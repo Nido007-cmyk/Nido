@@ -445,6 +445,31 @@ function topicRoots(sentence: string): Set<string> {
   return roots;
 }
 
+/**
+ * El tramo de frase de cada mención: del final de la mención anterior
+ * hasta el final de la suya (el evento suele ir delante de su fecha:
+ * «la vacuna es el 12 de diciembre y la revisión el 3 de enero»). Si
+ * algún tramo no trae tema propio («El 12 de diciembre es la vacuna
+ * y…», con el evento detrás), o una mención no se localiza, null: el
+ * llamador usa la frase entera.
+ */
+function dateSegments(sentence: string, mentions: readonly DateMention[]): string[] | null {
+  if (mentions.length < 2) return null;
+  const t = fold(sentence);
+  const out: string[] = [];
+  let cursor = 0;
+  for (const m of mentions) {
+    const at = t.indexOf(m.text, cursor);
+    if (at < 0) return null;
+    const end = at + m.text.length;
+    const seg = t.slice(cursor, end);
+    if (topicRoots(seg).size === 0) return null;
+    out.push(seg);
+    cursor = end;
+  }
+  return out;
+}
+
 function sharesTopicRoot(a: string, b: string): boolean {
   const rb = topicRoots(b);
   for (const r of topicRoots(a)) if (rb.has(r)) return true;
@@ -672,21 +697,39 @@ export function dateConflictForSentence(
   // relativas): si esas frases afirman una sola fecha distinta, la
   // de la respuesta la contradice. Conservadora como R5: sin tema
   // compartido no se juzga; con varias fechas emparejadas tampoco;
-  // y si CUALQUIER mención de la fuente trae la fecha exacta de la
-  // respuesta, no se acusa (puede estar citando esa otra).
+  // y si una mención de la fuente trae la fecha exacta de la
+  // respuesta EN SU MISMO EVENTO, no se acusa (puede estar citando
+  // esa otra).
+  //
+  // Auditoría de la 0.1.97 (fecha con el evento cambiado, la gemela
+  // de C2-H2 en fechas): esa guarda valía para CUALQUIER mención, así
+  // que la fecha de OTRO evento de la fuente pasaba sellada —
+  // «La revisión es el 12 de diciembre» ante «La vacuna es el 12 de
+  // diciembre. La revisión es el 3 de enero» salía grounded con
+  // origen source, en es/en/pt. Ahora la fecha exacta solo absuelve
+  // si su evento comparte tema con la respuesta; y el evento de cada
+  // mención es su TRAMO de frase (dateSegments: de la mención
+  // anterior hasta ella), para que una frase con dos eventos («la
+  // vacuna el 12 de diciembre y la revisión el 3 de enero») no
+  // preste a una el tema de la otra. Sin tramos fiables, el tramo es
+  // la frase entera, como antes.
+  const srcSeg = sources.flatMap((s) => {
+    const segs = dateSegments(s.text, s.mentions);
+    return s.mentions.map((m, i) => ({ m, sentence: s.text, segment: segs ? segs[i] : s.text }));
+  });
   for (const a of ans) {
     if (a.kind !== "calendario" || a.num) continue;
     const ad = domOf(a);
     const am = monOf(a);
     if (ad === null || am === null) continue;
-    if (srcAll.some(({ m }) => domOf(m) === ad && monOf(m) === am)) continue;
+    if (srcSeg.some(({ m, segment }) => domOf(m) === ad && monOf(m) === am && sharesTopicRoot(answerSentence, segment))) continue;
     const pairedDates = new Map<string, { d: number; m: number; sentence: string }>();
-    for (const { m, sentence } of srcAll) {
+    for (const { m, sentence, segment } of srcSeg) {
       if (m.kind !== "calendario" || m.num) continue;
       const sd = domOf(m);
       const sm = monOf(m);
       if (sd === null || sm === null) continue;
-      if (!sharesTopicRoot(answerSentence, sentence)) continue;
+      if (!sharesTopicRoot(answerSentence, segment)) continue;
       pairedDates.set(`${sd}-${sm}`, { d: sd, m: sm, sentence });
     }
     if (pairedDates.size !== 1) continue;
