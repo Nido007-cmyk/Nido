@@ -30,15 +30,23 @@ Nada de lo aquí descrito debe leerse como "auditado", "a prueba de cuántica" o
 | allowBackup=false | IMPLEMENTED |
 | SQLCipher | **SÍ** — IMPLEMENTED + AUTOMATED TESTED (DEK en Keystore, fail-closed) |
 | Biometría como gate criptográfico | **NO** — solo pendiente |
-| FLAG_SECURE / política clipboard / notificaciones sin contenido | **NO** |
-| dataExtractionRules (device-transfer) | **NO** |
+| FLAG_SECURE / política clipboard / notificaciones sin contenido | **SÍ** — IMPLEMENTED (plugin withFlagSecure; desde la 0.1.79 un ajuste opcional «Permitir capturas», apagado por defecto, que nunca desprotege la clave de copia, la entrada de clave ni el código de emparejamiento; copias sensibles de secretClipboard que se borran solas a los 60 s) |
+| dataExtractionRules (device-transfer) | **SÍ** — IMPLEMENTED (plugin registrado en app.json) |
 | Migración tweetnacl → @noble/\* | **NO** |
 | HKDF (hoy: SHA-512 ad-hoc en KDF) | **SÍ** — HKDF-SHA512 (RFC 5869), IMPLEMENTED + AUTOMATED TESTED (oct 2026) |
 | XChaCha20-Poly1305 (hoy: XSalsa20-Poly1305) | **NO** |
 | Noise_XX | **NO** — documentado como migración futura |
-| Híbrido PQ X25519+ML-KEM | **NO** — FUTURO, sin implementación auditada para RN |
-| Compilación Android del módulo nido-p2p | **NO** — sin JDK/SDK en este entorno |
-| Pruebas físicas entre dos teléfonos | **NO** |
+| Híbrido PQ X25519+ML-KEM | **SÍ** — IMPLEMENTADO + PROBADO AUTOMÁTICAMENTE: raíz híbrida X25519 + ML-KEM-768 por conexión dentro del Double Ratchet (P2P v5, 0.1.46; activo por defecto desde la 0.1.49 cuando los dos teléfonos lo admiten; ML-KEM nativo con mlkem-native desde la 0.1.51). Sin auditoría externa; ver X-1 y [HANDSHAKE_THREAT_MODEL.md](../HANDSHAKE_THREAT_MODEL.md) |
+| Compilación Android del módulo nido-p2p | **SÍ** — COMPILADO EN ANDROID en cada build del APK de release (`android-apk.yml`) |
+| Pruebas físicas entre dos teléfonos | **SÍ** — verificado físicamente (dos tablets: mensajes directos en modo avión, copia por LAN, identidad por Bluetooth; oct 2026) |
+
+> Línea base re-verificada contra el código el 2026-11-13 (auditoría de la
+> 0.1.97), en paridad con la versión inglesa: las filas de FLAG_SECURE,
+> dataExtractionRules, pruebas físicas, híbrido PQ y compilación de nido-p2p
+> seguían en NO desde la foto del 2026-09-27, y las cinco ya estaban hechas
+> (`p2p.ratchetV5` activo por defecto en `src/config/featureFlags.ts`). Los
+> mensajes siguen sellados con XSalsa20-Poly1305 y tweetnacl sigue en uso:
+> esas filas siguen en NO.
 
 ---
 
