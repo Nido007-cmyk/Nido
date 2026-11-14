@@ -245,22 +245,24 @@ afterAll(() => {
     else if (r.veredicto === "ausente") totales.ausente++;
     else totales.sentidoEquivocado++;
   }
-  writeFileSync(
-    "/home/hatch/workspace/nido-0197-caza/resultados-recuperacion.json",
-    JSON.stringify(
-      {
-        meta: {
-          eje: "recuperacion",
-          clase: "CL-12",
-          viabilidad: "parcial",
-          alcance:
-            "Rama léxica REAL de retrieve() (corpus integrado FTS5 + packs empaquetados nido-esencial/nido-local, puertas y fusión de la casa). Rama semántica NO ejecutable en esta máquina: no hay ningún .gguf en el árbol (assets/models/ no existe) ni motor nativo en vitest; retrieve() degrada a esta misma rama léxica sin motor. Los packs importados (SALVORA, con «Avería en carretera» y «Fuga de gas») no están en el árbol y no se pudieron buscar.",
-          totales,
+  try {
+    writeFileSync(
+      "resultados-recuperacion.json",
+      JSON.stringify(
+        {
+          meta: {
+            eje: "recuperacion",
+            clase: "CL-12",
+            viabilidad: "parcial",
+            alcance:
+              "Rama léxica REAL de retrieve() (corpus integrado FTS5 + packs empaquetados nido-esencial/nido-local, puertas y fusión de la casa). Rama semántica NO ejecutable en esta máquina: no hay ningún .gguf en el árbol (assets/models/ no existe) ni motor nativo en vitest; retrieve() degrada a esta misma rama léxica sin motor. Los packs importados (SALVORA, con «Avería en carretera» y «Fuga de gas») no están en el árbol y no se pudieron buscar.",
+            totales,
+          },
+          casos: RESULTADOS,
         },
-        casos: RESULTADOS,
-      },
-      null,
-      1,
-    ),
-  );
+        null,
+        1,
+      ),
+    );
+  } catch { /* El volcado de resultados es diagnóstico local: jamás es puerta, y en un entorno sin carpeta escribible (CI) no debe tumbar la batería. */ }
 });

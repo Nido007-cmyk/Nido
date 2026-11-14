@@ -599,5 +599,7 @@ describe("caza polisemia 0197", () => {
 });
 
 afterAll(() => {
-  writeFileSync("/home/hatch/workspace/nido-0197-caza/resultados-polisemia.json", JSON.stringify(RESULTADOS, null, 1));
+  try {
+  writeFileSync("resultados-polisemia.json", JSON.stringify(RESULTADOS, null, 1));
+  } catch { /* El volcado de resultados es diagnóstico local: jamás es puerta, y en un entorno sin carpeta escribible (CI) no debe tumbar la batería. */ }
 });
