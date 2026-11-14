@@ -33,20 +33,22 @@ describe("estimateTokens — nunca por debajo del real", () => {
     expect(rows.length).toBeGreaterThan(100);
   });
 
-  // Límite declarado: código fuente, texto entero en mayúsculas y ristras
-  // de signos sueltos siguen por debajo del real (igual que con la
-  // estimación anterior). Cubrirlos subía un 10 % el presupuesto de
-  // todos los turnos normales; ver contextBudget.ts.
-  const KNOWN_LIMITS = new Set(["adv-codigo", "adv-mayus", "adv-puntuacion"]);
+  // Límite declarado hasta la 0.1.98: código fuente, texto entero en
+  // mayúsculas y ristras de signos sueltos quedaban por debajo del
+  // real. m-30 (T-10, 0.1.99) los cubre con recargos condicionales por
+  // clase, sin inflar la prosa (ver contextBudget.ts y
+  // contextBudget.t10.test.ts): el conjunto queda vacío y la prueba
+  // de abajo vigila que ninguna fila vuelva a caer por debajo.
+  const KNOWN_LIMITS = new Set<string>([]);
   const covered = rows.filter((r) => !KNOWN_LIMITS.has(r.kind));
 
   it.each(covered.map((r, i) => [i, r.kind, r] as const))("fila %i (%s): estimado ≥ real", (_i, _k, r) => {
     expect(estimateTokens(r.text)).toBeGreaterThanOrEqual(r.realTokens);
   });
 
-  it("los límites declarados siguen declarados (si uno se cubre, se actualiza el comentario)", () => {
+  it("sin límites declarados: ninguna clase conocida queda por debajo (m-30)", () => {
     const stillUnder = rows.filter((r) => KNOWN_LIMITS.has(r.kind) && estimateTokens(r.text) < r.realTokens);
-    expect(stillUnder.length).toBeGreaterThan(0);
+    expect(stillUnder.length).toBe(0);
   });
 
   it("la estimación anterior fallaba en la misma fixture (el defecto existía)", () => {

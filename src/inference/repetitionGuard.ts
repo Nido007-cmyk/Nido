@@ -33,7 +33,17 @@ export function findRepetitionLoop(text: string): RepetitionLoop | null {
   if (text.length < 80) return null;
   // 0.1.37 (auditoría): dentro de un bloque de código abierto la
   // repetición es legítima (un tablero de ceros, filas iguales).
-  if ((text.match(/```/g)?.length ?? 0) % 2 === 1) return null;
+  // m-26 (T-10, 0.1.99): la exención NO cubre una valla ```tool
+  // abierta: no es código que el usuario haya pedido, es una llamada
+  // a medio escribir, y un bucle dentro quemaba la generación entera
+  // sin que la guarda lo viera. Cualquier otra valla abierta (código,
+  // python, sin idioma) sigue exenta.
+  if ((text.match(/```/g)?.length ?? 0) % 2 === 1) {
+    const lastFence = text.lastIndexOf("```");
+    const nl = text.indexOf("\n", lastFence);
+    const info = text.slice(lastFence + 3, nl === -1 ? text.length : nl);
+    if (!/^tool(\s|$)/.test(info)) return null;
+  }
   const offset = Math.max(0, text.length - WINDOW);
   const s = text.slice(offset);
   const n = s.length;

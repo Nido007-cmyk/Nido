@@ -591,7 +591,12 @@ describe("fitChunksToBudget (adversaria H-07): ni muñones ni restos sin marca",
   // Sala total de caracteres: (3072 − 512 − 50) × 3 ≈ 7.530. Con este
   // fixedText quedan ~140 para las entradas: el señuelo solo entra
   // truncado a ~una frase (~5 % de su cuerpo) y el bueno entra entero.
-  const TIGHT_FIXED = "F".repeat(7390);
+  // El relleno va en minúscula a propósito: desde m-30 (T-10, 0.1.99)
+  // un relleno de mayúsculas («F»×N) ES la clase de mayúsculas del
+  // estimador y paga su recargo medido, así que dejó de ser neutro
+  // para calibrar presupuestos; en minúscula la estimación del relleno
+  // es la de siempre y la aritmética de esta sala se mantiene.
+  const TIGHT_FIXED = "f".repeat(7390);
   const decoyBody = H07_SENTENCE.repeat(21).trimEnd();
   const goodBody = "La cita es el martes 10 de noviembre a las 9:30 en la sala 214 del segundo piso.";
 
@@ -610,7 +615,7 @@ describe("fitChunksToBudget (adversaria H-07): ni muñones ni restos sin marca",
   });
 
   it("el truncado que sí entra viaja marcado, por frases completas y sin mutar el original", () => {
-    const fixedText = "F".repeat(1500);
+    const fixedText = "f".repeat(1500);
     const big = h07Chunk("1", "Doc Grande", H07_SENTENCE.repeat(80));
     const out = fitChunksToBudget([big], fixedText, R01_NCTX, R01_RESERVE);
     expect(out).toHaveLength(1);
@@ -629,7 +634,7 @@ describe("fitChunksToBudget (adversaria H-07): ni muñones ni restos sin marca",
     // frases de ~400 — ni su primera frase cabe, así que no puede
     // entrar ni como resto; el segundo, de frases cortas, entra
     // truncado por encima del suelo de utilidad (≥ 320).
-    const midFixed = "F".repeat(7185);
+    const midFixed = "f".repeat(7185);
     const longSentence =
       "La pintura al óleo sobre lienzo, trabajada con capas muy finas y secado lento entre mano y mano, " +
       "con veladuras sucesivas de color y un barniz final mate que protege la superficie durante décadas " +

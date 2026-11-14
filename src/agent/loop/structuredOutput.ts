@@ -28,7 +28,14 @@ export type ValidationResult<T> =
 /** Minimal JSON-schema subset we validate: required keys + primitive types. */
 export interface SimpleSchema {
   required?: string[];
-  properties?: Record<string, "string" | "number" | "boolean">;
+  properties?: Record<string, "string" | "number" | "boolean" | "object">;
+  /**
+   * m-22 (T-10, 0.1.99): cierre opt-in de propiedades. Con `false`,
+   * una clave no declarada en `properties` invalida la salida. Sin
+   * declarar, el comportamiento es el de siempre (las claves extra
+   * pasan): cada esquema decide.
+   */
+  additionalProperties?: boolean;
 }
 
 /**
@@ -52,11 +59,26 @@ export function validateStructuredOutput<T>(schema: SimpleSchema, text: string):
     }
   }
   for (const [key, type] of Object.entries(schema.properties ?? {})) {
-    if (key in obj && typeof obj[key] !== type) {
+    if (!(key in obj)) continue;
+    const value = obj[key];
+    // m-22 (T-10, 0.1.99): "object" exige un objeto plano — typeof []
+    // y typeof null también dan "object" y no valen como argumentos.
+    const matches =
+      type === "object"
+        ? typeof value === "object" && value !== null && !Array.isArray(value)
+        : typeof value === type;
+    if (!matches) {
       return {
         ok: false,
-        error: `key "${key}" must be ${type}, got ${typeof obj[key]}`,
+        error: `key "${key}" must be ${type}, got ${Array.isArray(value) ? "array" : typeof value}`,
       };
+    }
+  }
+  if (schema.additionalProperties === false) {
+    for (const key of Object.keys(obj)) {
+      if (!(key in (schema.properties ?? {}))) {
+        return { ok: false, error: `unexpected key "${key}"` };
+      }
     }
   }
   return { ok: true, value: obj as T };

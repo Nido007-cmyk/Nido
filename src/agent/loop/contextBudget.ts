@@ -77,16 +77,29 @@ export interface BudgetedConversation {
  *     entero;
  *   - más 50 de la plantilla ChatML, como antes.
  * En prosa de las guías estima un 3,7 % más que la anterior y en el
- * prompt de sistema con herramientas un 3 % más (52 tokens). Quedan por
- * debajo del real, igual que antes, el código fuente, el texto entero en
- * mayúsculas y las ristras de signos sueltos: cubrirlos inflaba un 10 %
- * el presupuesto de todos los turnos normales.
+ * prompt de sistema con herramientas un 3 % más (52 tokens).
  * Tabla de la medición: docs/perf/ESTIMADOR_TOKENS_2026-11-11.md.
+ *
+ * m-30 (T-10, 0.1.99): quedaban por debajo del real el código fuente,
+ * el texto entero en mayúsculas y las ristras de signos sueltos.
+ * Cubrirlos a lo bruto inflaba un 10 % el presupuesto de todos los
+ * turnos; la corrección es SELECTIVA POR CLASE: cada recargo solo
+ * existe cuando la densidad de su clase domina el texto, así que la
+ * prosa normal paga exactamente lo de 2026-11-11. Medido contra el
+ * tokenizador real (Qwen2.5 BPE; la fixture guarda el máximo de
+ * Qwen2.5 y Qwen3): código con densidad de signos ≈ 0,34 y déficit de
+ * 0,23–0,31 por signo → 1/3 por signo con puerta de densidad > 0,30;
+ * mayúsculas sostenidas con déficit de 0,04–0,07 por letra → 1/12 por
+ * mayúscula con puerta de mayoría entre las letras (> 0,5). Las tres
+ * clases quedan cubiertas en la fixture (estimateTokens.test.ts).
  */
 export function estimateTokens(text: string): number {
   let digits = 0;
   let numbers = 0;
   let nonLatin = 0;
+  let uppers = 0;
+  let letters = 0;
+  let symbols = 0;
   let inNumber = false;
   for (let i = 0; i < text.length; i++) {
     const c = text.charCodeAt(i);
@@ -98,8 +111,30 @@ export function estimateTokens(text: string): number {
       nonLatin++;
     }
     inNumber = isDigit;
+    // m-30: clases de la corrección selectiva. Mayúsculas y letras del
+    // latín (A–Z, a–z y Latin-1 sin × ni ÷) y signos: puntuación ASCII,
+    // puntuación Latin-1 (¡¿«»§…) y puntuación general (— … ‘’ “”).
+    // Las mitades surrogate de un emoji ya cuentan como nonLatin
+    // arriba y NO como signos (caen fuera de estos rangos).
+    const isUpper = (c >= 0x41 && c <= 0x5a) || (c >= 0xc0 && c <= 0xde && c !== 0xd7);
+    if (isUpper) uppers++;
+    if (isUpper || (c >= 0x61 && c <= 0x7a) || (c >= 0xdf && c <= 0xff && c !== 0xf7) || (c >= 0xe0 && c <= 0xfe)) letters++;
+    if (
+      (c >= 0x21 && c <= 0x2f) ||
+      (c >= 0x3a && c <= 0x40) ||
+      (c >= 0x5b && c <= 0x60) ||
+      (c >= 0x7b && c <= 0x7e) ||
+      (c >= 0xa1 && c <= 0xbf) ||
+      (c >= 0x2010 && c <= 0x2027)
+    ) {
+      symbols++;
+    }
   }
-  return Math.ceil(text.length / 3 + (digits * 2) / 3 + numbers + (nonLatin * 2) / 3) + 50;
+  // m-30: recargos solo cuando la clase domina el texto; con las
+  // puertas cerradas la estimación es la de 2026-11-11, dígito a dígito.
+  const symbolExtra = text.length > 0 && symbols / text.length > 0.3 ? symbols / 3 : 0;
+  const capsExtra = letters > 0 && uppers / letters > 0.5 ? uppers / 12 : 0;
+  return Math.ceil(text.length / 3 + (digits * 2) / 3 + numbers + (nonLatin * 2) / 3 + symbolExtra + capsExtra) + 50;
 }
 
 /** Default estimator: conservative (overestimates) — the fail-safe direction. */
