@@ -97,6 +97,19 @@ export interface VerifyOptions {
 // treated as stalled and cancelled — see downloadCatalogModel's doc comment.
 const DOWNLOAD_INACTIVITY_TIMEOUT_MS = 60_000;
 
+/**
+ * T-09 (audit 2026-11-14, P-03): downloads in flight, by asset id —
+ * module-level on purpose. The app constructs many ModelManager
+ * instances (screens, services, the eval harness); an instance-level
+ * guard would not stop two of them downloading the same asset onto the
+ * same staging path at once. downloadManager already dedupes its own
+ * calls, but ModelManager is the layer that owns the staging file, so
+ * the guard lives here: a second call for an asset already downloading
+ * joins the in-flight promise instead of starting a rival transfer
+ * (its progress callback is not wired — the first caller's is).
+ */
+const catalogDownloadsInFlight = new Map<string, Promise<void>>();
+
 // console.log shows up in the Metro/dev-client terminal (not just on-device
 // LogBox) — this is the debug trail for diagnosing the "0 bytes despite a
 // clean-looking completion" reports without needing device log access.
@@ -225,6 +238,24 @@ export class ModelManager {
    *   one asset's bytes into another asset's file).
    * If the resumed transfer later fails integrity, the SHA-256 check
    * fails closed anyway — garbage in can never be promoted.
+   *
+   * T-09 (audit 2026-11-14, F-01/F-06): the token does NOT get to choose
+   * the download's origin or options. Its stored `url`/`options` are
+   * ignored entirely — the resumable is rebuilt with the gate-validated
+   * `sourceUrl` (the pinned fetchUrl for THIS catalog entry) and empty
+   * options, so a tampered or stale token can never steer a resume to
+   * an origin the app did not approve. Tokens written by this version
+   * also carry a `nidoBinding` ({assetId, sha256, sizeBytes, fetchUrl})
+   * recorded when the token was persisted; when a binding is present it
+   * must match the current catalog entry exactly, or the token is
+   * refused (its staged prefix may belong to different bytes — splicing
+   * it onto this download would waste the transfer and fail integrity).
+   * Legacy tokens without a binding (written by 0.1.98 or earlier) are
+   * adopted ONLY under the gate-URL rule above: that keeps a real
+   * mid-download upgrade resumable, at the declared cost that a legacy
+   * token cannot prove its staged bytes belong to this asset — the
+   * worst case is a wasted download caught by the final size + SHA-256
+   * checks, never a bad install.
    */
   private async restorePausedResumable(
     asset: CatalogModel,
@@ -246,10 +277,9 @@ export class ModelManager {
     }
     try {
       const parsed = JSON.parse(raw) as {
-        url?: unknown;
         fileUri?: unknown;
-        options?: unknown;
         resumeData?: unknown;
+        nidoBinding?: unknown;
       };
       if (typeof parsed.resumeData !== "string" || parsed.resumeData.length === 0) {
         dlog(asset.id, "resume token has no resumeData — starting from zero");
@@ -259,14 +289,40 @@ export class ModelManager {
         dlog(asset.id, `resume token fileUri mismatch (${parsed.fileUri}) — refusing to resume`);
         return undefined;
       }
+      // F-06: a token that carries an identity binding must match the
+      // catalog entry asking to resume. No binding (legacy token) is
+      // adopted under the gate-URL rule only — see the doc comment.
+      if (parsed.nidoBinding !== undefined) {
+        const b = parsed.nidoBinding as {
+          assetId?: unknown;
+          sha256?: unknown;
+          sizeBytes?: unknown;
+          fetchUrl?: unknown;
+        };
+        if (
+          b?.assetId !== asset.id ||
+          b?.sha256 !== asset.sha256 ||
+          b?.sizeBytes !== asset.sizeBytes ||
+          b?.fetchUrl !== sourceUrl
+        ) {
+          dlog(
+            asset.id,
+            "resume token binding does not match this catalog entry — refusing to resume, starting from zero"
+          );
+          return undefined;
+        }
+      }
       dlog(
         asset.id,
         `restoring paused resumable from token (staging has ${stagingInfo.size ?? 0} bytes)`
       );
+      // F-01: the token's stored url/options are NEVER used — the
+      // resumable is rebuilt with the gate-validated sourceUrl and
+      // empty options.
       return FileSystem.createDownloadResumable(
-        typeof parsed.url === "string" && parsed.url.length > 0 ? parsed.url : sourceUrl,
+        sourceUrl,
         staging,
-        (parsed.options as object) ?? {},
+        {},
         onDownloadProgress,
         parsed.resumeData
       );
@@ -292,12 +348,15 @@ export class ModelManager {
 
   /**
    * A file that exists but doesn't match the catalog's expected size is
-   * treated as NOT present (and cleaned up) rather than a false "present" —
-   * this is what an interrupted/truncated download looks like (e.g. the
-   * app backgrounded or network dropped mid-transfer), and llama.cpp fails
-   * to load such a file with a generic, unhelpful error. Catching this here
-   * means the UI correctly offers "Download"/"Retry" instead of showing a
-   * green "Downloaded" badge for a file that will fail the moment it's used.
+   * treated as NOT present rather than a false "present" — this is what
+   * an interrupted/truncated download looks like (e.g. the app
+   * backgrounded or network dropped mid-transfer), and llama.cpp fails
+   * to load such a file with a generic, unhelpful error. Catching this
+   * here means the UI correctly offers "Download"/"Retry" instead of
+   * showing a green "Downloaded" badge for a file that will fail the
+   * moment it's used. (T-09: statusOf no longer deletes the file — see
+   * its doc comment; the bytes stay on disk until an action path
+   * replaces or removes them.)
    */
   /**
    * Whether an asset is honestly installed. "Installed" means: the file is
@@ -308,10 +367,20 @@ export class ModelManager {
    * right now. Anything else — missing file, size mismatch, no/invalid
    * journal, rewritten file, checksum mismatch — is NOT present.
    *
-   * Never throws for untrusted files: it returns present=false and deletes
-   * files that are proven corrupt/partial so they can't be mistaken for a
-   * valid install later. The inference path uses assertTrustedForLoad(),
-   * which throws instead.
+   * Never throws for untrusted files: it returns present=false.
+   *
+   * T-09 (audit 2026-11-14, F-10): this is a QUERY, and a query must not
+   * destroy. Earlier versions deleted the file (and cleared the journal)
+   * whenever the trust verdict advised deleteFile — so a mere status
+   * listing destroyed bytes no action had decided to remove, and races
+   * with a concurrent load or a retry were possible. Now the verdict is
+   * reported honestly (present=false, checksumOk=false, the real
+   * on-disk size) and the file stays where it is. Deletion lives on the
+   * ACTION paths: assertTrustedModelFile() on load, deleteModel(), and
+   * downloadCatalogModel(), which clears a corrupt destination only
+   * after the replacement staging file is fully verified, right before
+   * promotion. The inference path uses assertTrustedForLoad(), which
+   * throws instead.
    */
   async statusOf(asset: CatalogModel): Promise<AssetStatus> {
     await this.ensureReconciled();
@@ -325,10 +394,11 @@ export class ModelManager {
       return { asset, present: false, sizeOnDiskBytes: verdict.sizeOnDiskBytes, checksumOk: null, outdated: true };
     }
     if (verdict.deleteFile) {
-      dlog(asset.id, `statusOf(): deleting untrusted file (${verdict.reason})`);
-      await FileSystem.deleteAsync(assetPath(asset), { idempotent: true }).catch(() => {});
-      await clearInstallRecord(asset.id);
-      return { asset, present: false, sizeOnDiskBytes: 0, checksumOk: false };
+      dlog(
+        asset.id,
+        `statusOf(): untrusted file left in place (${verdict.reason}) — a query does not delete; a fresh download replaces it after verification`
+      );
+      return { asset, present: false, sizeOnDiskBytes: verdict.sizeOnDiskBytes, checksumOk: false };
     }
     return { asset, present: false, sizeOnDiskBytes: 0, checksumOk: null };
   }
@@ -563,6 +633,31 @@ export class ModelManager {
    * never automatically and never during chat/inference.
    */
   async downloadCatalogModel(
+    asset: CatalogModel,
+    onProgress?: (p: DownloadProgress) => void
+  ): Promise<void> {
+    // T-09 (P-03): one download per asset across ALL ModelManager
+    // instances — a concurrent second call joins the in-flight
+    // transfer instead of racing it on the same staging path. The
+    // registration happens synchronously, before any await, so two
+    // calls issued in the same tick cannot both slip through.
+    const inFlight = catalogDownloadsInFlight.get(asset.id);
+    if (inFlight) {
+      dlog(asset.id, "download already in flight — joining it instead of starting a second transfer");
+      return inFlight;
+    }
+    const promise = this.downloadCatalogModelInner(asset, onProgress);
+    catalogDownloadsInFlight.set(asset.id, promise);
+    try {
+      await promise;
+    } finally {
+      if (catalogDownloadsInFlight.get(asset.id) === promise) {
+        catalogDownloadsInFlight.delete(asset.id);
+      }
+    }
+  }
+
+  private async downloadCatalogModelInner(
     asset: CatalogModel,
     onProgress?: (p: DownloadProgress) => void
   ): Promise<void> {
@@ -812,9 +907,25 @@ export class ModelManager {
       try {
         const savable = resumable.savable();
         if (savable && typeof savable.resumeData === "string" && savable.resumeData.length > 0) {
+          // T-09 (F-06): bind the token to THIS catalog entry's identity.
+          // restorePausedResumable refuses a token whose binding does not
+          // match the entry asking to resume, so staged bytes from a
+          // different asset (or from an older catalog revision of this
+          // one) can never be spliced onto this download. The stored
+          // url/options fields are kept only because expo's savable shape
+          // carries them; the restore path ignores them (F-01).
+          const bound = {
+            ...savable,
+            nidoBinding: {
+              assetId: asset.id,
+              sha256: asset.sha256,
+              sizeBytes: asset.sizeBytes,
+              fetchUrl: sourceUrl,
+            },
+          };
           await FileSystem.writeAsStringAsync(
             resumeTokenPathFor(asset),
-            JSON.stringify(savable),
+            JSON.stringify(bound),
             { encoding: FileSystem.EncodingType.UTF8 }
           );
           dlog(asset.id, "resume token persisted — a later attempt can genuinely resume");
@@ -1054,10 +1165,17 @@ export class ModelManager {
     }
     dlog(asset.id, "sha256 verified on staging file");
 
-    // Atomic promotion: rename within the same directory. Either the old
-    // final file or the new verified one is at destPath afterwards — never
-    // a half-written mix. Only AFTER the rename succeeds is the install
-    // recorded as complete.
+    // Promotion: rename within the same directory. Only AFTER the rename
+    // succeeds is the install recorded as complete.
+    // T-09 (F-10): the destination may still hold a corrupt file that
+    // statusOf (now a pure query) reported but did not remove. The
+    // staging file is fully verified at this point, so clearing the
+    // destination here — inside the action path, immediately before the
+    // rename — cannot sacrifice a valid install to a failed download:
+    // every failure path above this line leaves the old file untouched,
+    // and a crash between the delete and the rename reconciles as
+    // not-installed (the journal is only written after the rename).
+    await FileSystem.deleteAsync(destPath, { idempotent: true }).catch(() => {});
     await FileSystem.moveAsync({ from: stagingPath, to: destPath });
     await FileSystem.deleteAsync(resumeTokenPathFor(asset), { idempotent: true }).catch(() => {});
     await recordInstall(asset.id, {

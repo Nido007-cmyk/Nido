@@ -192,12 +192,14 @@ describe("real MODEL_CATALOG — every entry passes the pre-network gate", () =>
     ]);
   });
 
-  it("auditoría 2026-10-31 (F5-01, mitad de detección): licencias y capabilities fuera de la firma, fijadas", () => {
-    // La firma NO cubre license ni capabilities (ver F5-01: ampliar
-    // SIGNED_FIELDS exige re-firmar y es decisión del dueño con
-    // Claude). Mientras tanto, esta fijación es la red de detección:
-    // N12 (una licencia cambiada a MIT) y N13 (roles y plantilla
-    // del modelo por defecto) pasaban con la firma en verde.
+  it("auditoría 2026-10-31 (F5-01): licencias y capabilities fijadas (hoy también dentro de la firma)", () => {
+    // Corrección T-09 (P-01 del acta 2026-11-14): este comentario decía
+    // que la firma NO cubre license ni capabilities, y ya no es así:
+    // por orden del dueño de 2026-10-31, SIGNED_FIELDS (manifestTrust.ts)
+    // cubre ambos, y manifestTrust.test.ts lo verifica campo a campo.
+    // Esta fijación se queda como segunda red de detección: N12 (una
+    // licencia cambiada a MIT) y N13 (roles y plantilla del modelo por
+    // defecto) deben fallar aquí aunque la firma pasara.
     const licenses: Record<string, string> = {};
     for (const m of MODEL_CATALOG) licenses[m.id] = m.license;
     expect(licenses).toEqual({
@@ -252,11 +254,15 @@ describe("real MODEL_CATALOG — every entry passes the pre-network gate", () =>
 
 describe("gate fail-closed behavior (synthetic contracts)", () => {
   it("mutable HF branch-pointer URL without revision → unpinnedSource (C/F2 preserved)", () => {
+    // T-09: el fixture usa un repo FIJADO (bartowski) para que el único
+    // defecto sea la revisión ausente; con un repo no fijado la puerta
+    // también rechaza, pero con unknownSourceContract (ver
+    // downloadSourceGate.test.ts).
     expectGateFailure(
       {
         id: "syn-hf-unpinned",
         sourceUrl:
-          "https://huggingface.co/org/model/resolve/main/model.gguf",
+          "https://huggingface.co/bartowski/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/model.gguf",
       },
       "unpinnedSource"
     );
@@ -267,7 +273,7 @@ describe("gate fail-closed behavior (synthetic contracts)", () => {
       {
         id: "syn-raw-unpinned",
         sourceUrl:
-          "https://raw.githubusercontent.com/org/repo/main/assets/corpus.json",
+          "https://raw.githubusercontent.com/Nido007-cmyk/Nido/main/assets/corpus.json",
       },
       "unpinnedSource"
     );
@@ -289,13 +295,13 @@ describe("gate fail-closed behavior (synthetic contracts)", () => {
       sizeBytes: 1024,
       sha256: "0".repeat(64),
       sourceUrl:
-        "https://github.com/org/repo/releases/download/v1/data.sqlite",
+        "https://github.com/Nido007-cmyk/Nido/releases/download/v1/data.sqlite",
       license: "test",
       description: "test",
       required: false,
     });
     expect(gate.contract).toBe("github-release-asset");
-    expect(gate.fetchUrl).toBe("https://github.com/org/repo/releases/download/v1/data.sqlite");
+    expect(gate.fetchUrl).toBe("https://github.com/Nido007-cmyk/Nido/releases/download/v1/data.sqlite");
   });
 });
 

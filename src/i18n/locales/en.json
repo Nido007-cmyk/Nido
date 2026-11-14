@@ -37,7 +37,7 @@
   },
   "installNotice": {
     "pausedTooHeavy": "Part of this model is already downloaded ({{done}}), but the model doesn't fit on this device. You can delete it to free up space.",
-    "integrity": "The downloaded file did not match its fingerprint and was deleted. If you download again, a fresh copy will arrive.",
+    "integrity": "The downloaded file does not match its fingerprint, so it does not count as downloaded. If you download again, the fresh copy replaces it.",
     "interrupted": "The last download was interrupted before finishing. If you download again, it will start from the beginning.",
     "sizeMismatch": "The last download arrived incomplete and was deleted. If you download again, a fresh copy will arrive.",
     "storage": "There was not enough free space to finish the download. Free up space and try again.",

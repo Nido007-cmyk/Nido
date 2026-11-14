@@ -33,7 +33,7 @@
   },
   "installNotice": {
     "pausedTooHeavy": "Hay una parte descargada ({{done}}) de un modelo que no cabe en este dispositivo. Puedes borrarla para liberar espacio.",
-    "integrity": "El archivo descargado no coincidió con su huella y se borró. Si descargas otra vez, llegará una copia nueva.",
+    "integrity": "El archivo descargado no coincide con su huella, así que no cuenta como descargado. Si descargas otra vez, la copia nueva lo reemplaza.",
     "interrupted": "La última descarga se interrumpió antes de terminar. Si descargas otra vez, empezará desde el principio.",
     "sizeMismatch": "La última descarga llegó incompleta y se borró. Si descargas otra vez, llegará una copia nueva.",
     "storage": "No hubo espacio libre suficiente para terminar la descarga. Libera espacio y vuelve a intentarlo.",

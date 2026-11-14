@@ -515,7 +515,7 @@ describe("packs desactualizados (0.1.57)", () => {
     expect(hoisted.fileExists(packPath)).toBe(true);
   });
 
-  it("un pack reescrito con otros bytes no pasa por viejo: se borra como antes", async () => {
+  it("un pack reescrito con otros bytes no pasa por viejo: no es de confianza", async () => {
     await installOld();
     const tampered = OLD_PACK.slice();
     tampered[10] ^= 0xff;
@@ -524,7 +524,11 @@ describe("packs desactualizados (0.1.57)", () => {
     const status = await new ModelManager([newPack]).statusOf(newPack);
     expect(status.present).toBe(false);
     expect(status.outdated).toBeUndefined();
-    expect(hoisted.fileExists(packPath)).toBe(false);
+    // T-09 (F-10): statusOf ya no borra al consultar (antes este test
+    // fijaba «se borra como antes»). El pack manipulado no se usa y
+    // sigue en disco hasta que una vía de acción lo reemplace o lo
+    // borre; la puerta de carga (assertTrustedModelFile) sí lo borra.
+    expect(hoisted.fileExists(packPath)).toBe(true);
   });
 
   it("sin mtime comparable, solo un re-hash que coincide lo da por viejo", async () => {
@@ -537,7 +541,7 @@ describe("packs desactualizados (0.1.57)", () => {
     expect(hoisted.base64Reads.filter((p) => p === packPath).length).toBeGreaterThan(0);
   });
 
-  it("los modelos no cambian: un modelo de un catálogo viejo sigue sin ser de confianza y se borra", async () => {
+  it("los modelos no cambian: un modelo de un catálogo viejo sigue sin ser de confianza", async () => {
     const mgr = makeManager();
     await mgr.installBundled(asset);
     const newModel = { ...asset, sizeBytes: NEW_PACK.length, sha256: sha256Of(NEW_PACK) };
@@ -545,7 +549,8 @@ describe("packs desactualizados (0.1.57)", () => {
     const status = await new ModelManager([newModel]).statusOf(newModel);
     expect(status.present).toBe(false);
     expect(status.outdated).toBeUndefined();
-    expect(hoisted.fileExists(modelPath)).toBe(false);
+    // T-09 (F-10): sin ser de confianza, pero la consulta no lo borra.
+    expect(hoisted.fileExists(modelPath)).toBe(true);
   });
 
   it("una descarga nueva que falla o se corta no hace perder la prueba del pack viejo", async () => {
