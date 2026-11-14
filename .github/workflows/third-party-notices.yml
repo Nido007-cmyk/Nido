@@ -2,9 +2,10 @@
 #
 # THIRD_PARTY_NOTICES.md y src/legal/thirdPartyNotices.json se generan desde
 # node_modules (scripts/third-party-notices.mjs). Cuando cambian las
-# dependencias o el generador, este workflow los regenera y sube el
-# resultado a la misma rama. El APK no depende de esto: su workflow los
-# regenera antes de compilar.
+# dependencias o el generador, este workflow los regenera y abre un PR
+# contra main con el resultado (rama chore/avisos-terceros): main está
+# protegida y ya no acepta el push directo que hacía antes (2026-11-14).
+# El APK no depende de esto: su workflow los regenera antes de compilar.
 #
 # Los push de Dependabot reciben un token de solo lectura: se saltan, y los
 # avisos se actualizan al fusionar (push a main).
@@ -32,6 +33,7 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
@@ -42,7 +44,9 @@ jobs:
       # los paquetes.
       - run: npm ci --ignore-scripts
       - run: npm run notices
-      - name: Commit if changed
+      - name: Pull request if changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if git diff --quiet -- src/legal THIRD_PARTY_NOTICES.md; then
             echo "Avisos ya al día."
@@ -50,6 +54,43 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C chore/avisos-terceros
           git add src/legal/thirdPartyNotices.json THIRD_PARTY_NOTICES.md
           git commit -m "chore(legal): avisos de licencias de terceros al día"
-          git push
+          git push --force origin chore/avisos-terceros
+          # Si ya hay un PR abierto con esta cabeza, el push de arriba ya lo
+          # ha actualizado; no se abre otro.
+          api="https://api.github.com/repos/${{ github.repository }}"
+          abiertos=$(curl -s -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "$api/pulls?state=open&head=${{ github.repository_owner }}:chore/avisos-terceros" \
+            | python3 -c 'import json, sys; print(len(json.load(sys.stdin)))')
+          if [ "$abiertos" != "0" ]; then
+            echo "Ya hay un PR de avisos abierto; queda actualizado con este push."
+            exit 0
+          fi
+          python3 - "$api" <<'PYEOF'
+          import json, os, sys, urllib.request
+          cuerpo = (
+              "Regeneración automática de los avisos de licencias de terceros "
+              "tras un cambio de dependencias: `THIRD_PARTY_NOTICES.md` y "
+              "`src/legal/thirdPartyNotices.json` se generan desde el lockfile "
+              "con `npm run notices`.\n\n"
+              "Lo abre el workflow «Third-party notices» porque main está "
+              "protegida y ya no acepta el push directo que hacía antes. "
+              "Se revisa y se fusiona como cualquier otro PR."
+          )
+          datos = json.dumps({
+              "title": "chore(legal): avisos de licencias de terceros al día",
+              "head": "chore/avisos-terceros",
+              "base": "main",
+              "body": cuerpo,
+          }).encode()
+          peticion = urllib.request.Request(sys.argv[1] + "/pulls", data=datos, method="POST")
+          peticion.add_header("Authorization", "Bearer " + os.environ["GH_TOKEN"])
+          peticion.add_header("Accept", "application/vnd.github+json")
+          peticion.add_header("X-GitHub-Api-Version", "2022-11-28")
+          peticion.add_header("Content-Type", "application/json")
+          with urllib.request.urlopen(peticion) as resp:
+              pr = json.loads(resp.read().decode())
+          print("PR de avisos abierto:", pr["html_url"])
+          PYEOF
