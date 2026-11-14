@@ -33,7 +33,20 @@ export interface MemoryPressureEngines {
 export async function handleMemoryPressure(
   state: { generating: boolean },
   engines: MemoryPressureEngines,
+  level?: number,
 ): Promise<void> {
+  // P-36 (auditoría 2026-11-13, F3-18): el nivel manda. Hasta la
+  // 0.1.98 el manejador ignoraba el nivel del evento y el nativo
+  // reenviaba también los niveles de fondo (≥15 incluía 20 UI_HIDDEN
+  // y 40/60/80 de proceso en segundo plano): salir de la app a mitad
+  // de respuesta paraba la generación que el keep-alive existe para
+  // proteger, y un trim de fondo descargaba motores a los que el
+  // usuario podía volver en segundos. Los niveles ≥20 son estados de
+  // fondo/UI oculta — no son «el sistema se está quedando sin memoria
+  // con la app en uso» — y se ignoran. Sin nivel (llamantes viejos) o
+  // con el crítico (15, también el de onLowMemory) se actúa como
+  // siempre. El nativo, además, ya solo reenvía el 15.
+  if (level !== undefined && level >= 20) return;
   if (state.generating) {
     try {
       await engines.llm.stop?.();

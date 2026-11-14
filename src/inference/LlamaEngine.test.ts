@@ -7,10 +7,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 type FakeContext = {
-  model: string;
+  // m-80 (auditoría 2026-11-13, F2-m9): en llama.rn real, context.model
+  // es un OBJETO (NativeLlamaContext.model) y el motor lee de él los
+  // metadatos del GGUF (loadTimeSampling). El doble anterior lo traía
+  // como string y SIN metadata: la capa de muestreo de la carga no se
+  // podía ejercer de punta a punta. Ahora trae los metadatos que el
+  // test declare en mockModelMetadata.
+  model: { metadata: Record<string, unknown> };
+  isJinjaSupported: () => boolean;
   released: boolean;
   release: () => Promise<void>;
-  completion: (params: unknown, onToken: (d: { token: string }) => void) => Promise<{ text: string }>;
+  completion: (params: unknown, onToken: (d: { token: string }) => void) => Promise<{ text: string } & Record<string, unknown>>;
   stopCompletion: () => Promise<void>;
   releasedWhileGenerating: boolean;
   lastParams: unknown;
@@ -25,12 +32,38 @@ let maxConcurrentInits = 0;
 let backendGate: Promise<void> | null = null;
 // La variante nativa que llama.rn expone como context.androidLib (null: sin ella).
 let mockAndroidLib: string | null = null;
+// m-80: los metadatos del GGUF que el contexto falso declara (los lee
+// loadTimeSampling al cargar); {} = el fichero no declara nada.
+let mockModelMetadata: Record<string, unknown> = {};
+// m-80: si el contexto falso «soporta» Jinja (hasEmbeddedChatTemplate).
+let mockJinjaSupported = true;
+// m-80: el veredicto nativo con el que la completion falsa se asienta
+// (stopped_eos / stopped_limit / context_full / interrupted…), como el
+// NativeCompletionResult real; null = sin veredicto (cae al conteo).
+let mockStopVerdict: Record<string, unknown> | null = null;
+// m-80: si está puesto, la completion falsa rechaza con este error.
+let mockCompletionError: Error | null = null;
+// m-80: si está puesto, la puerta de confianza rechaza la carga con él.
+let mockTrustError: Error | null = null;
+// T-07: mensaje de error por intento de initLlama (para la cascada de
+// perfiles de m-73: cada perfil puede fallar con su propia causa).
+let mockInitErrorFor: ((p: Record<string, unknown>, attempt: number) => string) | null = null;
+// T-07: dispositivos que getBackendDevicesInfo devuelve; null = el de
+// siempre. mockBackendDevicesError lo hace lanzar (P-32).
+let mockBackendDevices: Array<{ backend: string; type: string; deviceName: string }> | null = null;
+let mockBackendDevicesError: Error | null = null;
+// T-07: stopCompletion lanza (m-76: la envoltura defensiva del motor).
+let mockStopCompletionThrows = false;
+// T-07: el contexto falso nace SIN isJinjaSupported (builds viejos, P-33).
+let mockOmitJinja = false;
 
 vi.mock("llama.rn", () => ({
   initLlama: async (params: { model: string } & Record<string, unknown>) => {
     const { model } = params;
     initCalls.push(params);
-    if (rejectInit?.(params)) throw new Error("Failed to initialize context");
+    if (rejectInit?.(params)) {
+      throw new Error(mockInitErrorFor?.(params, initCalls.length) ?? "Failed to initialize context");
+    }
     inFlightInits++;
     maxConcurrentInits = Math.max(maxConcurrentInits, inFlightInits);
     await new Promise((r) => setTimeout(r, 5));
@@ -38,7 +71,8 @@ vi.mock("llama.rn", () => ({
     const finishes: Array<() => void> = [];
     let generating = false;
     const ctx: FakeContext = {
-      model,
+      model: { metadata: mockModelMetadata },
+      isJinjaSupported: () => mockJinjaSupported,
       released: false,
       releasedWhileGenerating: false,
       lastParams: undefined,
@@ -47,22 +81,37 @@ vi.mock("llama.rn", () => ({
         ctx.released = true;
       },
       // Like llama.cpp: runs until stopped, and settles a moment after the stop (prompt still processing).
+      // m-80: se asienta con el veredicto nativo que el test declare
+      // (mockStopVerdict) o rechaza si mockCompletionError está puesto.
+      // T-07: el texto se emite por trozos, como el nativo (la guarda de
+      // bucle necesita tokens durante el streaming para poder marcar),
+      // y con veredicto declarado la completion se asienta SOLA a los
+      // pocos ms (un EOS/límite real no espera a que nadie pare nada).
       completion: (params, onToken) =>
-        new Promise((resolve) => {
+        new Promise((resolve, reject) => {
           generating = true;
           ctx.lastParams = params;
-          onToken({ token: mockReplyText });
+          for (let i = 0; i < mockReplyText.length; i += 12) {
+            onToken({ token: mockReplyText.slice(i, i + 12) });
+          }
+          if (mockReplyText.length === 0) onToken({ token: "" });
           finishes.push(() =>
             setTimeout(() => {
               generating = false;
-              resolve({ text: mockReplyText });
+              if (mockCompletionError) reject(mockCompletionError);
+              else resolve({ text: mockReplyText, ...(mockStopVerdict ?? {}) });
             }, 20)
           );
+          if (mockStopVerdict) {
+            setTimeout(() => finishes.splice(0).forEach((f) => f()), 5);
+          }
         }),
       stopCompletion: async () => {
+        if (mockStopCompletionThrows) throw new Error("native stop failed");
         finishes.splice(0).forEach((f) => f());
       },
     };
+    if (mockOmitJinja) delete (ctx as { isJinjaSupported?: unknown }).isJinjaSupported;
     if (mockAndroidLib) (ctx as FakeContext & { androidLib?: string }).androidLib = mockAndroidLib;
     created.push(ctx);
     return ctx;
@@ -73,7 +122,8 @@ vi.mock("llama.rn", () => ({
   // «llega» el resumen de dispositivos.
   getBackendDevicesInfo: async () => {
     if (backendGate) await backendGate;
-    return [{ backend: "CPU", type: "cpu", deviceName: "Probe" }];
+    if (mockBackendDevicesError) throw mockBackendDevicesError;
+    return mockBackendDevices ?? [{ backend: "CPU", type: "cpu", deviceName: "Probe" }];
   },
 }));
 // Bounty tanda 3: el CrashGuard persiste en un JSON junto a los
@@ -164,8 +214,12 @@ vi.mock("ram-monitor", () => ({
 }));
 // The integrity gate is covered by src/models/modelTrust.test.ts; here it
 // is stubbed so engine behavior is tested in isolation.
+// m-80: el stub ya no es «siempre válido» a ciegas — un test puede poner
+// mockTrustError y probar que la carga se niega antes de initLlama.
 vi.mock("../models/modelTrust", () => ({
-  assertTrustedModelFileByName: vi.fn(async () => {}),
+  assertTrustedModelFileByName: vi.fn(async () => {
+    if (mockTrustError) throw mockTrustError;
+  }),
 }));
 
 import { LlamaEngine, resolveSampling, SAMPLING_PRESETS, loadTimeSampling, LLAMA_CPP_SAMPLING_DEFAULTS } from "./LlamaEngine";
@@ -197,6 +251,16 @@ beforeEach(() => {
   pendingSessionWrites = [];
   backendGate = null;
   mockAndroidLib = null;
+  mockModelMetadata = {};
+  mockJinjaSupported = true;
+  mockStopVerdict = null;
+  mockCompletionError = null;
+  mockTrustError = null;
+  mockInitErrorFor = null;
+  mockBackendDevices = null;
+  mockBackendDevicesError = null;
+  mockStopCompletionThrows = false;
+  mockOmitJinja = false;
   resetBackgroundIndexingHold();
 });
 
@@ -323,7 +387,10 @@ describe("LlamaEngine load/unload", () => {
     await Promise.all([engine.load("models/a.gguf"), engine.load("models/b.gguf"), engine.load("models/a.gguf")]);
     expect(maxConcurrentInits).toBe(1);
     expect(live()).toHaveLength(1);
-    expect(live()[0].model).toBe("file:///docs/models/a.gguf");
+    // m-80: el doble ya no trae model como string (en llama.rn real es un
+    // objeto con metadata); la ruta cargada se comprueba en la llamada a
+    // initLlama, que es donde el camino se decide.
+    expect(initCalls[initCalls.length - 1].model).toBe("file:///docs/models/a.gguf");
     expect(engine.getModelInfo()?.filename).toBe("models/a.gguf");
   });
 
@@ -844,7 +911,9 @@ describe("Crash nativo M2+M3: registro de sesión y CrashGuard que aprende", () 
     await new Promise((r) => setTimeout(r, 10));
     const settled = readSession();
     expect(settled.generating).toBe(false);
-    expect(settled.backend).toBe("CPU/cpu/Probe");
+    // M-41: el resumen declara la ejecución (CPU, n_gpu_layers: 0) y los
+    // dispositivos como vistos — antes era solo la lista de dispositivos.
+    expect(settled.backend).toBe("ejecución CPU · vistos: CPU/cpu/Probe");
   });
 
   it("2026-11-13: el registro guarda la variante nativa real (context.androidLib) delante de los dispositivos", async () => {
@@ -857,7 +926,9 @@ describe("Crash nativo M2+M3: registro de sesión y CrashGuard que aprende", () 
     await engine.stop();
     await expect(gen).resolves.toBe("Hi");
     await new Promise((r) => setTimeout(r, 20));
-    expect(readSession().backend).toBe("lib librnllama_jni_v8_2_dotprod_i8mm.so · CPU/cpu/Probe");
+    expect(readSession().backend).toBe(
+      "lib librnllama_jni_v8_2_dotprod_i8mm.so · ejecución CPU · vistos: CPU/cpu/Probe",
+    );
   });
 
   it("H-10 E4 · el divorcio W4 curado: una escritura rechazada no deja la caché mintiendo — la siguiente generación parte del registro de DISCO", async () => {
@@ -890,22 +961,24 @@ describe("Crash nativo M2+M3: registro de sesión y CrashGuard que aprende", () 
 describe("Bounty tanda 8: la frase cortada", () => {
   it("una generación que consume su presupuesto devuelve el texto cerrado en frase completa", async () => {
     mockReplyText = "La primera frase está completa. La segunda quedó cort";
+    // m-80: el corte lo dice el veredicto nativo (stopped_limit), como en
+    // el aparato — la completion se asienta sola, sin stop() de por medio.
+    mockStopVerdict = { stopped_limit: 1 };
     const engine = new LlamaEngine();
     await engine.load("models/a.gguf");
     const gen = engine.generate({ prompt: "hola", nPredict: 1 });
-    await new Promise((r) => setTimeout(r, 30));
-    await engine.stop();
     await expect(gen).resolves.toBe("La primera frase está completa.");
     expect(engine.lastGenerationWasCut).toBe(true);
   });
 
   it("con presupuesto de sobra, el texto vuelve entero y sin marca de corte", async () => {
     mockReplyText = "La primera frase está completa. La segunda quedó cort";
+    // La generación termina sola (EOS): ni corte ni recorte, aunque el
+    // texto acabe sin punto — es la respuesta del modelo tal cual.
+    mockStopVerdict = { stopped_eos: true };
     const engine = new LlamaEngine();
     await engine.load("models/a.gguf");
     const gen = engine.generate({ prompt: "hola", nPredict: 64 });
-    await new Promise((r) => setTimeout(r, 30));
-    await engine.stop();
     await expect(gen).resolves.toBe("La primera frase está completa. La segunda quedó cort");
     expect(engine.lastGenerationWasCut).toBe(false);
   });
@@ -958,8 +1031,11 @@ describe("P1.2 sampling presets", () => {
   });
 
   it("loadTimeSampling: general.sampling.* del GGUF como strtol/strtof; si falta o no es un número, llama.cpp", () => {
-    expect(loadTimeSampling(undefined)).toEqual(LLAMA_CPP_SAMPLING_DEFAULTS);
-    expect(loadTimeSampling({})).toEqual({ topK: 40, topP: 0.95, minP: 0.05, repeatPenalty: 1.0 });
+    // M-36: el resultado trae además `declared` (vacío cuando el fichero
+    // no declara nada); los cuatro valores de relleno no cambian.
+    expect(loadTimeSampling(undefined)).toMatchObject(LLAMA_CPP_SAMPLING_DEFAULTS);
+    expect(loadTimeSampling(undefined).declared).toEqual({});
+    expect(loadTimeSampling({})).toMatchObject({ topK: 40, topP: 0.95, minP: 0.05, repeatPenalty: 1.0 });
     expect(
       loadTimeSampling({
         "general.sampling.top_k": "20",
@@ -967,7 +1043,14 @@ describe("P1.2 sampling presets", () => {
         "general.sampling.min_p": "0",
         "general.sampling.penalty_repeat": "1.05",
       }),
-    ).toEqual({ topK: 20, topP: 0.8, minP: 0, repeatPenalty: 1.05 });
+    ).toEqual({
+      topK: 20,
+      topP: 0.8,
+      minP: 0,
+      repeatPenalty: 1.05,
+      // M-36: los cuatro venían declarados y válidos — quedan en `declared`.
+      declared: { topK: 20, topP: 0.8, minP: 0, repeatPenalty: 1.05 },
+    });
     // strtol/strtof toman el número del principio; sin número, el valor por defecto.
     expect(loadTimeSampling({ "general.sampling.top_k": "64abc", "general.sampling.top_p": "x" })).toMatchObject({
       topK: 64,
@@ -1799,5 +1882,393 @@ describe("0.1.85: separación embeddings/CrashGuard (la indexación no castiga a
     const emb = new EmbeddingEngine();
     await expect(emb.load("models/embedding.gguf")).rejects.toThrow(/RAM/);
     expect(fsStore.get(GUARD)).toBe(before);
+  });
+});
+
+describe("M-36/m-72 (auditoría 2026-11-13): lo que el GGUF declara de sí mismo manda", () => {
+  it("loadTimeSampling lee la temperatura del fichero y separa lo declarado", () => {
+    const s = loadTimeSampling({
+      "general.sampling.temp": "0.35",
+      "general.sampling.top_k": "12",
+      "general.sampling.top_p": "0.9",
+    });
+    expect(s.declared.temperature).toBe(0.35);
+    expect(s.declared.topK).toBe(12);
+    expect(s.declared.topP).toBe(0.9);
+    expect(s.declared.minP).toBeUndefined();
+    expect(s.topK).toBe(12);
+    expect(s.topP).toBe(0.9);
+    // Lo no declarado se rellena con lo de llama.cpp, como siempre.
+    expect(s.minP).toBe(LLAMA_CPP_SAMPLING_DEFAULTS.minP);
+    expect(s.repeatPenalty).toBe(LLAMA_CPP_SAMPLING_DEFAULTS.repeatPenalty);
+  });
+
+  it("m-72: valores fuera de rango no llegan al nativo — cuentan como no declarados", () => {
+    const s = loadTimeSampling({
+      "general.sampling.top_k": "-3",
+      "general.sampling.top_p": "7.5",
+      "general.sampling.min_p": "1.7",
+      "general.sampling.penalty_repeat": "0",
+      "general.sampling.temp": "99",
+    });
+    expect(s.declared).toEqual({});
+    expect(s.topK).toBe(LLAMA_CPP_SAMPLING_DEFAULTS.topK);
+    expect(s.topP).toBe(LLAMA_CPP_SAMPLING_DEFAULTS.topP);
+    expect(s.minP).toBe(LLAMA_CPP_SAMPLING_DEFAULTS.minP);
+    expect(s.repeatPenalty).toBe(LLAMA_CPP_SAMPLING_DEFAULTS.repeatPenalty);
+  });
+
+  it("m-72: los bordes válidos sí cuentan (top_k 0 desactiva, temp 0 es greedy)", () => {
+    const s = loadTimeSampling({ "general.sampling.top_k": "0", "general.sampling.temp": "0" });
+    expect(s.declared.topK).toBe(0);
+    expect(s.declared.temperature).toBe(0);
+  });
+
+  it("resolveSampling: el fichero gana al catálogo; el preset y el llamante ganan al fichero", () => {
+    const file = { temperature: 0.9, topK: 7, topP: 0.5, minP: 0.2, repeatPenalty: 1.3 };
+    const catalog = { temperature: 0.2, topK: 80, topP: 0.8, repeatPenalty: 1.05 };
+    expect(resolveSampling({ fileDefaults: file, modelDefaults: catalog })).toEqual({
+      temperature: 0.9,
+      topK: 7,
+      topP: 0.5,
+      minP: 0.2,
+      repeatPenalty: 1.3,
+    });
+    // El preset factual fija temperatura/min_p/penalización: gana al fichero en lo suyo.
+    const withPreset = resolveSampling({ fileDefaults: file, modelDefaults: catalog, samplingPreset: "factual" });
+    expect(withPreset.temperature).toBe(0.3);
+    expect(withPreset.minP).toBe(0);
+    expect(withPreset.repeatPenalty).toBe(1.1);
+    expect(withPreset.topK).toBe(7); // el preset no fija top_k: manda el fichero
+    // El llamante gana a todas las capas.
+    expect(resolveSampling({ fileDefaults: file, modelDefaults: catalog, temperature: 0.42 }).temperature).toBe(0.42);
+    // Sin fichero, el catálogo sigue mandando como hasta ahora.
+    expect(resolveSampling({ modelDefaults: catalog }).temperature).toBe(0.2);
+  });
+
+  it("motor: la temperatura y el top_k del GGUF pisan la receta del catálogo (LFM2.5)", async () => {
+    mockModelMetadata = { "general.sampling.temp": "0.9", "general.sampling.top_k": "7" };
+    const engine = new LlamaEngine();
+    await engine.load("models/hf-liquidai-lfm2-5-8b-a1b-gguf-lfm2-5-8b-a1b-q4-k-m-gguf.gguf");
+    const reply = engine.generate({ messages: [{ role: "user", content: "hola" }] });
+    await engine.unload();
+    await expect(reply).resolves.toBe("Hi");
+    const params = created[0].lastParams as Record<string, unknown>;
+    // El catálogo dice 0.2/80: el fichero declara 0.9/7 y el fichero manda.
+    expect(params.temperature).toBe(0.9);
+    expect(params.top_k).toBe(7);
+    // Lo que el fichero calla sigue viniendo del catálogo.
+    expect(params.penalty_repeat).toBe(1.05);
+  });
+
+  it("motor: un top_p imposible del GGUF (7.5) no viaja al nativo", async () => {
+    mockModelMetadata = { "general.sampling.top_p": "7.5" };
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    const reply = engine.generate({ prompt: "hi" });
+    await engine.unload();
+    await expect(reply).resolves.toBe("Hi");
+    const params = created[0].lastParams as Record<string, unknown>;
+    expect(params.top_p).toBe(0.95);
+  });
+
+  it("m-80: si la puerta de confianza rechaza, la carga muere antes de initLlama", async () => {
+    mockTrustError = new Error("ModelNotTrustedError: sha mismatch");
+    const engine = new LlamaEngine();
+    await expect(engine.load("models/a.gguf")).rejects.toThrow(/sha mismatch/);
+    expect(initCalls).toHaveLength(0);
+    expect(engine.isLoaded).toBe(false);
+  });
+});
+
+describe("T-07: corte honesto (M-39), red de vacío (M-40) y bucle solo si se marcó (m-78)", () => {
+  const FRASES = "Primera frase completa. Segunda a media fr";
+
+  it("M-39: una parada del usuario recorta la frase a medias en el propio motor", async () => {
+    mockReplyText = FRASES;
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    const gen = engine.generate({ prompt: "hola" });
+    await new Promise((r) => setTimeout(r, 30));
+    await engine.stop();
+    await expect(gen).resolves.toBe("Primera frase completa.");
+    // El veredicto de tope sigue siendo el del motor: aquí no hubo tope.
+    expect(engine.lastGenerationWasCut).toBe(false);
+  });
+
+  it("M-39: un timeout también recorta la frase a medias", async () => {
+    mockReplyText = FRASES;
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    const gen = engine.generate({ prompt: "hola", timeoutMs: 10 });
+    await expect(gen).resolves.toBe("Primera frase completa.");
+  });
+
+  it("M-39: tras un corte, una generación que FALLA no deja el veredicto rancio", async () => {
+    mockReplyText = FRASES;
+    mockStopVerdict = { stopped_limit: 1 };
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    await expect(engine.generate({ prompt: "hola", nPredict: 1 })).resolves.toBe("Primera frase completa.");
+    expect(engine.lastGenerationWasCut).toBe(true);
+    // La siguiente generación muere con un error nativo: el veredicto de
+    // la anterior no puede sobrevivir como si fuera de esta.
+    mockStopVerdict = null;
+    mockCompletionError = new Error("native completion failed");
+    const gen = engine.generate({ prompt: "hola" });
+    await new Promise((r) => setTimeout(r, 30));
+    await engine.stop();
+    await expect(gen).rejects.toThrow(/native completion failed/);
+    expect(engine.lastGenerationWasCut).toBe(false);
+  });
+
+  it("M-40: un <think> sin cerrar no deja la respuesta vacía — se sirve el razonamiento", async () => {
+    mockReplyText = "<think>El razonamiento completo queda aquí. Y sigue pens";
+    mockStopVerdict = { stopped_limit: 1 };
+    const engine = new LlamaEngine();
+    await engine.load("models/hf-liquidai-lfm2-5-8b-a1b-gguf-lfm2-5-8b-a1b-q4-k-m-gguf.gguf");
+    await expect(engine.generate({ messages: [{ role: "user", content: "hola" }] })).resolves.toBe(
+      "El razonamiento completo queda aquí.",
+    );
+  });
+
+  it("M-40: si solo hay bloque de pensamiento y nada más, se sirve ese texto, no un vacío", async () => {
+    mockReplyText = "<think>pensando en voz alta</think>";
+    mockStopVerdict = { stopped_eos: true };
+    const engine = new LlamaEngine();
+    await engine.load("models/hf-liquidai-lfm2-5-8b-a1b-gguf-lfm2-5-8b-a1b-q4-k-m-gguf.gguf");
+    await expect(engine.generate({ messages: [{ role: "user", content: "hola" }] })).resolves.toBe(
+      "pensando en voz alta",
+    );
+  });
+
+  it("m-78: un texto que termina solo (EOS) no se recorta aunque su cola se repita", async () => {
+    // La cola repetida cumple los umbrales de la guarda, pero la
+    // generación terminó sola: ese texto es la respuesta del modelo y
+    // el motor no le inventa un «…» ni le quita un trozo.
+    mockReplyText = "El estribillo dice " + "ven aquí, ".repeat(12) + "y se acabó la canción.";
+    mockStopVerdict = { stopped_eos: true };
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    await expect(engine.generate({ prompt: "hola" })).resolves.toBe(mockReplyText);
+    expect(engine.lastGenerationLoopCut).toBe(false);
+  });
+
+  it("m-78: si la guarda marcó bucle en vivo, el asentado sí se recorta y queda registrado", async () => {
+    mockReplyText = "Ejemplos de plantas que conozco son " + "las aluminosas, ".repeat(30);
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    const gen = engine.generate({ prompt: "hola" });
+    await expect(gen).resolves.toBe("Ejemplos de plantas que conozco son las aluminosas…");
+    expect(engine.lastGenerationLoopCut).toBe(true);
+  });
+});
+
+describe("T-07: el diagnóstico dice lo que corrió (M-41/P-32)", () => {
+  const SESSION_PATH = "file:///docs/nido-native-session.json";
+  const readSession = (): NativeSessionRecord =>
+    JSON.parse(fsStore.get(SESSION_PATH)!) as NativeSessionRecord;
+
+  it("con GPU «disponible» el registro dice ejecución CPU y dispositivos vistos", async () => {
+    mockAndroidLib = "libggml-opencl.so";
+    mockBackendDevices = [
+      { backend: "OpenCL", type: "gpu", deviceName: "Adreno 750" },
+      { backend: "CPU", type: "cpu", deviceName: "Probe" },
+    ];
+    mockStopVerdict = { stopped_eos: true };
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    await engine.generate({ prompt: "hola" });
+    await new Promise((r) => setTimeout(r, 40));
+    const backend = readSession().backend ?? "";
+    expect(backend).toContain("lib libggml-opencl.so");
+    expect(backend).toContain("ejecución CPU");
+    expect(backend).toContain("vistos: OpenCL/gpu/Adreno 750");
+    expect(backend).not.toMatch(/^OpenCL/);
+  });
+
+  it("P-32: si la sonda de dispositivos falla, el diagnóstico NO queda vacío para siempre", async () => {
+    mockBackendDevicesError = new Error("sin sonda");
+    mockStopVerdict = { stopped_eos: true };
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    await engine.generate({ prompt: "hola" });
+    await new Promise((r) => setTimeout(r, 40));
+    // Sin librería ni dispositivos, lo que ejecutó (CPU) sí se sabe.
+    expect(readSession().backend).toContain("ejecución CPU");
+  });
+
+  it("P-32: con muchos dispositivos el resumen no corta un nombre por la mitad", async () => {
+    mockBackendDevices = Array.from({ length: 12 }, (_, i) => ({
+      backend: "OpenCL",
+      type: "gpu",
+      deviceName: `DispositivoConUnNombreLargo${i}`,
+    }));
+    mockStopVerdict = { stopped_eos: true };
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    await engine.generate({ prompt: "hola" });
+    await new Promise((r) => setTimeout(r, 40));
+    const backend = readSession().backend ?? "";
+    expect(backend.length).toBeLessThanOrEqual(200);
+    expect(backend).toMatch(/\+\d+ más/);
+    // Cada nombre presente aparece ENTERO como entrada: ninguno partido.
+    const vistosPart = backend.split("vistos: ")[1]?.replace(/ · \+\d+ más$/, "") ?? "";
+    expect(vistosPart.length).toBeGreaterThan(0);
+    for (const entry of vistosPart.split(", ")) {
+      expect(entry).toMatch(/^OpenCL\/gpu\/DispositivoConUnNombreLargo\d+$/);
+    }
+  });
+});
+
+describe("T-07: cascada de carga (m-73), validación de generación (m-74) y contexto sospechoso (m-79)", () => {
+  it("m-73: un error que nombra el fichero aborta la cascada al primer perfil", async () => {
+    rejectInit = () => true;
+    mockInitErrorFor = () => "llama_model_load: failed to load model (gguf): bad magic";
+    const engine = new LlamaEngine();
+    await expect(engine.load("models/a.gguf")).rejects.toThrow(/bad magic/);
+    expect(initCalls).toHaveLength(1);
+  });
+
+  it("m-73: el error final conserva la causa del primer perfil además de la del último", async () => {
+    rejectInit = () => true;
+    mockInitErrorFor = (_p, attempt) => `fallo del intento ${attempt}`;
+    const engine = new LlamaEngine();
+    const err = await engine.load("models/a.gguf").catch((e) => e);
+    expect(initCalls).toHaveLength(3);
+    expect(String(err?.message)).toContain("fallo del intento 3");
+    expect(String(err?.message)).toContain("fallo del intento 1");
+  });
+
+  it("m-74: nPredict que no es un entero positivo se rechaza antes de tocar el nativo", async () => {
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    await expect(engine.generate({ prompt: "hola", nPredict: 0 })).rejects.toThrow(/nPredict/);
+    await expect(engine.generate({ prompt: "hola", nPredict: -3 })).rejects.toThrow(/nPredict/);
+    await expect(engine.generate({ prompt: "hola", nPredict: 2.5 })).rejects.toThrow(/nPredict/);
+    expect(created[0].lastParams).toBeUndefined();
+  });
+
+  it("m-74: un prompt que no cabe en el contexto se rechaza con la cuenta, no a media generación", async () => {
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf", { nCtx: 128 });
+    await expect(engine.generate({ prompt: "x".repeat(600) })).rejects.toThrow(/no cabe|contexto/);
+    expect(created[0].lastParams).toBeUndefined();
+    // Y uno que sí cabe sigue su camino.
+    mockStopVerdict = { stopped_eos: true };
+    await expect(engine.generate({ prompt: "hola" })).resolves.toBe("Hi");
+  });
+
+  it("m-79: si la carga nueva falla, el modelo anterior vuelve a quedar residente", async () => {
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    rejectInit = (p) => String(p.model).includes("b.gguf");
+    await expect(engine.load("models/b.gguf")).rejects.toThrow(/Failed to load/);
+    expect(engine.isLoaded).toBe(true);
+    expect(engine.getModelInfo()?.filename).toBe("models/a.gguf");
+  });
+
+  it("m-79: tras una generación fallida, la siguiente recrea el contexto en vez de reutilizarlo", async () => {
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    mockCompletionError = new Error("native completion failed");
+    const gen = engine.generate({ prompt: "hola" });
+    await new Promise((r) => setTimeout(r, 30));
+    await engine.stop();
+    await expect(gen).rejects.toThrow(/native completion failed/);
+    mockCompletionError = null;
+    mockStopVerdict = { stopped_eos: true };
+    await expect(engine.generate({ prompt: "hola" })).resolves.toBe("Hi");
+    // El contexto sospechoso se liberó y se creó otro para el mismo modelo.
+    expect(created).toHaveLength(2);
+    expect(created[0].released).toBe(true);
+  });
+});
+
+describe("T-07: parada defensiva (m-76), plantilla sin Jinja (P-33) y paradas por defecto (P-34)", () => {
+  it("m-76: stop() no propaga un fallo del stopCompletion nativo", async () => {
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    mockStopCompletionThrows = true;
+    await expect(engine.stop()).resolves.toBeUndefined();
+    // Y la generación en vuelo se asienta igual cuando el temporizador manda.
+    mockStopVerdict = { stopped_eos: true };
+    await expect(engine.generate({ prompt: "hola", timeoutMs: 5 })).resolves.toBe("Hi");
+  });
+
+  it("P-33: un contexto sin isJinjaSupported no revienta hasEmbeddedChatTemplate", async () => {
+    mockOmitJinja = true;
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(engine.hasEmbeddedChatTemplate()).toBe(false);
+  });
+
+  it("P-33: con Jinja declarado, la respuesta sigue al nativo", async () => {
+    mockJinjaSupported = false;
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(engine.hasEmbeddedChatTemplate()).toBe(false);
+    const engine2 = new LlamaEngine();
+    await engine2.load("models/a.gguf");
+    expect(engine2.hasEmbeddedChatTemplate()).toBe(false); // mockJinjaSupported sigue en false
+  });
+
+  it("P-34: la ruta messages también nace con red de paradas (Assistant:/Answer:)", async () => {
+    mockStopVerdict = { stopped_eos: true };
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    await engine.generate({ messages: [{ role: "user", content: "hola" }] });
+    const stop = (created[0].lastParams as { stop?: string[] }).stop ?? [];
+    expect(stop).toContain("\nAssistant:");
+    expect(stop).toContain("\nAnswer:");
+    expect(stop).toContain("\nUser:");
+  });
+
+  it("P-34: la ruta prompt incluye los marcadores nuevos", async () => {
+    mockStopVerdict = { stopped_eos: true };
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    await engine.generate({ prompt: "hola" });
+    const stop = (created[0].lastParams as { stop?: string[] }).stop ?? [];
+    expect(stop).toContain("\nAssistant:");
+    expect(stop).toContain("\nAnswer:");
+  });
+});
+
+describe("T-07: la cola de generaciones tiene cota y plazo (P-15)", () => {
+  it("la novena generación en línea se rechaza al momento, no espera a la cadena", async () => {
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    const pending: Array<Promise<string>> = [];
+    for (let i = 0; i < 8; i++) {
+      const p = engine.generate({ prompt: "hola" });
+      p.catch(() => {});
+      pending.push(p);
+    }
+    await expect(engine.generate({ prompt: "hola" })).rejects.toThrow(/en línea|cola/);
+    await engine.unload();
+    await Promise.allSettled(pending);
+  });
+
+  it("una generación que espera más del plazo en la cola muere al llegar su turno", async () => {
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    const first = engine.generate({ prompt: "hola" });
+    first.catch(() => {});
+    const second = engine.generate({ prompt: "hola" });
+    second.catch(() => {});
+    // El reloj salta 16 minutos mientras la segunda espera su turno.
+    const realNow = Date.now;
+    let offset = 0;
+    const spy = vi.spyOn(Date, "now").mockImplementation(() => realNow() + offset);
+    try {
+      offset = 16 * 60_000;
+      await new Promise((r) => setTimeout(r, 30));
+      await engine.stop(); // la primera se asienta; la segunda llega a su turno
+      await expect(second).rejects.toThrow(/espera|plazo/);
+      await expect(first).resolves.toBe("Hi");
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

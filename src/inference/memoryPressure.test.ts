@@ -76,3 +76,36 @@ describe("handleMemoryPressure (optimización 2026-11-08, fase 5)", () => {
     expect(calls).toEqual(["embedding"]);
   });
 });
+
+describe("P-36 (auditoría 2026-11-13, F3-18): el nivel del evento manda", () => {
+  it("nivel de fondo (40/60/80) sin generar: no se descarga nada", async () => {
+    for (const level of [40, 60, 80]) {
+      const { engines, calls } = fakeEngines(true, true);
+      await handleMemoryPressure({ generating: false }, engines, level);
+      expect(calls).toEqual([]);
+    }
+  });
+
+  it("nivel UI_HIDDEN (20) generando: no se pide ni la parada — la respuesta sigue en segundo plano", async () => {
+    const { engines, calls } = fakeEngines(true, true);
+    const stop = vi.fn(async () => {
+      calls.push("stop");
+    });
+    engines.llm.stop = stop;
+    await handleMemoryPressure({ generating: true }, engines, 20);
+    expect(stop).not.toHaveBeenCalled();
+    expect(calls).toEqual([]);
+  });
+
+  it("nivel RUNNING_CRITICAL (15): la política actúa como siempre", async () => {
+    const { engines, calls } = fakeEngines(true, true);
+    await handleMemoryPressure({ generating: false }, engines, 15);
+    expect(calls).toEqual(["llm", "embedding"]);
+  });
+
+  it("sin nivel (llamantes viejos): la política actúa como siempre", async () => {
+    const { engines, calls } = fakeEngines(true, true);
+    await handleMemoryPressure({ generating: false }, engines, undefined);
+    expect(calls).toEqual(["llm", "embedding"]);
+  });
+});
