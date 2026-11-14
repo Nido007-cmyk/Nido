@@ -222,3 +222,78 @@ export function summarizePackMeta(meta: Record<string, string>): PackMetaSummary
     name,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Row caps and the internal-schema check (M-35: m-91 y P-39/B7)
+// ---------------------------------------------------------------------------
+
+/**
+ * Row caps for a pack's content tables, enforced in two places with the
+ * same numbers: the signed door rejects a pack above them (m-91) and
+ * openPack refuses to open one above them however it arrived (P-39) —
+ * the import byte cap (512 MB) alone bounds bytes, not the indexing
+ * work a pathological row count can demand at open time.
+ *
+ * Grounding (2026-11-14): the largest pack this house ships, the
+ * Wikipedia Vital pack, is ~156 MB and carries on the order of 10^5
+ * chunks; the real guide packs carry 174 guides (Esencial), 69 regions
+ * and 155 facts (NIDO Local). Every cap sits far above those numbers —
+ * they exist to stop a signed-but-absurd file, never to squeeze a real
+ * pack.
+ */
+export const PACK_MAX_CHUNKS = 1_000_000;
+export const PACK_MAX_GUIDES = 100_000;
+export const PACK_MAX_REGIONS = 10_000;
+export const PACK_MAX_FACTS = 100_000;
+
+/** A pack's internal schema as the door and the open path read it. */
+export interface PackSchemaDescriptor {
+  /** Column names per table; a table absent from the map does not exist. */
+  tables: Record<string, string[]>;
+  /** Row counts per content table (0 when the table does not exist). */
+  counts: { chunks: number; guides: number; regions: number; facts: number };
+}
+
+/**
+ * The tables and columns the readers actually select (rag/packs.ts):
+ * meta and chunks at every format version; chunks' guide/keys link and
+ * the guides/regions/facts tables from format v2 on. A pack whose
+ * signed bytes declare a fine meta but lack what the readers query is
+ * not a knowledge pack (m-91: the door used to validate the meta only).
+ */
+const PACK_SCHEMA_REQUIRED: Record<number, Record<string, string[]>> = {
+  1: {
+    meta: ["key", "value"],
+    chunks: ["id", "title", "body", "source", "vec"],
+  },
+  2: {
+    meta: ["key", "value"],
+    chunks: ["id", "title", "body", "source", "vec", "guide", "keys"],
+    guides: ["id", "key", "lang", "title", "category", "region", "sources", "verified"],
+    regions: ["code", "names", "aliases", "phrases"],
+    facts: ["region", "key", "value", "label", "note", "source_title", "source_url", "quote", "checked"],
+  },
+};
+
+/**
+ * True when the pack's internal schema is one the readers can use:
+ * every required table and column present, at least one chunk of
+ * content, and no row count above the caps. Format versions above 2
+ * are judged by the v2 shape until a newer one is defined.
+ */
+export function validatePackSchema(formatVersion: number, schema: PackSchemaDescriptor): boolean {
+  const required = PACK_SCHEMA_REQUIRED[formatVersion >= 2 ? 2 : 1];
+  for (const [table, columns] of Object.entries(required)) {
+    const present = schema.tables[table];
+    if (!present) return false;
+    for (const column of columns) {
+      if (!present.includes(column)) return false;
+    }
+  }
+  const { chunks, guides, regions, facts } = schema.counts;
+  if (!Number.isFinite(chunks) || chunks < 1 || chunks > PACK_MAX_CHUNKS) return false;
+  if (!Number.isFinite(guides) || guides < 0 || guides > PACK_MAX_GUIDES) return false;
+  if (!Number.isFinite(regions) || regions < 0 || regions > PACK_MAX_REGIONS) return false;
+  if (!Number.isFinite(facts) || facts < 0 || facts > PACK_MAX_FACTS) return false;
+  return true;
+}
