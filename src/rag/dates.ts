@@ -436,10 +436,15 @@ const NOT_TOPIC = new Set([
   "fue", "son", "esta", "that", "this", "with", "from",
 ]);
 
+// Los parentescos cortos son tema aunque no lleguen a 4 letras: sin
+// ellos «pai»/«mãe» (pt) y «mom»/«dad» (en) no distinguían a nadie,
+// mientras «padre»/«madre» sí (paridad es/en/pt de R8).
+const SHORT_TOPIC = new Set(["pai", "mae", "avo", "tio", "tia", "mom", "dad"]);
+
 function topicRoots(sentence: string): Set<string> {
   const roots = new Set<string>();
   for (const raw of fold(sentence).split(/[^a-z0-9]+/)) {
-    if (raw.length < 4 || NOT_TOPIC.has(raw) || /^\d+$/.test(raw)) continue;
+    if ((raw.length < 4 && !SHORT_TOPIC.has(raw)) || NOT_TOPIC.has(raw) || /^\d+$/.test(raw)) continue;
     roots.add(raw.replace(/(es|s)$/, "").slice(0, 6));
   }
   return roots;
@@ -468,6 +473,16 @@ function dateSegments(sentence: string, mentions: readonly DateMention[]): strin
     cursor = end;
   }
   return out;
+}
+
+/** ¿Empieza el tramo con el núcleo elidido? «el de mi padre», «o do meu pai», «my father's is». */
+function isEllipticalDateSegment(segment: string): boolean {
+  const t = fold(segment).replace(/^[\s,;:]+/, "");
+  return (
+    /^(?:(?:y|e|and)\s+)?(?:el|la|los|las|o|a|os|as)\s+(?:de|del|do|da|dos|das)\b/.test(t) ||
+    /^(?:and\s+)?(?:[a-z]+\s+){0,2}[a-z]+['’]s\s+(?:is|are|was|will be)\b/.test(t) ||
+    /^(?:and\s+)?the one (?:for|of)\b/.test(t)
+  );
 }
 
 function sharesTopicRoot(a: string, b: string): boolean {
@@ -717,21 +732,44 @@ export function dateConflictForSentence(
     const segs = dateSegments(s.text, s.mentions);
     return s.mentions.map((m, i) => ({ m, sentence: s.text, segment: segs ? segs[i] : s.text }));
   });
+  //
+  // Y el evento elidido («El cumpleaños de mi madre es el 4 de mayo.
+  // El de mi padre es el 9 de agosto»): el tramo elíptico («el de…»,
+  // «o do…», «my father's is…») hereda el tema del tramo anterior a
+  // medio peso, y el emparejamiento ya no es «comparte tema» sino
+  // «comparte el MÁXIMO tema»: la fecha exacta absuelve solo si su
+  // tramo está entre los de mayor solapamiento con la respuesta, y
+  // las fechas emparejadas son las de esos tramos. Sin herencia los
+  // pesos son enteros y, con un solo evento por tema, el resultado
+  // es el de antes.
+  const ownRoots = srcSeg.map(({ segment }) => topicRoots(segment));
+  const inherited = srcSeg.map(({ segment }, i) =>
+    i > 0 && isEllipticalDateSegment(segment) ? ownRoots[i - 1] : new Set<string>(),
+  );
+  const ansRoots = topicRoots(answerSentence);
+  const overlap = (i: number): number => {
+    let n = 0;
+    for (const r of ansRoots) n += ownRoots[i].has(r) ? 1 : inherited[i].has(r) ? 0.5 : 0;
+    return n;
+  };
+  const scores = srcSeg.map((_, i) => overlap(i));
+  const best = Math.max(0, ...scores);
   for (const a of ans) {
     if (a.kind !== "calendario" || a.num) continue;
     const ad = domOf(a);
     const am = monOf(a);
     if (ad === null || am === null) continue;
-    if (srcSeg.some(({ m, segment }) => domOf(m) === ad && monOf(m) === am && sharesTopicRoot(answerSentence, segment))) continue;
+    if (best === 0) continue;
+    if (srcSeg.some(({ m }, i) => domOf(m) === ad && monOf(m) === am && scores[i] === best)) continue;
     const pairedDates = new Map<string, { d: number; m: number; sentence: string }>();
-    for (const { m, sentence, segment } of srcSeg) {
-      if (m.kind !== "calendario" || m.num) continue;
+    srcSeg.forEach(({ m, sentence }, i) => {
+      if (m.kind !== "calendario" || m.num) return;
       const sd = domOf(m);
       const sm = monOf(m);
-      if (sd === null || sm === null) continue;
-      if (!sharesTopicRoot(answerSentence, segment)) continue;
+      if (sd === null || sm === null) return;
+      if (scores[i] !== best) return;
       pairedDates.set(`${sd}-${sm}`, { d: sd, m: sm, sentence });
-    }
+    });
     if (pairedDates.size !== 1) continue;
     const only = [...pairedDates.values()][0]!;
     if (only.d !== ad || only.m !== am) return { kind: "nombrada", sourceSentence: only.sentence };

@@ -50,18 +50,43 @@ describe("AUD97-1: la fecha de OTRO evento de la fuente ya no se sella (es/en/pt
     }
   });
 
-  // Residuo declarado: con el evento elidido en la fuente («El de mi
-  // padre…») el tema compartido («cumpleaños») cae en la frase del otro
-  // evento y la absuelve. it.fails estricto: si un día pasa, avisa.
-  it.fails("residuo: el evento elidido en la fuente («el de mi padre») no se separa", () => {
-    const r = verifyGroundedAnswer(
-      "El cumpleaños de mi padre es el 4 de mayo.",
-      [chunk("El cumpleaños de mi madre es el 4 de mayo. El de mi padre es el 9 de agosto.")],
-      "es",
-      "¿Cuándo es el cumpleaños de mi padre?",
-      REF,
-    );
-    expect(served(r, "El cumpleaños de mi padre es el 4 de mayo.")).toBe(false);
+  // El evento elidido en la fuente («El de mi padre…»): el tramo
+  // elíptico hereda el tema del anterior a medio peso (es/en/pt).
+  describe("el evento elidido en la fuente", () => {
+    const SRC = {
+      es: "El cumpleaños de mi madre es el 4 de mayo. El de mi padre es el 9 de agosto.",
+      en: "My mother's birthday is May 4. My father's is August 9.",
+      pt: "O aniversário da minha mãe é 4 de maio. O do meu pai é 9 de agosto.",
+      "es-compuesta": "El cumpleaños de mi madre es el 4 de mayo y el de mi padre el 9 de agosto.",
+    } as const;
+    const BAD: Array<[keyof typeof SRC, string, "es" | "en" | "pt", string]> = [
+      ["es", "El cumpleaños de mi padre es el 4 de mayo.", "es", "¿Cuándo es el cumpleaños de mi padre?"],
+      ["es", "El cumpleaños de mi madre es el 9 de agosto.", "es", "¿Cuándo es el cumpleaños de mi madre?"],
+      ["en", "My father's birthday is May 4.", "en", "When is my father's birthday?"],
+      ["en", "My mother's birthday is August 9.", "en", "When is my mother's birthday?"],
+      ["pt", "O aniversário do meu pai é 4 de maio.", "pt", "Quando é o aniversário do meu pai?"],
+      ["pt", "O aniversário da minha mãe é 9 de agosto.", "pt", "Quando é o aniversário da minha mãe?"],
+      ["es-compuesta", "El cumpleaños de mi padre es el 4 de mayo.", "es", "¿Cuándo es el cumpleaños de mi padre?"],
+    ];
+    for (const [k, ans, lang, q] of BAD) {
+      it(`sonda ${k}: «${ans}» no sale sellada`, () => {
+        const r = verifyGroundedAnswer(ans, [chunk(SRC[k])], lang, q, REF);
+        expect(served(r, ans), r.text).toBe(false);
+      });
+    }
+    const OK: Array<[keyof typeof SRC, string, "es" | "en" | "pt", string]> = [
+      ["es", "El cumpleaños de mi madre es el 4 de mayo.", "es", "¿Cuándo es el cumpleaños de mi madre?"],
+      ["es", "El cumpleaños de mi padre es el 9 de agosto.", "es", "¿Cuándo es el cumpleaños de mi padre?"],
+      ["en", "My father's birthday is August 9.", "en", "When is my father's birthday?"],
+      ["pt", "O aniversário do meu pai é 9 de agosto.", "pt", "Quando é o aniversário do meu pai?"],
+      ["es-compuesta", "El cumpleaños de mi padre es el 9 de agosto.", "es", "¿Cuándo es el cumpleaños de mi padre?"],
+    ];
+    for (const [k, ans, lang, q] of OK) {
+      it(`fiel ${k}: «${ans}» sigue fundada`, () => {
+        const r = verifyGroundedAnswer(ans, [chunk(SRC[k])], lang, q, REF);
+        expect(r.status, r.text).toBe("grounded");
+      });
+    }
   });
 });
 
