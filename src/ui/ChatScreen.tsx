@@ -317,6 +317,21 @@ export function ChatScreen({
   const [loadStatus, setLoadStatus] = useState<string | null>(t("chatScreen.initializingCore"));
   const [loadError, setLoadError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  // F3-16 (auditoría 2026-11-13): el espejo en ref de `generating`
+  // vive AQUÍ y se actualiza de forma SÍNCRONA en el mismo gesto que
+  // el estado, vía setGeneratingNow. Hasta la 0.1.98 lo sincronizaba
+  // un efecto tras el render: entre el setState y el efecto, el
+  // listener de presión de memoria (y los pulsos de inactividad)
+  // podían leer el valor anterior — una generación recién nacida se
+  // leía como «sin generar» y la presión descargaba los motores bajo
+  // la respuesta en vuelo, o al revés, una ya asentada se leía como
+  // viva y la presión no actuaba. La declaración estaba además muy
+  // por debajo de sus lectores; aquí queda junto a su estado.
+  const generatingRef = useRef(false);
+  const setGeneratingNow = (value: boolean) => {
+    generatingRef.current = value;
+    setGenerating(value);
+  };
   const [showPromptIdeas, setShowPromptIdeas] = useState(false);
   // 0.1.14: guía de usuario y onboarding de primera vez.
   const [showGuide, setShowGuide] = useState(false);
@@ -718,6 +733,17 @@ export function ChatScreen({
       // presión del aparato antes de cargar — batería y temperatura
       // de ahora, no las de un arranque anterior.
       refreshDevicePressure();
+      // F3-13 (auditoría 2026-11-13): el cruce de la sesión nativa
+      // corre AQUÍ, al abrir el arranque — antes de cargar el
+      // embedding, sembrar e indexar. Hasta la 0.1.98 esperaba a la
+      // primera carga del LLM (que desde las fases 1/4 es bajo
+      // demanda y puede tardar minutos), así que el apagado del
+      // indexado de fondo tras una muerte generando llegaba tarde a
+      // su propia sesión: el fondo arrancaba a plena residencia
+      // justo en el aparato que acababa de morir por memoria. El
+      // método es a prueba de fallos; la primera carga lo encuentra
+      // ya hecho y no lo repite.
+      await llamaEngine.crossNativeSessionAtStartup();
       const llm = await resolveActiveModel("llm");
       const emb = await resolveActiveModel("embedding");
       setActiveModel(llm);
@@ -842,7 +868,9 @@ export function ChatScreen({
   // de 30 s decide con la política pura; el paso a segundo plano se
   // anota y al volver, si duró más que el umbral y no hay generación,
   // se descarga el LLM; la presión de memoria del sistema descarga
-  // los dos motores salvo que se esté generando.
+  // los dos motores sin generación en vuelo, y generando pide la
+  // parada limpia de la respuesta (F3-04: el parcial se asienta y la
+  // residencia se cede en el siguiente evento).
   useEffect(() => {
     const LLM_IDLE_MS = 180_000;
     const EMBED_IDLE_MS = 600_000;
@@ -877,8 +905,14 @@ export function ChatScreen({
         }
       }
     });
-    const pressureSub = addMemoryPressureListener(() => {
-      void handleMemoryPressure({ generating: generatingRef.current }, { llm: llamaEngine, embedding: embeddingEngine });
+    const pressureSub = addMemoryPressureListener((event) => {
+      // P-36: el nivel del evento viaja al manejador — los niveles de
+      // fondo/UI oculta no paran la generación ni descargan motores.
+      void handleMemoryPressure(
+        { generating: generatingRef.current },
+        { llm: llamaEngine, embedding: embeddingEngine },
+        event?.level,
+      );
     });
     return () => {
       clearInterval(id);
@@ -888,10 +922,8 @@ export function ChatScreen({
   }, []);
 
 
-  const generatingRef = useRef(false);
-  useEffect(() => {
-    generatingRef.current = generating;
-  }, [generating]);
+  // (El espejo generatingRef vive junto al estado `generating`,
+  // arriba: se actualiza síncrono vía setGeneratingNow — F3-16.)
 
   // Development builds only: pick up an evaluation request written over adb
   // by scripts/eval-device.mjs (see src/eval/deviceEvalRequest.ts). Waits
@@ -931,7 +963,7 @@ export function ChatScreen({
         const { getDueTasks } = await import("../agent/scheduled/taskStore");
         if ((await getDueTasks()).length === 0) return;
         if (!llamaEngine.isLoaded) return;
-        setGenerating(true);
+        setGeneratingNow(true);
         const { runScheduledTasksNow } = await import("../agent/scheduled/runScheduled");
         await runScheduledTasksNow({
           engine: llamaEngine,
@@ -951,7 +983,7 @@ export function ChatScreen({
       } catch {
         // Una pasada fallida se reintenta en la siguiente revisión.
       } finally {
-        setGenerating(false);
+        setGeneratingNow(false);
         sendGuardRef.current.release();
       }
     };
@@ -1143,7 +1175,7 @@ export function ChatScreen({
     // lo que causaba cierre inmediato del app al enviar la sugerencia
     // de recordatorio recién abierto el chat.
     if (!query || generating || !ready) return;
-    // N3 (2026-09-28): synchronous in-flight guard. `setGenerating(true)` is
+    // N3 (2026-09-28): synchronous in-flight guard. `setGeneratingNow(true)` is
     // batched, so two taps in the same tick both see stale `generating ===
     // false` through the closure. The ref is set synchronously here, before
     // any await, so the second tap observes the first and bails out. Release
@@ -1209,7 +1241,7 @@ export function ChatScreen({
     if (override) stagedRef.current = null;
     updateInput(override?.draft ?? "", "typed");
     setStaged(null);
-    setGenerating(true);
+    setGeneratingNow(true);
     stopRequestedRef.current = false;
 
     let sessionId = activeSessionId;
@@ -1358,7 +1390,7 @@ export function ChatScreen({
         await refreshSessions();
       }
       await pruneSessions(kbSettings.maxSavedSessions);
-      setGenerating(false);
+      setGeneratingNow(false);
       setStopping(false);
       setProcessing(null);
       setLiveTokPerSec(null);
@@ -1674,7 +1706,7 @@ export function ChatScreen({
         // aquí: el pipeline de chat sigue con el turno vivo y su propio
         // finally es quien lo cierra.
         if (!divertedToChatNet) {
-          setGenerating(false);
+          setGeneratingNow(false);
           setStopping(false);
           setProcessing(null);
           setLiveTokPerSec(null);
@@ -2144,7 +2176,16 @@ export function ChatScreen({
         // se agotó el presupuesto) no enseña una frase a medias.
         let finalText = guideAnswered
           ? assistantText
-          : trimToCompleteSentences(trimRepetitionLoop(assistantText), wasStopped || llamaEngine.lastGenerationWasCut);
+          : trimToCompleteSentences(
+              // m-78 (F2-m7): el recorte de bucle sobre lo transmitido
+              // solo si la guarda marcó bucle en ESTA generación (el
+              // motor lo deja en lastGenerationLoopCut) — la misma
+              // regla que el motor aplica a su texto asentado. Sin la
+              // marca, lo transmitido es la respuesta íntegra aunque
+              // su cola se repita.
+              llamaEngine.lastGenerationLoopCut ? trimRepetitionLoop(assistantText) : assistantText,
+              wasStopped || llamaEngine.lastGenerationWasCut,
+            );
         if (guideAnswered) {
           // Verbatim guide text: nothing to verify or trim. Every sentence is the guide's (R1).
           provenance = guideAnswerProvenance(finalText);
@@ -2450,7 +2491,7 @@ export function ChatScreen({
         errorMessage: e?.message ?? String(e),
       }).catch(() => {});
     } finally {
-      setGenerating(false);
+      setGeneratingNow(false);
       setStopping(false);
       setProcessing(null);
       setLiveTokPerSec(null);

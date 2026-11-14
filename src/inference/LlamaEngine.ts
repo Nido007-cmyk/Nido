@@ -30,7 +30,7 @@ import {
 import { assertTrustedModelFileByName } from "../models/modelTrust";
 import { MODEL_CATALOG, type CatalogModel } from "../models/manifest";
 import { contextCeilingForDevice } from "../models/defaultModel";
-import { currentDevicePressure } from "./devicePressure";
+import { currentDevicePressure, refreshDevicePressure } from "./devicePressure";
 import { withStage } from "../utils/stageError";
 import { recordInferenceEvent, recordRamRejection, type TelemetryStopReason } from "./telemetry";
 import { findRepetitionLoop, trimRepetitionLoop } from "./repetitionGuard";
@@ -39,6 +39,7 @@ import { trimToCompleteSentences } from "./completeSentences";
 import { parseGemmaReasoning } from "./gemmaReasoning";
 import type { ModelSamplingDefaults } from "../routing/types";
 import { generationHitLimit, type NativeStopSignals } from "./generationCut";
+import { estimateTokens } from "../agent/loop/contextBudget";
 
 export interface ChatMessageInput {
   role: string;
@@ -159,10 +160,17 @@ export const SAMPLING_PRESETS: Record<SamplingPresetName, SamplingPreset> = {
 /**
  * Resolve sampling into concrete params. Pure — unit tested.
  * Precedence, highest first: explicit caller values → per-task preset
- * → the loaded model's manufacturer defaults (ModelCapabilities.
- * sampling, estudio de modelos 2026-10-12) → built-in defaults. The
- * model layer exists because presets never set topK/topP: without it,
- * every manufacturer's published recipe was silently dropped.
+ * → the GGUF's own declared sampling (general.sampling.*, M-36) →
+ * the catalog's transcription of the manufacturer's recipe
+ * (ModelCapabilities.sampling, estudio de modelos 2026-10-12) →
+ * built-in defaults.
+ *
+ * M-36 (auditoría 2026-11-13, F2-M1): hasta la 0.1.98 el catálogo
+ * pisaba lo que el propio fichero declara de sí mismo y la temperatura
+ * del fichero ni se leía — #257 quedó cumplido solo como fallback y
+ * nunca para la temperatura. La doctrina de la casa es que lo que el
+ * modelo declara de sí mismo manda sobre la transcripción manual: el
+ * catálogo queda como red cuando el GGUF calla.
  */
 export function resolveSampling(opts: {
   temperature?: number;
@@ -172,15 +180,17 @@ export function resolveSampling(opts: {
   repeatPenalty?: number;
   samplingPreset?: SamplingPresetName;
   modelDefaults?: ModelSamplingDefaults;
+  fileDefaults?: FileSamplingDefaults;
 }): { temperature: number; topK?: number; topP?: number; minP?: number; repeatPenalty?: number } {
   const preset = opts.samplingPreset ? SAMPLING_PRESETS[opts.samplingPreset] : undefined;
   const model = opts.modelDefaults;
+  const file = opts.fileDefaults;
   return {
-    temperature: opts.temperature ?? preset?.temperature ?? model?.temperature ?? 0.7,
-    topK: opts.topK ?? model?.topK,
-    topP: opts.topP ?? model?.topP,
-    minP: opts.minP ?? preset?.minP,
-    repeatPenalty: opts.repeatPenalty ?? preset?.repeatPenalty ?? model?.repeatPenalty,
+    temperature: opts.temperature ?? preset?.temperature ?? file?.temperature ?? model?.temperature ?? 0.7,
+    topK: opts.topK ?? file?.topK ?? model?.topK,
+    topP: opts.topP ?? file?.topP ?? model?.topP,
+    minP: opts.minP ?? preset?.minP ?? file?.minP,
+    repeatPenalty: opts.repeatPenalty ?? preset?.repeatPenalty ?? file?.repeatPenalty ?? model?.repeatPenalty,
   };
 }
 
@@ -192,13 +202,14 @@ export function resolveSampling(opts: {
  * llama.rn arma cada completion sobre ctx->params.sampling, que es el
  * estado del contexto: cada parámetro que la petición no trae conserva el
  * valor de la completion anterior (cpp/jsi/JSIParams.cpp,
- * parseCompletionParams; igual en rc.7, rc.9 y rc.10). Una llamada sin
+ * parseCompletionParams; igual en rc.7, rc.9, rc.10 y rc.11, re-leído
+ * en la tanda T-22). Una llamada sin
  * preset detrás de una con preset heredaba su min_p 0 y su
  * penalty_repeat 1.1. Por eso NIDO manda siempre los cuatro que gestiona,
  * y lo que el llamante no fija vale lo de la carga.
  *
- * La carga la hace common_init_sampler_from_model de llama.cpp (b11960 y
- * b12211, common/common.cpp): toma las claves general.sampling.* del GGUF
+ * La carga la hace common_init_sampler_from_model de llama.cpp (b11960,
+ * b12211 y b12292, common/common.cpp): toma las claves general.sampling.* del GGUF
  * con strtol/strtof, y si faltan o no empiezan por un número, deja los
  * valores por defecto de common_params_sampling (common/common.h), que
  * son los de LLAMA_CPP_SAMPLING_DEFAULTS. llama.rn no fija
@@ -212,6 +223,20 @@ export interface LoadTimeSampling {
   topP: number;
   minP: number;
   repeatPenalty: number;
+  /**
+   * M-36: solo lo que el GGUF declara de sí mismo, ya validado por
+   * rango (m-72). Vacío si el fichero no declara nada utilizable.
+   */
+  declared: FileSamplingDefaults;
+}
+
+/** Lo que un GGUF puede declarar de su propio muestreo (general.sampling.*). */
+export interface FileSamplingDefaults {
+  temperature?: number;
+  topK?: number;
+  topP?: number;
+  minP?: number;
+  repeatPenalty?: number;
 }
 
 /** strtol / strtof: el número del principio, o null si no empieza por uno. */
@@ -229,11 +254,29 @@ function leadingFloat(v: unknown): number | null {
 export function loadTimeSampling(metadata: Record<string, unknown> | null | undefined): LoadTimeSampling {
   const m = metadata ?? {};
   const d = LLAMA_CPP_SAMPLING_DEFAULTS;
+  // m-72 (auditoría 2026-11-13, F2-m1): los valores del fichero se
+  // validan por rango ANTES de que nada llegue al nativo. Un valor
+  // imposible (top_p 7.5, penalty_repeat 0, top_k negativo) cuenta como
+  // NO declarado: cae al relleno de llama.cpp y nunca viaja tal cual a
+  // una completion. Los bordes con significado sí pasan: top_k 0
+  // desactiva el filtro en llama.cpp y temperatura 0 es greedy.
+  const topK = leadingInt(m["general.sampling.top_k"]);
+  const topP = leadingFloat(m["general.sampling.top_p"]);
+  const minP = leadingFloat(m["general.sampling.min_p"]);
+  const repeatPenalty = leadingFloat(m["general.sampling.penalty_repeat"]);
+  const temp = leadingFloat(m["general.sampling.temp"]);
+  const declared: FileSamplingDefaults = {};
+  if (topK !== null && topK >= 0) declared.topK = topK;
+  if (topP !== null && topP > 0 && topP <= 1) declared.topP = topP;
+  if (minP !== null && minP >= 0 && minP <= 1) declared.minP = minP;
+  if (repeatPenalty !== null && repeatPenalty > 0 && repeatPenalty <= 10) declared.repeatPenalty = repeatPenalty;
+  if (temp !== null && temp >= 0 && temp <= 10) declared.temperature = temp;
   return {
-    topK: leadingInt(m["general.sampling.top_k"]) ?? d.topK,
-    topP: leadingFloat(m["general.sampling.top_p"]) ?? d.topP,
-    minP: leadingFloat(m["general.sampling.min_p"]) ?? d.minP,
-    repeatPenalty: leadingFloat(m["general.sampling.penalty_repeat"]) ?? d.repeatPenalty,
+    topK: declared.topK ?? d.topK,
+    topP: declared.topP ?? d.topP,
+    minP: declared.minP ?? d.minP,
+    repeatPenalty: declared.repeatPenalty ?? d.repeatPenalty,
+    declared,
   };
 }
 
@@ -248,7 +291,17 @@ export function loadTimeSampling(metadata: Record<string, unknown> | null | unde
  * inventing new "User:" turns rather than stopping. These match our own
  * template's role markers so generation halts the moment it tries to do that.
  */
-const DEFAULT_STOP_SEQUENCES = ["\nUser:", "\n\nUser:", "\nQuestion:", "\n\nQuestion:"];
+const DEFAULT_STOP_SEQUENCES = [
+  "\nUser:",
+  "\n\nUser:",
+  "\nQuestion:",
+  "\n\nQuestion:",
+  // P-34 (auditoría 2026-11-13, F2-p4): los marcadores con los que un
+  // modelo que sigue el turno en inglés se inventa la respuesta o la
+  // siguiente pregunta; anclados al salto de línea como los demás.
+  "\nAssistant:",
+  "\nAnswer:",
+];
 
 export interface LoadedModelInfo {
   filename: string;
@@ -267,10 +320,11 @@ export interface LoadedModelInfo {
 }
 
 /**
- * RAM-2026-10-11: perfiles de memoria para el contexto del LLM, del más
- * ahorrador al original. Se prueban en orden y se queda el primero que
- * llama.cpp acepta, así un dispositivo o build donde una opción no esté
- * soportada sigue cargando exactamente como antes.
+ * RAM-2026-10-11: perfiles de memoria para el contexto del LLM. Se
+ * prueban en orden y se queda el primero que llama.cpp acepta. Los
+ * tres comparten la base y el LOTE (ver llmInitParamsForProfile); lo
+ * único que degrada la cascada es la KV: q8_0, luego fp16 con el lote
+ * pequeño, luego fp16 «default».
  *
  * - n_ubatch 256 (antes 512 por defecto): el búfer de cómputo de llama.cpp
  *   se reserva para el peor caso de n_ubatch tokens con logits completos
@@ -301,18 +355,45 @@ export function llmInitParamsForProfile(
     n_threads: base.n_threads,
     n_gpu_layers: 0, // CPU-only for broad device compatibility; adjust per-device
   };
-  if (profile === "default") return common;
   // Optimización 2026-11-08 (fase 2): el lote ya no es la constante
   // para todos — lo elige batchForRam según la RAM total del aparato
   // (y el techo de presión de la fase 3). Sin lectura de RAM, el
   // llamador pasa el lote de siempre y esta función se comporta
   // exactamente como antes.
-  const smallBatch = { ...common, n_batch: batch.nBatch, n_ubatch: batch.nUbatch };
-  if (profile === "small-batch") return smallBatch;
-  return { ...smallBatch, cache_type_k: "q8_0", cache_type_v: "q8_0" };
+  //
+  // F3-06 (auditoría 2026-11-13, SOSPECHA dirimida): el perfil
+  // default TAMBIÉN lleva ese lote. Hasta la 0.1.98 volvía sin
+  // claves de lote — «exactamente la llamada original» — así que si
+  // la cascada llegaba a él, lo que corría era el n_ubatch por
+  // defecto del binario (512 en llama.cpp), un búfer que el
+  // pre-flight nunca cobró: la estimación decía una cosa y el
+  // proceso reservaba otra, justo en los aparatos donde las dos
+  // primeras opciones ya habían fallado. Con el lote compartido, lo
+  // que corre es lo que el pre-flight cobró en los tres perfiles, y
+  // la sospecha del «ubatch desconocido» queda cerrada por
+  // construcción: ya no hay llamada sin lote.
+  const withBatch = { ...common, n_batch: batch.nBatch, n_ubatch: batch.nUbatch };
+  if (profile === "default") return withBatch;
+  if (profile === "small-batch") return withBatch;
+  return { ...withBatch, cache_type_k: "q8_0", cache_type_v: "q8_0" };
 }
 
 export const LLM_MEMORY_PROFILES: readonly LlmMemoryProfile[] = ["kv-q8", "small-batch", "default"];
+
+/**
+ * m-73 (auditoría 2026-11-13, F2-m2): ¿el error de initLlama nombra el
+ * FICHERO o el formato? Esos no los cura otro perfil de memoria — los
+ * tres perfiles parsean el mismo fichero — y reintentar solo lo
+ * parsearía tres veces y enterraría la causa real bajo el último
+ * mensaje. Los errores de memoria/contexto no llevan estas palabras y
+ * sí siguen la cascada.
+ */
+const MODEL_FILE_FATAL = /gguf|magic|failed to load model|corrupt|unsupported (model|architecture)|unknown (model )?(architecture|format)|invalid (model|gguf|file format)/i;
+
+export function isModelFileFatalError(e: unknown): boolean {
+  const msg = (e as { message?: unknown } | null)?.message;
+  return typeof msg === "string" && MODEL_FILE_FATAL.test(msg);
+}
 
 /**
  * M2 (crash nativo): los cierres del proceso según Android, tal como
@@ -336,6 +417,49 @@ function recentExitsInfo(): CrashReportLike["exits"] | null {
 }
 
 /**
+ * P-15: cota dura de generaciones en línea (la que corre + las que
+ * esperan) y plazo máximo de espera en la cola antes de arrancar.
+ */
+export const MAX_GENERATIONS_IN_LINE = 8;
+export const MAX_GENERATION_WAIT_MS = 15 * 60_000;
+
+/**
+ * M-41 (auditoría 2026-11-13, F2-M6): el resumen de backend dice lo que
+ * EJECUTÓ, no lo que había. La ejecución es CPU siempre — todos los
+ * perfiles de carga fijan n_gpu_layers: 0 (llmInitParamsForProfile) —
+ * así que el resumen la declara como hecho y los dispositivos de
+ * getBackendDevicesInfo van etiquetados como VISTOS: que el aparato
+ * tenga una GPU OpenCL no significa que la inferencia la usara.
+ *
+ * P-32 (F2-p1): la composición respeta un tope de 200 caracteres SIN
+ * cortar una entrada por la mitad — el corte a ciegas de antes podía
+ * dejar un nombre de dispositivo partido y sin sentido. Los
+ * dispositivos que no caben se cuentan («+N más»), no se truncan.
+ * Puro — testeado.
+ */
+export function composeBackendSummary(lib: string | null, deviceLabels: string[]): string {
+  const MAX = 200;
+  const head = lib ? `lib ${lib} · ejecución CPU` : "ejecución CPU";
+  if (deviceLabels.length === 0) return head.length <= MAX ? head : head.slice(0, MAX);
+  let vistos = "";
+  let used = 0;
+  for (const label of deviceLabels) {
+    const next = vistos ? `${vistos}, ${label}` : label;
+    if (`${head} · vistos: ${next}`.length > MAX) break;
+    vistos = next;
+    used++;
+  }
+  const omitted = deviceLabels.length - used;
+  if (used === 0) return `${head} · vistos: +${deviceLabels.length} más`;
+  let out = `${head} · vistos: ${vistos}`;
+  if (omitted > 0) {
+    const suffix = ` · +${omitted} más`;
+    if (out.length + suffix.length <= MAX) out += suffix;
+  }
+  return out;
+}
+
+/**
  * Thin wrapper around llama.rn. Loads a GGUF model with mmap so weights
  * stream from disk rather than being fully resident, keeping peak RAM under
  * the model's working-set size (weights touched + KV cache), not the full
@@ -345,7 +469,7 @@ export class LlamaEngine {
   private context: LlamaContext | null = null;
   private modelInfo: LoadedModelInfo | null = null;
   /** Los valores de muestreo de la carga del modelo actual (loadTimeSampling). */
-  private loadSampling: LoadTimeSampling = { ...LLAMA_CPP_SAMPLING_DEFAULTS };
+  private loadSampling: LoadTimeSampling = { ...LLAMA_CPP_SAMPLING_DEFAULTS, declared: {} };
   // load()/unload() run one at a time. Concurrent loads (e.g. switching
   // models and closing Settings quickly) used to both release, both create a
   // context, and the one overwritten in this.context was never released,
@@ -388,6 +512,30 @@ export class LlamaEngine {
   get lastGenerationWasCut(): boolean {
     return this.lastCut;
   }
+  /**
+   * m-78 (auditoría 2026-11-13, F2-m7): ¿la guarda de repetición marcó
+   * bucle durante la ÚLTIMA generación? Solo entonces el texto asentado
+   * se recorta con trimRepetitionLoop — y solo entonces ChatScreen
+   * aplica la misma regla sobre lo transmitido.
+   */
+  private lastLoopCut = false;
+  get lastGenerationLoopCut(): boolean {
+    return this.lastLoopCut;
+  }
+  /**
+   * M-39: contador de paradas pedidas con stop(). generateOnce toma una
+   * foto al arrancar: si el contador se movió al asentarse, ESTA
+   * generación fue parada desde fuera (usuario o timeout ya tiene su
+   * propia marca) y su texto pasa por la regla de la frase completa
+   * aunque el veredicto nativo diga «interrupted».
+   */
+  private stopCounter = 0;
+  /**
+   * m-79 (F2-m8): el contexto quedó sospechoso tras una completion
+   * fallida. La siguiente generación lo recrea antes de usarlo en vez
+   * de generar sobre un estado nativo que ya demostró estar roto.
+   */
+  private contextSuspect = false;
 
   private enqueue<T>(task: () => Promise<T>): Promise<T> {
     const run = this.queue.then(task);
@@ -408,7 +556,7 @@ export class LlamaEngine {
 
   private async crashGuardRead(): Promise<CrashGuardRecord> {
     if (this.crashGuard) return this.crashGuard;
-    let record: CrashGuardRecord = { crashes: 0, pending: null };
+    let record: CrashGuardRecord = { crashes: 0, pending: null, lastCrashAt: null };
     try {
       const raw = await FileSystem.readAsStringAsync(this.crashGuardPath());
       record = parseCrashGuardRecord(raw);
@@ -432,21 +580,28 @@ export class LlamaEngine {
    * Al abrir una carga: asienta el registro (un pendiente con el
    * proceso muerto cuenta como choque; con un modelo vivo, ese
    * pendiente es el modelo cargado y se confirma) y devuelve el
-   * factor de seguridad que manda en el plan de esta carga.
+   * factor de seguridad que manda en el plan de esta carga. El
+   * asentamiento recibe la hora (Date.now) para que la caducidad
+   * del contador (F3-07) corra: un choque se perdona por cada 24 h
+   * sin choques nuevos.
    */
   private async crashGuardSettle(): Promise<number> {
     let before = await this.crashGuardRead();
-    // M3 (crash nativo): el cruce corre primero, una vez por proceso.
-    // Si la última muerte fue CRASH_NATIVE con una generación en
-    // vuelo, el choque se cuenta aquí y el pendiente de aquella carga
-    // se consume en el mismo gesto — la muerte se cuenta una vez, y
-    // el factor resultante es el que planifica esta carga.
+    // M3 (crash nativo) + C-02: el cruce corre primero, una vez por
+    // proceso. Si la última muerte fue con una generación en vuelo —
+    // CRASH_NATIVE o LOW_MEMORY — el choque se cuenta aquí y el
+    // pendiente de aquella carga se consume en el mismo gesto: la
+    // muerte se cuenta una vez, y el factor resultante es el que
+    // planifica esta carga.
     const adjusted = await this.nativeSessionCross(before);
     if (adjusted) {
       before = adjusted;
       await this.crashGuardWrite(adjusted);
     }
-    const { record, safety } = settleCrashGuardRecord(before, { modelAlive: this.context !== null });
+    const { record, safety } = settleCrashGuardRecord(before, {
+      modelAlive: this.context !== null,
+      now: Date.now(),
+    });
     if (record !== before) await this.crashGuardWrite(record);
     return safety;
   }
@@ -454,7 +609,23 @@ export class LlamaEngine {
   /** Deja el intento en vuelo persistido ANTES de crear el contexto. */
   private async crashGuardMarkPending(model: string, nCtx: number): Promise<void> {
     const record = await this.crashGuardRead();
-    await this.crashGuardWrite({ crashes: record.crashes, pending: { model, nCtx, at: Date.now() } });
+    await this.crashGuardWrite({ ...record, pending: { model, nCtx, at: Date.now() } });
+  }
+
+  /**
+   * F3-15 (auditoría 2026-11-13): limpia el pendiente SIN contar.
+   * Para la vía en que initLlama fracasó con un error JS capturable:
+   * el proceso sigue vivo, el error ya está diagnosticado y no es un
+   * choque — dejar el pendiente escrito lo castigaba como muerte
+   * nativa en el siguiente intento, y una cascada de reintentos con
+   * el mismo error degradaba el factor sin muerte alguna. Si el
+   * proceso muere dentro de initLlama, esta limpieza nunca corre y
+   * el pendiente cuenta, como está diseñado.
+   */
+  private async crashGuardClearPending(): Promise<void> {
+    const record = await this.crashGuardRead();
+    if (!record.pending) return;
+    await this.crashGuardWrite({ ...record, pending: null });
   }
 
   /**
@@ -592,51 +763,69 @@ export class LlamaEngine {
   }
 
   /**
-   * La variante nativa cargada y los dispositivos de la sesión, una vez
-   * por proceso, en segundo plano: «lib <variante> · <dispositivos>».
+   * La variante nativa cargada y lo que la sesión ejecutó, una vez por
+   * proceso, en segundo plano: «lib <variante> · ejecución CPU ·
+   * vistos: <dispositivos>».
    *
    * La variante sale de context.androidLib, que llama.rn rellena al cargar
    * con la librería que eligió (RNLlamaJSI.cpp, g_android_loaded_library;
-   * existe al menos desde rc.7). Hasta el 2026-11-13 NIDO creía que no
-   * había forma de leerla y guardaba solo los dispositivos como sustituto.
-   * La librería se carga una vez por proceso, así que basta con leerla una
-   * vez. Cualquier fallo deja fuera esa parte, sin más coste.
+   * existe al menos desde rc.7). La librería se carga una vez por proceso,
+   * así que basta con leerla una vez.
+   *
+   * M-41: la ejecución se declara desde lo que el motor fijó
+   * (n_gpu_layers: 0 en todos los perfiles), no desde los dispositivos
+   * que la sonda ve — ver composeBackendSummary. P-32: un intento que no
+   * produce resumen NO se cachea (antes, un primer fallo dejaba el
+   * diagnóstico vacío para todo el proceso); y la parte que puede fallar
+   * (la sonda de dispositivos) ya no puede vaciar el resumen entero,
+   * porque lo ejecutado se sabe sin ella.
    */
   private refreshBackendSummary(): Promise<void> {
     if (!this.backendSummaryPromise) {
-      this.backendSummaryPromise = (async () => {
-        const parts: string[] = [];
-        const lib = (this.context as unknown as { androidLib?: unknown } | null)?.androidLib;
-        if (typeof lib === "string" && lib) parts.push(`lib ${lib}`);
+      const attempt = (async () => {
         try {
-          const mod = (await import("llama.rn")) as { getBackendDevicesInfo?: unknown };
-          if (typeof mod.getBackendDevicesInfo === "function") {
-            const devices = await (
-              mod.getBackendDevicesInfo as () => Promise<
-                Array<{ backend: string; type: string; deviceName: string }>
-              >
-            )();
-            if (Array.isArray(devices) && devices.length > 0) {
-              parts.push(devices.map((d) => `${d.backend}/${d.type}/${d.deviceName}`).join(", "));
+          const lib = (this.context as unknown as { androidLib?: unknown } | null)?.androidLib;
+          let labels: string[] = [];
+          try {
+            const mod = (await import("llama.rn")) as { getBackendDevicesInfo?: unknown };
+            if (typeof mod.getBackendDevicesInfo === "function") {
+              const devices = await (
+                mod.getBackendDevicesInfo as () => Promise<
+                  Array<{ backend: string; type: string; deviceName: string }>
+                >
+              )();
+              if (Array.isArray(devices)) {
+                labels = devices.map((d) => `${d.backend}/${d.type}/${d.deviceName}`);
+              }
             }
+          } catch {
+            // Best-effort: lo ejecutado se declara sin los dispositivos.
           }
+          this.backendSummary = composeBackendSummary(typeof lib === "string" && lib ? lib : null, labels);
         } catch {
-          // Best-effort: el registro vive sin los dispositivos.
+          // Ni siquiera la composición: el resumen queda vacío y el
+          // intento no se cachea (P-32), para reintentar en la siguiente.
         }
-        if (parts.length > 0) this.backendSummary = parts.join(" · ").slice(0, 200);
       })();
+      this.backendSummaryPromise = attempt;
+      void attempt.then(() => {
+        if (!this.backendSummary && this.backendSummaryPromise === attempt) {
+          this.backendSummaryPromise = null;
+        }
+      });
     }
     return this.backendSummaryPromise;
   }
 
   /**
-   * M2+M3: el cruce del registro con los cierres registrados, una vez
-   * por proceso, al abrir la primera carga (antes de asentar el
-   * CrashGuard, para que el factor de ESTA carga ya lo recoja).
-   * Devuelve el registro del CrashGuard ajustado cuando la muerte se
-   * cuenta aquí — con el pendiente consumido, para que el
-   * asentamiento normal no la cuente una segunda vez — o null si el
-   * cruce no contó nada.
+   * M2+M3 + C-02: el cruce del registro con los cierres registrados,
+   * una vez por proceso, al abrir la primera carga (antes de asentar
+   * el CrashGuard, para que el factor de ESTA carga ya lo recoja) o
+   * al arrancar la pantalla (crossNativeSessionAtStartup). Devuelve
+   * el registro del CrashGuard ajustado cuando la muerte se cuenta
+   * aquí — con el pendiente consumido, para que el asentamiento
+   * normal no la cuente una segunda vez — o null si el cruce no
+   * contó nada.
    */
   private async nativeSessionCross(crashRecord: CrashGuardRecord): Promise<CrashGuardRecord | null> {
     if (this.nativeSessionCrossDone) return null;
@@ -646,8 +835,33 @@ export class LlamaEngine {
     const cross = crossNativeSessionRecord(record, recentExitsInfo());
     if (cross.record !== record) await this.nativeSessionWrite(cross.record);
     if (cross.holdBackground) holdBackgroundIndexingForSession();
-    if (!cross.countedNativeCrash) return null;
-    return { crashes: Math.min(crashRecord.crashes + 1, 10), pending: null };
+    if (!cross.countedNativeCrash && !cross.countedLowMemoryDeath) return null;
+    return {
+      crashes: Math.min(crashRecord.crashes + 1, 10),
+      pending: null,
+      lastCrashAt: Date.now(),
+    };
+  }
+
+  /**
+   * F3-13 (auditoría 2026-11-13): el cruce al ARRANQUE de la app, sin
+   * esperar a la primera carga del LLM. ChatScreen lo llama al abrir
+   * su arranque, antes de cargar el embedding, sembrar e indexar:
+   * hasta la 0.1.98 el cruce esperaba dentro de crashGuardSettle a
+   * que algo pidiera el LLM, así que el conteo de la muerte anterior
+   * y — lo que más importa — el apagado del indexado de fondo de M3
+   * llegaban tarde a su propia sesión (la indexación arranca antes
+   * que la primera respuesta). A prueba de fallos, como todo el
+   * instrumento: cualquier error deja la sesión como estaba.
+   */
+  async crossNativeSessionAtStartup(): Promise<void> {
+    try {
+      const before = await this.crashGuardRead();
+      const adjusted = await this.nativeSessionCross(before);
+      if (adjusted) await this.crashGuardWrite(adjusted);
+    } catch {
+      // El cruce es un instrumento, no una puerta: nunca bloquea el arranque.
+    }
   }
 
   /**
@@ -702,8 +916,17 @@ export class LlamaEngine {
     // reales del aparato (política en ramBudget.ts); la opción
     // explícita sigue mandando, como manda con nCtx. Optimización
     // 2026-11-08 (fase 3): la presión del aparato (batería baja, modo
-    // de ahorro, calor) puede bajar ese número con su tope; la foto
-    // de presión la refresca la pantalla y aquí solo se consulta.
+    // de ahorro, calor) puede bajar ese número con su tope.
+    // F3-09 (auditoría 2026-11-13): la foto de presión la refresca la
+    // propia carga, no la pantalla. Hasta la 0.1.98 solo ChatScreen
+    // refrescaba (en su arranque y al volver a primer plano), así
+    // que una carga lanzada sin pasar por ese efecto — el asistente
+    // de modelos usa el mismo motor — leía la foto del arranque de
+    // la app con la batería ya caída o el aparato ya caliente, y
+    // nacía sin los topes que la política promete. refreshDevicePressure
+    // nunca lanza por diseño; los refrescos de la pantalla quedan,
+    // inocuos.
+    refreshDevicePressure();
     const pressure = currentDevicePressure();
     const baseThreads = opts?.nThreads ?? defaultThreadsForCores(readProcessorCount());
     const nThreads =
@@ -797,6 +1020,22 @@ export class LlamaEngine {
     };
     const spec = { ...specBase, nCtx };
     let verdict = snapshot ? checkRamBudget(spec, snapshot) : null;
+    // F3-10: el presupuesto que decidió de verdad (con el factor, o
+    // el de la vía de emergencia) — viaja al error de rechazo para
+    // que el diagnóstico pueda citar la cuenta que mandó.
+    let decidingBudget: number | null = null;
+    // F3-11 (auditoría 2026-11-13): la vía de contexto EXPLÍCITO
+    // también se juzga contra el presupuesto con el factor del
+    // CrashGuard. Hasta la 0.1.98 la escalera aplicaba el factor y
+    // la vía explícita no: tras dos muertes, una carga automática
+    // bajaba de peldaño y la MISMA carga pedida a mano desde los
+    // ajustes pasaba contra el disponible crudo y moría igual — la
+    // degradación aprendida se podía saltar sin saberlo. El veredicto
+    // conserva el disponible de la foto; lo que se recalcula es fits.
+    if (explicitCtx && verdict && crashSafety < 1) {
+      decidingBudget = Math.floor(verdict.availableBytes * crashSafety);
+      verdict = { ...verdict, fits: verdict.totalBytes <= decidingBudget };
+    }
     // La escalera solo actúa sin opción explícita y con lectura de
     // RAM: elige el peldaño mayor que cabe bajo el techo pedido, con
     // el presupuesto reducido por el CrashGuard si hubo un choque.
@@ -818,6 +1057,7 @@ export class LlamaEngine {
         nCtx = plan.nCtx;
         verdict = plan.verdict;
         contextNote = plan.note;
+        decidingBudget = plan.budgetBytes;
       }
       if (plan && plan.nCtx === EMERGENCY_CONTEXT) {
         const q8Plan: LadderPlan | null = planContext(
@@ -836,6 +1076,7 @@ export class LlamaEngine {
           nCtx = q8Plan.nCtx;
           verdict = q8Plan.verdict;
           contextNote = q8Plan.note;
+          decidingBudget = q8Plan.budgetBytes;
           pinnedProfile = "kv-q8";
         }
       }
@@ -862,6 +1103,13 @@ export class LlamaEngine {
         `"${modelFilename}" needs roughly ${toGb(verdict.totalBytes)}GB of RAM, but this ` +
           `device only has about ${toGb(verdict.availableBytes)}GB free (of ${toGb(verdict.totalRamBytes)}GB total). ` +
           `Try a smaller model from Settings > Tone & Model.` +
+          // F3-10: cuando lo que mandó fue un presupuesto reducido
+          // (el factor del CrashGuard o la vía de emergencia), el
+          // mensaje lo cita: sin la cifra, «cabe X, hay Y, rechazado»
+          // se leía como contradicción del propio instrumento.
+          (decidingBudget !== null && decidingBudget < verdict.availableBytes
+            ? ` (usable budget for this load: ~${toGb(decidingBudget)}GB)`
+            : "") +
           (contextNote ? ` (${contextNote})` : ""),
         verdict.totalBytes,
         verdict.availableBytes,
@@ -869,6 +1117,7 @@ export class LlamaEngine {
         nCtx < requestedCtx ? requestedCtx : null,
         nCtx < requestedCtx ? nCtx : null,
         crashSafety < 1 ? crashSafety : null,
+        decidingBudget !== null && decidingBudget < verdict.availableBytes ? decidingBudget : null,
       );
     }
 
@@ -885,6 +1134,9 @@ export class LlamaEngine {
       return;
     }
 
+    // m-79 (F2-m8): el modelo residente ANTES de soltarlo — si la carga
+    // nueva fracasa, el catch intenta dejar el motor como estaba.
+    const prevInfo = this.modelInfo;
     // Release any previously loaded model (e.g. actually switching models
     // from Settings) so we don't leak the old context's native memory.
     await this.unloadNow();
@@ -896,13 +1148,26 @@ export class LlamaEngine {
     await this.crashGuardMarkPending(modelFilename, nCtx);
 
     try {
+      // M-37 (F2-M2): la puerta se repite pegada a initLlama. Entre la
+      // comprobación del principio de loadNow y este punto hay
+      // pre-flight, una descarga y escrituras del CrashGuard — una
+      // ventana en la que el fichero podía cambiar tras haber sido
+      // verificado (TOCTOU). Repetirla aquí la deja en lo que tarda la
+      // propia puerta (la vía rápida, con la cabecera comparada, no
+      // re-hashea). Va DENTRO del try: su rechazo es un error ya
+      // diagnosticado con el proceso vivo, y el catch de abajo limpia
+      // el pendiente del CrashGuard sin contar (F3-15) en vez de dejar
+      // que el siguiente arranque lo cuente como muerte nativa.
+      await withStage("trust-check", () => assertTrustedModelFileByName(modelFilename));
       // RAM-2026-10-11: primer perfil que llama.cpp acepte (ver
-      // LLM_MEMORY_PROFILES). El último es exactamente la llamada original.
+      // LLM_MEMORY_PROFILES). Los tres llevan el lote que el
+      // pre-flight cobró; lo que degrada es solo la KV (F3-06).
       // Si el plan fijó kv-q8 (solo cupo en el peldaño de emergencia con
       // su KV), la lista es ese perfil solo: cargar con otro sería
       // gastar una KV que el pre-flight no aprobó.
       const profilesToTry = pinnedProfile ? [pinnedProfile] : LLM_MEMORY_PROFILES;
       let lastErr: unknown = null;
+      let firstErr: unknown = null;
       let loadedProfile: LlmMemoryProfile | null = null;
       for (const profile of profilesToTry) {
         try {
@@ -914,10 +1179,24 @@ export class LlamaEngine {
           loadedProfile = profile;
           break;
         } catch (e) {
+          if (firstErr === null) firstErr = e;
           lastErr = e;
+          // m-73: un error que nombra el fichero/formato aborta la
+          // cascada — los demás perfiles parsearían el mismo fichero.
+          if (isModelFileFatalError(e)) break;
         }
       }
-      if (!loadedProfile) throw lastErr;
+      if (!loadedProfile) {
+        // m-73: el error que sale conserva la causa del PRIMER perfil
+        // además de la del último — hasta la 0.1.98 solo sobrevivía la
+        // última y la primera (a menudo la informativa) se perdía.
+        throw firstErr !== null && firstErr !== lastErr
+          ? new Error(
+              `${(lastErr as { message?: string })?.message ?? String(lastErr)} ` +
+                `(primer intento, perfil ${profilesToTry[0]}: ${(firstErr as { message?: string })?.message ?? String(firstErr)})`,
+            )
+          : lastErr;
+      }
       this.loadSampling = loadTimeSampling(
         (this.context as unknown as { model?: { metadata?: Record<string, unknown> } } | null)?.model?.metadata,
       );
@@ -932,6 +1211,25 @@ export class LlamaEngine {
         stripReasoning: catalogEntry?.capabilities?.stripReasoning,
       };
     } catch (e: any) {
+      // F3-15: el proceso sigue vivo y el error ya está diagnosticado
+      // — el pendiente se limpia SIN contar antes de relanzar (ver
+      // crashGuardClearPending). Si el proceso hubiera muerto dentro
+      // de initLlama, este catch nunca correría.
+      await this.crashGuardClearPending();
+      // m-79 (F2-m8): si había un modelo residente, la carga fallida no
+      // lo deja tirado — se intenta restaurar el anterior con sus
+      // parámetros y el motor queda como estaba. Best-effort: si la
+      // restauración también falla, el motor queda sin modelo y manda
+      // el error original, que es el de la petición del llamante. (La
+      // llamada recursiva no puede buclear: al entrar, modelInfo es
+      // null — unloadNow lo anuló y la cascada fallida no lo fijó.)
+      if (prevInfo) {
+        try {
+          await this.loadNow(prevInfo.filename, { nCtx: prevInfo.nCtx, nThreads: prevInfo.nThreads });
+        } catch {
+          // Sin restauración posible: vale el error original.
+        }
+      }
       // The native error here (from llama.rn/llama.cpp) is often terse
       // ("Failed to initialize context" with no further detail) — append
       // our own RAM estimate so the user (and future debugging) has an
@@ -979,7 +1277,7 @@ export class LlamaEngine {
     const context = this.context;
     this.context = null;
     this.modelInfo = null;
-    this.loadSampling = { ...LLAMA_CPP_SAMPLING_DEFAULTS };
+    this.loadSampling = { ...LLAMA_CPP_SAMPLING_DEFAULTS, declared: {} };
     await context?.release();
     // Justicia del conteo (0.1.85): la descarga ORDENADA confirma el
     // registro del CrashGuard, como el encabezado de memoryLadder.ts
@@ -1018,7 +1316,39 @@ export class LlamaEngine {
    * will be formatted in the model's own instruction format.
    */
   hasEmbeddedChatTemplate(): boolean {
-    return this.context?.isJinjaSupported() ?? false;
+    // P-33 (auditoría 2026-11-13, F2-p3): en builds donde el contexto no
+    // expone isJinjaSupported, llamarlo reventaba con TypeError — la
+    // guarda `?.` solo cubría el contexto nulo. Misma guarda de tipo que
+    // recentExitsInfo usa para getCrashReport: ausencia = «sin Jinja».
+    try {
+      const fn = (this.context as unknown as { isJinjaSupported?: unknown } | null)?.isJinjaSupported;
+      return typeof fn === "function" ? (fn as () => boolean).call(this.context) : false;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * m-79 (F2-m8): recrea el contexto del modelo residente tras una
+   * completion fallida. Descarga ordenada + la misma carga con los
+   * mismos parámetros (contexto y hilos del modelo en uso). Efectos
+   * declarados de reutilizar unloadNow/loadNow: la época de
+   * generación avanza (las generaciones encoladas fallan con «model
+   * not loaded» en vez de correr sobre un contexto que no es el que
+   * esperaban) y la descarga confirma el CrashGuard como cualquier
+   * descarga ordenada — el fallo fue de la completion, con el proceso
+   * vivo, no una muerte de la carga. Si la recarga falla, su error es
+   * la verdad actual y es el que ve el llamante.
+   */
+  private async recreateContext(): Promise<void> {
+    const info = this.modelInfo;
+    if (!info || !this.context) {
+      this.contextSuspect = false;
+      return;
+    }
+    await this.unloadNow();
+    await this.loadNow(info.filename, { nCtx: info.nCtx, nThreads: info.nThreads });
+    this.contextSuspect = false;
   }
 
   /**
@@ -1049,6 +1379,18 @@ export class LlamaEngine {
   private generationsInLine = 0;
 
   async generate(options: GenerateOptions): Promise<string> {
+    // P-15 (auditoría 2026-11-13, B-p1): la cola tenía ni cota ni
+    // plazo — un llamante desbocado (un bucle de reintentos, un agente
+    // atascado) podía encolar generaciones para siempre, cada una con
+    // su prompt en memoria y su promesa sin asentar. La cota es dura y
+    // el rechazo es inmediato: los llamantes reales son secuenciales
+    // (la propia cadena los serializa), así que 8 en línea ya es un
+    // síntoma, no un uso. El plazo de espera va en la rama encolada.
+    if (this.generationsInLine >= MAX_GENERATIONS_IN_LINE) {
+      throw new Error(
+        `LlamaEngine: demasiadas generaciones en línea (${this.generationsInLine}); la petición se rechaza sin encolar`,
+      );
+    }
     // M1 (crash nativo): la puerta se toma al llamar, de forma
     // síncrona y sin esperar a nadie — el indexado de fondo consulta
     // la puerta por chunk y cede en cuanto ve una generación en
@@ -1062,6 +1404,7 @@ export class LlamaEngine {
     const isHead = this.generationsInLine === 0;
     this.generationsInLine++;
     const epoch = this.generationEpoch;
+    const enqueuedAt = Date.now();
     // La cabeza llama directamente: su cuerpo corre síncrono hasta
     // encolar el arranque en la cola de carga, en el mismo orden de
     // llamada de siempre (un unload() posterior queda detrás de su
@@ -1070,6 +1413,14 @@ export class LlamaEngine {
     const run = isHead
       ? this.generateOnce(options)
       : this.generationChain.then(() => {
+          // P-15: el plazo de ESPERA manda sobre una generación que aún
+          // no arrancó — su contexto puede haber cambiado o el llamante
+          // ya no necesitarla. Una vez arrancada manda su timeoutMs.
+          if (Date.now() - enqueuedAt > MAX_GENERATION_WAIT_MS) {
+            throw new Error(
+              "LlamaEngine: la generación esperó demasiado en la cola y su plazo venció sin arrancar",
+            );
+          }
           if (epoch !== this.generationEpoch) {
             throw new Error("LlamaEngine: model not loaded");
           }
@@ -1124,6 +1475,15 @@ export class LlamaEngine {
   }: GenerateOptions): Promise<string> {
     // P2.4: telemetry measurement. All local, fire-and-forget, never throws.
     const tStart = Date.now();
+    // M-39 (auditoría 2026-11-13, F2-M4): los veredictos de corte se
+    // reinician al arrancar. Hasta la 0.1.98 lastCut solo se asignaba
+    // en la rama de éxito: tras un error, el lector (ChatScreen) veía
+    // el veredicto de la generación ANTERIOR como si fuera de esta.
+    this.lastCut = false;
+    this.lastLoopCut = false;
+    // Foto del contador de paradas: si stop() se pide durante ESTA
+    // generación, su texto se recorta aunque el nativo diga interrupted.
+    const stopsAtStart = this.stopCounter;
     let firstTokenAt: number | null = null;
     let tokenCount = 0;
     let timedOut = false;
@@ -1207,14 +1567,34 @@ export class LlamaEngine {
         .catch(() => {});
     }
     try {
-      const started = await this.enqueue(() =>
-        this.startCompletion({ prompt, messages, nPredict, temperature, topK, topP, minP, repeatPenalty, samplingPreset, responseFormat, grammar, enableThinking, onToken: wrappedOnToken, stop, timeoutMs, onTimeout: wrappedOnTimeout })
-      );
+      const started = await this.enqueue(async () => {
+        // m-79 (F2-m8): si la completion anterior falló, el contexto
+        // nativo quedó sospechoso — se recrea ANTES de generar en vez
+        // de reutilizarlo a ciegas. Dentro de la cola de carga, como el
+        // propio arranque: el orden con load/unload no cambia.
+        if (this.contextSuspect) await this.recreateContext();
+        return this.startCompletion({ prompt, messages, nPredict, temperature, topK, topP, minP, repeatPenalty, samplingPreset, responseFormat, grammar, enableThinking, onToken: wrappedOnToken, stop, timeoutMs, onTimeout: wrappedOnTimeout });
+      });
       try {
-        const result = await started.completion;
+        let result: { text?: string };
+        try {
+          result = await started.completion;
+        } catch (e) {
+          // m-79: la completion falló a media generación; el estado
+          // nativo (KV a medias, sampler tocado) ya no es de fiar.
+          this.contextSuspect = true;
+          throw e;
+        }
         const { text } = result;
         const settled = text ?? started.getFull();
-        const raw = guardLoops ? trimRepetitionLoop(settled) : settled;
+        // m-78 (F2-m7): el recorte de bucle sobre el texto asentado
+        // SOLO si la guarda marcó bucle durante ESTA generación. Hasta
+        // la 0.1.98 se aplicaba siempre que el texto final «pareciera»
+        // repetido al final — también cuando el modelo había terminado
+        // solo (EOS) y ese texto era su respuesta íntegra: se le
+        // quitaba un trozo y se le añadía un «…» que no escribió.
+        this.lastLoopCut = loopCut;
+        const raw = guardLoops && loopCut ? trimRepetitionLoop(settled) : settled;
         // Bounty tanda 8 (frase cortada): si la generación consumió
         // todo su presupuesto de tokens, el texto devuelto se cierra
         // en su última frase completa y el hecho queda registrado
@@ -1226,7 +1606,17 @@ export class LlamaEngine {
         // llama.rn retiene en saltos de línea y UTF-8 a medias y se
         // quedaba corta justo cuando había tope (generationCut.ts).
         this.lastCut = generationHitLimit(result as NativeStopSignals, tokenCount, nPredict);
-        const completed = guardLoops ? trimToCompleteSentences(raw, this.lastCut) : raw;
+        // M-39 (F2-M4): generationHitLimit devuelve false SIEMPRE para
+        // una parada interrupted (usuario, timeout) — su veredicto es
+        // «¿se consumió el presupuesto?», no «¿se cortó?». Hasta la
+        // 0.1.98 el texto asentado de esas paradas no pasaba por la
+        // regla de la frase completa en el motor y un consumidor
+        // directo de generate() recibía la frase a medias (ChatScreen
+        // se salvaba recortando por su cuenta). La parada temprana
+        // también es corte a efectos del recorte; lastCut conserva su
+        // significado de tope para la nota de la pantalla.
+        const stoppedEarly = timedOut || loopCut || this.stopCounter !== stopsAtStart;
+        const completed = guardLoops ? trimToCompleteSentences(raw, this.lastCut || stoppedEarly) : raw;
         // Safety net (Qwen3 lane + estudio de modelos): for a noThink
         // model whose native layer ignored enable_thinking=false, and
         // for stripReasoning models (LFM2.5) whose chain-of-thought is
@@ -1234,9 +1624,24 @@ export class LlamaEngine {
         // or parsers read, the final settled text never carries a raw
         // <think> block. Streamed tokens are NOT retroactively
         // changed — this only guarantees a clean settled result.
-        return this.modelInfo?.noThink || this.modelInfo?.stripReasoning
-          ? parseGemmaReasoning(completed).answer
-          : completed;
+        if (this.modelInfo?.noThink || this.modelInfo?.stripReasoning) {
+          const parsed = parseGemmaReasoning(completed);
+          if (parsed.answer.trim().length > 0) return parsed.answer;
+          // M-40 (F2-M5): red de vacío. Un <think> sin cerrar se traga
+          // todo el texto (el patrón de gemmaReasoning lo trata como
+          // razonamiento hasta el final) y la respuesta quedaba VACÍA
+          // aunque el modelo sí hubiera escrito. Si lo único que hay
+          // es el razonamiento, se sirve ese — recortado con la misma
+          // regla de frase completa — en vez de un vacío que parece un
+          // aparato roto. Si no hay ni eso, queda vacío como hasta hoy.
+          if (parsed.reasoning && parsed.reasoning.trim().length > 0) {
+            return guardLoops
+              ? trimToCompleteSentences(parsed.reasoning, this.lastCut || stoppedEarly)
+              : parsed.reasoning;
+          }
+          return parsed.answer;
+        }
+        return completed;
       } finally {
         // M4: desde aquí, la parada diferida de la guarda de
         // repetición ya no puede disparar contra este contexto.
@@ -1295,11 +1700,35 @@ export class LlamaEngine {
     if (!prompt && !messages) {
       throw new Error("LlamaEngine.generate: either prompt or messages must be provided");
     }
+    // m-74 (auditoría 2026-11-13, F2-m3): lo que el llamante pide se
+    // valida ANTES de tocar el nativo. nPredict debe ser un entero
+    // positivo — un 0, un negativo o un 2.5 llegaban tal cual a
+    // llama.cpp. Y el prompt se estima contra el nCtx cargado con el
+    // estimador de la casa (contextBudget.estimateTokens): si el
+    // prompt SOLO ya no cabe, la generación moriría a media ingesta
+    // con context_full; aquí se rechaza con la cuenta a la vista. No
+    // se recorta ni se clampea nada: rechazar es la respuesta honesta.
+    if (!Number.isInteger(nPredict) || nPredict <= 0) {
+      throw new Error(`LlamaEngine.generate: nPredict debe ser un entero positivo (llegó ${nPredict})`);
+    }
+    const nCtx = this.modelInfo?.nCtx;
+    if (nCtx) {
+      const promptText = prompt ?? (messages ?? []).map((m) => m.content ?? "").join("\n");
+      const promptTokens = estimateTokens(promptText);
+      if (promptTokens >= nCtx) {
+        throw new Error(
+          `LlamaEngine.generate: el prompt solo (~${promptTokens} tokens estimados) no cabe en el contexto de ${nCtx}; acorta el texto o sube el contexto del modelo`,
+        );
+      }
+    }
 
     const timer = timeoutMs
       ? setTimeout(() => {
           onTimeout?.();
-          this.context?.stopCompletion();
+          // m-76 (F2-m5): con la misma envoltura defensiva que los
+          // demás sitios — stopCompletion cambió su retorno entre RCs
+          // y un fallo suyo dentro del temporizador quedaba sin atrapar.
+          void Promise.resolve(this.context?.stopCompletion()).catch(() => {});
         }, timeoutMs)
       : null;
 
@@ -1314,6 +1743,9 @@ export class LlamaEngine {
       repeatPenalty,
       samplingPreset,
       modelDefaults: this.modelInfo?.sampling,
+      // M-36: lo que el GGUF cargado declara de sí mismo va entre el
+      // preset y el catálogo (ver resolveSampling).
+      fileDefaults: this.loadSampling.declared,
     });
     // Los cuatro viajan siempre (ver loadTimeSampling): sin fijar = lo de
     // la carga, nunca lo que dejó la respuesta anterior en el contexto.
@@ -1346,7 +1778,14 @@ export class LlamaEngine {
           jinja: true,
           n_predict: nPredict,
           temperature: sampling.temperature,
-          stop: stop ?? [],
+          // P-34 (F2-p4): la ruta messages nacía con stop: [] — si la
+          // plantilla del modelo no produce su token de fin, la
+          // generación no tenía NINGUNA parada de texto y seguía hasta
+          // agotar el presupuesto inventando turnos. La red es la
+          // misma de la ruta prompt (marcadores anclados a salto de
+          // línea); el token de fin de la plantilla sigue siendo la
+          // parada primaria, porque llama.rn lo aplica siempre.
+          stop: stop ?? DEFAULT_STOP_SEQUENCES,
           ...extraParams,
           ...(thinkingParam !== undefined ? { enable_thinking: thinkingParam } : {}),
         }
@@ -1368,7 +1807,14 @@ export class LlamaEngine {
    * error/abort path, so no try/catch needed around a stopped generate().
    */
   async stop(): Promise<void> {
-    await this.context?.stopCompletion();
+    // M-39: la parada queda contada — generateOnce la lee al asentarse
+    // para aplicar la regla de la frase completa a esta generación.
+    this.stopCounter++;
+    // m-76 (F2-m5): con la envoltura defensiva que el propio fichero
+    // exige en los demás sitios (unloadNow, la guarda de bucle): un
+    // stopCompletion que lanza o rechaza no debe tumbar al llamante,
+    // que solo quería parar.
+    await Promise.resolve(this.context?.stopCompletion()).catch(() => {});
   }
 }
 

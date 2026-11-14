@@ -121,6 +121,26 @@ describe("etiqueta de compatibilidad", () => {
     expect(computeCompatibility(byId("qwen2.5-0.5b-instruct-q4km"), 0)).toBe("unknown");
   });
 
+  it("con foto en vivo la insignia es la PEOR de las dos fotos (F3-14): verde en vacío, roja con el teléfono ocupado", () => {
+    const m = byId("qwen3-0.6b-q4km");
+    expect(computeCompatibility(m, TAB_RAM)).toBe("green");
+    // La misma tableta con el proceso hinchado y casi nada libre: ni
+    // el peldaño de emergencia con su cuenta amable admite el modelo
+    // (la vía misma rendiría el 90 % de 100 MiB). La insignia lo dice
+    // en vez de prometer el verde de la foto canónica.
+    const busy = { totalRamBytes: TAB_RAM, rssBytes: 1.2 * GB, availBytes: 100 * MiB, lowMemThresholdBytes: 216 * MiB };
+    expect(computeCompatibility(m, TAB_RAM, busy)).toBe("red");
+    // Con hueco real, la foto viva no degrada nada.
+    const roomy = { totalRamBytes: TAB_RAM, rssBytes: APP_BASELINE_BYTES, availBytes: 2 * GB, lowMemThresholdBytes: 216 * MiB };
+    expect(computeCompatibility(m, TAB_RAM, roomy)).toBe("green");
+    // Una foto de OTRO aparato (o sin término en vivo) no es foto de
+    // este momento: se ignora y manda la canónica.
+    const foreign = { totalRamBytes: BIG_RAM, rssBytes: 3 * GB, availBytes: 10 * MiB, lowMemThresholdBytes: 216 * MiB };
+    expect(computeCompatibility(m, TAB_RAM, foreign)).toBe("green");
+    const noLive = { totalRamBytes: TAB_RAM, rssBytes: 3 * GB };
+    expect(computeCompatibility(m, TAB_RAM, noLive)).toBe("green");
+  });
+
   it("el estimado que la etiqueta cobra es el de la carga: Qwen3 en la Tab, 693,8 MiB a su techo", () => {
     const spec = contextSpecForModel(byId("qwen3-0.6b-q4km"), TAB_RAM);
     expect(spec.nCtx).toBe(2048);

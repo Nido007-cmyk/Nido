@@ -110,13 +110,24 @@ describe("crossNativeSessionRecord (M2: la próxima muerte se auto-identifica)",
     expect(cross.record.crossedExitAt).toBe(2_000);
   });
 
-  it("LOW_MEMORY con la misma bandera puesta: sin conteo, sin apagado, sin veredicto (fenómeno aparte)", () => {
+  it("LOW_MEMORY con la bandera puesta (muerte generando): el CrashGuard SÍ aprende (C-02) — cuenta como muerte por memoria y el fondo se apaga; sin veredicto (esos son solo de CRASH_NATIVE)", () => {
     const cross = crossNativeSessionRecord(crashBRecord(), [exit("LOW_MEMORY", 2_000)]);
     expect(cross.countedNativeCrash).toBe(false);
-    expect(cross.holdBackground).toBe(false);
+    expect(cross.countedLowMemoryDeath).toBe(true);
+    expect(cross.holdBackground).toBe(true);
     expect(cross.record.verdict).toBeNull();
     // El registro sí se asienta: aquel proceso ya no existe y su
     // bandera no puede seguir diciendo «generando» para siempre.
+    expect(cross.record.generating).toBe(false);
+    expect(cross.record.crossedExitAt).toBe(2_000);
+  });
+
+  it("LOW_MEMORY SIN generación en vuelo: fenómeno aparte, como siempre — sin conteo, sin apagado, sin veredicto", () => {
+    const cross = crossNativeSessionRecord(crashBRecord({ generating: false }), [exit("LOW_MEMORY", 2_000)]);
+    expect(cross.countedNativeCrash).toBe(false);
+    expect(cross.countedLowMemoryDeath).toBe(false);
+    expect(cross.holdBackground).toBe(false);
+    expect(cross.record.verdict).toBeNull();
     expect(cross.record.generating).toBe(false);
     expect(cross.record.crossedExitAt).toBe(2_000);
   });
@@ -153,7 +164,10 @@ describe("crossNativeSessionRecord (M2: la próxima muerte se auto-identifica)",
 
   it("un cruce posterior sin crash no pisa el veredicto de la muerte nativa anterior", () => {
     const first = crossNativeSessionRecord(crashBRecord(), [exit("CRASH_NATIVE", 2_000)]);
-    // Una generación nueva en la sesión siguiente y una cosecha de fondo después.
+    // Una generación nueva en la sesión siguiente y una muerte por
+    // memoria generando después: cuenta en el CrashGuard (C-02) pero
+    // NO pisa el veredicto de la muerte nativa — los veredictos son
+    // solo de CRASH_NATIVE.
     const nextGen: NativeSessionRecord = { ...first.record, at: 3_000, generating: true, verdict: first.record.verdict };
     const cross = crossNativeSessionRecord(nextGen, [exit("LOW_MEMORY", 4_000)]);
     expect(cross.record.verdict?.exitAt).toBe(2_000);
