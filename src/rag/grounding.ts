@@ -284,6 +284,20 @@ export function isAbstention(sentence: string): boolean {
  *  - o una cópula seguida de una cifra («es de 25 ml», «is 25 ml»,
  *    «é de 25 ml») que no sea la de una pregunta indirecta («no sé cuál
  *    es la dosis para 2 años» sigue siendo abstención pura).
+ *  - o (T-04 de la 0.1.99, M-01 de la auditoría) una cláusula
+ *    declarativa con contenido juzgable tras un corte de cláusula:
+ *    «Não sei, a dose dobra em crianças.» no trae contraste, ni
+ *    cópula, ni cifra, y la red la dejaba pasar como abstención pura:
+ *    en la rama principal la respuesta entera colapsaba a la
+ *    abstención honesta por casualidad, pero en la cruzada la frase
+ *    se servía tal cual. La cláusula que sigue a una coma (o a «;»,
+ *    «:», «—») con ≥ MIN_JUDGED_TERMS raíces propias y que no es una
+ *    pregunta indirecta ES una afirmación y se juzga como tal. Lo que
+ *    va ANTES del primer corte no se toca: es el complemento de tema
+ *    de la propia abstención («No tengo información sobre la dosis
+ *    para menores de 2 años», «the dose for children under 2» tras
+ *    «the sources don't mention»), y las preguntas indirectas quedan
+ *    fuera por su palabra inicial.
  * La abstención pura («no lo sé», «las fuentes no lo mencionan») se
  * conserva como hasta ahora.
  */
@@ -292,6 +306,9 @@ const ABSTENTION_CONTRAST_RE =
 // Límites por letra, no \b: «é» no es carácter de palabra para \b en JS.
 const ABSTENTION_COPULA_DIGIT_RE =
   /(?<!(?<![\p{L}])(?:cu[aá]l(?:es)?|qu[eé]|cu[aá]nt[oa]s?|what|which|how much|how many|qual|quais|quant[oa]s?|o que)\s)(?<![\p{L}])(?:es|son|era|ser[aá]|is|are|was|will be|é|são)(?![\p{L}])[^.!?\d]{0,40}\d/iu;
+const ABSTENTION_CLAUSE_SPLIT_RE = /[,;:—–-]/;
+const ABSTENTION_INTERROGATIVE_RE =
+  /^\s*(?:qu[eé]|cu[aá]l(?:es)?|cu[aá]nt[oa]s?|c[oó]mo|cu[aá]ndo|d[oó]nde|qui[eé]n(?:es)?|por qu[eé]|what|which|how|when|where|who|whom|qual|quais|quant[oa]s?|como|quando|onde|quem|por que)(?![\p{L}])/iu;
 
 export function isPureAbstention(sentence: string): boolean {
   if (!IDK_RE.test(sentence)) return false;
@@ -299,6 +316,15 @@ export function isPureAbstention(sentence: string): boolean {
   const rest = sentence.replace(new RegExp(IDK_RE.source, "giu"), " ");
   if (ABSTENTION_CONTRAST_RE.test(rest)) return false;
   if (ABSTENTION_COPULA_DIGIT_RE.test(rest)) return false;
+  // La cláusula declarativa tras el primer corte (M-01): solo las
+  // piezas que SIGUEN a un separador; la primera es el resto de la
+  // abstención misma o su complemento de tema.
+  const pieces = rest.split(ABSTENTION_CLAUSE_SPLIT_RE);
+  for (let i = 1; i < pieces.length; i++) {
+    const piece = pieces[i]!;
+    if (ABSTENTION_INTERROGATIVE_RE.test(piece)) continue;
+    if (new Set(contentStems(piece)).size >= MIN_JUDGED_TERMS) return false;
+  }
   return true;
 }
 
@@ -586,6 +612,78 @@ export function negatedClauseSource(
   return hits.length === 1 ? hits[0]! : null;
 }
 
+/**
+ * T-04 (M-06 de la auditoría): la volcada de UNA raíz. «No lo
+ * purgue.» contra «Purgue el aire de la manguera antes de usarla.»
+ * salía sellada «grounded»: con una raíz la frase es
+ * «too-short-to-check» y ninguna vía de negación la alcanza (la
+ * principal exige ≥3 aciertos y el 85 %; la corta y la de cláusulas,
+ * ≥2 raíces). Con una raíz no hay copia que demostrar, así que el
+ * desenlace no es la sustitución de 0.1.59 sino la retirada. Solo
+ * actúa si la frase trae negación, su raíz aparece en una cláusula
+ * del chunk de apoyo con recuento de negaciones duras DISTINTO, y
+ * ninguna cláusula de ninguna fuente la trae con el MISMO recuento: la
+ * lectura fiel protege, como en negatedClauseSource («No lo purgue»
+ * contra una guía que en otra parte ya dice «no purgue…» no se
+ * toca, porque el referente puede ser ese).
+ */
+const NEGATION_DEBRIS_STEMS = new Set([
+  "nao", "nunca", "jamas", "not", "never", "don", "nenhum", "nenhuma", "tampoco", "ningun", "ninguna", "nada", "none", "nor", "nem",
+]);
+
+function flippedSingleStem(sentence: string, bestChunkSentences: string[], allSentences: string[]): boolean {
+  const bare = sentence.replace(/\[\d+\]/g, "");
+  // Las raíces que son la propia negación no cuentan: «no» español se
+  // cae por longitud, pero «não» queda en «nao» (3 letras) y «don't»
+  // deja «don», y tapaban la raíz única en pt/en.
+  const stems = [...new Set(contentStems(bare))].filter((s) => !NEGATION_DEBRIS_STEMS.has(s));
+  if (stems.length !== 1) return false;
+  if (negationCount(bare) < 1) return false;
+  // La comparación es por negación DURA (la del predicado, como en
+  // CL-3): con el conteo entero, la cláusula protectora «No purgue
+  // el depósito sin guantes» contaba 2 («no» + el «sin» del adjunto)
+  // contra el 1 de la frase y la lectura fiel dejaba de proteger.
+  const neg = hardNegationCount(bare);
+  const stem1 = stems[0]!;
+  const clausesOf = (ss: string[]) => ss.flatMap((src) => src.split(CLAUSE_SPLIT_RE));
+  for (const clause of clausesOf(allSentences)) {
+    if (new Set(contentStems(clause)).has(stem1) && hardNegationCount(clause) === neg) return false;
+  }
+  for (const clause of clausesOf(bestChunkSentences)) {
+    if (new Set(contentStems(clause)).has(stem1) && hardNegationCount(clause) !== neg) return true;
+  }
+  return false;
+}
+
+/**
+ * T-04 (P-06 de la auditoría): el condicional caído. «La fiebre pasa
+ * de 39 grados, busca atención médica» copia a la guía condicional
+ * («Si la fiebre pasa de 39 grados…») sin el «si»: palabra funcional,
+ * invisible para las raíces, y la afirmación quedaba sellada como si
+ * la guía afirmara sin condición. Si la frase es copia demostrada de
+ * una frase fuente (la vara del 85 % de closestSourceSentence) que
+ * EMPIEZA por subordinante condicional y la respuesta no trae
+ * ningún subordinante en ninguna parte, el desenlace es el de la
+ * negación volcada de 0.1.59: sustituir por la frase fuente palabra
+ * por palabra, que devuelve el «si» a su sitio y no inventa nada.
+ * El «se» inicial solo cuenta con veredicto portugués claro: en
+ * español es el reflexivo corriente («Se recomienda…»), no una
+ * condición.
+ */
+const CONDITIONAL_STARTERS = new Set(["si", "if", "cuando", "quando", "when"]);
+const CONDITIONAL_TOKENS = new Set(["si", "se", "if", "cuando", "quando", "when"]);
+
+function droppedConditional(sentence: string, src: string): boolean {
+  const srcWords = words(src);
+  if (srcWords.length === 0) return false;
+  const first = srcWords[0]!;
+  const startsConditional = CONDITIONAL_STARTERS.has(first) || (first === "se" && detectTextLang(src) === "pt");
+  if (!startsConditional) return false;
+  const respWords = new Set(words(sentence.replace(/\[\d+\]/g, "")));
+  for (const t of CONDITIONAL_TOKENS) if (respWords.has(t)) return false;
+  return true;
+}
+
 // --------------------------------- polaridad por cláusulas (CL-3)
 
 /**
@@ -595,6 +693,52 @@ export function negatedClauseSource(
 export interface SourceClauseRec {
   stems: Set<string>;
   neg: number;
+  /** T-04 (M-02): raíces que la cláusula pone bajo «sin»/«sem»/«without». */
+  sinGov: Set<string>;
+  /** T-04 (M-02): raíz gobernada por su marcador de exclusividad («solo»…), o null. */
+  soloGov: string | null;
+}
+
+/**
+ * Los verbos ligeros que acompañan al marcador sin gobernar nada:
+ * «sin hacer compresiones» niega «compresiones», no «hacer» (que además
+ * es palabra vacía en es/pt, pero no su gerundio inglés «doing»).
+ */
+const LIGHT_VERB_WORDS = new Set(
+  "hacer haciendo haga haz hagan fazer fazendo faca do doing does make making realizar realizando efetuar efectuando efectuar efectuando".split(" "),
+);
+
+/**
+ * Las raíces que una cláusula pone bajo «sin»/«sem»/«without»: lo que
+ * sigue al primer marcador, saltando el verbo ligero que lo acompaña.
+ * null si la cláusula no trae marcador. Es la polaridad que
+ * hardNegationCount no mira a propósito (la de acompañamiento), leída
+ * por gobierno y no por conteo: «haz solo compresiones sin parar»
+ * pone bajo «sin» a «parar», no a «compresiones».
+ */
+function sinGovernedStems(clause: string): Set<string> | null {
+  const ws = words(clause.replace(/\[\d+\]/g, ""));
+  const i = ws.findIndex((w) => w === "sin" || w === "sem" || w === "without");
+  if (i < 0) return null;
+  let rest = ws.slice(i + 1);
+  while (rest.length > 0 && LIGHT_VERB_WORDS.has(rest[0]!)) rest = rest.slice(1);
+  return new Set(contentStems(rest.join(" ")));
+}
+
+/**
+ * Marcadores de exclusividad (es/en/pt). «só» queda fuera a propósito:
+ * words() quita el acento y lo deja en «so», que en inglés es una
+ * conjunción corriente; el portugués conserva «somente» y «apenas».
+ */
+const EXCLUSIVITY_MARKERS = new Set("solo only somente apenas unicamente exclusivamente exclusively".split(" "));
+
+/** La primera raíz de contenido tras el marcador de exclusividad, o null. */
+function exclusivityGovernedStem(clause: string): string | null {
+  const ws = words(clause.replace(/\[\d+\]/g, ""));
+  const i = ws.findIndex((w) => EXCLUSIVITY_MARKERS.has(w));
+  if (i < 0) return null;
+  const stems = contentStems(ws.slice(i + 1).join(" "));
+  return stems.length > 0 ? stems[0]! : null;
 }
 
 /**
@@ -629,10 +773,83 @@ function sourceClauseRecs(sourceSentences: string[]): SourceClauseRec[] {
   for (const src of sourceSentences) {
     for (const clause of src.split(CLAUSE_SPLIT_EXT_RE)) {
       if (!clause.trim()) continue;
-      out.push({ stems: new Set(contentStems(clause)), neg: hardNegationCount(clause) });
+      out.push({
+        stems: new Set(contentStems(clause)),
+        neg: hardNegationCount(clause),
+        sinGov: sinGovernedStems(clause) ?? new Set<string>(),
+        soloGov: exclusivityGovernedStem(clause),
+      });
     }
   }
   return out;
+}
+
+/**
+ * T-04 (M-02 de la auditoría): la cláusula niega con «sin» una acción
+ * que la guía afirma. hardNegationCount deja «sin» fuera a propósito
+ * (el de acompañamiento migra fielmente al fundir frases), así que la
+ * recombinación «Sopla 1 segundo…, sin hacer compresiones» pasaba con
+ * la polaridad «empatada». Aquí el «sin» se lee por GOBIERNO, no por
+ * conteo: devuelve true si toda raíz que la cláusula pone bajo «sin»
+ * (y que es raíz de la cláusula) aparece en las fuentes y en ninguna
+ * cláusula fuente va gobernada por «sin» — la guía la afirma siempre,
+ * negarla es volcarla. Si una sola cláusula fuente la pone bajo
+ * «sin», hay una lectura fiel y no se toca (la doctrina de
+ * negatedClauseSource); el «sin» copiado tal cual («sin despegar las
+ * manos») se protege solo, porque su raíz sí va gobernada en la
+ * fuente.
+ */
+function sinGovernedFlip(clause: string, want: Set<string>, sourceClauses: SourceClauseRec[]): boolean {
+  const gov = sinGovernedStems(clause);
+  if (!gov) return false;
+  const targets = [...gov].filter((g) => want.has(g));
+  if (targets.length === 0) return false;
+  return targets.every((g) => {
+    let seen = false;
+    for (const src of sourceClauses) {
+      if (!src.stems.has(g)) continue;
+      seen = true;
+      if (src.sinGov.has(g)) return false;
+    }
+    return seen;
+  });
+}
+
+/**
+ * T-04 (M-02 de la auditoría): el trasplante bajo exclusividad. «Haz
+ * solo respiraciones sin parar» copia el marco de la guía («haz solo
+ * compresiones sin parar») y cambia el objeto del «solo» por otra
+ * raíz de la misma guía: ni el apoyo (1,0 contra la unión de raíces)
+ * ni la polaridad (su «sin parar» es fiel) lo ven. La cláusula se
+ * corta si gobierna con su marcador una raíz que la guía trae en
+ * otra parte (trasplante, no invención), existe una cláusula fuente
+ * con marcador que gobierna OTRA raíz y comparte ≥2 raíces con ella
+ * (el marco del que copia), y ninguna cláusula fuente gobierna la
+ * MISMA raíz con contacto de marco (esa sería la lectura fiel).
+ */
+function exclusivityFlip(clause: string, want: Set<string>, sourceClauses: SourceClauseRec[]): boolean {
+  const govC = exclusivityGovernedStem(clause);
+  if (!govC) return false;
+  const shared = (src: SourceClauseRec) => {
+    let n = 0;
+    for (const w of want) if (src.stems.has(w)) n++;
+    return n;
+  };
+  for (const src of sourceClauses) {
+    if (src.soloGov === govC && shared(src) >= 1) return false;
+  }
+  let transplanted = false;
+  for (const src of sourceClauses) {
+    if (src.stems.has(govC)) {
+      transplanted = true;
+      break;
+    }
+  }
+  if (!transplanted) return false;
+  for (const src of sourceClauses) {
+    if (src.soloGov !== null && src.soloGov !== govC && shared(src) >= 2) return true;
+  }
+  return false;
 }
 
 /**
@@ -674,7 +891,14 @@ export function dropFlippedClauses(
     // vacías («Uses el ascensor durante un incendio» → {ascenso,
     // incendi}: «uses» y «durante» son palabras vacías). Con 2 se
     // exige contención entera (need = 2).
-    if (want.size < 2) continue;
+    if (want.size < 2) {
+      // T-04 (M-02): la cláusula de UNA raíz no llega a la vara, pero
+      // si esa raíz va bajo «sin» contra la guía («sin hacer
+      // compresiones»: «hacer» es palabra vacía y solo queda
+      // «compresiones»), el gobierno del «sin» la juzga igual.
+      if (want.size === 1 && sinGovernedFlip(clause, want, sourceClauses)) drop.add(i);
+      continue;
+    }
     const neg = hardNegationCount(clause);
     const need = Math.max(2, Math.ceil(want.size * 0.75));
     let matched = false;
@@ -699,6 +923,14 @@ export function dropFlippedClauses(
       }
     }
     if (matched && !faithful) drop.add(i);
+    // T-04 (M-02): sin lectura fiel por conteo, quedan las dos
+    // recombinaciones que el conteo no ve — la acción afirmada por
+    // la guía y negada con «sin», y el objeto del «solo» trasplantado
+    // de otra cláusula de la guía. Una cláusula con lectura fiel
+    // demostrada no se toca tampoco por estas vías.
+    if (!drop.has(i) && !(matched && faithful)) {
+      if (sinGovernedFlip(clause, want, sourceClauses) || exclusivityFlip(clause, want, sourceClauses)) drop.add(i);
+    }
     // Cláusula principal fiel demostrada: servirá para decidir si
     // la frase sobrevive a la caída de su primera cláusula.
     if (matched && faithful && want.size >= MIN_JUDGED_TERMS) faithfulMain.add(i);
@@ -2409,6 +2641,21 @@ export function verifyGroundedAnswer(
         sourceFixed++;
         continue;
       }
+      // T-04 (M-01 de la auditoría): la abstención que AFIRMA (la red
+      // C2-H1 la despoja del privilegio de abstención y la juzga por
+      // lo que afirma) no tiene en esta rama juicio léxico que la
+      // sostenga ni la tumbe. Si tras las piernas independientes del
+      // idioma no le queda ningún ancla comprobable (ni una cifra ni
+      // una dosis medida que esas piernas hayan podido contrastar),
+      // su afirmación cae como caería en la rama principal por falta
+      // de apoyo, y lo que se sirve es la abstención honesta. La que
+      // trae un ancla y la pasa («não sei, mas são 5 ml» con la dosis
+      // de la guía) se conserva no verificada, como manda CL-2 para
+      // el resto de frases del modelo en esta rama.
+      if (isAbstention(s) && numberTokens(s).length === 0 && doseMeasuresOf(s).length === 0) {
+        removed++;
+        continue;
+      }
       // CL-2 (caza 0.1.97), forma medida: en la rama cruzada juzgan
       // las piernas independientes del idioma (cifras, cantidades,
       // dosis, fechas, copia, dato). Lo demás se conserva como no
@@ -2584,12 +2831,21 @@ export function verifyGroundedAnswer(
     // (closestShortCopySentence) la alcanza sin bajar la vara: solo
     // entra cuando la copia está demostrada raíz a raíz.
     if (sup.bestChunk >= 0) {
-      const src =
-        (sup.total >= MIN_JUDGED_TERMS ? closestSourceSentence(s, chunkSentences[sup.bestChunk]) : null) ??
-        closestShortCopySentence(s, chunkSentences[sup.bestChunk]);
+      const copySrc = sup.total >= MIN_JUDGED_TERMS ? closestSourceSentence(s, chunkSentences[sup.bestChunk]) : null;
+      const src = copySrc ?? closestShortCopySentence(s, chunkSentences[sup.bestChunk]);
       if (src && negationCount(s.replace(/\[\d+\]/g, "")) !== negationCount(src)) {
         negationFixed++;
         const fixed = addCitation(src, sup.bestChunk + 1);
+        kept.push(fixed);
+        prov.push({ text: fixed, origin: { kind: "source", n: sup.bestChunk + 1, support: 1, negationFixed: true } });
+        continue;
+      }
+      // T-04 (P-06): la copia que perdió el condicional inicial de
+      // su fuente se sustituye por la fuente, como la negación
+      // volcada: el «si» vuelve a su sitio palabra por palabra.
+      if (copySrc && droppedConditional(s, copySrc)) {
+        negationFixed++;
+        const fixed = addCitation(copySrc, sup.bestChunk + 1);
         kept.push(fixed);
         prov.push({ text: fixed, origin: { kind: "source", n: sup.bestChunk + 1, support: 1, negationFixed: true } });
         continue;
@@ -2602,6 +2858,12 @@ export function verifyGroundedAnswer(
         const fixed = addCitation(clauseSrc, sup.bestChunk + 1);
         kept.push(fixed);
         prov.push({ text: fixed, origin: { kind: "source", n: sup.bestChunk + 1, support: 1, negationFixed: true } });
+        continue;
+      }
+      // T-04 (M-06): la volcada de una raíz se retira; con una raíz
+      // no hay copia que demostrar y no cabe la sustitución.
+      if (flippedSingleStem(s, chunkSentences[sup.bestChunk], chunkSentences.flat())) {
+        removed++;
         continue;
       }
     }

@@ -67,8 +67,10 @@ import {
   loadInstallState,
   recordInstall,
   verifiedProofOf,
+  type GgufJournalFacts,
   type InstallRecord,
 } from "./installState";
+import { parseGgufHeader, ggufPrefixMatches } from "./ggufHeader";
 import { CatalogModel, MODEL_CATALOG } from "./manifest";
 
 /**
@@ -109,6 +111,7 @@ export type TrustFailureReason =
   | "size-mismatch"
   | "no-expected-sha256"
   | "checksum-mismatch"
+  | "invalid-structure"
   | "unverifiable"
   | "unknown-model-file"
   | "outdated-pack";
@@ -294,6 +297,127 @@ export async function currentMtimeMs(path: string): Promise<number | null> {
 }
 
 // ---------------------------------------------------------------------------
+// M-37 (auditoría 2026-11-13, F2-M2): validación estructural GGUF.
+//
+// El SHA-256 del catálogo prueba que los bytes son los publicados; no
+// prueba que sean un GGUF bien formado, y la vía rápida de abajo ni
+// siquiera lo miraba: fiaba tamaño + SHA del diario + mtime, y el propio
+// encabezado de este módulo lleva años diciendo que reescribir dentro
+// del mismo segundo o falsificar el mtime es invisible para esa vía.
+// Ahora, para los assets GGUF (kind llm/embedding sin format — los packs
+// declaran sqlite-pack y no pasan por aquí):
+//
+//  - La vía lenta, tras casar el SHA, recorre la cabecera entera con el
+//    parser puro de ggufHeader.ts. Una cabecera que no se puede recorrer
+//    es «invalid-structure» y no se fía (deleteFile: false — los bytes
+//    SÍ son los del catálogo; borrarlos solo re-descargaría los mismos).
+//    Los hechos del recorrido quedan en el diario.
+//  - La vía rápida exige además que la cabecera actual sea la
+//    verificada: prefijo de 24 bytes + recorrido + SHA-256 de la región
+//    de cabecera [0, dataOffset) contra lo anotado. Leer la cabecera
+//    (KB–MB) no es re-hashear el fichero (cientos de MB), y un fichero
+//    sustituido con el mismo tamaño y el mismo mtime ya no cuela si su
+//    cabecera difiere. Si el diario aún no trae hechos (lo escribió el
+//    instalador o una versión anterior a la 0.1.99), NO hay vía rápida:
+//    la adopción la hace la vía lenta (re-hash + recorrido + anotación),
+//    una sola vez por instalación — el mismo coste que la instalación
+//    ya pagó al verificar, y el que este módulo siempre llamó «adopción
+//    del diario». Adoptar los hechos desde el fichero actual sin
+//    re-hashear convertiría la primera comprobación en notario de lo
+//    que haya en el disco en ese momento, que es justo el hueco que
+//    M-37 cierra. Residuo declarado: una sustitución que conserve
+//    cabecera, tamaño y mtime byte a byte y solo cambie los PESOS pasa
+//    la vía rápida — cerrarla del todo exigiría re-hashear cada carga,
+//    el coste que la vía rápida existe para evitar.
+// ---------------------------------------------------------------------------
+
+/** Primera lectura de cabecera; se multiplica hasta el tope si hace falta. */
+const GGUF_HEADER_READ_START = 256 * 1024;
+/** Las cabeceras reales (con vocabulario del tokenizador) quedan muy por debajo. */
+const GGUF_HEADER_READ_MAX = 32 * 1024 * 1024;
+
+function isGgufAsset(asset: CatalogModel): boolean {
+  return (asset.kind === "llm" || asset.kind === "embedding") && asset.format === undefined;
+}
+
+async function readRangeBytes(path: string, position: number, length: number): Promise<Uint8Array> {
+  const b64 = await FileSystem.readAsStringAsync(path, {
+    encoding: FileSystem.EncodingType.Base64,
+    position,
+    length,
+  });
+  return decodeBase64(b64);
+}
+
+function sha256HexOf(bytes: Uint8Array): string {
+  const hasher = createSha256();
+  hasher.update(bytes);
+  return Array.from(hasher.digest(), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+type GgufWalk =
+  | { kind: "ok"; facts: GgufJournalFacts }
+  | { kind: "invalid"; reason: string }
+  | { kind: "unknown" };
+
+/**
+ * Recorre la cabecera GGUF del fichero, leyendo por tramos crecientes.
+ * «unknown» = la cabecera pasa del tope de lectura o no se pudo leer:
+ * con el SHA ya casado no es motivo de rechazo (ver checkModelTrust).
+ */
+async function walkGgufHeader(path: string, sizeBytes: number): Promise<GgufWalk> {
+  let want = Math.min(sizeBytes, GGUF_HEADER_READ_START);
+  for (;;) {
+    let bytes: Uint8Array;
+    try {
+      bytes = await readRangeBytes(path, 0, want);
+    } catch {
+      return { kind: "unknown" };
+    }
+    const verdict = parseGgufHeader(bytes, sizeBytes);
+    if (verdict.status === "invalid") return { kind: "invalid", reason: verdict.reason };
+    if (verdict.status === "ok") {
+      return {
+        kind: "ok",
+        facts: { ...verdict.facts, headerSha256: sha256HexOf(bytes.subarray(0, verdict.facts.dataOffset)) },
+      };
+    }
+    if (want >= sizeBytes || want >= GGUF_HEADER_READ_MAX) return { kind: "unknown" };
+    want = Math.min(sizeBytes, GGUF_HEADER_READ_MAX, want * 4);
+  }
+}
+
+/**
+ * ¿La cabecera actual es la que el diario dice que se verificó? Lee solo
+ * la región de cabecera anotada. Cualquier desajuste o error devuelve
+ * false y la decisión pasa a la vía lenta, que es la juez.
+ */
+async function fastPathHeaderMatches(
+  path: string,
+  sizeBytes: number,
+  recorded: GgufJournalFacts,
+): Promise<boolean> {
+  try {
+    if (recorded.dataOffset < 24 || recorded.dataOffset > sizeBytes) return false;
+    const head = await readRangeBytes(path, 0, recorded.dataOffset);
+    if (!ggufPrefixMatches(head, recorded)) return false;
+    const verdict = parseGgufHeader(head, sizeBytes);
+    if (verdict.status !== "ok") return false;
+    if (
+      verdict.facts.version !== recorded.version ||
+      verdict.facts.tensorCount !== recorded.tensorCount ||
+      verdict.facts.metadataCount !== recorded.metadataCount ||
+      verdict.facts.dataOffset !== recorded.dataOffset
+    ) {
+      return false;
+    }
+    return sha256HexOf(head) === recorded.headerSha256;
+  } catch {
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // The trust gate.
 // ---------------------------------------------------------------------------
 
@@ -344,7 +468,17 @@ export async function checkModelTrust(asset: CatalogModel): Promise<TrustVerdict
   ) {
     // Fast path: these exact bytes were verified before, and the file has
     // not been rewritten since. No re-hash.
-    return { trusted: true, reason: "ok", deleteFile: false, sizeOnDiskBytes: sizeOnDisk };
+    // M-37: para un GGUF eso ya no basta — la cabecera actual debe ser
+    // la verificada (hechos del diario). Sin hechos anotados (diario del
+    // instalador o anterior a la 0.1.99) no hay vía rápida: la vía lenta
+    // de abajo verifica y adopta. Con hechos que no casan, también.
+    if (!isGgufAsset(asset)) {
+      return { trusted: true, reason: "ok", deleteFile: false, sizeOnDiskBytes: sizeOnDisk };
+    }
+    if (rec.gguf && (await fastPathHeaderMatches(path, sizeOnDisk, rec.gguf))) {
+      return { trusted: true, reason: "ok", deleteFile: false, sizeOnDiskBytes: sizeOnDisk };
+    }
+    dlog(asset.id, "checkModelTrust: vía rápida denegada (cabecera GGUF sin hechos o distinta) — verificando bytes");
   }
 
   // Slow path: size matches but there is no valid cached verification
@@ -380,11 +514,28 @@ export async function checkModelTrust(asset: CatalogModel): Promise<TrustVerdict
     dlog(asset.id, "checkModelTrust: checksum mismatch — untrusted, file must be deleted");
     return { trusted: false, reason: "checksum-mismatch", deleteFile: true, sizeOnDiskBytes: sizeOnDisk };
   }
+  // M-37: con el SHA casado, la estructura manda. Una cabecera GGUF que
+  // no se puede recorrer no llega al parser nativo aunque los bytes sean
+  // los del catálogo (deleteFile: false — borrarlos solo traería los
+  // mismos bytes otra vez; lo que estaría mal es la entrada del catálogo).
+  let ggufFacts: GgufJournalFacts | undefined;
+  if (isGgufAsset(asset)) {
+    const walk = await walkGgufHeader(path, sizeOnDisk);
+    if (walk.kind === "invalid") {
+      dlog(asset.id, `checkModelTrust: GGUF structure invalid (${walk.reason}) — untrusted`);
+      return { trusted: false, reason: "invalid-structure", deleteFile: false, sizeOnDiskBytes: sizeOnDisk };
+    }
+    if (walk.kind === "ok") ggufFacts = walk.facts;
+    // «unknown» (cabecera mayor que el tope o ilegible): los bytes ya son
+    // los verificados por SHA; se acepta sin anotar hechos y la vía
+    // rápida simplemente no se usará para este fichero.
+  }
   await recordInstall(asset.id, {
     status: "installed",
     sizeBytes: asset.sizeBytes,
     sha256: asset.sha256,
     mtimeMs: mtime ?? undefined,
+    ...(ggufFacts ? { gguf: ggufFacts } : {}),
   });
   return { trusted: true, reason: "ok", deleteFile: false, sizeOnDiskBytes: sizeOnDisk };
 }

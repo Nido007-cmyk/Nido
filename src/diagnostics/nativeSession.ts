@@ -62,9 +62,23 @@
  *   ×0,8; el conteo lo aplica LlamaEngine, dueño del registro) y el
  *   indexado de fondo queda desactivado durante toda la sesión
  *   siguiente (la bandera de este módulo, que consultan reembed y los
- *   índices de packs dentro de los propios llamados). Los LOW_MEMORY
- *   NO se mezclan: son la cosecha del sistema en segundo plano
- *   (diagnóstico §5), un fenómeno aparte que no cuenta ni apaga nada.
+ *   índices de packs dentro de los propios llamados).
+ *
+ * - C-02 (auditoría 2026-11-13, CRÍTICO): los LOW_MEMORY con
+ *   generación en vuelo TAMBIÉN cuentan y TAMBIÉN apagan el fondo.
+ *   Hasta la 0.1.98 el cruce los excluía enteros («son la cosecha del
+ *   sistema en segundo plano, un fenómeno aparte»): el CrashGuard
+ *   quedaba ciego a la muerte por memoria a mitad de generación —
+ *   tras la primera generación buena el registro quedaba sin
+ *   pendiente, y un aparato justo moría de forma idéntica en cada
+ *   respuesta larga, para siempre, sin bajar un solo peldaño. La
+ *   doctrina §5 sigue valiendo para lo que describía: la cosecha
+ *   LOW_MEMORY SIN generación en vuelo (el sistema cerrando la app
+ *   en segundo plano) no cuenta ni apaga nada. Lo que distingue un
+ *   caso del otro es la bandera `generating`, que para eso existe.
+ *   El VEREDICTO, en cambio, sigue siendo solo de CRASH_NATIVE: el
+ *   veredicto dice qué configuración nativa murió, y una muerte por
+ *   memoria no acusa a ninguna.
  */
 
 import * as FileSystem from "expo-file-system/legacy";
@@ -177,6 +191,8 @@ export interface NativeSessionCrossing {
   record: NativeSessionRecord;
   /** M3: la muerte cuenta un choque en el CrashGuard (solo CRASH_NATIVE generando). */
   countedNativeCrash: boolean;
+  /** C-02: la muerte fue LOW_MEMORY con generación en vuelo: también cuenta en el CrashGuard. */
+  countedLowMemoryDeath: boolean;
   /** M3: el indexado de fondo queda desactivado durante esta sesión. */
   holdBackground: boolean;
 }
@@ -211,15 +227,23 @@ export function pickExitForRecord(
  *   bandera de generación cae (aquel proceso ya no existe) y el
  *   cierre queda marcado como cruzado para no contarlo dos veces.
  * - Solo CRASH_NATIVE produce veredicto; con generación en vuelo,
- *   además cuenta el choque y apaga el fondo (M3). Cualquier otro
- *   motivo (LOW_MEMORY, USER_REQUESTED…) se cruza en silencio: no
- *   cuenta, no apaga, no pisa el veredicto anterior.
+ *   además cuenta el choque y apaga el fondo (M3).
+ * - LOW_MEMORY con generación en vuelo cuenta la muerte y apaga el
+ *   fondo (C-02), sin veredicto. LOW_MEMORY sin generación — la
+ *   cosecha del sistema en segundo plano — y cualquier otro motivo
+ *   (USER_REQUESTED…) se cruzan en silencio: no cuentan, no apagan,
+ *   no pisan el veredicto anterior.
  */
 export function crossNativeSessionRecord(
   record: NativeSessionRecord,
   exits: readonly ExitInfoLike[] | null,
 ): NativeSessionCrossing {
-  const none: NativeSessionCrossing = { record, countedNativeCrash: false, holdBackground: false };
+  const none: NativeSessionCrossing = {
+    record,
+    countedNativeCrash: false,
+    countedLowMemoryDeath: false,
+    holdBackground: false,
+  };
   if (!exits || exits.length === 0) return none;
   const exit = pickExitForRecord(exits, record);
   if (!exit) return none;
@@ -229,8 +253,14 @@ export function crossNativeSessionRecord(
     crossedExitAt: exit.timestamp,
     generating: false,
   };
+  if (exit.reason === "LOW_MEMORY") {
+    if (!record.generating) {
+      return { record: crossed, countedNativeCrash: false, countedLowMemoryDeath: false, holdBackground: false };
+    }
+    return { record: crossed, countedNativeCrash: false, countedLowMemoryDeath: true, holdBackground: true };
+  }
   if (exit.reason !== "CRASH_NATIVE") {
-    return { record: crossed, countedNativeCrash: false, holdBackground: false };
+    return { record: crossed, countedNativeCrash: false, countedLowMemoryDeath: false, holdBackground: false };
   }
   const verdict: NativeSessionVerdict = {
     exitAt: exit.timestamp,
@@ -242,9 +272,9 @@ export function crossNativeSessionRecord(
   };
   const withVerdict: NativeSessionRecord = { ...crossed, verdict };
   if (!record.generating) {
-    return { record: withVerdict, countedNativeCrash: false, holdBackground: false };
+    return { record: withVerdict, countedNativeCrash: false, countedLowMemoryDeath: false, holdBackground: false };
   }
-  return { record: withVerdict, countedNativeCrash: true, holdBackground: true };
+  return { record: withVerdict, countedNativeCrash: true, countedLowMemoryDeath: false, holdBackground: true };
 }
 
 // ------------------------------------------------------------ M3: el fondo apagado esta sesión

@@ -37,8 +37,8 @@ describe("setup model picker", () => {
     }
   });
 
-  it("preselects the preferred model when RAM is unknown (blind)", () => {
-    expect(preselectLlmId(0)).toBe(PREFERRED_LLM_ID);
+  it("preselects the LIGHT model when RAM is unknown (blind, F3-05)", () => {
+    expect(preselectLlmId(0)).toBe(LIGHT_LLM_ID);
   });
 
   it("preselects the light model on a low-RAM device (Tab A9+ class)", () => {
