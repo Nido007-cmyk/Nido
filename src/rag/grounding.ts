@@ -191,7 +191,7 @@ export function stem(w: string): string {
   return s.slice(0, 7);
 }
 
-function contentStems(text: string): string[] {
+export function contentStems(text: string): string[] {
   return words(text)
     .filter((w) => (w.length >= 3 || /^\d+$/.test(w)) && !STOPWORDS.has(w))
     .map((w) => (/^\d/.test(w) ? w : stem(w)));
@@ -1106,6 +1106,116 @@ function changedNumberCopy(sentence: string, sourceSentences: readonly string[])
       if ([...mine].every((v) => theirs.has(v))) continue;
       const differing = [...mine].filter((v) => !theirs.has(v));
       if (differing.every((v) => qtyVals.has(v))) continue;
+      return true;
+    }
+  }
+  return false;
+}
+
+// ------------------------------------------- cifra↔rol por orden (T-19, V5b)
+
+/**
+ * T-19 (núcleo del juez, V5b): la cifra fiel lavada en un rol ajeno.
+ * La vara de cantidades ata la cifra a su unidad, pero no a su PAPEL:
+ * «3000 mg por toma» pasa cuando la guía dice «500 mg por toma» y
+ * «3000 mg en 24 horas» — la cifra existe, la unidad existe y el rol
+ * existe, pero ese par (cifra, rol) no. La pierna empareja POR ORDEN
+ * dentro de la frase: se recorren las palabras en orden, la cifra
+ * vigente es la última vista y cada palabra de rol se ata a ella.
+ * Dispara cuando un par de la frase no está entre los pares de la
+ * evidencia, con el rol emparejado en la evidencia y la cifra
+ * presente en ella: la invención con cifra ausente no dispara (es
+ * terreno de las demás puertas) y el par fiel no dispara.
+ *
+ * La forma es la medida en el diseño contra la batería completa
+ * (902 casos: caza 012/295/296/297 con 0 fieles rotas y 0 colateral).
+ * La variante cartesiana (V5a: todo valor con todo rol de la frase)
+ * rompía los conserva matriz-b-011 y matriz-b-114 y está muerta: si
+ * esta implementación rompe alguno, es que se coló la forma muerta.
+ *
+ * Las formas de la tabla son las de superficie es/en/pt; la raíz con
+ * la que se casa cada una es la que produce contentStems (el mapa se
+ * construye desde ella), y el test de la pierna fija esa raíz por
+ * entrada: una forma que el stemmer dejara muerta tumba el test, no
+ * pasa en silencio.
+ */
+export const VALUE_ROLE_FORMS: ReadonlyArray<readonly [string, string]> = [
+  ["frente", "front"], ["delantera", "front"], ["delantero", "front"], ["front", "front"],
+  ["dianteira", "front"], ["dianteiro", "front"],
+  ["trasera", "rear"], ["trasero", "rear"], ["detrás", "rear"], ["atrás", "rear"],
+  ["rear", "rear"], ["traseira", "rear"], ["traseiro", "rear"],
+  ["izquierda", "left"], ["izquierdo", "left"], ["left", "left"],
+  ["esquerda", "left"], ["esquerdo", "left"],
+  ["derecha", "right"], ["derecho", "right"], ["right", "right"],
+  ["direita", "right"], ["direito", "right"],
+  ["toma", "perdose"], ["dose", "perdose"],
+  ["día", "perday"], ["dia", "perday"], ["day", "perday"],
+  ["primera", "first"], ["primero", "first"], ["primer", "first"], ["first", "first"],
+  ["primeira", "first"], ["primeiro", "first"],
+  ["última", "last"], ["último", "last"], ["ultima", "last"], ["ultimo", "last"], ["last", "last"],
+];
+
+/** Raíz de producción → rol, construido desde las formas con contentStems. */
+const VALUE_ROLE_BY_STEM: ReadonlyMap<string, string> = (() => {
+  const map = new Map<string, string>();
+  for (const [form, role] of VALUE_ROLE_FORMS) {
+    for (const s of contentStems(form)) map.set(s, role);
+  }
+  return map;
+})();
+
+/**
+ * Los pares (cifra, rol) de un texto, como claves «valor|rol»,
+ * emparejados por la cifra precedente dentro de cada frase. Los
+ * valores son las lecturas de la casa (parseNumberToken): «3.000»
+ * empareja sus dos lecturas, como la evidencia las cuenta todas.
+ */
+export function valueRolePairs(text: string): Set<string> {
+  const pairs = new Set<string>();
+  for (const sentence of splitSentences(text)) {
+    // El mismo plegado que words(): minúsculas, sin acentos, sin citas.
+    const folded = stripAccents(sentence.toLowerCase()).replace(/\[\d+\]/g, " ");
+    let current: number[] = [];
+    for (const m of folded.matchAll(/\d+\/\d+(?![\d/])|\d[\d.,]*\d|\d|[a-zñ]+/g)) {
+      const tok = m[0];
+      if (/^\d/.test(tok)) {
+        const readings = parseNumberToken(tok);
+        if (readings.length > 0) {
+          current = readings;
+        } else if (tok.includes("/")) {
+          // Fracción que no es de cocina (una fecha, una razón):
+          // numberTokens la parte en tokens sueltos, así que la
+          // cifra vigente pasa a ser su última parte, como allí.
+          const parts = tok.match(/\d+/g) ?? [];
+          current = parts.length ? parseNumberToken(parts[parts.length - 1]) : [];
+        }
+        continue;
+      }
+      const role = VALUE_ROLE_BY_STEM.get(stem(tok));
+      if (role !== undefined) {
+        for (const v of current) pairs.add(`${v}|${role}`);
+      }
+    }
+  }
+  return pairs;
+}
+
+/**
+ * ¿Ata la frase alguna cifra a un rol con el que la evidencia nunca
+ * la empareja, estando la cifra en la evidencia y el rol emparejado
+ * en ella con otra cifra? Es el disparo de V5b; su desenlace en el
+ * juez es el de quantityConflict (la frase se retira).
+ */
+export function valueRoleConflict(
+  sentence: string,
+  sourcePairs: ReadonlySet<string>,
+  sourceRoles: ReadonlySet<string>,
+  sourceNumbers: ReadonlySet<number>,
+): boolean {
+  for (const key of valueRolePairs(sentence)) {
+    if (sourcePairs.has(key)) continue;
+    const cut = key.lastIndexOf("|");
+    if (sourceRoles.has(key.slice(cut + 1)) && sourceNumbers.has(Number(key.slice(0, cut)))) {
       return true;
     }
   }
@@ -2698,6 +2808,29 @@ export function verifyGroundedAnswer(
   // pregunta ya no compila; y quien pasa "" a la vista obtiene el
   // juicio de cantidades entero, que es el comportamiento seguro.
 
+  // T-19 (V5b): los pares cifra↔rol de la evidencia, calculados una
+  // sola vez por llamada: la unión de pares de TODAS las frases
+  // fuente (es lo medido; la condición conjuntiva del disparo es lo
+  // que lo hace seguro), los roles que la evidencia empareja y sus
+  // cifras con las lecturas de la casa.
+  const sourceRolePairs = new Set<string>();
+  for (const ss of chunkSentences) {
+    for (const st of ss) {
+      for (const p of valueRolePairs(st)) sourceRolePairs.add(p);
+    }
+  }
+  const sourceRoles = new Set<string>();
+  for (const key of sourceRolePairs) sourceRoles.add(key.slice(key.lastIndexOf("|") + 1));
+  // Las cifras de la evidencia para el disparo son las de los tokens
+  // en dígitos (numberValueSet: las lecturas de parseNumberToken de
+  // numberTokens), NO las lecturas en letra de evidenceNumberValues:
+  // el paseo de pares es de dígitos, y contar el «dos» de «dos veces
+  // al día» como cifra suelta hacía disparar la pierna contra la
+  // prosa fiel que lo trae en dígitos («tome el jarabe 2 veces al
+  // día», controles de A3-03 y T-J1). Es la forma medida en el
+  // diseño, cuyo numeros() es de dígitos.
+  const sourceRoleNumbers = numberValueSet(chunkSentences.flat().join(" "));
+
   if (!sameLanguage && !hasTopicSameLangChunk) {
     // Sin comparación léxica válida: solo cifras (independientes del idioma).
     // Tanda 1 del programa bounty: la comparación ya no es por dígitos
@@ -2757,6 +2890,14 @@ export function verifyGroundedAnswer(
       // T-05 (V-02) juzgan sin puerta de pregunta: ver la frontera
       // de T-J1 actualizada junto a datumArmedAny.
       if (quantityConflict(s, weakQty, weakNums, weakRanges)) {
+        removed++;
+        continue;
+      }
+      // T-19 (V5b): la cifra↔rol también es independiente del
+      // idioma — la cifra y el rol se atan por orden, sin léxico
+      // que comparar — y juzga en esta rama con los pares globales
+      // de la evidencia (012 y 297 viven aquí).
+      if (valueRoleConflict(s, sourceRolePairs, sourceRoles, sourceRoleNumbers)) {
         removed++;
         continue;
       }
@@ -2843,6 +2984,20 @@ export function verifyGroundedAnswer(
   }
 
   const chunkStemSets = chunkTexts.map((t) => new Set(contentStems(t)));
+  // T-19 (V6): la relevancia de la polisemia se cuenta por PRESENCIA
+  // (raíces de la pregunta presentes en el chunk, sin repetir), no
+  // por ocurrencias como chunkQuestionRel: con ocurrencias, la guía
+  // del sentido competidor empata a la buena a base de repetir la
+  // palabra polisémica (polisemia-114 empata 3 a 3 y la pierna no se
+  // arma) y por presencia es 2 a 1, que es lo medido en el diseño.
+  // Su armado (≥2) y su disparo viven junto a CL-10 en el bucle.
+  const questionRelPresence = chunkStemSets.map((set) => {
+    let n = 0;
+    for (const w of questionStems) if (set.has(w)) n++;
+    return n;
+  });
+  const maxQuestionRelPresence = Math.max(0, ...questionRelPresence);
+  const relevanceArmedLow = maxQuestionRelPresence >= 2 && chunkTexts.length >= 2;
   // CL-3: las cláusulas de todas las frases fuente, para la pierna
   // de polaridad (el vocabulario de una contradicción puede venir
   // repartido entre chunks, así que no se limita al mejor chunk).
@@ -2863,6 +3018,16 @@ export function verifyGroundedAnswer(
       prov.push({ text: s, origin: { kind: "abstain" } });
       continue;
     }
+    // La jurisdicción del dato de esta frase, calculada al entrar:
+    // la consultan CL-10 y V5b (las dos retiran por su cuenta y las
+    // dos ceden ante la regla del dato, cuyo desenlace sellado es
+    // la sustitución: ver la excepción junto a CL-10).
+    const datumJurisdiction =
+      (datumArmedAny && assertsDatumIdentity(s)) ||
+      (datumTypeOfText(query ?? "") !== null &&
+        isTypedDatumOffender(s, datumTypeOfText(query ?? "")!, sourceRecs, questionStems)) ||
+      (datumTypeOfText(s) !== null &&
+        isTypedDatumOffender(s, datumTypeOfText(s)!, sourceRecs, questionStems));
     const sup = sentenceSupport(s, chunkStemSets);
     // CL-4 paso B (caza 0.1.97): la evidencia de cifras de ESTA
     // frase es la de sus chunks de apoyo (su mejor chunk y los que
@@ -2897,6 +3062,27 @@ export function verifyGroundedAnswer(
     // número en letra fuera de los portillos de dosis. Desde T-05
     // (V-02) juzga sin puerta de pregunta.
     if (quantityConflict(s, localQty, localNums, localRanges)) {
+      removed++;
+      continue;
+    }
+    // T-19 (V5b): la cifra fiel con el rol cambiado no es un
+    // conflicto de cantidad — la cifra y el rol existen en la
+    // evidencia, pero nunca emparejados así. changedNumberCopy cubre
+    // la copia casi idéntica con la cifra cambiada; esta pierna, el
+    // caso sin copia y el mismo idioma (295/296 viven aquí), con los
+    // pares globales de la evidencia. Cede ante la maquinaria del
+    // dato, como measuredDoseConflict cede ante la afirmación con
+    // categoría y cópula: la frase que afirma un dato (la dosis
+    // falsa de T-J2, la rescatada por unión de R2-11) tiene su
+    // desenlace sellado en esa maquinaria — sustitución o rescate —
+    // y retirarla aquí lo convertía en abstención. La jurisdicción
+    // del dato de CL-10 manda por la misma razón.
+    const datumAssertion = DATUM_CATEGORY_RE.test(foldForCues(s)) && hasDatumCopula(s);
+    if (
+      !datumJurisdiction &&
+      !datumAssertion &&
+      valueRoleConflict(s, sourceRolePairs, sourceRoles, sourceRoleNumbers)
+    ) {
       removed++;
       continue;
     }
@@ -2938,15 +3124,39 @@ export function verifyGroundedAnswer(
     // cuyo desenlace sellado es la SUSTITUCIÓN por la frase fuente
     // (R-05, H-02): retirarla aquí por relevancia convertía la
     // sustitución en abstención.
-    const datumJurisdiction =
-      (datumArmedAny && assertsDatumIdentity(s)) ||
-      (datumTypeOfText(query ?? "") !== null &&
-        isTypedDatumOffender(s, datumTypeOfText(query ?? "")!, sourceRecs, questionStems)) ||
-      (datumTypeOfText(s) !== null &&
-        isTypedDatumOffender(s, datumTypeOfText(s)!, sourceRecs, questionStems));
     if (relevanceArmed && !datumJurisdiction) {
       const relSupport = sentenceSupport(s, chunkStemSets.filter((_, i) => relevantIdx.has(i)));
       if (!isSupported(relSupport)) {
+        removed++;
+        continue;
+      }
+    }
+    // T-19 (V6): si la frase se apoya sobre todo (≥ 0,5) en un chunk
+    // que no es de los de máxima relación con la pregunta, y ningún
+    // chunk de máxima relación la apoya ni a medias (< 0,5), su
+    // único respaldo real es la guía del sentido competidor: se
+    // retira como en CL-10, cuya excepción de jurisdicción del dato
+    // se aplica igual (su desenlace sellado es la sustitución). Es
+    // la red léxica de la polisemia para cuando la puerta semántica
+    // (N8 de T-21) no está activa; con margen 1, medido: el margen 2
+    // ya no caza 114 y el listón 3 es el de CL-10, que no la alcanza.
+    if (relevanceArmedLow && !datumJurisdiction) {
+      const chunkSupports = chunkStemSets.map((set) => sentenceSupport(s, [set]).support);
+      let bestSupported = 0;
+      for (let i = 1; i < chunkSupports.length; i++) {
+        if (chunkSupports[i] > chunkSupports[bestSupported]) bestSupported = i;
+      }
+      let relevantSupport = 0;
+      questionRelPresence.forEach((rel, i) => {
+        if (rel === maxQuestionRelPresence && chunkSupports[i] > relevantSupport) {
+          relevantSupport = chunkSupports[i];
+        }
+      });
+      if (
+        chunkSupports[bestSupported] >= 0.5 &&
+        questionRelPresence[bestSupported] <= maxQuestionRelPresence - 1 &&
+        relevantSupport < 0.5
+      ) {
         removed++;
         continue;
       }
