@@ -202,13 +202,14 @@ export function resolveSampling(opts: {
  * llama.rn arma cada completion sobre ctx->params.sampling, que es el
  * estado del contexto: cada parámetro que la petición no trae conserva el
  * valor de la completion anterior (cpp/jsi/JSIParams.cpp,
- * parseCompletionParams; igual en rc.7, rc.9 y rc.10). Una llamada sin
+ * parseCompletionParams; igual en rc.7, rc.9, rc.10 y rc.11, re-leído
+ * en la tanda T-22). Una llamada sin
  * preset detrás de una con preset heredaba su min_p 0 y su
  * penalty_repeat 1.1. Por eso NIDO manda siempre los cuatro que gestiona,
  * y lo que el llamante no fija vale lo de la carga.
  *
- * La carga la hace common_init_sampler_from_model de llama.cpp (b11960 y
- * b12211, common/common.cpp): toma las claves general.sampling.* del GGUF
+ * La carga la hace common_init_sampler_from_model de llama.cpp (b11960,
+ * b12211 y b12292, common/common.cpp): toma las claves general.sampling.* del GGUF
  * con strtol/strtof, y si faltan o no empiezan por un número, deja los
  * valores por defecto de common_params_sampling (common/common.h), que
  * son los de LLAMA_CPP_SAMPLING_DEFAULTS. llama.rn no fija

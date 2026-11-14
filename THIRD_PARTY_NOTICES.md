@@ -9,7 +9,7 @@ The list covers every package that `package-lock.json` does not mark as developm
 
 AI models are not part of the app: they are downloaded separately and keep their own licenses. Two of NIDO's own knowledge packs ship inside the APK since 0.1.95 (NIDO Essentials and NIDO Local, CC BY 4.0); the other packs are downloaded separately. All of them keep their own licenses (see [ATTRIBUTION.md](ATTRIBUTION.md) and `docs/release/MODEL_LICENSE_AUDIT.md`). Android libraries resolved by Gradle at build time (AndroidX, Kotlin, SQLCipher and their dependencies) do not come from npm: since 0.1.55 the exact list for each build is attached to its GitHub release as `android-runtime-dependencies.txt` (see below).
 
-Source: `package-lock.json sha256:50e10a7aaa81` · 594 packages.
+Source: `package-lock.json sha256:f1af0217fb39` · 594 packages.
 
 ## License elections
 
@@ -404,7 +404,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | lightningcss-linux-x64-musl | 1.33.0 | MPL-2.0 |
 | lightningcss-win32-arm64-msvc | 1.33.0 | MPL-2.0 |
 | lightningcss-win32-x64-msvc | 1.33.0 | MPL-2.0 |
-| llama.rn | 0.13.0-rc.9 | MIT |
+| llama.rn | 0.13.0-rc.11 | MIT |
 | locate-path | 5.0.0 | MIT |
 | lodash.debounce | 4.0.8 | MIT |
 | lodash.throttle | 4.1.1 | MIT |
@@ -12146,7 +12146,7 @@ Ships no license file; same project, copyright holder and license as `lightningc
 
 Ships no license file; same project, copyright holder and license as `lightningcss`, whose notice applies (see above).
 
-### llama.rn@0.13.0-rc.9 — LICENSE
+### llama.rn@0.13.0-rc.11 — LICENSE
 
 ```text
 MIT License
@@ -12171,7 +12171,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### llama.rn@0.13.0-rc.9 — vendor/OpenCL-Headers/LICENSE
+### llama.rn@0.13.0-rc.11 — vendor/OpenCL-Headers/LICENSE
 
 ```text
 Apache License
@@ -12377,7 +12377,7 @@ Apache License
    limitations under the License.
 ```
 
-### llama.rn@0.13.0-rc.9 — vendor/codec.cpp/LICENSE
+### llama.rn@0.13.0-rc.11 — vendor/codec.cpp/LICENSE
 
 ```text
 MIT License
@@ -12403,7 +12403,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### llama.rn@0.13.0-rc.9 — vendor/llama.cpp/LICENSE
+### llama.rn@0.13.0-rc.11 — vendor/llama.cpp/LICENSE
 
 ```text
 MIT License
