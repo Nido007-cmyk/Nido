@@ -167,8 +167,44 @@ import { assetPath } from "./modelTrust";
 import type { CatalogModel } from "./manifest";
 
 const BYTES = (() => {
+  // M-37 (0.1.99): cabecera GGUF válida + patrón detrás — la puerta de
+  // confianza valida la estructura además del SHA y los bytes de un
+  // modelo real son un GGUF.
+  const header: number[] = [];
+  const push = (...bs: number[]) => {
+    header.push(...bs);
+  };
+  const u32 = (v: number) => {
+    for (let i = 0; i < 4; i++) push((v >>> (8 * i)) & 0xff);
+  };
+  const u64 = (v: number) => {
+    let x = BigInt(v);
+    for (let i = 0; i < 8; i++) {
+      push(Number(x & 0xffn));
+      x >>= 8n;
+    }
+  };
+  const str = (s: string) => {
+    const e = new TextEncoder().encode(s);
+    u64(e.length);
+    push(...e);
+  };
+  push(0x47, 0x47, 0x55, 0x46); // "GGUF"
+  u32(3);
+  u64(1);
+  u64(1);
+  str("general.name");
+  u32(8);
+  str("modelo de prueba");
+  str("token_embd.weight");
+  u32(2);
+  u64(4);
+  u64(8);
+  u32(0);
+  u64(0);
   const b = new Uint8Array(3000);
-  for (let i = 0; i < b.length; i++) b[i] = (i * 31 + 7) % 251;
+  b.set(header);
+  for (let i = header.length; i < b.length; i++) b[i] = (i * 31 + 7) % 251;
   return b;
 })();
 const SHA = createHash("sha256").update(BYTES).digest("hex");

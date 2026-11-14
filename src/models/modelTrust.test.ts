@@ -54,6 +54,10 @@ const hoisted = vi.hoisted(() => {
   }
   const files = new Map<string, MockFile>();
   const base64Reads: string[] = []; // model-path chunk reads (i.e. hashing happened)
+  // M-37: tamaños de cada lectura base64 por ruta — la vía rápida nueva
+  // lee SOLO la cabecera; los tests distinguen «leyó la cabecera» de
+  // «re-hasheó el fichero entero» por los tamaños, no por el conteo.
+  const base64ReadSizes = new Map<string, number[]>();
   const copiedSubPaths: string[] = []; // APK asset paths copyBundledAssetToFile was asked for
   let apkBytes: Uint8Array = new Uint8Array(0);
   let apkMtimeSec = 2000;
@@ -68,6 +72,7 @@ const hoisted = vi.hoisted(() => {
     JOURNAL,
     files,
     base64Reads,
+    base64ReadSizes,
     writeFile,
     fileExists: (path: string) => files.has(path),
     setMtime: (path: string, mtimeSec: number) => {
@@ -110,6 +115,9 @@ vi.mock("expo-file-system/legacy", () => ({
       hoisted.base64Reads.push(path);
       const pos = opts?.position ?? 0;
       const len = opts?.length ?? f.bytes.length - pos;
+      const sizes = hoisted.base64ReadSizes.get(path) ?? [];
+      sizes.push(len);
+      hoisted.base64ReadSizes.set(path, sizes);
       return Buffer.from(f.bytes.subarray(pos, pos + len)).toString("base64");
     }
     return hoisted.td.decode(f.bytes);
@@ -158,8 +166,52 @@ const sha256Of = (b: Uint8Array) => createHash("sha256").update(b).digest("hex")
 
 // Small deterministic "model": 4 KiB. The streaming-hash logic itself is
 // covered by verifyChecksum.test.ts; here we prove the trust decisions.
-const GOOD_BYTES = new Uint8Array(4096);
-for (let i = 0; i < GOOD_BYTES.length; i++) GOOD_BYTES[i] = (i * 7 + 3) & 0xff;
+// M-37: el «modelo bueno» es un GGUF de verdad — cabecera recorrible por
+// el parser de ggufHeader.ts y datos de tensor de relleno detrás —
+// porque la puerta ahora valida la estructura además del SHA: un patrón
+// de bytes cualquiera ya no es un modelo válido ni como fixture.
+function buildGgufBytes(totalSize: number): Uint8Array {
+  const bytes: number[] = [];
+  const push = (...bs: number[]) => {
+    bytes.push(...bs);
+  };
+  const u32 = (v: number) => {
+    for (let i = 0; i < 4; i++) push((v >>> (8 * i)) & 0xff);
+  };
+  const u64 = (v: number) => {
+    let x = BigInt(v);
+    for (let i = 0; i < 8; i++) {
+      push(Number(x & 0xffn));
+      x >>= 8n;
+    }
+  };
+  const str = (s: string) => {
+    const e = new TextEncoder().encode(s);
+    u64(e.length);
+    push(...e);
+  };
+  push(0x47, 0x47, 0x55, 0x46); // "GGUF"
+  u32(3); // versión
+  u64(1); // tensores
+  u64(2); // metadatos
+  str("general.name");
+  u32(8); // STRING
+  str("modelo de prueba");
+  str("general.sampling.temp");
+  u32(8);
+  str("0.7");
+  str("token_embd.weight");
+  u32(2); // n_dims
+  u64(4);
+  u64(8);
+  u32(0); // tipo ggml f32
+  u64(0); // offset
+  const out = new Uint8Array(totalSize);
+  out.set(bytes);
+  for (let i = bytes.length; i < totalSize; i++) out[i] = (i * 7 + 3) & 0xff;
+  return out;
+}
+const GOOD_BYTES = buildGgufBytes(300_000);
 const GOOD_SHA = sha256Of(GOOD_BYTES);
 
 const asset = {
@@ -185,6 +237,7 @@ function makeManager(): ModelManager {
 beforeEach(() => {
   hoisted.files.clear();
   hoisted.base64Reads.length = 0;
+  hoisted.base64ReadSizes.clear();
   hoisted.setApkBytes(GOOD_BYTES.slice());
   hoisted.setApkMtimeSec(2000);
   resetInstallReconcileForTests();
@@ -203,10 +256,20 @@ describe("installBundled integrity (same SHA-256 guarantee as downloads)", () =>
     expect(status.sizeOnDiskBytes).toBe(asset.sizeBytes);
     expect(hoisted.fileExists(modelPath)).toBe(true);
 
-    // Second call is idempotent and takes the fast path (no re-hash).
-    hoisted.base64Reads.length = 0;
+    // Second call is idempotent. M-37: el diario del instalador aún no
+    // trae hechos GGUF, así que esta llamada paga la adopción por la
+    // vía lenta (verificación completa, una vez) y el diario queda con
+    // los hechos anotados.
     await mgr.installBundled(asset);
-    expect(hoisted.base64Reads.filter((p) => p === modelPath)).toEqual([]);
+    const { loadInstallState } = await import("./installState");
+    expect((await loadInstallState()).records[asset.id]?.gguf).toBeDefined();
+    // Third call: now the fast path applies — it reads only the header
+    // region to compare it against the journal facts (no re-hash).
+    hoisted.base64Reads.length = 0;
+    hoisted.base64ReadSizes.clear();
+    await mgr.installBundled(asset);
+    const sizes = hoisted.base64ReadSizes.get(modelPath) ?? [];
+    expect(sizes.reduce((a, b) => a + b, 0)).toBeLessThan(1024);
   });
 
   it("2. bundled asset with incorrect SHA → rejected, deleted, never installed", async () => {
@@ -259,13 +322,23 @@ describe("load-time trust gate", () => {
     await mgr.installBundled(asset);
 
     // "Restart": drop all in-memory state; the journal + file persist.
-    hoisted.base64Reads.length = 0;
     const mgr2 = makeManager();
 
+    // M-37: el diario del instalador no trae hechos GGUF — la primera
+    // comprobación adopta por la vía lenta (verificación completa).
+    await mgr2.assertTrustedForLoad(asset);
+    const { loadInstallState } = await import("./installState");
+    expect((await loadInstallState()).records[asset.id]?.gguf).toBeDefined();
+
+    hoisted.base64Reads.length = 0;
+    hoisted.base64ReadSizes.clear();
     await mgr2.assertTrustedForLoad(asset); // must resolve
-    // No byte reads of the model file: trust came from the journal +
-    // unchanged mtime (fast path), not from re-hashing ~GBs.
-    expect(hoisted.base64Reads.filter((p) => p === modelPath)).toEqual([]);
+    // From here on, trust comes from the journal + unchanged mtime +
+    // the compared HEADER (fast path), not from re-hashing the file:
+    // the reads add up to the header region only.
+    const sizes = hoisted.base64ReadSizes.get(modelPath) ?? [];
+    expect(sizes.length).toBeGreaterThan(0);
+    expect(sizes.reduce((a, b) => a + b, 0)).toBeLessThan(1024);
     expect((await mgr2.statusOf(asset)).present).toBe(true);
   });
 
@@ -521,5 +594,95 @@ describe("packs desactualizados (0.1.57)", () => {
     expect(await packFileState(newPack)).toBe("unusable");
     // A local pack (built by the user, no catalog size) opens as before.
     expect(await packFileState({ ...oldPack, id: "local-x", sizeBytes: 0, sha256: "" })).toBe("current");
+  });
+});
+
+describe("M-37 (auditoría 2026-11-13, F2-M2): estructura GGUF y cabecera en la vía rápida", () => {
+  const readSizesOfModel = () => hoisted.base64ReadSizes.get(modelPath) ?? [];
+  const totalRead = () => readSizesOfModel().reduce((a, b) => a + b, 0);
+
+  it("la vía lenta anota los hechos GGUF verificados en el diario", async () => {
+    // Sin diario previo: la comprobación va por la vía lenta (SHA +
+    // recorrido estructural) y el diario queda con los hechos.
+    hoisted.writeFile(modelPath, GOOD_BYTES.slice(), 1000);
+    const verdict = await checkModelTrust(asset);
+    expect(verdict.trusted).toBe(true);
+    const { loadInstallState } = await import("./installState");
+    const gguf = (await loadInstallState()).records[asset.id]?.gguf;
+    expect(gguf?.version).toBe(3);
+    expect(gguf?.tensorCount).toBe(1);
+    expect(gguf?.metadataCount).toBe(2);
+    expect(gguf?.dataOffset).toBeGreaterThan(24);
+    expect(gguf?.dataOffset).toBeLessThan(GOOD_BYTES.length);
+    expect(gguf?.headerSha256).toBe(sha256Of(GOOD_BYTES.subarray(0, gguf?.dataOffset ?? 0)));
+  });
+
+  it("mismo tamaño y mismo mtime, un byte de la cabecera cambiado: no cuela", async () => {
+    const mgr = makeManager();
+    await mgr.installBundled(asset); // fichero con mtime 2000 (el del APK)
+    // Sustitución con el mismo tamaño y el MISMO mtime: hasta la 0.1.98
+    // la vía rápida la fiaba sin mirar un byte. El byte 60 cae dentro
+    // de los metadatos de la cabecera (el nombre del modelo).
+    const forged = GOOD_BYTES.slice();
+    forged[60] = forged[60] ^ 0xff;
+    hoisted.writeFile(modelPath, forged, 2000);
+    const mgr2 = makeManager();
+    const err = await mgr2.assertTrustedForLoad(asset).catch((e) => e);
+    expect(err).toBeInstanceOf(ModelNotTrustedError);
+    expect(err.reason).toBe("checksum-mismatch"); // la vía lenta corrió y juzgó
+    expect(hoisted.fileExists(modelPath)).toBe(false);
+  });
+
+  it("mismo tamaño y mismo mtime, otro conteo de tensores en el prefijo: no cuela", async () => {
+    const mgr = makeManager();
+    await mgr.installBundled(asset);
+    const forged = GOOD_BYTES.slice();
+    forged[8] = 2; // tensor_count (u64 en el offset 8): 1 → 2
+    hoisted.writeFile(modelPath, forged, 2000);
+    const mgr2 = makeManager();
+    const err = await mgr2.assertTrustedForLoad(asset).catch((e) => e);
+    expect(err).toBeInstanceOf(ModelNotTrustedError);
+    expect(err.reason).toBe("checksum-mismatch");
+  });
+
+  it("SHA del catálogo correcto pero estructura que no es GGUF: invalid-structure y NO se borra", async () => {
+    const garbage = new Uint8Array(4096);
+    for (let i = 0; i < garbage.length; i++) garbage[i] = (i * 7 + 3) & 0xff;
+    const badAsset = {
+      ...asset,
+      id: "trust-test-bad-structure",
+      filename: "models/bad-structure.gguf",
+      sizeBytes: garbage.length,
+      sha256: sha256Of(garbage),
+    };
+    const badPath = `${hoisted.DOCS}${badAsset.filename}`;
+    hoisted.writeFile(badPath, garbage, 1000);
+    const verdict = await checkModelTrust(badAsset);
+    expect(verdict).toMatchObject({ trusted: false, reason: "invalid-structure", deleteFile: false });
+    // Los bytes SON los del catálogo: borrarlos solo re-descargaría los mismos.
+    expect(hoisted.fileExists(badPath)).toBe(true);
+  });
+
+  it("diario sin hechos (anterior a la 0.1.99): la vía lenta adopta y la siguiente ya es rápida", async () => {
+    const mgr = makeManager();
+    await mgr.installBundled(asset);
+    // Se borran los hechos del diario, como quedaría un registro viejo.
+    const raw = hoisted.td.decode(hoisted.files.get(hoisted.JOURNAL)?.bytes ?? new Uint8Array(0));
+    const parsed = JSON.parse(raw) as { records: Record<string, { gguf?: unknown }> };
+    delete parsed.records[asset.id].gguf;
+    hoisted.writeFile(hoisted.JOURNAL, hoisted.te.encode(JSON.stringify(parsed)), 1000);
+
+    hoisted.base64ReadSizes.clear();
+    const mgr2 = makeManager();
+    await mgr2.assertTrustedForLoad(asset); // resuelve, pero hasheando entero
+    expect(totalRead()).toBeGreaterThanOrEqual(GOOD_BYTES.length);
+    const { loadInstallState } = await import("./installState");
+    expect((await loadInstallState()).records[asset.id]?.gguf).toBeDefined();
+
+    hoisted.base64ReadSizes.clear();
+    const mgr3 = makeManager();
+    await mgr3.assertTrustedForLoad(asset); // ahora: solo la cabecera anotada
+    expect(totalRead()).toBeGreaterThan(0);
+    expect(totalRead()).toBeLessThan(1024);
   });
 });

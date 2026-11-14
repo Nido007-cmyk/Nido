@@ -49,8 +49,9 @@ class RamMonitorModule : Module() {
     Name("RamMonitor")
 
     // Evento de presión de memoria (optimización 2026-11-08, fase 5):
-    // onTrimMemory con nivel ≥ RUNNING_CRITICAL llega a JS para que
+    // onTrimMemory en nivel RUNNING_CRITICAL (15) llega a JS para que
     // la app descargue los motores antes de que el sistema la cierre.
+    // P-36: solo ese nivel — los de fondo (20/40/60/80) no se reenvían.
     Events("onMemoryPressure")
 
     OnCreate {
@@ -145,9 +146,10 @@ class RamMonitorModule : Module() {
 
   /**
    * Fase 5: registra un ComponentCallbacks2 sobre el contexto de la
-   * aplicación; onTrimMemory con nivel ≥ TRIM_MEMORY_RUNNING_CRITICAL
-   * (15) se reenvía a JS como evento «onMemoryPressure». Idempotente;
-   * un fallo al registrar deja la app sin el evento, nunca caída.
+   * aplicación; onTrimMemory con nivel TRIM_MEMORY_RUNNING_CRITICAL
+   * (15) se reenvía a JS como evento «onMemoryPressure» (P-36: solo
+   * ese nivel, no los de fondo). Idempotente; un fallo al registrar
+   * deja la app sin el evento, nunca caída.
    *
    * F3-04 (auditoría 2026-11-13): onLowMemory también reenvía el
    * evento, con el nivel RUNNING_CRITICAL. Es la señal «el sistema
@@ -162,7 +164,12 @@ class RamMonitorModule : Module() {
     try {
       ctx.registerComponentCallbacks(object : ComponentCallbacks2 {
         override fun onTrimMemory(level: Int) {
-          if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) {
+          // P-36 (auditoría 2026-11-13, F3-18): SOLO el nivel crítico
+          // en primer plano (15). Con «>=» se reenviaban también
+          // UI_HIDDEN (20) y los de proceso en segundo plano
+          // (40/60/80), que no son la señal «sin memoria con la app en
+          // uso» y tumbaban generaciones y motores en segundo plano.
+          if (level == ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) {
             try {
               sendEvent("onMemoryPressure", mapOf("level" to level))
             } catch (_: Throwable) {

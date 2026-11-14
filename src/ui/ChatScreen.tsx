@@ -905,8 +905,14 @@ export function ChatScreen({
         }
       }
     });
-    const pressureSub = addMemoryPressureListener(() => {
-      void handleMemoryPressure({ generating: generatingRef.current }, { llm: llamaEngine, embedding: embeddingEngine });
+    const pressureSub = addMemoryPressureListener((event) => {
+      // P-36: el nivel del evento viaja al manejador — los niveles de
+      // fondo/UI oculta no paran la generación ni descargan motores.
+      void handleMemoryPressure(
+        { generating: generatingRef.current },
+        { llm: llamaEngine, embedding: embeddingEngine },
+        event?.level,
+      );
     });
     return () => {
       clearInterval(id);
@@ -2170,7 +2176,16 @@ export function ChatScreen({
         // se agotó el presupuesto) no enseña una frase a medias.
         let finalText = guideAnswered
           ? assistantText
-          : trimToCompleteSentences(trimRepetitionLoop(assistantText), wasStopped || llamaEngine.lastGenerationWasCut);
+          : trimToCompleteSentences(
+              // m-78 (F2-m7): el recorte de bucle sobre lo transmitido
+              // solo si la guarda marcó bucle en ESTA generación (el
+              // motor lo deja en lastGenerationLoopCut) — la misma
+              // regla que el motor aplica a su texto asentado. Sin la
+              // marca, lo transmitido es la respuesta íntegra aunque
+              // su cola se repita.
+              llamaEngine.lastGenerationLoopCut ? trimRepetitionLoop(assistantText) : assistantText,
+              wasStopped || llamaEngine.lastGenerationWasCut,
+            );
         if (guideAnswered) {
           // Verbatim guide text: nothing to verify or trim. Every sentence is the guide's (R1).
           provenance = guideAnswerProvenance(finalText);

@@ -250,6 +250,12 @@ export class EmbeddingEngine {
     // carga que mató al proceso: entra con el factor reducido).
     await this.crashGuardMarkPending(modelFilename);
     try {
+      // M-37 (F2-M2): la puerta se repite pegada a initLlama, como en el
+      // LLM — la ventana entre la primera comprobación y la creación del
+      // contexto nativo queda reducida a la propia puerta. Dentro del
+      // try: su rechazo limpia el pendiente sin contar (F3-15), como
+      // cualquier otro error JS diagnosticado con el proceso vivo.
+      await withStage("trust-check", () => assertTrustedModelFileByName(modelFilename));
       this.context = await withStage("initLlama-embedding", () =>
         initLlama({
           model: modelPath,
