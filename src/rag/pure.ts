@@ -914,9 +914,17 @@ export function fuseRetrievalResults(
   // búsquedas léxicas) es su medida absoluta, y media cobertura —
   // el mínimo que la puerta de entrada tolera — no basta para
   // llegar al prompt: hace falta más de la mitad.
+  // Auditoría de la 0.1.97: el documento PROPIO del usuario queda fuera
+  // de esta vara, como de la señal B de dropUnfoundedCorpus y por la
+  // misma razón: una nota personal puede traer el dato sin nombrar el
+  // tipo ni el tema («Seguro Mapfre. Póliza 12345678» ante «¿cuál es el
+  // número de póliza del seguro del coche?», 2 de 4 términos). Pasó ya
+  // la puerta de entrada; la reserva R-03 le guarda sitio, y esta
+  // puerta lo tiraba después. El ruido de CL-12 era del corpus de la
+  // casa, que sigue bajo la vara.
   return out.filter((c) => {
     if (c.rawScore !== undefined) return c.rawScore >= minRawScore;
-    return c.termCoverage === undefined || c.termCoverage > 0.5;
+    return c.termCoverage === undefined || c.termCoverage > 0.5 || c.sourceKind === "user";
   });
 }
 
