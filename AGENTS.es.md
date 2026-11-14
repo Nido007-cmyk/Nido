@@ -13,9 +13,9 @@ build/instalación.
 ## El dato que lo cambia todo: esta NO es una app de Expo Go
 
 Los `plugins` de `app.json` **no** incluyen `expo-dev-client` (retirado el 2026-09-27;
-ver `.github/workflows/android-apk.yml`), y este repo tiene trece
+ver `.github/workflows/android-apk.yml`), y este repo tiene catorce
 **módulos nativos personalizados** (`modules/bundled-assets`, `modules/download-wake-lock`,
-`modules/exact-alarm`, `modules/nido-cpr`, `modules/nido-keyvault`, `modules/nido-launch`,
+`modules/exact-alarm`, `modules/nido-cpr`, `modules/nido-keyvault`, `modules/nido-launch`, `modules/nido-notify`,
 `modules/nido-ocr`, `modules/nido-p2p`, `modules/nido-pdf-text`,
 `modules/nido-secure-dialog`, `modules/nido-vectors`, `modules/ram-monitor`,
 `modules/voice-input`) además de `llama.rn` (inferencia LLM nativa). Nada de eso

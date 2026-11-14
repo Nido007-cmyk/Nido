@@ -36,13 +36,18 @@ Nothing described here should be read as "audited", "quantum-proof" or "impossib
 | HKDF (today: ad-hoc SHA-512 in KDF) | **YES** — HKDF-SHA512 (RFC 5869), IMPLEMENTED + AUTOMATED TESTED (Oct 2026) |
 | XChaCha20-Poly1305 (today: XSalsa20-Poly1305) | **NO** |
 | Noise_XX | **NO** — documented as future migration |
-| PQ hybrid X25519+ML-KEM | **NO** — FUTURE, no audited implementation for RN |
-| Android compilation of the nido-p2p module | **NO** — no JDK/SDK in this environment |
+| PQ hybrid X25519+ML-KEM | **YES** — IMPLEMENTED + AUTOMATED TESTED: hybrid X25519 + ML-KEM-768 root per connection inside the Double Ratchet (P2P v5, 0.1.46; on by default since 0.1.49 when both phones support it; native mlkem-native since 0.1.51). Not externally audited; see X-1 and [HANDSHAKE_THREAT_MODEL.md](HANDSHAKE_THREAT_MODEL.md) |
+| Android compilation of the nido-p2p module | **YES** — ANDROID COMPILED in every release APK build (`android-apk.yml`) |
 | Physical tests between two devices | **YES** — physically verified (two tablets: direct messages in airplane mode, LAN backup, Bluetooth identity; Oct 2026) |
 
 > Baseline re-verified against the code on 2026-10-12 (full audit): the
 > FLAG_SECURE/clipboard, dataExtractionRules and physical-tests rows above
 > still said NO from the 2026-09-27 snapshot; all three were already done.
+> Re-verified again on 2026-11-13 (0.1.97 audit): the PQ-hybrid and nido-p2p
+> compilation rows still said NO, while `p2p.ratchetV5` (Double Ratchet with
+> an X25519 + ML-KEM-768 root) is on by default in `src/config/featureFlags.ts`
+> and every release APK compiles the module. Messages are still sealed with
+> XSalsa20-Poly1305 and tweetnacl is still in use, so those rows stay NO.
 
 ---
 
