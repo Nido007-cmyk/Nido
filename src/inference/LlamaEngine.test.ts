@@ -165,7 +165,7 @@ vi.mock("../models/modelTrust", () => ({
   assertTrustedModelFileByName: vi.fn(async () => {}),
 }));
 
-import { LlamaEngine, resolveSampling, SAMPLING_PRESETS } from "./LlamaEngine";
+import { LlamaEngine, resolveSampling, SAMPLING_PRESETS, loadTimeSampling, LLAMA_CPP_SAMPLING_DEFAULTS } from "./LlamaEngine";
 import { isNativeGateTaken } from "./nativeGate";
 import { refreshDevicePressure } from "./devicePressure";
 import {
@@ -824,6 +824,25 @@ describe("P1.2 sampling presets", () => {
     expect(resolveSampling({ modelDefaults: { temperature: 0.2 } }).temperature).toBe(0.2);
   });
 
+  it("loadTimeSampling: general.sampling.* del GGUF como strtol/strtof; si falta o no es un número, llama.cpp", () => {
+    expect(loadTimeSampling(undefined)).toEqual(LLAMA_CPP_SAMPLING_DEFAULTS);
+    expect(loadTimeSampling({})).toEqual({ topK: 40, topP: 0.95, minP: 0.05, repeatPenalty: 1.0 });
+    expect(
+      loadTimeSampling({
+        "general.sampling.top_k": "20",
+        "general.sampling.top_p": "0.8",
+        "general.sampling.min_p": "0",
+        "general.sampling.penalty_repeat": "1.05",
+      }),
+    ).toEqual({ topK: 20, topP: 0.8, minP: 0, repeatPenalty: 1.05 });
+    // strtol/strtof toman el número del principio; sin número, el valor por defecto.
+    expect(loadTimeSampling({ "general.sampling.top_k": "64abc", "general.sampling.top_p": "x" })).toMatchObject({
+      topK: 64,
+      topP: 0.95,
+    });
+    expect(loadTimeSampling({ "general.sampling.top_k": " 30" }).topK).toBe(30);
+  });
+
   it("SAMPLING_PRESETS table matches the research calibration", () => {
     expect(SAMPLING_PRESETS.structured.temperature).toBeLessThanOrEqual(0.2);
     expect(SAMPLING_PRESETS.factual.temperature).toBeLessThanOrEqual(0.4);
@@ -834,7 +853,7 @@ describe("P1.2 sampling presets", () => {
     expect(SAMPLING_PRESETS.chat.repeatPenalty).toBeGreaterThan(1);
   });
 
-  it("generate() with no new options sends exactly the old params", async () => {
+  it("generate() sin opciones manda los valores de la carga (llama.cpp por defecto si el GGUF no trae los suyos)", async () => {
     const engine = new LlamaEngine();
     await engine.load("models/a.gguf");
     const reply = engine.generate({ prompt: "hi" });
@@ -842,11 +861,28 @@ describe("P1.2 sampling presets", () => {
     await expect(reply).resolves.toBe("Hi");
     const params = created[0].lastParams as Record<string, unknown>;
     expect(params.temperature).toBe(0.7);
-    expect("top_k" in params).toBe(false);
-    expect("min_p" in params).toBe(false);
-    expect("penalty_repeat" in params).toBe(false);
+    expect(params.top_k).toBe(40);
+    expect(params.top_p).toBe(0.95);
+    expect(params.min_p).toBe(0.05);
+    expect(params.penalty_repeat).toBe(1.0);
     expect("response_format" in params).toBe(false);
     expect("grammar" in params).toBe(false);
+  });
+
+  it("2026-11-13: una respuesta no hereda el muestreo de la anterior (llama.rn lo conserva si no se manda)", async () => {
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    const first = engine.generate({ prompt: "hi", samplingPreset: "chat" });
+    await new Promise((r) => setTimeout(r, 30)); // que arranque de verdad
+    await engine.stop();
+    await expect(first).resolves.toBe("Hi");
+    expect(created[0].lastParams).toMatchObject({ min_p: 0, penalty_repeat: 1.1 });
+    const second = engine.generate({ prompt: "hi", temperature: 0.4 });
+    await new Promise((r) => setTimeout(r, 30));
+    await engine.unload();
+    await expect(second).resolves.toBe("Hi");
+    // Sin preset: lo de la carga, no el min_p 0 y la penalización 1.1 de antes.
+    expect(created[0].lastParams).toMatchObject({ temperature: 0.4, top_k: 40, top_p: 0.95, min_p: 0.05, penalty_repeat: 1.0 });
   });
 
   it("generate() forwards sampling tunables to the native call", async () => {
@@ -859,7 +895,8 @@ describe("P1.2 sampling presets", () => {
     expect(params.temperature).toBe(0.1);
     expect(params.min_p).toBe(0);
     expect(params.top_k).toBe(40);
-    expect("penalty_repeat" in params).toBe(false);
+    // structured no fija penalización: va la de la carga (1.0, desactivada).
+    expect(params.penalty_repeat).toBe(1.0);
   });
 
   it("generate() forwards response_format and grammar (P1.1)", async () => {
@@ -1092,8 +1129,9 @@ describe("estudio de modelos: sampling por modelo y stripReasoning", () => {
     await engine.unload();
     await expect(reply).resolves.toBe("Hi");
     const params = created[0].lastParams as Record<string, unknown>;
-    expect("top_k" in params).toBe(false);
-    expect("top_p" in params).toBe(false);
+    // Sin capa de modelo: los valores de la carga, no unos del catálogo.
+    expect(params.top_k).toBe(40);
+    expect(params.top_p).toBe(0.95);
   });
 });
 
