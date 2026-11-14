@@ -18,6 +18,8 @@ import * as SQLite from "expo-sqlite";
 import * as FileSystem from "expo-file-system/legacy";
 import { CORPUS_CATALOG, MODEL_CATALOG, CatalogModel } from "../models/manifest";
 import { packFileState } from "../models/modelTrust";
+import { readImportedPacks } from "../models/importedPacksRegistry";
+import { PACK_MAX_CHUNKS, PACK_MAX_FACTS, PACK_MAX_GUIDES, PACK_MAX_REGIONS } from "../models/packImport";
 import { buildLexicalQuery, cosineSimilarityInt8, countMatchedTerms, distinctFloor, DISTINCT_BG_TO, EXACT_SEARCH_MAX_ROWS, exactVectorSearch, dropUnfoundedCorpus, filterByMinScore, filterByTermCoverage, MIN_SEMANTIC_SIMILARITY, MIN_SEMANTIC_SIMILARITY_SINGLE_TERM, normalizeCorpusScores, pruneSemanticByMargin, pruneVectorHits } from "./pure";
 import type { RetrievedChunk } from "./retrieve.types";
 import { guideTitleOf, markUsedPart, MAX_SOURCE_PARTS, parsePackChunkId, sectionLikePattern, type PackSourceDoc } from "./packSource";
@@ -59,32 +61,43 @@ const openPacks = new Map<string, OpenPack>();
 const CORPUS_DIR = "corpus/";
 
 /**
- * Catalog packs, plus any other pack file in corpus/ (e.g. one built with
- * scripts/build-knowledge-pack.mjs and copied over with npm run pack:push).
- * Those have no catalog size to check, only the format and model checks in openPack.
+ * Catalog packs, plus the packs the signed door imported — and nothing
+ * else. M-35 (auditoría 2026-11-13, carril 07 · F-03): until 0.1.99 ANY
+ * `.sqlite` file found in corpus/ was listed here with an empty pin
+ * (sizeBytes 0, sha256 "") and opened as a pack, so presence in the
+ * directory was itself the credential. Now an extra file counts only
+ * when the door's registry (models/importedPacksRegistry.ts) holds a
+ * record for it, and the entry is built FROM that record: the SHA-256
+ * and size the door verified become the pack's pin, checked at open by
+ * packFileState exactly like a catalog pin. A record under a catalog
+ * file name is not an import: the file presents as the catalog entry
+ * (and the door only lets the catalog's own bytes take that name).
  */
 export async function knowledgePacks(): Promise<CatalogModel[]> {
   const catalog = CORPUS_CATALOG.filter((m) => m.format === "sqlite-pack");
-  const names = await FileSystem.readDirectoryAsync(`${FileSystem.documentDirectory}${CORPUS_DIR}`).catch(() => [] as string[]);
-  const extra = names
-    .filter((n) => n.endsWith(".sqlite") && !catalog.some((c) => c.filename === `${CORPUS_DIR}${n}`))
-    .map(
-      (n): CatalogModel => ({
-        id: `local-${n.replace(/\.sqlite$/, "")}`,
-        kind: "corpus",
-        format: "sqlite-pack",
-        label: n,
-        filename: `${CORPUS_DIR}${n}`,
-        sizeBytes: 0,
-        sha256: "",
-        sourceUrl: "",
-        license: "",
-        description: "",
-        required: false,
-      })
-    );
+  const registry = await readImportedPacks();
+  const extra: CatalogModel[] = [];
+  for (const [filename, record] of Object.entries(registry)) {
+    if (catalog.some((c) => c.filename === `${CORPUS_DIR}${filename}`)) continue;
+    extra.push({
+      id: `local-${filename.replace(/\.sqlite$/, "")}`,
+      kind: "corpus",
+      format: "sqlite-pack",
+      label: record.name || filename,
+      filename: `${CORPUS_DIR}${filename}`,
+      sizeBytes: record.sizeBytes,
+      sha256: record.sha256,
+      sourceUrl: "",
+      license: "",
+      description: "",
+      required: false,
+    });
+  }
   return [...catalog, ...extra];
 }
+
+/** Ids of the signed catalog's packs: the deterministic-facts authority set (M-35/B3). */
+const CATALOG_PACK_IDS = new Set(CORPUS_CATALOG.filter((m) => m.format === "sqlite-pack").map((m) => m.id));
 
 /**
  * 0.1.55: la guía entera de la que salió un trozo de una respuesta, con la
@@ -219,9 +232,10 @@ async function openPack(pack: CatalogModel): Promise<OpenPack | null> {
   const cached = openPacks.get(pack.id);
   if (cached && cached.sizeBytes === size && cached.mtime === mtime) return cached;
   if (cached) await closePack(pack.id);
-  // Catalog packs must be complete for the catalog, or an older version whose
-  // bytes were verified at install (0.1.57); a local pack (sizeBytes 0) has
-  // nothing to compare against.
+  // Every pack must be complete for its pin (the catalog's, or the
+  // import registry's), or an older version whose bytes were verified
+  // at install (0.1.57). A pack without a pin never reaches this line:
+  // knowledgePacks() only builds entries that carry one (M-35/F-03).
   const state = await packFileState(pack).catch(() => "unusable" as const);
   if (state === "unusable") return null;
 
@@ -241,9 +255,29 @@ async function openPack(pack: CatalogModel): Promise<OpenPack | null> {
     await db.closeAsync().catch(() => {});
     return null;
   }
+  const formatVersion = Number(meta.formatVersion) > 0 ? Number(meta.formatVersion) : 1;
+  // P-39 (auditoría 2026-11-13, carril 07 · B7): the byte size never
+  // bounded the WORK of opening a pack — a signed file under the byte
+  // cap can still declare millions of rows for the indexers and the
+  // facts merge to walk. Row counts are four cheap COUNT(*) reads;
+  // above the caps (models/packImport.ts) the pack does not open,
+  // however it arrived. A chunks count that cannot even be read means
+  // the table the search runs on is not there: not a pack.
+  const rowCounts = await packRowCounts(db, formatVersion);
+  if (
+    !rowCounts ||
+    rowCounts.chunks > PACK_MAX_CHUNKS ||
+    rowCounts.guides > PACK_MAX_GUIDES ||
+    rowCounts.regions > PACK_MAX_REGIONS ||
+    rowCounts.facts > PACK_MAX_FACTS
+  ) {
+    console.warn(`[packs] ${pack.filename} exceeds the row caps or its chunks are unreadable; skipping it`);
+    await db.closeAsync().catch(() => {});
+    return null;
+  }
   const open: OpenPack = {
     db,
-    formatVersion: Number(meta.formatVersion) > 0 ? Number(meta.formatVersion) : 1,
+    formatVersion,
     modelSha256: String(meta.embeddingModelSha256 ?? ""),
     sizeBytes: size,
     dims: Number(meta.dims) > 0 ? Number(meta.dims) : 384,
@@ -252,6 +286,32 @@ async function openPack(pack: CatalogModel): Promise<OpenPack | null> {
   };
   openPacks.set(pack.id, open);
   return open;
+}
+
+/**
+ * Row counts of a pack's content tables. Null only when the chunks
+ * count is unreadable; the v2 tables degrade to 0 when unreadable
+ * (their readers already tolerate a failed read the same way).
+ */
+async function packRowCounts(
+  db: SQLite.SQLiteDatabase,
+  formatVersion: number
+): Promise<{ chunks: number; guides: number; regions: number; facts: number } | null> {
+  const count = async (table: string): Promise<number | null> => {
+    const row = await db
+      .getFirstAsync<{ n: number }>(`SELECT COUNT(*) AS n FROM ${table}`)
+      .catch(() => null);
+    return row && Number.isFinite(row.n) ? row.n : null;
+  };
+  const chunks = await count("chunks");
+  if (chunks === null) return null;
+  if (formatVersion < 2) return { chunks, guides: 0, regions: 0, facts: 0 };
+  return {
+    chunks,
+    guides: (await count("guides")) ?? 0,
+    regions: (await count("regions")) ?? 0,
+    facts: (await count("facts")) ?? 0,
+  };
 }
 
 type PackRow = { id: number; title: string; body: string; keys?: string; vec: Uint8Array; rank: number };
@@ -514,6 +574,16 @@ export async function answerFromPackFacts(text: string, lang: FactLang): Promise
     const perPack: Array<{ regions: PackRegion[]; facts: PackFact[] }> = [];
     const packMeta: Array<{ label: string; outdated: boolean }> = [];
     for (const pack of await knowledgePacks()) {
+      // M-35/B3 (auditoría 2026-11-13, carril 07): deterministic emergency
+      // answers — a number to call, a crisis line — are spoken with the
+      // house's authority, so only the signed catalog's packs may be
+      // their source. An imported pack's signature proves who published
+      // it, not that the house stands behind its emergency numbers; it
+      // still serves its guides and its search like any pack. A pack
+      // imported under a catalog file name IS the catalog entry here
+      // (knowledgePacks presents it as such, bytes pinned), so it keeps
+      // the authority its verified bytes earn.
+      if (!CATALOG_PACK_IDS.has(pack.id)) continue;
       const open = await openPack(pack).catch(() => null);
       if (!open || open.formatVersion < 2) continue;
       const { regions, facts } = await packFacts(pack.id, open).catch(() => ({ regions: [], facts: [] }));
@@ -546,11 +616,12 @@ export async function answerFromPackFacts(text: string, lang: FactLang): Promise
 }
 
 /**
- * 0.1.55: every verified fact of the installed v2 packs, for the Emergency
- * tab. A country covered by two packs keeps the first pack's numbers (the
- * catalog order), so one screen never mixes two sources; the merge rule
- * itself (and its one exception, the `crisis.*` family) lives in
- * packFacts.ts › mergePackFacts. Never throws.
+ * 0.1.55: every verified fact of the installed catalog v2 packs, for the
+ * Emergency tab (M-35/B3: imported packs are not a facts source — see
+ * answerFromPackFacts). A country covered by two packs keeps the first
+ * pack's numbers (the catalog order), so one screen never mixes two
+ * sources; the merge rule itself (and its one exception, the `crisis.*`
+ * family) lives in packFacts.ts › mergePackFacts. Never throws.
  */
 export async function loadAllPackFacts(): Promise<{ regions: PackRegion[]; facts: PackFact[]; outdatedPacks: string[] }> {
   const perPack: Array<{ regions: PackRegion[]; facts: PackFact[] }> = [];
@@ -558,6 +629,10 @@ export async function loadAllPackFacts(): Promise<{ regions: PackRegion[]; facts
   const packMeta: Array<{ label: string; outdated: boolean }> = [];
   try {
     for (const pack of await knowledgePacks()) {
+      // M-35/B3: the Emergency tab shows the same deterministic facts
+      // the chat answers from — catalog packs only, as in
+      // answerFromPackFacts (see its note).
+      if (!CATALOG_PACK_IDS.has(pack.id)) continue;
       const open = await openPack(pack).catch(() => null);
       if (!open || open.formatVersion < 2) continue;
       const data = await packFacts(pack.id, open).catch(() => ({ regions: [] as PackRegion[], facts: [] as PackFact[] }));

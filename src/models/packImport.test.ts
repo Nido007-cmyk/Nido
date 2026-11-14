@@ -30,9 +30,15 @@ import {
   isCatalogCorpusPin,
   parsePackManifest,
   summarizePackMeta,
+  validatePackSchema,
   verifyPackOrigin,
   verifySalvoraManifestSignature,
+  PACK_MAX_CHUNKS,
+  PACK_MAX_FACTS,
+  PACK_MAX_GUIDES,
+  PACK_MAX_REGIONS,
   type PackManifest,
+  type PackSchemaDescriptor,
 } from "./packImport";
 
 const PACKS_DIR = join(homedir(), "workspace/your_files/salvora-packs");
@@ -318,5 +324,71 @@ describe.runIf(REAL_ZIPS_PRESENT)("packImport · real store bytes", () => {
       ok: false,
       reason: "hash-mismatch",
     });
+  });
+});
+
+describe("packImport · esquema interno y topes (M-35: m-91 y P-39)", () => {
+  const v2 = (): PackSchemaDescriptor => ({
+    tables: {
+      meta: ["key", "value"],
+      chunks: ["id", "title", "body", "source", "scale", "vec", "guide", "keys"],
+      guides: ["id", "key", "lang", "title", "category", "region", "sources", "verified"],
+      regions: ["code", "names", "aliases", "phrases"],
+      facts: ["id", "region", "key", "value", "label", "note", "source_title", "source_url", "quote", "checked"],
+    },
+    counts: { chunks: 500, guides: 12, regions: 3, facts: 40 },
+  });
+
+  it("acepta el esquema v2 completo del constructor", () => {
+    expect(validatePackSchema(2, v2())).toBe(true);
+  });
+
+  it("un pack de hechos sin guías también es válido: las tablas existen, los conteos pueden ser cero", () => {
+    const s = v2();
+    s.counts.guides = 0;
+    expect(validatePackSchema(2, s)).toBe(true);
+  });
+
+  it("rechaza una tabla ausente y una columna ausente", () => {
+    const noGuides = v2();
+    delete noGuides.tables.guides;
+    expect(validatePackSchema(2, noGuides)).toBe(false);
+    const noKeys = v2();
+    noKeys.tables.chunks = noKeys.tables.chunks.filter((c) => c !== "keys");
+    expect(validatePackSchema(2, noKeys)).toBe(false);
+  });
+
+  it("rechaza un pack sin trozos: firmado o no, no es un pack de conocimiento", () => {
+    const s = v2();
+    s.counts.chunks = 0;
+    expect(validatePackSchema(2, s)).toBe(false);
+  });
+
+  it("rechaza conteos por encima de cada tope y acepta el tope exacto", () => {
+    const over = (patch: Partial<PackSchemaDescriptor["counts"]>) => {
+      const s = v2();
+      Object.assign(s.counts, patch);
+      return validatePackSchema(2, s);
+    };
+    expect(over({ chunks: PACK_MAX_CHUNKS + 1 })).toBe(false);
+    expect(over({ guides: PACK_MAX_GUIDES + 1 })).toBe(false);
+    expect(over({ regions: PACK_MAX_REGIONS + 1 })).toBe(false);
+    expect(over({ facts: PACK_MAX_FACTS + 1 })).toBe(false);
+    expect(
+      over({ chunks: PACK_MAX_CHUNKS, guides: PACK_MAX_GUIDES, regions: PACK_MAX_REGIONS, facts: PACK_MAX_FACTS })
+    ).toBe(true);
+  });
+
+  it("la v1 heredada solo exige meta y chunks con sus columnas de lectura", () => {
+    const s: PackSchemaDescriptor = {
+      tables: { meta: ["key", "value"], chunks: ["id", "title", "body", "source", "vec"] },
+      counts: { chunks: 10, guides: 0, regions: 0, facts: 0 },
+    };
+    expect(validatePackSchema(1, s)).toBe(true);
+    const broken: PackSchemaDescriptor = {
+      tables: { meta: ["key", "value"], chunks: ["id", "title", "body"] },
+      counts: { chunks: 10, guides: 0, regions: 0, facts: 0 },
+    };
+    expect(validatePackSchema(1, broken)).toBe(false);
   });
 });

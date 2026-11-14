@@ -99,11 +99,68 @@ vi.mock("expo-sqlite", () => ({
     const meta = h.metas.get(uri);
     if (!meta) throw new Error("file is not a database");
     return {
-      getAllAsync: async () => Object.entries(meta).map(([key, value]) => ({ key, value })),
+      getAllAsync: async (sql: string) => {
+        if (/FROM meta/.test(sql)) return Object.entries(meta).map(([key, value]) => ({ key, value }));
+        // M-35/m-91: the door's step 5 reads the internal schema. This
+        // mock answers it from the REAL bytes (node:sqlite), the same
+        // way realMeta below reads a staged pack's meta — a synthetic
+        // schema here would let the step pass packs it should reject.
+        const pragma = /PRAGMA table_info\((\w+)\)/.exec(sql);
+        if (pragma) return (realPackSchema(uri).tables[pragma[1]] ?? []).map((n) => ({ name: n }));
+        const count = /SELECT COUNT\(\*\) AS n FROM (\w+)/.exec(sql);
+        if (count) return [{ n: realPackSchema(uri).counts[count[1]] ?? 0 }];
+        return Object.entries(meta).map(([key, value]) => ({ key, value }));
+      },
       closeAsync: async () => {},
     };
   },
 }));
+
+/**
+ * The real schema (tables, columns, row counts) of the pack file staged
+ * at `uri`, read from its actual bytes with node:sqlite and cached per
+ * URI. Empty when the bytes are not a readable database.
+ */
+const realSchemaCache = new Map<string, { tables: Record<string, string[]>; counts: Record<string, number> }>();
+function realPackSchema(uri: string): { tables: Record<string, string[]>; counts: Record<string, number> } {
+  const bytes = h.files.get(uri);
+  if (!bytes) return { tables: {}, counts: {} };
+  // Keyed by a fingerprint of the bytes, not just the URI: a test that
+  // stages different bytes at the same URI (an updated edition) must
+  // not read the previous file's schema.
+  const key = `${uri}:${bytes.length}:${createHash("sha256").update(bytes.subarray(0, 4096)).digest("hex")}`;
+  const cached = realSchemaCache.get(key);
+  if (cached) return cached;
+  const empty = { tables: {} as Record<string, string[]>, counts: {} as Record<string, number> };
+  const fs = require("node:fs") as typeof import("node:fs");
+  const os = require("node:os") as typeof import("node:os");
+  const path = require("node:path") as typeof import("node:path");
+  const tmp = path.join(os.tmpdir(), `.packimporter-schema-${process.pid}-${realSchemaCache.size}.sqlite`);
+  fs.writeFileSync(tmp, bytes);
+  try {
+    const db = new DatabaseSync(tmp, { readOnly: true });
+    const tables: Record<string, string[]> = {};
+    for (const t of ["meta", "chunks", "guides", "regions", "facts"]) {
+      const cols = db.prepare(`PRAGMA table_info(${t})`).all() as Array<{ name: string }>;
+      if (cols.length > 0) tables[t] = cols.map((c) => c.name);
+    }
+    const counts: Record<string, number> = {};
+    for (const t of ["chunks", "guides", "regions", "facts"]) {
+      if (tables[t]) {
+        const row = db.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get() as { n: number };
+        counts[t] = Number(row.n);
+      }
+    }
+    db.close();
+    const out = { tables, counts };
+    realSchemaCache.set(key, out);
+    return out;
+  } catch {
+    return empty;
+  } finally {
+    fs.unlinkSync(tmp);
+  }
+}
 
 vi.mock("expo-document-picker", () => ({
   getDocumentAsync: async () =>

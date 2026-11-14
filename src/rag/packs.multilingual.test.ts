@@ -15,6 +15,8 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 type Row = { id: number; title: string; body: string; vec: Uint8Array };
 type World = {
   installed: { filename: string; size: number };
+  /** M-35: the install journal's JSON, as a verified install leaves it. */
+  journal: string;
   meta: Record<string, string>;
   rows: Row[];
   ftsHits: number[];
@@ -31,9 +33,22 @@ const W = (): World => (globalThis as unknown as { __pkW: World }).__pkW;
 
 vi.mock("expo-file-system/legacy", () => ({
   documentDirectory: "file:///docs/",
+  EncodingType: { Base64: "base64", UTF8: "utf8" },
   getInfoAsync: async (uri: string) => {
-    const i = (globalThis as unknown as { __pkW: World }).__pkW.installed;
-    return uri.endsWith(i.filename) ? { exists: true, size: i.size } : { exists: false };
+    const w = (globalThis as unknown as { __pkW: World }).__pkW;
+    // M-35: opening a pack now passes the trust gate, whose fast path is
+    // the install journal — this world seeds the verified installation
+    // a real download leaves behind (record + the file's mtime bound to
+    // it), instead of the old world where presence alone opened the pack.
+    if (uri.endsWith("nido-install-state.json")) return { exists: true, size: w.journal.length, modificationTime: 1 };
+    return uri.endsWith(w.installed.filename)
+      ? { exists: true, size: w.installed.size, modificationTime: 4242 }
+      : { exists: false };
+  },
+  readAsStringAsync: async (uri: string) => {
+    const w = (globalThis as unknown as { __pkW: World }).__pkW;
+    if (uri.endsWith("nido-install-state.json")) return w.journal;
+    throw new Error(`ENOENT ${uri}`);
   },
   readDirectoryAsync: async () => [],
 }));
@@ -80,6 +95,19 @@ beforeEach(async () => {
   const vital = catalog.CORPUS_CATALOG.find((c) => c.id === "wiki-vital5")!;
   Object.assign(W(), {
     installed: { filename: vital.filename, size: vital.sizeBytes },
+    journal: JSON.stringify({
+      version: 1,
+      records: {
+        [vital.id]: {
+          assetId: vital.id,
+          status: "installed",
+          sizeBytes: vital.sizeBytes,
+          sha256: vital.sha256,
+          mtimeMs: 4242 * 1000,
+          updatedAt: 1,
+        },
+      },
+    }),
     // Test vectors are 2-dimensional; real packs declare 384.
     meta: { format: "nido-knowledge-pack", dims: "2", embeddingModelSha256: "802c868f57ccddd2e0c80645c3db1cb96a1aa50986a057cbaee2526f6e474cde" },
     rows: [
