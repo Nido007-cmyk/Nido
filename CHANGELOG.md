@@ -4,6 +4,54 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.97-alpha - 2026-11-13
+
+A photo from the owner's tablet showed the sealed tire-changing
+guide served correctly, and under it a line the model had invented:
+make sure the engine is running. The engine must be off. The judge
+had let it through, and the sources listed under the answer
+included a history of Cambodia. This release is the hunt that
+photo started: 943 adversarial cases in Spanish, English and
+Portuguese, built to make the judge and the retrieval fail in
+every way we could think of. They found 285 failures. This release
+fixes all but a declared residue.
+
+**The judge.**
+
+- A sentence that denied what the source affirmed could pass by
+  sharing its vocabulary. Polarity is now judged clause by clause.
+- Quantities are read as quantities, with units and conversions
+  (500 mg against half a gram, a dose spelled out in words in any
+  of the three languages), and each sentence is judged against
+  the sources that actually support it, not against the union of
+  everything retrieved.
+- A correct number attributed to the wrong owner, the clinic's
+  phone presented as the emergency number, is now caught in both
+  language branches. A dictated self-harm sentence glued to the
+  previous one gets the fixed answer, like the separated form.
+- The question weighs the support: a sentence backed only by a
+  source about the other sense of the word is removed as drift.
+- Dates are paired with their event, so a faithful date no longer
+  falls because another event in the same sources carries a
+  different one.
+
+**Retrieval.** The lexical search no longer crosses languages by
+prefix: a Spanish question about changing a tire used to match
+"Cambodia" and "Llanidloes" by their first letters. A hit in
+another language now needs complete coverage by exact forms, and
+a chunk found only by the lexical path is no longer exempt from
+the gate after fusion. Checked against the real Vital pack from
+the tablet, the lexical path that served only noise now honestly
+serves nothing when it has nothing.
+
+**The residue, declared.** 108 of the 943 cases remain: an
+invention written in another language, with no numbers, dates or
+data in it, cannot be told apart from a faithful translation by a
+deterministic judge, and NIDO does not translate automatically.
+Those cases ship inside the test batteries marked as expected
+failures, strict: if one of them starts passing it has to be
+taken off the list by hand, and any new failure breaks the build.
+
 ## 0.1.96-alpha - 2026-11-13
 
 The APK no longer contains any Google code, and the release sweep

@@ -9,7 +9,7 @@ The list covers every package that `package-lock.json` does not mark as developm
 
 AI models are not part of the app: they are downloaded separately and keep their own licenses. Two of NIDO's own knowledge packs ship inside the APK since 0.1.95 (NIDO Essentials and NIDO Local, CC BY 4.0); the other packs are downloaded separately. All of them keep their own licenses (see [ATTRIBUTION.md](ATTRIBUTION.md) and `docs/release/MODEL_LICENSE_AUDIT.md`). Android libraries resolved by Gradle at build time (AndroidX, Kotlin, SQLCipher and their dependencies) do not come from npm: since 0.1.55 the exact list for each build is attached to its GitHub release as `android-runtime-dependencies.txt` (see below).
 
-Source: `package-lock.json sha256:5b98a44fc62f` · 594 packages.
+Source: `package-lock.json sha256:6fd65f769b45` · 594 packages.
 
 ## License elections
 
