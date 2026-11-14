@@ -33,9 +33,50 @@ import { createHash } from "crypto";
  */
 
 // ---------- deterministic "server" content ----------
+// M-37 (0.1.99): el contenido servido lleva una cabecera GGUF válida —
+// la puerta de confianza ahora valida la estructura además del SHA, y
+// en el mundo real los bytes de un modelo SÍ son un GGUF. La semilla
+// sigue cambiando la huella (rellena tras la cabecera).
+function ggufHeaderPrefix(): number[] {
+  const bytes: number[] = [];
+  const push = (...bs: number[]) => {
+    bytes.push(...bs);
+  };
+  const u32 = (v: number) => {
+    for (let i = 0; i < 4; i++) push((v >>> (8 * i)) & 0xff);
+  };
+  const u64 = (v: number) => {
+    let x = BigInt(v);
+    for (let i = 0; i < 8; i++) {
+      push(Number(x & 0xffn));
+      x >>= 8n;
+    }
+  };
+  const str = (s: string) => {
+    const e = new TextEncoder().encode(s);
+    u64(e.length);
+    push(...e);
+  };
+  push(0x47, 0x47, 0x55, 0x46); // "GGUF"
+  u32(3);
+  u64(1); // tensores
+  u64(1); // metadatos
+  str("general.name");
+  u32(8); // STRING
+  str("modelo de prueba");
+  str("token_embd.weight");
+  u32(2);
+  u64(4);
+  u64(8);
+  u32(0);
+  u64(0);
+  return bytes;
+}
 function serverBytes(size: number, seed: number): Uint8Array {
   const b = new Uint8Array(size);
-  for (let i = 0; i < size; i++) b[i] = (i * 31 + seed) % 251;
+  const header = ggufHeaderPrefix();
+  b.set(header.slice(0, size));
+  for (let i = Math.min(header.length, size); i < size; i++) b[i] = (i * 31 + seed) % 251;
   return b;
 }
 const shaOf = (b: Uint8Array) => createHash("sha256").update(b).digest("hex");

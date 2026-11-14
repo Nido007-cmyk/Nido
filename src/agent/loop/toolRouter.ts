@@ -439,6 +439,20 @@ const MONTH_LOOKUP: Record<string, number> = (() => {
     [["octubre", "october", "oct", "outubro"], 10],
     [["noviembre", "november", "nov", "novembro"], 11],
     [["diciembre", "december", "dec", "dezembro"], 12],
+    // 0.1.99 (auditoría carril 3, A-M2): las abreviaturas es/pt que
+    // faltaban — la tabla solo traía las inglesas (jan, dec…) y
+    // «qué día cae el 25 de dic» / «que dia cai 25 de dez» daban null.
+    // Son las de rag/dates.ts: ene, fev, abr, mai, ago, set, out,
+    // dic, dez (las en ya estaban arriba).
+    [["ene"], 1],
+    [["fev"], 2],
+    [["abr"], 4],
+    [["mai"], 5],
+    [["ago"], 8],
+    [["set"], 9],
+    [["out"], 10],
+    [["dic"], 12],
+    [["dez"], 12],
   ];
   const out: Record<string, number> = {};
   for (const [list, n] of names) for (const w of list) out[w] = n;
