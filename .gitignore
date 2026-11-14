@@ -63,3 +63,6 @@ formal/out/
 vitest-results.json
 jest-results.json
 test-summary.json
+
+# Volcados locales de las baterías de la caza 0.1.97 (diagnóstico, no puerta)
+resultados-*.json
