@@ -272,6 +272,16 @@ export function sentenceWordReadings(sentence: string): Array<{ value: number; d
 }
 
 /** Un rango que la evidencia afirma («entre 37 y 40 °C», «10 a 14 días», «5–6 %»). */
+/**
+ * El valor de UN token en letra («cinco», «twenty», «duzentos») o
+ * null si no es un número de una sola palabra (CL-9: la simetría
+ * dígito↔letra del apoyo la consume token a token).
+ */
+export function wordNumberValue(token: string): number | null {
+  const r = parseWordNumber([token], 0);
+  return r && r.len === 1 ? r.value : null;
+}
+
 export interface EvidenceRange {
   min: number;
   max: number;
@@ -335,11 +345,25 @@ export function sentenceNumbersSupported(
   evidence: ReadonlySet<number>,
   ranges: readonly EvidenceRange[] = [],
 ): boolean {
+  // CL-9 (caza 0.1.97): la contención también al revés — un rango
+  // de la RESPUESTA que contiene un valor de la evidencia sostiene
+  // sus extremos («entre 45 y 55 minutos» sostiene el 50 de la
+  // guía, no lo contradice). C-08 solo cubría valor-en-rango.
+  const answerRanges = evidenceRanges([sentence]);
+  const endpointOfContainingRange = (v: number): boolean =>
+    answerRanges.some(
+      (r) =>
+        (Math.abs(v - r.min) <= 1e-9 || Math.abs(v - r.max) <= 1e-9) &&
+        [...evidence].some((e) => e >= r.min - 1e-9 && e <= r.max + 1e-9),
+    );
   for (const token of numberTokens(sentence)) {
     if (!isJudged(token)) continue;
     const readings = parseNumberToken(token);
     const ok = readings.some(
-      (v) => roundsFromEvidence(v, decimalsOf(token, v), evidence) || withinEvidenceRanges(v, decimalsOf(token, v), ranges),
+      (v) =>
+        roundsFromEvidence(v, decimalsOf(token, v), evidence) ||
+        withinEvidenceRanges(v, decimalsOf(token, v), ranges) ||
+        endpointOfContainingRange(v),
     );
     if (!ok) return false;
   }
@@ -351,4 +375,344 @@ export function sentenceNumbersSupported(
     }
   }
   return true;
+}
+
+// ------------------------------------------- cantidades con unidad (CL-4/CL-5)
+
+/**
+ * La capa de cantidades (CL-4 y CL-5 de la caza 0.1.97). La vara de
+ * valores de arriba juzga la CIFRA suelta: «500» apoyaba igual en
+ * «500 mg» que en «500 g», «38» en °C que en °F, «230» en voltios
+ * que en vatios, y el número en letra fuera de los portillos de
+ * dosis («doscientos voltios») ni se veía. Aquí toda expresión de
+ * cantidad (dígitos o letra plena en es/en/pt) pegada a una unidad
+ * se normaliza a (dimensión, valor canónico): la cifra sin su
+ * unidad no apoya nada, y la unidad de otra dimensión — o la misma
+ * con otro factor — es otra cantidad.
+ */
+export interface Quantity {
+  dim: string;
+  canon: number;
+  raw: number;
+  decimals: number;
+  /** Derivada de la conversión (para escalar la tolerancia de redondeo). */
+  tolF: number;
+  /** CL-9: la cantidad es extremo de un rango («entre 45 y 55 minutos»). */
+  ranged?: boolean;
+}
+
+const WN_SMALL: Record<string, number> = {
+  cero: 0, zero: 0,
+  un: 1, una: 1, uno: 1, um: 1, uma: 1, one: 1,
+  dos: 2, dois: 2, duas: 2, two: 2,
+  tres: 3, three: 3,
+  cuatro: 4, quatro: 4, four: 4,
+  cinco: 5, five: 5,
+  seis: 6, six: 6,
+  siete: 7, sete: 7, seven: 7,
+  ocho: 8, oito: 8, eight: 8,
+  nueve: 9, nove: 9, nine: 9,
+  diez: 10, dez: 10, ten: 10,
+  once: 11, onze: 11, eleven: 11,
+  doce: 12, doze: 12, twelve: 12,
+  trece: 13, treze: 13, thirteen: 13,
+  catorce: 14, catorze: 14, fourteen: 14,
+  quince: 15, fifteen: 15,
+  dieciseis: 16, dezesseis: 16, sixteen: 16,
+  diecisiete: 17, dezessete: 17, seventeen: 17,
+  dieciocho: 18, dezoito: 18, eighteen: 18,
+  diecinueve: 19, dezanove: 19, dezenove: 19, nineteen: 19,
+};
+
+const WN_TENS: Record<string, number> = {
+  veinte: 20, vinte: 20, twenty: 20,
+  veintidos: 22, veintitres: 23, veinticuatro: 24, veinticinco: 25,
+  veintiseis: 26, veintisiete: 27, veintiocho: 28, veintinueve: 29,
+  trinta: 30, treinta: 30, thirty: 30,
+  cuarenta: 40, quarenta: 40, forty: 40,
+  cincuenta: 50, cinquenta: 50, fifty: 50,
+  sesenta: 60, sessenta: 60, sixty: 60,
+  setenta: 70, seventy: 70,
+  ochenta: 80, oitenta: 80, eighty: 80,
+  noventa: 90, ninety: 90,
+};
+
+const WN_HUNDREDS: Record<string, number> = {
+  cien: 100, ciento: 100, cem: 100, cento: 100,
+  doscientos: 200, doscientas: 200, duzentos: 200, duzentas: 200,
+  trescientos: 300, trescientas: 300, trezentos: 300, trezentas: 300,
+  cuatrocientos: 400, cuatrocientas: 400, quatrocentos: 400, quatrocentas: 400,
+  quinientos: 500, quinientas: 500, quinhentos: 500, quinhentas: 500,
+  seiscientos: 600, seiscientas: 600, seiscentos: 600, seiscentas: 600,
+  setecientos: 700, setecientas: 700, setecentos: 700, setecentas: 700,
+  ochocientos: 800, ochocientas: 800, oitocentos: 800, oitocentas: 800,
+  novecientos: 900, novecientas: 900, novecentos: 900, novecentas: 900,
+};
+
+const WN_CONNECTORS = new Set(["y", "e", "and"]);
+
+/** El tramo < 1000 que empieza en `i` (centenas, decenas, unidades), o null. */
+function parseUnder1000(tokens: readonly string[], i: number): { value: number; len: number } | null {
+  let value = 0;
+  let n = 0;
+  const t0 = tokens[i];
+  if (t0 !== undefined && WN_HUNDREDS[t0] !== undefined) {
+    value += WN_HUNDREDS[t0]!;
+    n++;
+  } else if (t0 !== undefined && WN_SMALL[t0] !== undefined && tokens[i + 1] === "hundred") {
+    value += WN_SMALL[t0]! * 100;
+    n += 2;
+  }
+  let j = i + n;
+  if (n > 0 && tokens[j] !== undefined && WN_CONNECTORS.has(tokens[j]!)) j++;
+  const tt = tokens[j];
+  if (tt !== undefined && WN_TENS[tt] !== undefined) {
+    value += WN_TENS[tt]!;
+    n = j - i + 1;
+    j++;
+    if (tokens[j] !== undefined && WN_CONNECTORS.has(tokens[j]!)) j++;
+    const ts = tokens[j];
+    if (ts !== undefined && WN_SMALL[ts] !== undefined && WN_SMALL[ts]! < 10) {
+      value += WN_SMALL[ts]!;
+      n = j - i + 1;
+    }
+  } else if (tt !== undefined && WN_SMALL[tt] !== undefined) {
+    value += WN_SMALL[tt]!;
+    n = j - i + 1;
+  }
+  return n > 0 ? { value, len: n } : null;
+}
+
+/** Un número en letra pleno (con miles) que empieza en `i`, o null. */
+function parseWordNumber(tokens: readonly string[], i: number): { value: number; len: number } | null {
+  let value = 0;
+  let n = 0;
+  const seg = parseUnder1000(tokens, i);
+  const after = tokens[i + (seg?.len ?? 0)];
+  if (seg && seg.value > 0 && (after === "mil" || after === "thousand")) {
+    value += seg.value * 1000;
+    n += seg.len + 1;
+  } else if (tokens[i] === "mil" || tokens[i] === "thousand") {
+    value += 1000;
+    n += 1;
+  }
+  const rest = parseUnder1000(tokens, i + n);
+  if (rest) {
+    value += rest.value;
+    n += rest.len;
+  }
+  return n > 0 ? { value, len: n } : null;
+}
+
+/** Unidades: palabra plegada (singular) → dimensión y factor a la canónica. */
+const UNIT_TABLE: Record<string, { dim: string; f: number }> = {
+  // masa → mg
+  miligramo: { dim: "masa", f: 1 }, milligram: { dim: "masa", f: 1 }, mg: { dim: "masa", f: 1 },
+  microgramo: { dim: "masa", f: 0.001 }, mcg: { dim: "masa", f: 0.001 },
+  gramo: { dim: "masa", f: 1e3 }, gram: { dim: "masa", f: 1e3 }, g: { dim: "masa", f: 1e3 },
+  kilogramo: { dim: "masa", f: 1e6 }, kilogram: { dim: "masa", f: 1e6 }, kilo: { dim: "masa", f: 1e6 }, kg: { dim: "masa", f: 1e6 },
+  // volumen → ml
+  mililitro: { dim: "volumen", f: 1 }, milliliter: { dim: "volumen", f: 1 }, ml: { dim: "volumen", f: 1 },
+  centilitro: { dim: "volumen", f: 10 }, decilitro: { dim: "volumen", f: 100 },
+  litro: { dim: "volumen", f: 1e3 }, liter: { dim: "volumen", f: 1e3 }, litre: { dim: "volumen", f: 1e3 }, l: { dim: "volumen", f: 1e3 },
+  // tiempo → s
+  segundo: { dim: "tiempo", f: 1 }, second: { dim: "tiempo", f: 1 }, seg: { dim: "tiempo", f: 1 },
+  minuto: { dim: "tiempo", f: 60 }, minute: { dim: "tiempo", f: 60 }, min: { dim: "tiempo", f: 60 },
+  hora: { dim: "tiempo", f: 3600 }, hour: { dim: "tiempo", f: 3600 }, h: { dim: "tiempo", f: 3600 },
+  dia: { dim: "tiempo", f: 86400 }, day: { dim: "tiempo", f: 86400 },
+  semana: { dim: "tiempo", f: 604800 }, week: { dim: "tiempo", f: 604800 },
+  // electricidad (sin conversión entre dimensiones: ese es el punto)
+  voltio: { dim: "voltaje", f: 1 }, volt: { dim: "voltaje", f: 1 }, v: { dim: "voltaje", f: 1 },
+  vatio: { dim: "potencia", f: 1 }, watt: { dim: "potencia", f: 1 }, w: { dim: "potencia", f: 1 },
+  amperio: { dim: "corriente", f: 1 }, ampere: { dim: "corriente", f: 1 }, amp: { dim: "corriente", f: 1 },
+  // longitud → mm
+  milimetro: { dim: "longitud", f: 1 }, millimeter: { dim: "longitud", f: 1 }, mm: { dim: "longitud", f: 1 },
+  centimetro: { dim: "longitud", f: 10 }, centimeter: { dim: "longitud", f: 10 }, centimetre: { dim: "longitud", f: 10 }, cm: { dim: "longitud", f: 10 },
+  metro: { dim: "longitud", f: 1e3 }, meter: { dim: "longitud", f: 1e3 }, metre: { dim: "longitud", f: 1e3 }, m: { dim: "longitud", f: 1e3 },
+  kilometro: { dim: "longitud", f: 1e6 }, kilometer: { dim: "longitud", f: 1e6 }, kilometre: { dim: "longitud", f: 1e6 }, km: { dim: "longitud", f: 1e6 },
+  pulgada: { dim: "longitud", f: 25.4 }, inch: { dim: "longitud", f: 25.4 },
+  pie: { dim: "longitud", f: 304.8 }, foot: { dim: "longitud", f: 304.8 }, feet: { dim: "longitud", f: 304.8 }, ft: { dim: "longitud", f: 304.8 },
+  milla: { dim: "longitud", f: 1609344 }, mile: { dim: "longitud", f: 1609344 },
+  // presión → psi
+  psi: { dim: "presion", f: 1 }, bar: { dim: "presion", f: 14.5038 }, kpa: { dim: "presion", f: 0.145038 },
+  // dinero (dimensión por moneda; sin conversión entre monedas)
+  euro: { dim: "dinero:eur", f: 1 }, eur: { dim: "dinero:eur", f: 1 },
+  dolar: { dim: "dinero:usd", f: 1 }, dollar: { dim: "dinero:usd", f: 1 }, usd: { dim: "dinero:usd", f: 1 },
+  peso: { dim: "dinero:peso", f: 1 },
+  real: { dim: "dinero:brl", f: 1 }, reais: { dim: "dinero:brl", f: 1 },
+  // porcentaje
+  percent: { dim: "porcentaje", f: 1 }, porcentaje: { dim: "porcentaje", f: 1 }, porcento: { dim: "porcentaje", f: 1 },
+};
+
+const SINGLE_LETTER_UNITS = new Set(["g", "l", "v", "w", "m", "h"]);
+
+interface UnitHit {
+  dim: string;
+  f: number;
+  len: number;
+  /** Conversión afín (temperatura) en vez de factor. */
+  affine?: (v: number) => number;
+}
+
+function lookupUnit(tokens: readonly string[], i: number, fromDigit: boolean): UnitHit | null {
+  const t = tokens[i];
+  if (t === undefined) return null;
+  // «38° f», «38 %»: símbolo suelto entre la cifra y su letra.
+  if (t === "°") {
+    const letter = tokens[i + 1];
+    if (letter === "c") return { dim: "temperatura", f: 1, len: 2, affine: (v) => v };
+    if (letter === "f") return { dim: "temperatura", f: 5 / 9, len: 2, affine: (v) => ((v - 32) * 5) / 9 };
+    return null;
+  }
+  if (t === "%") return { dim: "porcentaje", f: 1, len: 1 };
+  if (t === "€") return { dim: "dinero:eur", f: 1, len: 1 };
+  if (t === "$") return { dim: "dinero:usd", f: 1, len: 1 };
+  // Dos palabras: «por ciento», «por cento», «grados fahrenheit»…
+  const t2 = tokens[i + 1];
+  if ((t === "por" && (t2 === "ciento" || t2 === "cento")) || (t === "per" && t2 === "cent")) {
+    return { dim: "porcentaje", f: 1, len: 2 };
+  }
+  if (t === "grados" || t === "degrees" || t === "graus") {
+    if (t2 === "fahrenheit") return { dim: "temperatura", f: 5 / 9, len: 2, affine: (v) => ((v - 32) * 5) / 9 };
+    if (t2 === "kelvin") return { dim: "temperatura", f: 1, len: 2, affine: (v) => v - 273.15 };
+    // «grados» a secas: en las guías de la casa es la escala del
+    // propio texto (°C en es/pt, la local en en); canónica °C.
+    return { dim: "temperatura", f: 1, len: 1, affine: (v) => v };
+  }
+  if (t === "fahrenheit") return { dim: "temperatura", f: 5 / 9, len: 1, affine: (v) => ((v - 32) * 5) / 9 };
+  if (t === "celsius" || t === "centigrado" || t === "centigrade") return { dim: "temperatura", f: 1, len: 1, affine: (v) => v };
+  if (t === "kelvin") return { dim: "temperatura", f: 1, len: 1, affine: (v) => v - 273.15 };
+  const cand = UNIT_TABLE[t] ?? (t.endsWith("s") ? UNIT_TABLE[t.slice(0, -1)] : undefined);
+  if (!cand) return null;
+  // Las unidades de una letra solo se pegan a cifras en dígitos
+  // («30 g» sí; «cinco g» no es prosa real, y «m»/«h» sueltas en
+  // letra serían otra palabra).
+  if (t.length === 1 && !fromDigit) return null;
+  if (SINGLE_LETTER_UNITS.has(t) && !fromDigit) return null;
+  return { dim: cand.dim, f: cand.f, len: 1 };
+}
+
+/** Los tokens de un texto plegado: palabras, cifras con su decimal y los símbolos de unidad. */
+function quantityTokens(text: string): string[] {
+  const folded = foldForWords(text).replace(/\[\d+\]/g, " ");
+  return folded.match(/[a-zñ]+|\d+(?:[.,]\d+)?|°|%|€|\$/g) ?? [];
+}
+
+/** Todas las cantidades con unidad de un texto, normalizadas. */
+export function quantitiesOf(text: string): Quantity[] {
+  const tokens = quantityTokens(text);
+  const out: Quantity[] = [];
+  const push = (raw: number, decimals: number, unit: UnitHit, ranged = false) => {
+    out.push({
+      dim: unit.dim,
+      canon: unit.affine ? unit.affine(raw) : raw * unit.f,
+      raw,
+      decimals,
+      tolF: unit.f,
+      ...(ranged ? { ranged: true } : {}),
+    });
+  };
+  // Los rangos con unidad al final («entre 37 y 40 °C»): la unidad
+  // vale para los dos extremos, no solo para el segundo.
+  const rangeRe = /(\d+(?:[.,]\d+)?)\s*(?:[-–—]|\ba\b|\bto\b|\baté\b)\s*(\d+(?:[.,]\d+)?)\s*([a-zñ°%]+)/g;
+  const entreRe = /\bentre\s+(\d+(?:[.,]\d+)?)\s+(?:y|e|and)\s+(\d+(?:[.,]\d+)?)\s*([a-zñ°%]+)/g;
+  for (const re of [rangeRe, entreRe]) {
+    for (const m of foldForWords(text).replace(/\[\d+\]/g, " ").matchAll(re)) {
+      const lo = parseNumberToken(m[1]!)[0];
+      const hi = parseNumberToken(m[2]!)[0];
+      if (lo === undefined || hi === undefined) continue;
+      const unit = lookupUnit([m[3]!], 0, true);
+      if (!unit) continue;
+      push(lo, decimalsOf(m[1]!, lo), unit, true);
+      push(hi, decimalsOf(m[2]!, hi), unit, true);
+    }
+  }
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i]!;
+    let raw: number | null = null;
+    let decimals = 0;
+    let span = 0;
+    let fromDigit = false;
+    if (/^\d/.test(t)) {
+      const readings = parseNumberToken(t);
+      if (readings.length === 0) continue;
+      raw = readings[0]!;
+      decimals = decimalsOf(t, raw);
+      span = 1;
+      fromDigit = true;
+    } else if (t === "media" || t === "medio" || t === "half" || t === "meia") {
+      raw = 0.5;
+      decimals = 1;
+      span = 1;
+    } else {
+      const wn = parseWordNumber(tokens, i);
+      if (!wn) continue;
+      raw = wn.value;
+      span = wn.len;
+    }
+    const unit = lookupUnit(tokens, i + span, fromDigit);
+    if (!unit) continue;
+    push(raw, decimals, unit);
+    i += span + unit.len - 1;
+  }
+  return out;
+}
+
+/** Las cantidades de toda la evidencia, texto a texto (sin cruzar fronteras). */
+export function evidenceQuantities(texts: readonly string[]): Quantity[] {
+  return texts.flatMap((t) => quantitiesOf(t));
+}
+
+/**
+ * ¿Contradice alguna cantidad de la frase a la evidencia? Tres
+ * salidas honestas: la dimensión está en la evidencia y ninguna de
+ * sus cantidades casa (tras convertir) → contradicción; la
+ * dimensión no está y el valor tampoco aparece suelto → invención;
+ * el valor cae dentro de un rango de la evidencia → sostenida (la
+ * doctrina de C-08 manda también aquí).
+ */
+export function quantityConflict(
+  sentence: string,
+  evidence: readonly Quantity[],
+  evidenceValues: ReadonlySet<number>,
+  ranges: readonly EvidenceRange[] = [],
+): boolean {
+  const mine = quantitiesOf(sentence);
+  // CL-9: los extremos de un rango de la respuesta que CONTIENE
+  // una cantidad de la evidencia en su dimensión no contradicen:
+  // acotan. Se excusan por dimensión antes de juzgar uno a uno.
+  const excusedDims = new Set<string>();
+  for (const q of mine) {
+    if (!q.ranged) continue;
+    const group = mine.filter((o) => o.ranged && o.dim === q.dim);
+    if (group.length < 2) continue;
+    const lo = Math.min(...group.map((o) => o.canon));
+    const hi = Math.max(...group.map((o) => o.canon));
+    if (evidence.some((e) => e.dim === q.dim && e.canon >= lo - 1e-9 && e.canon <= hi + 1e-9)) {
+      excusedDims.add(q.dim);
+    }
+  }
+  // La misma cantidad leída dos veces (extremo del rango y lectura
+  // suelta del escaneo general) no se juzga dos veces: si su valor
+  // es un extremo del rango excusado, también está excusada.
+  const excusedValues = new Map<string, number[]>();
+  for (const dim of excusedDims) {
+    excusedValues.set(dim, mine.filter((o) => o.ranged && o.dim === dim).map((o) => o.canon));
+  }
+  for (const q of mine) {
+    if (withinEvidenceRanges(q.raw, q.decimals, ranges)) continue;
+    if (q.ranged && excusedDims.has(q.dim)) continue;
+    if (excusedValues.get(q.dim)?.some((v) => Math.abs(v - q.canon) <= 1e-9)) continue;
+    const sameDim = evidence.filter((e) => e.dim === q.dim);
+    if (sameDim.length > 0) {
+      const tol = 0.5 * Math.pow(10, -q.decimals) * q.tolF + 1e-9;
+      if (!sameDim.some((e) => Math.abs(e.canon - q.canon) <= tol)) return true;
+    } else if (
+      !roundsFromEvidence(q.raw, q.decimals, evidenceValues) &&
+      !roundsFromEvidence(q.canon, q.decimals, evidenceValues)
+    ) {
+      return true;
+    }
+  }
+  return false;
 }

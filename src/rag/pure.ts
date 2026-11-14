@@ -187,6 +187,47 @@ export interface LexicalQuery {
   /** FTS5 MATCH expression: every quoted form OR-ed together, BM25-ranked by FTS5 itself. */
   match: string;
   terms: LexicalTerm[];
+  /** Idioma detectado de la pregunta (las mismas pistas que el juez); null sin veredicto. */
+  lang: LexicalLang | null;
+}
+
+export type LexicalLang = "en" | "es" | "pt";
+
+/**
+ * Las palabras pista por idioma — las mismas de detectTextLang en
+ * grounding.ts, sobre los tokens de esta capa (tokenize ya pliega
+ * tildes). Dos detectores con las mismas pistas a propósito: pure.ts
+ * no puede importar grounding.ts (es la base sin dependencias).
+ */
+const LEXICAL_LANG_HINTS: Record<LexicalLang, Set<string>> = {
+  en: new Set("the and is are was were of to in that it with for this which by from have has not".split(" ")),
+  es: new Set("el la los las y es son del que en por para con una un se su lo como pero mas".split(" ")),
+  pt: new Set("o os as e sao do da dos das que em por para com uma um se seu sua como mas nao".split(" ")),
+};
+
+/**
+ * El idioma de un texto para la pata léxica, con los umbrales del
+ * juez: menos de 4 tokens, señal débil (<8 % de pistas) o empate
+ * es/pt → sin veredicto (null), y sin veredicto no hay disciplina.
+ */
+export function detectLexicalLang(text: string): LexicalLang | null {
+  const ws = tokenize(text);
+  if (ws.length < 4) return null;
+  let best: LexicalLang | null = null;
+  let bestScore = 0;
+  let second = 0;
+  for (const lang of ["en", "es", "pt"] as LexicalLang[]) {
+    const score = ws.filter((w) => LEXICAL_LANG_HINTS[lang].has(w)).length / ws.length;
+    if (score > bestScore) {
+      second = bestScore;
+      bestScore = score;
+      best = lang;
+    } else if (score > second) {
+      second = score;
+    }
+  }
+  if (bestScore < 0.08 || bestScore - second < 0.03) return null;
+  return best;
 }
 
 // "-es" is ambiguous ("viruses" → "virus" but "cases" → "case"), so both
@@ -229,7 +270,7 @@ export function buildLexicalQuery(query: string): LexicalQuery | null {
   }
   if (terms.length === 0) return null;
   const match = terms.flatMap((t) => [...t.forms.map((f) => `"${f}"`), ...(t.prefix ? [`"${t.prefix}"*`] : [])]).join(" OR ");
-  return { match, terms };
+  return { match, terms, lang: detectLexicalLang(query) };
 }
 
 /**
@@ -246,6 +287,12 @@ export function countMatchedTerms(text: string, terms: LexicalTerm[]): number {
   const list = tokenize(text);
   const tokens = new Set(list);
   return terms.filter((term) => term.forms.some((f) => tokens.has(f)) || (!!term.prefix && list.some((t) => t.startsWith(term.prefix!)))).length;
+}
+
+/** Los términos casados SOLO por forma exacta (sin crédito de prefijo). */
+export function countExactMatchedTerms(text: string, terms: LexicalTerm[]): number {
+  const tokens = new Set(tokenize(text));
+  return terms.filter((term) => term.forms.some((f) => tokens.has(f))).length;
 }
 
 /**
@@ -268,12 +315,35 @@ export function lexicalPrefixOf(token: string): string | undefined {
  */
 export function filterByTermCoverage<T extends { title: string; body: string; keys?: string }>(
   hits: T[],
-  terms: LexicalTerm[]
+  terms: LexicalTerm[],
+  queryLang?: LexicalLang | null
 ): T[] {
   const required = requiredTermMatches(terms.length);
   // 0.1.55: packs v2 index the real questions each section answers (`keys`);
   // a term found there counts like one in the text.
-  return hits.filter((h) => countMatchedTerms(h.keys ? `${h.title} ${h.body} ${h.keys}` : `${h.title} ${h.body}`, terms) >= required);
+  return hits.filter((h) => {
+    const text = h.keys ? `${h.title} ${h.body} ${h.keys}` : `${h.title} ${h.body}`;
+    if (countMatchedTerms(text, terms) < required) return false;
+    // CL-12 (caza 0.1.97): disciplina de idioma de la pata léxica.
+    // El prefijo de una pregunta en español («camb*», «llan*»,
+    // «carr*») casaba tokens ingleses («cambodia», «carried»,
+    // «llanidloes») y un artículo extranjero alcanzaba la cobertura
+    // sin contener ni una palabra de la pregunta: así entraron
+    // «Cambodia» y «River Severn» tras la guía de la llanta en el
+    // aparato del dueño. La pata léxica es INTRA-idioma — el puente
+    // entre idiomas es la semántica, exenta de esta puerta por
+    // diseño —: un acierto en otro idioma solo pasa con cobertura
+    // TOTAL por formas exactas (los cognados de verdad), nunca por
+    // prefijos. Sin veredicto de idioma en cualquiera de los dos
+    // lados, manda la regla de siempre.
+    if (queryLang) {
+      const hitLang = detectLexicalLang(text);
+      if (hitLang && hitLang !== queryLang) {
+        return countExactMatchedTerms(text, terms) === terms.length;
+      }
+    }
+    return true;
+  });
 }
 
 /**
@@ -837,7 +907,17 @@ export function fuseRetrievalResults(
   // H2-2026-10-06: gate absoluto post-fusión. La fusión es re-ranking
   // relativo; un chunk semántico con rawScore bajo (pero "mejor de un mal
   // lote") no debe llegar al prompt del modelo.
-  return out.filter((c) => c.rawScore === undefined || c.rawScore >= minRawScore);
+  // CL-12 (caza 0.1.97): el chunk SOLO léxico ya no está exento de
+  // esta puerta. BM25 no tiene escala absoluta honesta, pero su
+  // cobertura de términos sí: la fracción de términos de la pregunta
+  // que el chunk trae de verdad (termCoverage, estampada por las
+  // búsquedas léxicas) es su medida absoluta, y media cobertura —
+  // el mínimo que la puerta de entrada tolera — no basta para
+  // llegar al prompt: hace falta más de la mitad.
+  return out.filter((c) => {
+    if (c.rawScore !== undefined) return c.rawScore >= minRawScore;
+    return c.termCoverage === undefined || c.termCoverage > 0.5;
+  });
 }
 
 /**

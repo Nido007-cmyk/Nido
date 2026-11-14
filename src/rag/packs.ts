@@ -18,7 +18,7 @@ import * as SQLite from "expo-sqlite";
 import * as FileSystem from "expo-file-system/legacy";
 import { CORPUS_CATALOG, MODEL_CATALOG, CatalogModel } from "../models/manifest";
 import { packFileState } from "../models/modelTrust";
-import { buildLexicalQuery, cosineSimilarityInt8, distinctFloor, DISTINCT_BG_TO, EXACT_SEARCH_MAX_ROWS, exactVectorSearch, dropUnfoundedCorpus, filterByMinScore, filterByTermCoverage, MIN_SEMANTIC_SIMILARITY, MIN_SEMANTIC_SIMILARITY_SINGLE_TERM, normalizeCorpusScores, pruneSemanticByMargin, pruneVectorHits } from "./pure";
+import { buildLexicalQuery, cosineSimilarityInt8, countMatchedTerms, distinctFloor, DISTINCT_BG_TO, EXACT_SEARCH_MAX_ROWS, exactVectorSearch, dropUnfoundedCorpus, filterByMinScore, filterByTermCoverage, MIN_SEMANTIC_SIMILARITY, MIN_SEMANTIC_SIMILARITY_SINGLE_TERM, normalizeCorpusScores, pruneSemanticByMargin, pruneVectorHits } from "./pure";
 import type { RetrievedChunk } from "./retrieve.types";
 import { guideTitleOf, markUsedPart, MAX_SOURCE_PARTS, parsePackChunkId, sectionLikePattern, type PackSourceDoc } from "./packSource";
 import { BGE_SMALL_EN_PROFILE, packSemanticFloor, type EmbeddingProfile } from "./embeddingProfile";
@@ -311,11 +311,12 @@ export async function searchPacks(
       // Same model AND same vector size as the question (a pack that
       // declares another size is never scored against it).
       const vectorsMatch = open.modelSha256 === modelSha256 && (!queryVec || queryVec.length === open.dims);
-      const toChunk = (r: { id: number; title: string; body: string; keys?: string }, score: number, matchType: RetrievedChunk["matchType"]): RetrievedChunk => ({
+      const toChunk = (r: { id: number; title: string; body: string; keys?: string }, score: number, matchType: RetrievedChunk["matchType"], termCoverage?: number): RetrievedChunk => ({
         chunkId: `pack:${pack.id}:${r.id}`,
         docId: `pack:${pack.id}:${r.title}`,
         title: r.title,
         body: r.body,
+        ...(termCoverage !== undefined ? { termCoverage } : {}),
         // 0.1.87: las claves de pregunta del formato v2 viajan con
         // el fragmento: la vía léxica de la elección de la guía las
         // cuenta como texto, igual que la puerta de cobertura de
@@ -341,13 +342,22 @@ export async function searchPacks(
         // no-source fall instead of citing a plausible neighbour. Packs
         // are always house corpus: signal B's user exemption never
         // applies here.
-        const gated = filterByTermCoverage(rows, lexicalQuery.terms);
+        const gated = filterByTermCoverage(rows, lexicalQuery.terms, lexicalQuery.lang);
         const founded = dropUnfoundedCorpus(rows, gated, lexicalQuery.terms, { query });
         // C-02: normalize PER PACK — each pack is its own corpus with
         // its own BM25 scale; normalizing over the union of packs (or
         // not at all) would re-create the cross-scale inversion this
         // normalization exists to cure.
-        const packLexical = founded.slice(0, limit).map((r) => toChunk(r, -r.rank, "lexical"));
+        const packLexical = founded.slice(0, limit).map((r) =>
+          toChunk(
+            r,
+            -r.rank,
+            "lexical",
+            lexicalQuery.terms.length > 0
+              ? countMatchedTerms(r.keys ? `${r.title} ${r.body} ${r.keys}` : `${r.title} ${r.body}`, lexicalQuery.terms) / lexicalQuery.terms.length
+              : undefined
+          )
+        );
         lexical.push(...normalizeCorpusScores(packLexical));
       }
       // F4-2026-10-06: sin queryVec (JSI de embedding ausente) se omite

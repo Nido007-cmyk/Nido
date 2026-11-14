@@ -26,6 +26,13 @@ export interface RetrievedChunk extends ChunkRecord {
    */
   sourceKind?: ChunkSourceKind;
   /**
+   * CL-12: cobertura de términos de la pata léxica (términos de la
+   * pregunta presentes en el chunk / total de términos), estampada
+   * por las búsquedas léxicas. Es la medida absoluta del chunk solo
+   * léxico ante la puerta post-fusión de fuseRetrievalResults.
+   */
+  termCoverage?: number;
+  /**
    * Absolute pre-fusion score where one exists on a bounded scale: the raw
    * cosine similarity for semantic (and hybrid) chunks. Left undefined for
    * lexical-only chunks — BM25 is unbounded, so no honest percentage exists

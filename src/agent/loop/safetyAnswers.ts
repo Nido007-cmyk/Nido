@@ -307,9 +307,7 @@ export function unknownCountryText(lang: SafetyLang, asked: boolean, knownNames:
  *    «024. Línea de atención a la conducta suicida»).
  *  - Brasil: CVV, 188, gratuita en todo el país (CONASS).
  */
-const SELF_HARM_RE = new RegExp(
-  "\\b(?:" +
-    [
+const SELF_HARM_PATTERNS = [
       // español
       "(?:ya )?no quiero (?:seguir )?vivi(?:r|endo)",
       "(?:me )?quiero morir(?:me)?",
@@ -360,13 +358,37 @@ const SELF_HARM_RE = new RegExp(
       "nao quero (?:mais )?viver",
       "nao aguento mais viver",
       "acabar com (?:a )?minha vida",
-    ].join("|") +
-    ")\\b",
+];
+
+const SELF_HARM_RE = new RegExp("\\b(?:" + SELF_HARM_PATTERNS.join("|") + ")\\b");
+
+/**
+ * La misma lista sin espacios ni límites de palabra (CL-11b de la
+ * caza 0.1.97): el dictado por voz pega las palabras («quieroaserme
+ * daño», «queromemachucar», «iwanttohurtmyself») y la puerta no
+ * disparaba en ningún idioma, porque cada expresión exige palabras
+ * separadas. Contra el texto también sin espacios, la frase entera
+ * tiene que aparecer como una sola corrida de letras: una colisión
+ * benigna necesitaría la frase completa cruzando palabras ajenas.
+ */
+/**
+ * Variantes solo para la vía pegada: la fusión dictada también se
+ * come la h muda y sesea («quiero hacerme daño» llega como
+ * «quieroaserme dano»: ni «hacerme» ni «quiero hacerme» sobreviven
+ * como corrida de letras). Como patrones con espacios nunca casan
+ * texto real; solo alimentan la regex sin espacios.
+ */
+const SELF_HARM_GLUED_EXTRA = ["aserme dano", "(?:quiero|voy a|tengo ganas de) (?:lastimarme|erirme)"];
+
+const SELF_HARM_GLUED_RE = new RegExp(
+  [...SELF_HARM_PATTERNS, ...SELF_HARM_GLUED_EXTRA].map((p) => p.replace(/\s+/g, "")).join("|"),
 );
 
 // Frases hechas y ficción: no son una persona contando que quiere morir.
 const SELF_HARM_VETO_RE =
   /\b(?:morir(?:me)? de (?:la )?(?:risa|verguenza|pena|hambre|sueno|calor|frio|amor|ganas|envidia|aburrimiento|cansancio|nervios)|die of (?:embarrassment|laughter|boredom|shame|hunger|thirst)|morrer de (?:rir|vergonha|fome|sono|calor|frio|amor|vontade|tedio|saudade)|(?:cuento|novela|historia|guion|cancion|poema|personaje|pelicula|serie|story|novel|script|song|lyrics|poem|character|movie|conto|romance|roteiro|musica|personagem|filme)\b)/;
+
+const SELF_HARM_VETO_GLUED_RE = new RegExp(SELF_HARM_VETO_RE.source.replace(/\\b/g, "").replace(/\s+/g, ""));
 
 const SELF_HARM_TEXT: Record<SafetyLang, string> = {
   es:
@@ -405,7 +427,11 @@ const SELF_HARM_TEXT: Record<SafetyLang, string> = {
 export function isSelfHarmMessage(userText: string): boolean {
   const folded = fold(userText).replace(/\s+/g, " ").trim();
   if (folded.length === 0 || folded.length > 4000) return false;
-  return SELF_HARM_RE.test(folded) && !SELF_HARM_VETO_RE.test(folded);
+  if (SELF_HARM_RE.test(folded) && !SELF_HARM_VETO_RE.test(folded)) return true;
+  // CL-11b: la forma dictada con las palabras pegadas, contra la
+  // misma lista sin espacios y con el mismo veto sin espacios.
+  const glued = folded.replace(/ /g, "");
+  return SELF_HARM_GLUED_RE.test(glued) && !SELF_HARM_VETO_GLUED_RE.test(glued);
 }
 
 export function matchSafetyAnswer(userText: string, lang: SafetyLang): SafetyHit | null {
