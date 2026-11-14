@@ -30,7 +30,7 @@
     "expo-sqlite": "57.0.4",
     "expo-status-bar": "57.0.1",
     "i18next": "26.7.1",
-    "llama.rn": "0.13.0-rc.9",
+    "llama.rn": "0.13.0-rc.10",
     "nido-cpr": "file:./modules/nido-cpr",
     "nido-keyvault": "file:./modules/nido-keyvault",
     "nido-launch": "file:./modules/nido-launch",
