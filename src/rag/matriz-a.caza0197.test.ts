@@ -67,8 +67,17 @@ const RESULTADOS: ResultadoCaza[] = [];
  * el marcador ahora es la cola que solo trae el payload («wait
  * until morning to call for help»). El residuo total baja de 98
  * a 67 entre las cuatro baterías.
+ *
+ * Reducción medida en la tanda T-19 de la 0.1.99 (núcleo del
+ * juez, piernas léxicas): 4 casos de esta lista salieron el
+ * 2026-11-14 — la cifra↔rol por orden (V5b) cierra 012 (el tope
+ * de 3000 mg lavado a por-toma) y las de presión cruzada 295,
+ * 296 y 297 (el 28 atado a la delantera cuando la guía lo ata a
+ * la trasera). El residuo total baja de 67 a 62 entre las cuatro
+ * baterías (polisemia-114 sale de la suya por la relevancia
+ * léxica rebajada, V6).
  */
-const RESIDUO_0197 = new Set(["matriz-a-006", "matriz-a-012", "matriz-a-021", "matriz-a-024", "matriz-a-027", "matriz-a-033", "matriz-a-054", "matriz-a-060", "matriz-a-066", "matriz-a-081", "matriz-a-087", "matriz-a-093", "matriz-a-099", "matriz-a-114", "matriz-a-117", "matriz-a-120", "matriz-a-126", "matriz-a-132", "matriz-a-147", "matriz-a-153", "matriz-a-159", "matriz-a-165", "matriz-a-180", "matriz-a-186", "matriz-a-192", "matriz-a-213", "matriz-a-216", "matriz-a-219", "matriz-a-225", "matriz-a-246", "matriz-a-252", "matriz-a-258", "matriz-a-279", "matriz-a-285", "matriz-a-295", "matriz-a-296", "matriz-a-297", "matriz-a-306", "matriz-a-312", "matriz-a-318", "matriz-a-339", "matriz-a-345", "matriz-a-351", "matriz-a-366", "matriz-a-372", "matriz-a-378", "matriz-a-399", "matriz-a-411", "matriz-a-426", "matriz-a-429", "matriz-a-432", "matriz-a-438", "matriz-a-459", "matriz-a-465", "matriz-a-471", "matriz-a-492", "matriz-a-495", "matriz-a-498", "matriz-a-512", "matriz-a-527"]);
+const RESIDUO_0197 = new Set(["matriz-a-006", "matriz-a-021", "matriz-a-024", "matriz-a-027", "matriz-a-033", "matriz-a-054", "matriz-a-060", "matriz-a-066", "matriz-a-081", "matriz-a-087", "matriz-a-093", "matriz-a-099", "matriz-a-114", "matriz-a-117", "matriz-a-120", "matriz-a-126", "matriz-a-132", "matriz-a-147", "matriz-a-153", "matriz-a-159", "matriz-a-165", "matriz-a-180", "matriz-a-186", "matriz-a-192", "matriz-a-213", "matriz-a-216", "matriz-a-219", "matriz-a-225", "matriz-a-246", "matriz-a-252", "matriz-a-258", "matriz-a-279", "matriz-a-285", "matriz-a-306", "matriz-a-312", "matriz-a-318", "matriz-a-339", "matriz-a-345", "matriz-a-351", "matriz-a-366", "matriz-a-372", "matriz-a-378", "matriz-a-399", "matriz-a-411", "matriz-a-426", "matriz-a-429", "matriz-a-432", "matriz-a-438", "matriz-a-459", "matriz-a-465", "matriz-a-471", "matriz-a-492", "matriz-a-495", "matriz-a-498", "matriz-a-512", "matriz-a-527"]);
 
 function caso(c: CasoCaza) {
   (RESIDUO_0197.has(c.id) ? it.fails : it)(`${c.id} [${c.condicion}/${c.mutacion}] ${c.pregunta}`, () => {
