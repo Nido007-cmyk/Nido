@@ -74,6 +74,7 @@
 import type { SentenceProvenance } from "./provenance";
 import { evidenceNumberValues, evidenceQuantities, evidenceRanges, isJudged, numberTokens, parseNumberToken, quantitiesOf, quantityConflict, sentenceNumbersSupported, sentenceWordReadings, wordNumberValue } from "./evidenceNumbers";
 import { dateConflictForSentence, parseSourceDateSentences } from "./dates";
+import type { JudgeSemanticContext } from "./semanticContext";
 
 export type GroundingLang = "es" | "en" | "pt";
 
@@ -775,6 +776,46 @@ const clauseSplitExtRe = (text: string): RegExp =>
   detectTextLang(text) === "pt" ? CLAUSE_SPLIT_EXT_PT_RE : CLAUSE_SPLIT_EXT_RE;
 const clauseSplitExtCaptureRe = (text: string): RegExp =>
   detectTextLang(text) === "pt" ? CLAUSE_SPLIT_EXT_PT_CAPTURE_RE : CLAUSE_SPLIT_EXT_CAPTURE_RE;
+
+/**
+ * T-20 (0.1.99, núcleo del juez): el troceo de cláusulas CON separador,
+ * el que el diseño del núcleo midió (clausulas_con_sep) y el que el
+ * contexto semántico (semanticContext.ts) usa para alinear vectores
+ * con cláusulas. Corta con la misma regex con captura de esta pierna
+ * (la variante por idioma, como dropFlippedClauses), descarta los
+ * fragmentos de menos de 8 caracteres (ruido sin predicado) y marca
+ * si la cláusula cuelga de un separador subordinante («porque», «si»,
+ * «cuando», «because»…): la subordinada no sostiene sola una puerta
+ * (su gemela puede vivir en la principal). Vive aquí, junto al
+ * troceador, para que constructor y juez troceen con LA MISMA función:
+ * duplicarla en dos módulos es como nace una desalineación.
+ */
+const SUBORDINATE_SEP_WORDS = new Set([
+  "si", "se", "if", "when", "cuando", "quando", "while", "mientras",
+  "enquanto", "porque", "because", "aunque", "although", "que",
+]);
+
+export interface ClauseWithSep {
+  text: string;
+  subordinate: boolean;
+}
+
+export function splitClausesWithSep(text: string): ClauseWithSep[] {
+  const segs = text.split(clauseSplitExtCaptureRe(text));
+  const out: ClauseWithSep[] = [];
+  let sepPrev = "";
+  for (let i = 0; i < segs.length; i++) {
+    if (i % 2 === 1) {
+      sepPrev = segs[i]!;
+      continue;
+    }
+    const t = segs[i]!.trim();
+    if (t.length < 8) continue;
+    const subordinate = sepPrev !== "" && words(sepPrev).some((w) => SUBORDINATE_SEP_WORDS.has(w));
+    out.push({ text: t, subordinate });
+  }
+  return out;
+}
 
 /**
  * El recuento de negaciones de ESTA pierna: sin «sin»/«sem»/
@@ -2672,6 +2713,55 @@ export function applyDatumRule(
   return replaced || removedExtra > 0 ? { removedExtra, replaced } : none;
 }
 
+/**
+ * T-20: la validación del contexto semántico. El contexto solo se
+ * acepta ENTERO y alineado con lo que el juez mismo reconstruye: el
+ * perfil multilingüe medido, un vector de similitud por chunk, y
+ * exactamente los vectores de las cláusulas que salen de aplicar
+ * splitClausesWithSep a las frases de los chunks y de la respuesta,
+ * todos vectores finitos de la misma dimensión. Cualquier desvío —
+ * un chunk de más o de menos, una cláusula desalineada, un NaN — y
+ * el contexto se ignora entero: nunca se juzga con un contexto a
+ * medias (la desalineación cláusula↔vector es el fallo silencioso
+ * que esta validación existe para hacer imposible).
+ */
+function usableSemanticContext(
+  ctx: JudgeSemanticContext | undefined,
+  chunks: GroundingChunk[],
+  sentences: string[],
+  chunkSentences: string[][],
+): JudgeSemanticContext | undefined {
+  if (!ctx) return undefined;
+  if (ctx.profileId !== "multilingual-e5-small") return undefined;
+  if (ctx.chunkClauseVectors.length !== chunks.length) return undefined;
+  if (ctx.questionChunkSims.length !== chunks.length) return undefined;
+  if (ctx.answerClauseVectors.length !== sentences.length) return undefined;
+  for (const sim of ctx.questionChunkSims) {
+    if (!Number.isFinite(sim)) return undefined;
+  }
+  let dim = 0;
+  const vectorOk = (v: Float32Array): boolean => {
+    if (!(v instanceof Float32Array) || v.length === 0) return false;
+    if (dim === 0) dim = v.length;
+    if (v.length !== dim) return false;
+    for (const x of v) if (!Number.isFinite(x)) return false;
+    return true;
+  };
+  for (let i = 0; i < chunks.length; i++) {
+    const expected = chunkSentences[i]!.flatMap((s) => splitClausesWithSep(s)).length;
+    const vectors = ctx.chunkClauseVectors[i]!;
+    if (vectors.length !== expected) return undefined;
+    for (const v of vectors) if (!vectorOk(v)) return undefined;
+  }
+  for (let i = 0; i < sentences.length; i++) {
+    const expected = splitClausesWithSep(sentences[i]!).length;
+    const vectors = ctx.answerClauseVectors[i]!;
+    if (vectors.length !== expected) return undefined;
+    for (const v of vectors) if (!vectorOk(v)) return undefined;
+  }
+  return ctx;
+}
+
 export function verifyGroundedAnswer(
   answer: string,
   chunks: GroundingChunk[],
@@ -2696,6 +2786,18 @@ export function verifyGroundedAnswer(
    * que el humano quiso decir.
    */
   referenceDate: Date = new Date(),
+  /**
+   * T-20 (0.1.99, núcleo del juez): el contexto semántico precomputado
+   * por la capa de recuperación (semanticContext.ts) — vectores de las
+   * cláusulas de los chunks y de la respuesta y similitudes
+   * pregunta→chunk, del perfil multilingüe activo. En T-20 el juez lo
+   * ACEPTA y lo VALIDA (usableSemanticContext: perfil, longitudes y
+   * alineación de cláusulas contra su propio troceo) pero ninguna
+   * puerta lo lee todavía: sin contexto, o con un contexto que no
+   * cuadra, el veredicto es byte a byte el de siempre. Las puertas
+   * que lo consumen son T-21.
+   */
+  semanticContext?: JudgeSemanticContext,
 ): GroundingResult {
   const trimmed = (answer ?? "").trim();
   if (!trimmed) return { text: trimmed, status: "skipped", removed: 0, kept: 0 };
@@ -2777,6 +2879,13 @@ export function verifyGroundedAnswer(
   chunkSentences.forEach((ss, i) => {
     for (const text of ss) sourceRecs.push({ text, chunk: i });
   });
+  // T-20: el contexto semántico queda validado contra el troceo
+  // propio del juez en cuanto existen las frases de las fuentes.
+  // Ninguna puerta lo lee en esta tanda (eso es T-21): la validación
+  // vive ya aquí para que la desalineación se descubra en el primer
+  // consumidor, no en la primera puerta.
+  const semanticCtx = usableSemanticContext(semanticContext, chunks, sentences, chunkSentences);
+  void semanticCtx;
   // C-07: las menciones de fecha de las fuentes, parseadas una sola
   // vez: la pierna de fechas juzga cada frase contra ellas (dates.ts).
   const sourceDateSentences = parseSourceDateSentences(chunkSentences.flat(), referenceDate);
