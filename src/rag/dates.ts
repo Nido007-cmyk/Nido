@@ -155,6 +155,64 @@ const WEEKDAY_ALT = alt(WEEKDAYS);
 const BOUND_L = "(?<![a-z])";
 const BOUND_R = "(?![a-z])";
 
+// T-05 (M-04 de la auditoría): el día del mes EN LETRA. La Pasada A
+// exigía dígitos y «el diez de abril» contra «el 10 de mayo» se
+// sellaba grounded: ninguna mención nacía y el mes cambiado no lo
+// comparaba nadie. Las tablas es/pt comparten la gramática «día de
+// mes» y sus colisiones valen lo mismo (tres=3, cinco=5, seis=6,
+// once/onze=11, doce/doze=12), así que una sola tabla manda; los
+// compuestos («treinta y uno», «vinte e um») van como claves con
+// espacios y la alternancia ordenada por longitud los prueba antes
+// que sus piezas.
+const WORDDAY: Record<string, number> = {
+  primero: 1, primeiro: 1, uno: 1, um: 1,
+  dos: 2, dois: 2,
+  tres: 3,
+  cuatro: 4, quatro: 4,
+  cinco: 5,
+  seis: 6,
+  siete: 7, sete: 7,
+  ocho: 8, oito: 8,
+  nueve: 9, nove: 9,
+  diez: 10, dez: 10,
+  once: 11, onze: 11,
+  doce: 12, doze: 12,
+  trece: 13, treze: 13,
+  catorce: 14, catorze: 14, quatorze: 14,
+  quince: 15, quinze: 15,
+  dieciseis: 16, dezesseis: 16,
+  diecisiete: 17, dezessete: 17,
+  dieciocho: 18, dezoito: 18,
+  diecinueve: 19, dezenove: 19,
+  veinte: 20, vinte: 20,
+  veintiuno: 21, veintidos: 22, veintitres: 23, veinticuatro: 24,
+  veinticinco: 25, veintiseis: 26, veintisiete: 27, veintiocho: 28,
+  veintinueve: 29,
+  treinta: 30, trinta: 30,
+  "treinta y uno": 31, "trinta e um": 31,
+  "vinte e um": 21, "vinte e dois": 22, "vinte e tres": 23,
+  "vinte e quatro": 24, "vinte e cinco": 25, "vinte e seis": 26,
+  "vinte e sete": 27, "vinte e oito": 28, "vinte e nove": 29,
+};
+// Los ordinales ingleses («the tenth of April», «April tenth»): la
+// forma con guion y la con espacio valen lo mismo en el texto plegado.
+const ORDAY: Record<string, number> = {
+  first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6,
+  seventh: 7, eighth: 8, ninth: 9, tenth: 10, eleventh: 11,
+  twelfth: 12, thirteenth: 13, fourteenth: 14, fifteenth: 15,
+  sixteenth: 16, seventeenth: 17, eighteenth: 18, nineteenth: 19,
+  twentieth: 20, thirtieth: 30,
+  "twenty-first": 21, "twenty first": 21, "twenty-second": 22,
+  "twenty second": 22, "twenty-third": 23, "twenty third": 23,
+  "twenty-fourth": 24, "twenty fourth": 24, "twenty-fifth": 25,
+  "twenty fifth": 25, "twenty-sixth": 26, "twenty sixth": 26,
+  "twenty-seventh": 27, "twenty seventh": 27, "twenty-eighth": 28,
+  "twenty eighth": 28, "twenty-ninth": 29, "twenty ninth": 29,
+  "thirty-first": 31, "thirty first": 31,
+};
+const WORDDAY_ALT = alt(WORDDAY);
+const ORDAY_ALT = alt(ORDAY);
+
 /** Día de semana real de (y, m, d); null si la fecha no existe (no rueda). */
 function weekdayOf(y: number, m: number, d: number): number | null {
   const dt = new Date(y, m - 1, d);
@@ -204,12 +262,16 @@ export function parseDateMentions(text: string, referenceDate: Date): DateMentio
   };
 
   // — Pasada A: absolutas con mes (la gramática de posición manda) —
+  // T-05: las formas «mes primero» exigen frontera de palabra antes
+  // del mes (BOUND_L): sin ella, «About 3000 people» paría una
+  // mención fantasma («out» de outubro + «30» de 3000) que ensuciaba
+  // todo emparejado posterior — medido al cerrar el residuo vii.
   const absPatterns: Array<{ re: RegExp; dayFirst: boolean }> = [
     { re: new RegExp(`(\\d{1,2})(?:st|nd|rd|th)?\\s+de\\s+(${MONTH_ALT})\\s+de\\s+(\\d{4})`, "g"), dayFirst: true },
-    { re: new RegExp(`(${MONTH_ALT})\\s+(\\d{1,2})(?:st|nd|rd|th)?\\s*,?\\s+(\\d{4})`, "g"), dayFirst: false },
+    { re: new RegExp(`${BOUND_L}(${MONTH_ALT})\\s+(\\d{1,2})(?:st|nd|rd|th)?\\s*,?\\s+(\\d{4})`, "g"), dayFirst: false },
     { re: new RegExp(`(\\d{1,2})(?:st|nd|rd|th)?\\s+(${MONTH_ALT})\\s+(\\d{4})`, "g"), dayFirst: true },
     { re: new RegExp(`(\\d{1,2})(?:st|nd|rd|th)?\\s+de\\s+(${MONTH_ALT})${BOUND_R}`, "g"), dayFirst: true },
-    { re: new RegExp(`(${MONTH_ALT})\\s+(\\d{1,2})(?:st|nd|rd|th)?${BOUND_R}`, "g"), dayFirst: false },
+    { re: new RegExp(`${BOUND_L}(${MONTH_ALT})\\s+(\\d{1,2})(?:st|nd|rd|th)?${BOUND_R}`, "g"), dayFirst: false },
     { re: new RegExp(`(\\d{1,2})(?:st|nd|rd|th)?\\s+(${MONTH_ALT})${BOUND_R}`, "g"), dayFirst: true },
   ];
   for (const { re, dayFirst } of absPatterns) {
@@ -222,6 +284,49 @@ export function parseDateMentions(text: string, referenceDate: Date): DateMentio
       const m = MONTHS[monthName];
       const y = match[3] ? parseInt(match[3], 10) : null;
       if (!m || !(d >= 1 && d <= 31)) continue;
+      push({
+        day: y !== null ? validDay(y, m, d) : null,
+        weekday: null,
+        hasYear: y !== null,
+        kind: "calendario",
+        text: match[0],
+        dom: d,
+        month: m,
+        start,
+        end,
+      });
+    }
+  }
+
+  // — Pasada A3: absolutas con el día EN LETRA (T-05, M-04) —
+  // Misma gramática de posición que la Pasada A, con el día de las
+  // tablas de arriba: es/pt «(el) diez de abril [de 2024]» y las dos
+  // formas inglesas con ordinal («the tenth of April», «April
+  // tenth»). Sin mes pegado no hay mención, como en el resto del
+  // parseo: «diez» suelto no es una fecha.
+  const wordPatterns: Array<{ re: RegExp; dayGroup: number; monthGroup: number; yearGroup: number; table: Record<string, number> }> = [
+    {
+      re: new RegExp(`${BOUND_L}(${WORDDAY_ALT})\\s+de\\s+(${MONTH_ALT})${BOUND_R}(?:\\s+de\\s+(\\d{4}))?`, "g"),
+      dayGroup: 1, monthGroup: 2, yearGroup: 3, table: WORDDAY,
+    },
+    {
+      re: new RegExp(`${BOUND_L}(${ORDAY_ALT})\\s+of\\s+(${MONTH_ALT})${BOUND_R}(?:\\s+(\\d{4}))?`, "g"),
+      dayGroup: 1, monthGroup: 2, yearGroup: 3, table: ORDAY,
+    },
+    {
+      re: new RegExp(`${BOUND_L}(${MONTH_ALT})\\s+(?:the\\s+)?(${ORDAY_ALT})${BOUND_R}(?:\\s*,?\\s*(\\d{4}))?`, "g"),
+      dayGroup: 2, monthGroup: 1, yearGroup: 3, table: ORDAY,
+    },
+  ];
+  for (const { re, dayGroup, monthGroup, yearGroup, table } of wordPatterns) {
+    for (const match of t.matchAll(re)) {
+      const start = match.index ?? 0;
+      const end = start + match[0].length;
+      if (overlaps(start, end)) continue;
+      const d = table[match[dayGroup]!.replace(/\s+/g, " ")];
+      const m = MONTHS[match[monthGroup]!.replace(/\s+/g, " ")];
+      const y = match[yearGroup] ? parseInt(match[yearGroup], 10) : null;
+      if (d === undefined || !m || !(d >= 1 && d <= 31)) continue;
       push({
         day: y !== null ? validDay(y, m, d) : null,
         weekday: null,
@@ -441,11 +546,24 @@ const NOT_TOPIC = new Set([
 // mientras «padre»/«madre» sí (paridad es/en/pt de R8).
 const SHORT_TOPIC = new Set(["pai", "mae", "avo", "tio", "tia", "mom", "dad"]);
 
+// T-05 (m-05 de la auditoría): la familia de la vacunación se
+// canonicaliza a una sola raíz de tema. El emparejado R8 es por
+// raíces y «la inmunización de Ana es el 3 de enero» escapaba con
+// la fecha de la revisión: «inmunización» no comparte raíz con
+// «vacuna». La sinonimia abierta no es cerrable por esta vía; esta
+// familia cerrada (es/en/pt) sí, y es la que las guías de la casa
+// usan para el mismo evento.
+const TOPIC_CANON: Record<string, string> = {
+  vacuna: "vacuna", vacina: "vacuna", vaccin: "vacuna",
+  inmuni: "vacuna", imuniz: "vacuna", immuni: "vacuna",
+};
+
 function topicRoots(sentence: string): Set<string> {
   const roots = new Set<string>();
   for (const raw of fold(sentence).split(/[^a-z0-9]+/)) {
     if ((raw.length < 4 && !SHORT_TOPIC.has(raw)) || NOT_TOPIC.has(raw) || /^\d+$/.test(raw)) continue;
-    roots.add(raw.replace(/(es|s)$/, "").slice(0, 6));
+    const root = raw.replace(/(es|s)$/, "").slice(0, 6);
+    roots.add(TOPIC_CANON[root] ?? root);
   }
   return roots;
 }
@@ -754,25 +872,95 @@ export function dateConflictForSentence(
   };
   const scores = srcSeg.map((_, i) => overlap(i));
   const best = Math.max(0, ...scores);
+  const pairedDates = new Map<string, { d: number; m: number; sentence: string }>();
+  srcSeg.forEach(({ m, sentence }, i) => {
+    if (m.kind !== "calendario" || m.num) return;
+    const sd = domOf(m);
+    const sm = monOf(m);
+    if (sd === null || sm === null) return;
+    if (scores[i] !== best) return;
+    pairedDates.set(`${sd}-${sm}`, { d: sd, m: sm, sentence });
+  });
   for (const a of ans) {
     if (a.kind !== "calendario" || a.num) continue;
     const ad = domOf(a);
     const am = monOf(a);
     if (ad === null || am === null) continue;
     if (best === 0) continue;
+    if (pairedDates.size === 1) {
+      const only = [...pairedDates.values()][0]!;
+      if (only.d !== ad || only.m !== am) return { kind: "nombrada", sourceSentence: only.sentence };
+      continue;
+    }
+    // T-05 (m-04 de la auditoría): la fusión de eventos en la
+    // RESPUESTA. «La vacuna y la revisión son el 12 de diciembre»
+    // afirma una fecha para dos eventos que la fuente fecha por
+    // separado: una de las dos afirmaciones es falsa por
+    // construcción, y el empate de tema la absolvía porque la
+    // fecha afirmada SÍ está entre las emparejadas. Se corta solo
+    // con la fusión demostrada en la propia respuesta: una sola
+    // mención, la afirmada entre las emparejadas en empate, y la
+    // respuesta comparte tema con el tramo de OTRA fecha
+    // emparejada distinta — nombrando así los dos eventos — con
+    // tramos distinguibles. La primera versión de esta subregla,
+    // sin esas dos guardas, cortaba el control fiel «fecha delante
+    // del evento» de auditoria0197: sin tramos fiables
+    // dateSegments cae a la frase entera para todas las menciones
+    // y el empate es la absolución diseñada; medido y corregido
+    // en la misma tanda.
+    if (pairedDates.size >= 2 && ans.length === 1 && pairedDates.has(`${ad}-${am}`)) {
+      const segOf = new Map<string, { segment: string; roots: Set<string> }>();
+      srcSeg.forEach(({ m, segment }, i) => {
+        if (m.kind !== "calendario" || m.num || scores[i] !== best) return;
+        const sd = domOf(m);
+        const sm = monOf(m);
+        if (sd === null || sm === null) return;
+        segOf.set(`${sd}-${sm}`, { segment, roots: ownRoots[i] });
+      });
+      const mine = segOf.get(`${ad}-${am}`);
+      const fusion = [...segOf.entries()].some(([key, other]) => {
+        if (key === `${ad}-${am}` || !mine) return false;
+        if (other.segment === mine.segment) return false;
+        const nombraOtro = [...ansRoots].some((r) => other.roots.has(r));
+        const nombraMio = [...ansRoots].some((r) => mine.roots.has(r));
+        return nombraOtro && nombraMio;
+      });
+      if (fusion) {
+        const other = [...pairedDates.values()].find((p) => p.d !== ad || p.m !== am)!;
+        return { kind: "nombrada", sourceSentence: other.sentence };
+      }
+    }
     if (srcSeg.some(({ m }, i) => domOf(m) === ad && monOf(m) === am && scores[i] === best)) continue;
-    const pairedDates = new Map<string, { d: number; m: number; sentence: string }>();
-    srcSeg.forEach(({ m, sentence }, i) => {
-      if (m.kind !== "calendario" || m.num) return;
-      const sd = domOf(m);
-      const sm = monOf(m);
-      if (sd === null || sm === null) return;
-      if (scores[i] !== best) return;
-      pairedDates.set(`${sd}-${sm}`, { d: sd, m: sm, sentence });
-    });
-    if (pairedDates.size !== 1) continue;
-    const only = [...pairedDates.values()][0]!;
-    if (only.d !== ad || only.m !== am) return { kind: "nombrada", sourceSentence: only.sentence };
+  }
+
+  // T-05 (residuo 0197, mutación vii): la fecha única de la
+  // evidencia. R8 empareja por tema y R5(a) ya aplica esta misma
+  // doctrina a las relativas; quedaba el hueco de la nombrada sin
+  // tema compartido — el caso sistemático de la guía en otro
+  // idioma: la respuesta afirma SOLO «esta guía fue revisada el 10
+  // de abril» y la evidencia entera trae una única fecha nombrada,
+  // el 10 de marzo. Sin tema no hay emparejado posible, pero con
+  // una sola fecha en toda la evidencia tampoco hay ambigüedad:
+  // la afirmada o es esa o contradice la única que hay.
+  {
+    const distinct = new Map<string, { d: number; m: number; sentence: string }>();
+    for (const { m, sentence } of srcAll) {
+      if (m.kind !== "calendario" || m.num) continue;
+      const d = domOf(m);
+      const mo = monOf(m);
+      if (d === null || mo === null) continue;
+      distinct.set(`${d}-${mo}`, { d, m: mo, sentence });
+    }
+    if (distinct.size === 1) {
+      const only = [...distinct.values()][0]!;
+      for (const a of ans) {
+        if (a.kind !== "calendario" || a.num) continue;
+        const ad = domOf(a);
+        const am = monOf(a);
+        if (ad === null || am === null) continue;
+        if (only.d !== ad || only.m !== am) return { kind: "nombrada", sourceSentence: only.sentence };
+      }
+    }
   }
 
   return null;
