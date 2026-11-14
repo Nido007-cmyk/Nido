@@ -77,7 +77,9 @@ vi.mock("expo-crypto", () => ({
 }));
 
 // Auditoría 2026-10-31 (F3-03): la conexión de la base de conocimiento
-// es la de rag/db; su checkpoint se registra aquí.
+// es la de rag/db; su checkpoint se registra aquí. T-03 de la 0.1.99
+// (M-31): la limpieza post-restauración también lee su
+// integrity_check, así que el doble modela una base sana legible.
 const kdbx = vi.hoisted(() => ({ sql: [] as string[], failWith: null as string | null, events: [] as string[] }));
 vi.mock("../rag/db", () => ({
   getDb: async () => ({
@@ -86,6 +88,8 @@ vi.mock("../rag/db", () => ({
       kdbx.events.push("checkpoint-conocimiento");
       if (kdbx.failWith) throw new Error(kdbx.failWith);
     },
+    getFirstAsync: async () => ({ n: 10 }),
+    getAllAsync: async () => [{ integrity_check: "ok" }],
   }),
 }));
 

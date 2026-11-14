@@ -522,6 +522,17 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     // que la cara por raíz pueda leer).
     "se desmayo", "se ahogo", "se desvanecio",
     "cuesta respirar", "cuesta mucho respirar",
+    // 0.1.99 T-01 (m-10, auditoría 2026-11-14): la respiración
+    // contada con su marca de gravedad dentro de la frase («mi
+    // padre respira muy mal», sonda P-18a), la forma corriente que
+    // ninguna cara veía. La raíz suelta no entra como raíz en
+    // EMERGENCY_STEMS a propósito: «respir-» comparte principio
+    // con temas cotidianos (ejercicios de respiración, «un
+    // respiro» como descanso), y las raíces de ahí no comparten
+    // principio con temas cotidianos.
+    "respira muy mal", "respira mal", "respirando muy mal", "respirando mal",
+    "respiro muy mal", "respiro mal",
+    "respira con dificultad", "respirando con dificultad",
     "esta inconsciente", "quedo inconsciente", "no responde",
     "se agarra el pecho", "agarrandose el pecho", "se aprieta el pecho",
     "humo saliendo", "saliendo humo", "sale humo", "hay humo", "hay fuego",
@@ -570,6 +581,9 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "can t breathe", "cant breathe", "cannot breathe",
     "is choking", "choking on", "started choking", "is drowning",
     "struggling to breathe", "hard to breathe", "difficulty breathing",
+    // 0.1.99 T-01 (m-10): the same family as the Spanish signs —
+    // the breathing told with its severity inside the phrase.
+    "breathing very badly", "breathing badly", "breathing poorly", "breathing with difficulty",
     "clutching his chest", "clutching her chest", "clutching my chest", "clutching their chest",
     "is unconscious", "was unconscious", "found unconscious", "not responding", "lost consciousness",
     // ADV-E1: «passed out», la frase-signo corriente del desmayo.
@@ -607,6 +621,11 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     // ADV-E1: os eventos novos em português («desmaiou», «se afogou»).
     "desmaiou", "se afogou",
     "dificuldade para respirar", "dificuldade em respirar",
+    // 0.1.99 T-01 (m-10): a mesma família dos signos em espanhol
+    // («respira muito mal»); «respira mal» já entra pela lista
+    // espanhola, porque ALL_SIGNS junta as três línguas.
+    "respira muito mal", "respirando muito mal",
+    "respira com dificuldade", "respirando com dificuldade",
     "esta inconsciente", "ficou inconsciente", "nao responde",
     "segurando o peito", "apertando o peito", "mao no peito",
     "fumaca saindo", "saindo fumaca", "tem fogo", "pegando fogo", "em chamas", "saindo chamas",

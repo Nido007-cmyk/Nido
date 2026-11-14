@@ -46,7 +46,7 @@ describe("procedencia en verifyGroundedAnswer", () => {
       "Photosynthesis is the process by which plants convert light energy into chemical energy [1]. " +
       "Plants absorb sunlight in a process called phototropism. " +
       "The light is transported to the roots.";
-    const r = verifyGroundedAnswer(answer, SOURCES, "en");
+    const r = verifyGroundedAnswer(answer, SOURCES, "en", "");
     expect(r.status).toBe("partial");
     const s = r.sentences!;
     expect(s.filter((x) => x.origin.kind === "source").length).toBe(1);
@@ -57,7 +57,7 @@ describe("procedencia en verifyGroundedAnswer", () => {
 
   it("cada frase del resultado está en el texto final, en orden", () => {
     const answer = "Chloroplasts capture energy from sunlight with chlorophyll pigments. Sure!";
-    const r = verifyGroundedAnswer(answer, SOURCES, "en");
+    const r = verifyGroundedAnswer(answer, SOURCES, "en", "");
     let from = 0;
     for (const s of r.sentences!) {
       const at = r.text.indexOf(s.text, from);
@@ -67,7 +67,7 @@ describe("procedencia en verifyGroundedAnswer", () => {
   });
 
   it("una frase demasiado corta para comprobar no se marca como fuente", () => {
-    const r = verifyGroundedAnswer("Chloroplasts capture energy from sunlight with chlorophyll pigments. Sure!", SOURCES, "en");
+    const r = verifyGroundedAnswer("Chloroplasts capture energy from sunlight with chlorophyll pigments. Sure!", SOURCES, "en", "");
     const short = r.sentences!.find((x) => x.text.startsWith("Sure"));
     expect(short?.origin).toEqual({ kind: "model", reason: "too-short-to-check" });
   });
@@ -81,6 +81,7 @@ describe("procedencia en verifyGroundedAnswer", () => {
       "Si es un adulto despierto, no es alérgico a la aspirina y está sangrando, que mastique una aspirina.",
       [chunk],
       "es",
+      "",
     );
     const fixed = r.sentences!.find((x) => x.origin.kind === "source");
     expect(fixed?.origin).toMatchObject({ kind: "source", n: 1, negationFixed: true });
@@ -88,26 +89,26 @@ describe("procedencia en verifyGroundedAnswer", () => {
   });
 
   it("todo inventado: «no lo sé» + extracto literal de la fuente 1", () => {
-    const r = verifyGroundedAnswer("The moon is made of cheese and orbits Mars every Tuesday.", SOURCES, "en");
+    const r = verifyGroundedAnswer("The moon is made of cheese and orbits Mars every Tuesday.", SOURCES, "en", "");
     expect(r.status).toBe("abstained");
     expect(r.sentences!.map((x) => x.origin.kind)).toEqual(["abstain", "fixed", "source"]);
     expect(r.sentences![2].text).toContain("Photosynthesis is a system");
   });
 
   it("sin fuentes: todo es del modelo, salvo un «no lo sé»", () => {
-    const r = verifyGroundedAnswer("The capital is Canberra. I don't know the population.", [], "en");
+    const r = verifyGroundedAnswer("The capital is Canberra. I don't know the population.", [], "en", "");
     expect(r.sentences!.map((x) => x.origin.kind)).toEqual(["model", "abstain"]);
   });
 
   it("idioma distinto: lo conservado es del modelo sin poder comprobarlo, nunca «fuente»", () => {
-    const r = verifyGroundedAnswer("La fotosíntesis convierte la luz en energía química en las plantas.", SOURCES, "es");
+    const r = verifyGroundedAnswer("La fotosíntesis convierte la luz en energía química en las plantas.", SOURCES, "es", "");
     expect(r.status).toBe("unverified");
     expect(r.sentences!.every((x) => x.origin.kind !== "source")).toBe(true);
   });
 
   it("modelo razonador o respuesta vacía: sin procedencia (no se toca)", () => {
-    expect(verifyGroundedAnswer("<think>…</think> hola", SOURCES, "en").sentences).toBeUndefined();
-    expect(verifyGroundedAnswer("   ", SOURCES, "en").sentences).toBeUndefined();
+    expect(verifyGroundedAnswer("<think>…</think> hola", SOURCES, "en", "").sentences).toBeUndefined();
+    expect(verifyGroundedAnswer("   ", SOURCES, "en", "").sentences).toBeUndefined();
   });
 });
 

@@ -24,7 +24,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { BackupKeyModal } from "./BackupKeyModal";
-import { saveBackupToFolder } from "./backupShare";
+import { saveBackupToFolder, pruneLocalBackups } from "./backupShare";
 import { backupErrorText } from "./backupErrorText";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
@@ -40,19 +40,16 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
   // FIX 2026-10-09 (K4/K5): DEK en modal copiable con biométrico, no en Alert.
   const [dekModal, setDekModal] = useState<{ dek: string; dest: string } | null>(null);
 
-  // 0.1.29 (B-2): misma política en todas las puertas de la clave. Sin PIN
-  // en el teléfono se avisa de forma visible ANTES de mostrarla.
-  const revealKey = (dek: string, dest: string, noLock: boolean) => {
-    if (!noLock) {
-      setDekModal({ dek, dest });
-      return;
-    }
-    Alert.alert(
-      t("backup.noLockTitle"),
-      t("backup.noLockBody"),
-      [{ text: t("backup.understood"), onPress: () => setDekModal({ dek, dest }) }],
-      { cancelable: false },
-    );
+  // T-03 de la 0.1.99 (m-65, decisión del dueño): el bloqueo del
+  // dispositivo se exige SOLO para mostrar/exportar la clave. Sin
+  // bloqueo, el respaldo se crea igual, pero la clave no se exporta
+  // ni se muestra: se avisa de que hay que poner un bloqueo de
+  // pantalla para verla. (Antes, política B-2: se avisaba y se
+  // mostraba igual.)
+  const warnKeyNeedsLock = () => {
+    Alert.alert(t("backup.keyNeedsLockTitle"), t("backup.keyNeedsLockBody"), [
+      { text: t("backup.understood") },
+    ]);
   };
 
   const handleCreateBackup = async () => {
@@ -62,11 +59,13 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
       const dest = `${documentDirectory}nido-backup-${timestamp}.db`;
       await Backup.createBackup(dest);
-      const key = await Backup.exportDatabaseKey();
       setLastBackup(dest);
-      // K5/R2: desbloqueo antes de mostrar la clave. 0.1.29 (B-2): sin PIN
-      // en el teléfono se avisa de forma visible y se muestra (negarle la
-      // clave de un respaldo ya creado es peor); cancelar no la muestra.
+      // m-64: poda de respaldos locales (quedan los dos más recientes).
+      await pruneLocalBackups().catch(() => 0);
+      // K5/R2: desbloqueo antes de mostrar la clave, y la clave no se
+      // exporta hasta pasar la puerta. Cancelar no la muestra; sin
+      // bloqueo en el teléfono (m-65) tampoco: el respaldo ya creado
+      // se queda, la clave espera a que haya bloqueo.
       let noLock: boolean;
       try {
         noLock = (await unlockForSecret(t("backup.unlockReason"))) === "no-lock";
@@ -74,8 +73,13 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
         Alert.alert(t("backup.cancelledTitle"), t("backup.keyNotShown"));
         return;
       }
+      if (noLock) {
+        warnKeyNeedsLock();
+        return;
+      }
+      const key = await Backup.exportDatabaseKey();
       // K4: modal copiable en vez de Alert (el texto de Alert no se puede copiar).
-      revealKey(key, dest, noLock);
+      setDekModal({ dek: key, dest });
     } catch (e) {
       Alert.alert(t("backup.errorTitle"), backupErrorText(e, t, "backup.createFailed"));
     } finally {
@@ -191,9 +195,10 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
   const handleShowKey = async () => {
     setBusy(true);
     try {
-      // FIX 2026-10-09 (H-3): desbloqueo para ver la DEK. 0.1.29 (B-2):
-      // misma política que al crear el respaldo (antes aquí se bloqueaba
-      // sin PIN y allí no).
+      // FIX 2026-10-09 (H-3): desbloqueo para ver la DEK. T-03
+      // (m-65): sin bloqueo en el teléfono la clave no se exporta ni
+      // se muestra; se avisa de que hace falta un bloqueo de
+      // pantalla. Cancelar tampoco la muestra.
       let noLock: boolean;
       try {
         noLock = (await unlockForSecret(t("backup.unlockReason"))) === "no-lock";
@@ -201,10 +206,14 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
         Alert.alert(t("backup.cancelledTitle"), t("backup.keyNotShown"));
         return;
       }
+      if (noLock) {
+        warnKeyNeedsLock();
+        return;
+      }
       const key = await Backup.exportDatabaseKey();
       // La clave se muestra en el mismo modal copiable que al crear el
       // respaldo: el texto de un Alert no se puede copiar.
-      revealKey(key, "", noLock);
+      setDekModal({ dek: key, dest: "" });
     } catch (e) {
       Alert.alert(t("backup.errorTitle"), backupErrorText(e, t, "backup.keyFailed"));
     } finally {

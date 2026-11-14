@@ -226,6 +226,8 @@ export async function clearSettings(): Promise<void> {
   // Queued like every change, so a write already on its way can't recreate
   // the file right after the reset.
   const run = settingsQueue.then(async () => {
+    // m-63: también el prompt que solo vivía en memoria.
+    volatileCustomPrompt = null;
     await FileSystem.deleteAsync(SETTINGS_PATH, { idempotent: true });
     // También el marcador de recuperación (F3-10): si sobreviviera a
     // este borrado, el primer montaje mostraría el aviso «tus ajustes
@@ -249,6 +251,9 @@ export async function clearSettings(): Promise<void> {
  * true: lo no comprobable se trata como superviviente (fail-closed).
  */
 export async function customPromptStillStored(): Promise<boolean> {
+  // m-63: el slot volátil también cuenta como «sigue guardado»
+  // (fail-closed: el borrado total lo limpia en clearSettings).
+  if (volatileCustomPrompt !== null && volatileCustomPrompt.length > 0) return true;
   try {
     const km = await import("../privacy/keyManager");
     const v = await km.readPrivateSetting(CUSTOM_PROMPT_KEY);
@@ -295,11 +300,23 @@ export async function setPersonalityId(id: PersonalityId): Promise<void> {
 
 /**
  * Blindaje 0.1.44: el prompt personalizado es texto del usuario, así que se
- * guarda cifrado en SecureStore y no en `settings.json` en claro. Si
- * SecureStore no está disponible (tests, fallo del Keystore) se usa el
- * archivo como antes: nunca se pierde ni se rompe el ajuste.
+ * guarda cifrado en SecureStore y no en `settings.json` en claro.
+ *
+ * T-03 de la 0.1.99 (m-63): si SecureStore falla al escribir, el texto
+ * caía al fichero EN CLARO y sin aviso — la ventana que el blindaje
+ * vino a cerrar quedaba abierta justo cuando el Keystore fallaba.
+ * Ahora un valor que no se pudo cifrar vive SOLO en memoria (el slot
+ * volátil de abajo), con reintento de cifrado en cada lectura y cada
+ * escritura; el fichero no lo recibe nunca. Precio declarado: si el
+ * Keystore sigue caído y el proceso muere, ese valor no persistió —
+ * es el coste correcto de no escribir en claro un texto que el
+ * usuario escribió como privado. La migración del valor legado que
+ * ya vivía en el fichero sigue intacta (getCustomSystemPrompt).
  */
 const CUSTOM_PROMPT_KEY = "nido_private_custom_prompt";
+
+/** Último prompt que no se pudo guardar cifrado; solo memoria. */
+let volatileCustomPrompt: string | null = null;
 
 async function privateStore() {
   return import("../privacy/keyManager");
@@ -307,6 +324,18 @@ async function privateStore() {
 
 export async function getCustomSystemPrompt(): Promise<string> {
   const km = await privateStore();
+  if (volatileCustomPrompt !== null) {
+    // m-63: hay un valor que solo vive en memoria porque el Keystore
+    // falló al guardarlo. Es el valor vigente (el último que el
+    // usuario escribió): se reintenta el cifrado y, si ahora sí, sale
+    // de la memoria y queda en SecureStore.
+    if (await km.writePrivateSetting(CUSTOM_PROMPT_KEY, volatileCustomPrompt)) {
+      const value = volatileCustomPrompt;
+      volatileCustomPrompt = null;
+      return value;
+    }
+    return volatileCustomPrompt;
+  }
   const secure = await km.readPrivateSetting(CUSTOM_PROMPT_KEY);
   if (typeof secure === "string") return secure;
   const s = await readSettings();
@@ -332,9 +361,13 @@ export async function setCustomSystemPrompt(prompt: string): Promise<void> {
   const run = settingsQueue.then(async () => {
     const km = await privateStore();
     const secured = await km.writePrivateSetting(CUSTOM_PROMPT_KEY, value);
+    // m-63: cifrado o memoria, nunca el fichero en claro. El campo
+    // legado sale del fichero en ambos caminos: si se cifró, porque
+    // ya vive en SecureStore; si no, porque el valor vigente es el
+    // volátil y el viejo no debe quedar escrito en claro.
+    volatileCustomPrompt = secured ? null : value;
     const s = await readSettings();
-    if (secured) delete s.customSystemPrompt;
-    else s.customSystemPrompt = value;
+    delete s.customSystemPrompt;
     await writeSettings(s);
   });
   settingsQueue = run.catch(() => {});

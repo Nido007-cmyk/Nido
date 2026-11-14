@@ -41,8 +41,16 @@ const RESULTADOS: ResultadoCaza[] = [];
  * residuo empieza a pasar, la suite cae y hay que sacarlo de la
  * lista a mano, con su medición. Si un caso NUEVO cae, también cae
  * la suite: el residuo no crece en silencio.
+ *
+ * Reducción medida en la tanda T-05 de la 0.1.99: 3 de los 4
+ * casos de esta lista salieron el 2026-11-14 — «miligrama» y
+ * «grama» en la tabla de unidades cierran matriz-b-113 (M-03) y
+ * el troceo portugués de cláusulas cierra matriz-b-103 y
+ * matriz-b-111. Queda matriz-b-099, declarado en el informe de
+ * la tanda. El residuo total baja de 98 a 67 entre las cuatro
+ * baterías.
  */
-const RESIDUO_0197 = new Set(["matriz-b-099", "matriz-b-103", "matriz-b-111", "matriz-b-113"]);
+const RESIDUO_0197 = new Set(["matriz-b-099"]);
 
 function caso(c: CasoCaza) {
   (RESIDUO_0197.has(c.id) ? it.fails : it)(`${c.id} [${c.condicion}/${c.mutacion}${c.forma ? "/" + c.forma : ""}] ${c.pregunta}`, () => {
