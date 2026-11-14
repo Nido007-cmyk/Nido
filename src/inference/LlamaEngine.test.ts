@@ -23,6 +23,8 @@ let rejectInit: ((p: Record<string, unknown>) => boolean) | null = null;
 let maxConcurrentInits = 0;
 // H-09/H-10: puerta del resumen de dispositivos (ver getBackendDevicesInfo).
 let backendGate: Promise<void> | null = null;
+// La variante nativa que llama.rn expone como context.androidLib (null: sin ella).
+let mockAndroidLib: string | null = null;
 
 vi.mock("llama.rn", () => ({
   initLlama: async (params: { model: string } & Record<string, unknown>) => {
@@ -61,6 +63,7 @@ vi.mock("llama.rn", () => ({
         finishes.splice(0).forEach((f) => f());
       },
     };
+    if (mockAndroidLib) (ctx as FakeContext & { androidLib?: string }).androidLib = mockAndroidLib;
     created.push(ctx);
     return ctx;
   },
@@ -193,6 +196,7 @@ beforeEach(() => {
   failSessionWrites = false;
   pendingSessionWrites = [];
   backendGate = null;
+  mockAndroidLib = null;
   resetBackgroundIndexingHold();
 });
 
@@ -725,6 +729,19 @@ describe("Crash nativo M2+M3: registro de sesión y CrashGuard que aprende", () 
     const settled = readSession();
     expect(settled.generating).toBe(false);
     expect(settled.backend).toBe("CPU/cpu/Probe");
+  });
+
+  it("2026-11-13: el registro guarda la variante nativa real (context.androidLib) delante de los dispositivos", async () => {
+    fsStore.set(GUARD_PATH, JSON.stringify({ crashes: 0, pending: null }));
+    mockAndroidLib = "librnllama_jni_v8_2_dotprod_i8mm.so";
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    const gen = engine.generate({ prompt: "hola" });
+    await new Promise((r) => setTimeout(r, 40));
+    await engine.stop();
+    await expect(gen).resolves.toBe("Hi");
+    await new Promise((r) => setTimeout(r, 20));
+    expect(readSession().backend).toBe("lib librnllama_jni_v8_2_dotprod_i8mm.so · CPU/cpu/Probe");
   });
 
   it("H-10 E4 · el divorcio W4 curado: una escritura rechazada no deja la caché mintiendo — la siguiente generación parte del registro de DISCO", async () => {

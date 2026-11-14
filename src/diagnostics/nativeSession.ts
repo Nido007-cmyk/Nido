@@ -39,10 +39,11 @@
  *   cruce asienta el veredicto: murió o no murió generando, y si el
  *   indexado corría. El veredicto es lo que la tarjeta de cierres
  *   enseña («murió generando · indexado en curso: sí · perfil kv-q8 ·
- *   nCtx 3072»). La variante nativa cargada no es legible desde el JS
- *   de llama.rn rc.7 ni rc.9 (sin getter en el binding): el campo `backend`
- *   guarda como sustituto el resumen de getBackendDevicesInfo() de
- *   la sesión, una vez por sesión.
+ *   nCtx 3072»). El campo `backend` guarda, una vez por sesión, la
+ *   variante nativa cargada (context.androidLib, que llama.rn expone al
+ *   menos desde rc.7) y el resumen de getBackendDevicesInfo(): «lib
+ *   <variante> · <dispositivos>». Hasta el 2026-11-13 solo guardaba los
+ *   dispositivos, porque NIDO creía que la variante no era legible.
  *
  * - EL LÍMITE DEL INSTRUMENTO (H-10, resto nombrado): el registro se
  *   escribe de forma asíncrona y ningún diseño JS puede escribir
@@ -97,7 +98,7 @@ export interface NativeSessionRecord {
   reembed: { running: boolean; done: number; total: number };
   /** La bandera: true mientras la generación registrada no se ha asentado. */
   generating: boolean;
-  /** Sustituto de la variante nativa: resumen de getBackendDevicesInfo() de la sesión. */
+  /** Variante nativa cargada (androidLib) y dispositivos de la sesión: «lib <variante> · <dispositivos>». */
   backend: string | null;
   /** El cierre ya cruzado (su timestamp): un mismo cierre nunca se cruza dos veces. */
   crossedExitAt: number | null;
