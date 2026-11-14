@@ -40,12 +40,19 @@ export interface DevicePressureCaps {
 
 const NO_CAPS: DevicePressureCaps = { threadCap: null, ubatchCap: null };
 
-/** Nivel térmico SEVERE en la escala de PowerManager (0-6). */
-export const THERMAL_SEVERE = 5;
+/**
+ * Nivel térmico SEVERE en la escala de PowerManager (0-6): 0 ninguno,
+ * 1 ligero, 2 moderado, 3 SEVERE, 4 CRITICAL, 5 EMERGENCY,
+ * 6 SHUTDOWN. Hasta la 0.1.98 esta constante valía 5 — EMERGENCY —
+ * y el severo y el crítico reales (3 y 4) quedaban SIN topes: la
+ * palanca anti-térmica solo existía cuando el aparato ya estaba al
+ * borde del apagado (F3-03; el test lo sellaba como esperado).
+ */
+export const THERMAL_SEVERE = 3;
 
 /**
  * Política pura: batería <20 % sin cargar o modo de ahorro → 3 hilos
- * y n_ubatch ≤128; calor severo (≥5) → 2 hilos y n_ubatch ≤128. Las
+ * y n_ubatch ≤128; calor severo (≥3) → 2 hilos y n_ubatch ≤128. Las
  * dos presiones a la vez no se suman: manda la más estricta.
  */
 export function pressureCaps(input: DevicePressureInput): DevicePressureCaps {

@@ -23,7 +23,9 @@
  *    elige el peldaño mayor cuyo coste estimado cabe en el
  *    presupuesto; el rechazo honesto queda solo para cuando ni el
  *    peldaño menor cabe. La opción explícita de contexto no pasa por
- *    la escalera: manda, como siempre.
+ *    la escalera (no baja peldaños: manda ella), pero desde la
+ *    0.1.99 (F3-11) su veredicto SÍ se juzga contra el presupuesto
+ *    con el factor del CrashGuard, como el de la escalera.
  *
  *  - EL CRASHGUARD: cada intento de carga deja un «pendiente»
  *    persistido antes de crear el contexto. Si el proceso muere
@@ -35,7 +37,11 @@
  *    contador. Falso positivo conocido y aceptado, como en Bivouac:
  *    si Android mata la app en segundo plano con el modelo cargado y
  *    sano, también cuenta; cuesta una carga conservadora y se cura
- *    solo en cuanto una generación confirma.
+ *    solo en cuanto una generación confirma. Y desde la 0.1.99
+ *    (F3-07) el contador CADUCA: un choque se perdona por cada 24 h
+ *    sin choques nuevos (el registro guarda cuándo fue el último),
+ *    para que tres falsos positivos no dejen un aparato en el
+ *    factor suelo para siempre. Los factores no se tocan.
  *
  * Lo que NO viaja de Bivouac: el reempaquetado de pesos (interno de
  * su llama.cpp, no existe en llama.rn) y su fracción de RAM usable
@@ -83,6 +89,17 @@ export interface LadderPlan {
   ceiling: number;
   /** Factor de seguridad aplicado al presupuesto (CrashGuard). */
   safety: number;
+  /**
+   * F3-10 (auditoría 2026-11-13): el presupuesto contra el que se
+   * juzgó ESTE peldaño — el disponible reducido por el factor, o el
+   * de la vía de emergencia en su peldaño. Hasta aquí la reducción
+   * era invisible fuera de la escalera: el rechazo solo podía decir
+   * «cabe X, hay Y» con la foto cruda, y un rechazo por el factor se
+   * leía como contradicción. `verdict.availableBytes` sigue siendo la
+   * foto (es la cifra del instrumento desde la 0.1.84); esto es la
+   * cuenta que decidió.
+   */
+  budgetBytes: number;
   /** Qué se degradó y por qué, en una frase; "" si el plan es el pedido. */
   note: string;
 }
@@ -113,14 +130,16 @@ export function planContext(
   if (emergency) rungs.push(EMERGENCY_CONTEXT);
   // Vía del peldaño de emergencia (0.1.85, defecto 2026-11-08, tercera
   // vuelta): SOLO la evaluación de ESE peldaño se juzga contra el
-  // disponible con el término en vivo crudo (emergencyLive en
+  // disponible con el término en vivo casi crudo (emergencyLive en
   // checkRamBudget: availMem + crédito liberable, sin restar el
-  // threshold ni el margen en vivo). La foto de las 19:54 lo exige:
+  // threshold ni el margen en vivo, y desde la 0.1.99 con la reserva
+  // del 10 % de F3-02 sobre la lectura). La foto de las 19:54 lo exige:
   // con la cuenta normal ni el plan más barato (q8 @1024, 431,4 MiB)
   // cabía en los 370 disponibles NI SIN freno del CrashGuard — el
   // término en vivo era un candado independiente del freno, y con el
   // freno no había generación que lo curara: círculo cerrado. Con la
-  // vía, el disponible de emergencia es min(byTotal, avail crudo) y
+  // vía, el disponible de emergencia es min(byTotal, avail con la
+  // reserva del 10 %) y
   // el freno sigue aplicado encima, intacto. Los peldaños normales y
   // su presupuesto no se tocan: fuera de la emergencia la cuenta es
   // byte a byte la de la 0.1.84.
@@ -144,7 +163,7 @@ export function planContext(
       availableBytes: base.availableBytes,
       totalRamBytes: base.totalRamBytes,
     };
-    const plan: LadderPlan = { nCtx, verdict, ceiling: opts.ceiling, safety, note: "" };
+    const plan: LadderPlan = { nCtx, verdict, ceiling: opts.ceiling, safety, budgetBytes: rungBudget, note: "" };
     if (verdict.fits) {
       plan.note = planNote(plan);
       return plan;
@@ -186,9 +205,19 @@ export interface CrashGuardRecord {
   crashes: number;
   /** El intento en vuelo cuando el proceso murió, si lo había. */
   pending: { model: string; nCtx: number; at: number } | null;
+  /**
+   * F3-07 (auditoría 2026-11-13): cuándo se contó el último choque.
+   * Sin esta marca el contador era vitalicio: tres positivos falsos
+   * dejaban un aparato en el factor suelo (0,5) para siempre. Con
+   * ella, settleCrashGuardRecord perdona un choque por cada 24 h sin
+   * choques nuevos (ver CRASH_DECAY_STEP_MS). Los registros de la
+   * 0.1.98 no la traen: null = «sin marca», y la cuenta atrás empieza
+   * en el primer asentamiento que reciba hora.
+   */
+  lastCrashAt: number | null;
 }
 
-export const EMPTY_CRASH_RECORD: CrashGuardRecord = { crashes: 0, pending: null };
+export const EMPTY_CRASH_RECORD: CrashGuardRecord = { crashes: 0, pending: null, lastCrashAt: null };
 
 /** Lectura tolerante del registro persistido: lo ilegible es un registro vacío. */
 export function parseCrashGuardRecord(raw: string | null | undefined): CrashGuardRecord {
@@ -204,10 +233,45 @@ export function parseCrashGuardRecord(raw: string | null | undefined): CrashGuar
       p && typeof p.model === "string" && typeof p.nCtx === "number" && typeof p.at === "number"
         ? { model: p.model, nCtx: p.nCtx, at: p.at }
         : null;
-    return { crashes, pending };
+    const lastCrashAt =
+      typeof parsed.lastCrashAt === "number" && Number.isFinite(parsed.lastCrashAt) && parsed.lastCrashAt > 0
+        ? parsed.lastCrashAt
+        : null;
+    return { crashes, pending, lastCrashAt };
   } catch {
     return { ...EMPTY_CRASH_RECORD };
   }
+}
+
+/**
+ * Caducidad del contador (F3-07): un choque se perdona por cada tramo
+ * de este tamaño transcurrido SIN choques nuevos. 24 h: un aparato
+ * que choca cada día sigue castigado (cada choque renueva la cuenta),
+ * y uno que chocó por una tormenta pasajera de memoria vuelve a
+ * cargar a plenitud en tres días como mucho. Los FACTORES no se
+ * tocan: lo que caduca es el cuentachocos, no la tabla sellada.
+ */
+export const CRASH_DECAY_STEP_MS = 24 * 3600_000;
+
+/**
+ * El registro tras perdonar lo caducado a fecha `now`. Sin choques o
+ * sin marca no hay nada que perdonar: con choques y sin marca (un
+ * registro heredado de la 0.1.98) la marca se estampa a `now` SIN
+ * perdonar — la cuenta atrás empieza con la actualización, no antes:
+ * no se regala perdón por un pasado que no se puede fechar.
+ */
+function decayCrashGuardRecord(record: CrashGuardRecord, now: number): CrashGuardRecord {
+  if (record.crashes <= 0) return record;
+  if (record.lastCrashAt === null) {
+    return { ...record, lastCrashAt: now };
+  }
+  const steps = Math.floor((now - record.lastCrashAt) / CRASH_DECAY_STEP_MS);
+  if (steps <= 0) return record;
+  const crashes = record.crashes - steps;
+  if (crashes <= 0) return { ...record, crashes: 0, lastCrashAt: null };
+  // La marca avanza solo lo consumido: el resto del tramo en curso
+  // sigue contando para el siguiente perdón.
+  return { ...record, crashes, lastCrashAt: record.lastCrashAt + steps * CRASH_DECAY_STEP_MS };
 }
 
 /**
@@ -216,24 +280,32 @@ export function parseCrashGuardRecord(raw: string | null | undefined): CrashGuar
  * motor (ese pendiente ES el modelo cargado, que sobrevivió: se
  * confirma, no se castiga). Devuelve el registro ya asentado, sin
  * pendiente, y el factor que manda en esta carga.
+ *
+ * `opts.now` (F3-07): la hora del asentamiento. Cuando llega, el
+ * contador caduca primero (decayCrashGuardRecord) y un choque nuevo
+ * se estampa con ella. Sin `now` la conducta es exactamente la de
+ * siempre — los llamadores que no pasan hora no ganan caducidad,
+ * pero tampoco la pierden ni cambian una coma.
  */
 export function settleCrashGuardRecord(
   record: CrashGuardRecord,
-  opts: { modelAlive: boolean },
+  opts: { modelAlive: boolean; now?: number },
 ): { record: CrashGuardRecord; safety: number; countedCrash: boolean } {
-  if (!record.pending) {
-    return { record, safety: safetyForCrashes(record.crashes), countedCrash: false };
+  const now = typeof opts.now === "number" && Number.isFinite(opts.now) && opts.now > 0 ? opts.now : null;
+  const base = now !== null ? decayCrashGuardRecord(record, now) : record;
+  if (!base.pending) {
+    return { record: base, safety: safetyForCrashes(base.crashes), countedCrash: false };
   }
   if (opts.modelAlive) {
-    const settled: CrashGuardRecord = { crashes: 0, pending: null };
+    const settled: CrashGuardRecord = { crashes: 0, pending: null, lastCrashAt: null };
     return { record: settled, safety: 1, countedCrash: false };
   }
-  const crashes = Math.min(record.crashes + 1, 10);
-  const settled: CrashGuardRecord = { crashes, pending: null };
+  const crashes = Math.min(base.crashes + 1, 10);
+  const settled: CrashGuardRecord = { crashes, pending: null, lastCrashAt: now ?? base.pending.at };
   return { record: settled, safety: safetyForCrashes(crashes), countedCrash: true };
 }
 
 /** Una carga confirmada (generó o se descargó con orden): contador a cero. */
 export function confirmCrashGuardRecord(record: CrashGuardRecord): CrashGuardRecord {
-  return { crashes: 0, pending: null };
+  return { crashes: 0, pending: null, lastCrashAt: null };
 }
