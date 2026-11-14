@@ -16,7 +16,11 @@
  * JNI, 14.449.672 B) y los 4 assets HTP de `assets/ggml-hexagon/`
  * (3.717.792 B) son peso muerto en todos los aparatos: 18.167.464 B,
  * medidos con rc.7. La rc.9 añade un quinto asset HTP (v85) en el
- * mismo directorio, y el mismo patrón lo saca.
+ * mismo directorio, y el mismo patrón lo saca. La rc.11 (tanda T-22,
+ * 2026-11-14) trae el censo idéntico — las mismas 7 variantes arm64
+ * en jniLibs, la misma pareja x86_64 y los mismos 5 assets HTP
+ * (v73/v75/v79/v81/v85) — verificado sobre su node_modules: las
+ * listas de este plugin no cambian.
  *
  * Por qué es seguro: el despacho vive en `RNLlama.loadNative()` como
  * una escalera con respaldo — cada peldaño se intenta con
