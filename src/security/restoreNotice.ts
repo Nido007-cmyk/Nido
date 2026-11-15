@@ -17,7 +17,12 @@
  */
 import type { BackupManifestInfo } from "./backup";
 
-type T = (key: string, vars?: Record<string, string>) => string;
+// Dos sobrecargas (sin segundo parámetro opcional): desde i18next 27 el
+// TFunction real ya no es asignable a `(key, vars?) => string`.
+type T = {
+  (key: string): string;
+  (key: string, vars: Record<string, unknown>): string;
+};
 
 /** Fecha legible del respaldo; la parte ISO si el teléfono no sabe formatear. */
 export function formatBackupDate(iso: string, lang: string): string {

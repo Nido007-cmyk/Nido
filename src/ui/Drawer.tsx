@@ -37,7 +37,7 @@ interface Props {
   onDeleteSession?: (id: string) => void;
 }
 
-function formatTimestamp(ms: number, t: (key: string, opts?: Record<string, unknown>) => string): string {
+function formatTimestamp(ms: number, t: { (key: string): string; (key: string, opts: Record<string, unknown>): string }): string {
   const diffMin = (Date.now() - ms) / 60000;
   if (diffMin < 1) return t("time.justNow");
   if (diffMin < 60) return t("time.minutesAgo", { count: Math.floor(diffMin) });

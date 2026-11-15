@@ -23,7 +23,12 @@ export interface Diagnosis {
 
 const MEMORY_PATTERN = /memory|memoria|mem[oó]ria|\boom\b|\bram\b|\balloc|malloc/;
 
-export type TranslateFn = (key: string, opts?: Record<string, unknown>) => string;
+// Dos sobrecargas (sin segundo parámetro opcional): desde i18next 27 el
+// TFunction real ya no es asignable a `(key, opts?) => string`.
+export type TranslateFn = {
+  (key: string): string;
+  (key: string, opts: Record<string, unknown>): string;
+};
 
 /**
  * Classify a model/install error string into a user-facing diagnosis.

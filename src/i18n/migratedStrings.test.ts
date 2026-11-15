@@ -78,7 +78,7 @@ describe("i18n: claves migradas resuelven en EN/ES/PT", () => {
     it(`todas las claves resuelven en ${lang} (sin claves crudas ni huecos)`, async () => {
       await i18n.changeLanguage(lang);
       for (const { key, vars } of ALL_KEYS) {
-        const s = i18n.t(key, vars);
+        const s = i18n.t(key, vars ?? {});
         expect(s, key).not.toBe(key);
         expect(s, key).not.toBe("");
         expect(s, key).not.toMatch(/\{\{\w+\}\}/);
