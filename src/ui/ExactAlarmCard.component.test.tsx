@@ -4,10 +4,10 @@
  * See LICENSE file for details.
  */
 
-// @ts-nocheck
 // 0.1.32: la tarjeta de alarmas exactas dice la verdad: aviso + botón si
 // Android puede retrasar los recordatorios, confirmación si no, y NADA si
 // no se puede saber (módulo nativo ausente).
+import { jest, describe, it, expect, beforeEach } from "@jest/globals";
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react-native";
 

@@ -4,12 +4,12 @@
  * See LICENSE file for details.
  */
 
-// @ts-nocheck
 // Auditoría completa 2026-10-31 (F9-01): las etiquetas de alcance
 // de la tarjeta de consentimiento salían en inglés para el usuario
 // portugués, con las traducciones ya escritas en los locales. La
 // prueba monta la tarjeta de verdad, con getResource leyendo los
 // JSON reales de los tres idiomas.
+import { jest, describe, it, expect } from "@jest/globals";
 import React from "react";
 import { render, screen } from "@testing-library/react-native";
 

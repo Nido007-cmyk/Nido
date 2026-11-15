@@ -4,11 +4,11 @@
  * See LICENSE file for details.
  */
 
-// @ts-nocheck
 // TESTFIX-2026-10-08 (Fix 5): accepted sessions must be visible.
 // Physical evidence: after accepting, the session "disappeared" from both
 // tablets — only a raw state dump existed. Now ACCEPTED sessions render in
 // an "active collaborations" section with peer name, description and date.
+import { jest, describe, it, expect } from "@jest/globals";
 import React from "react";
 import { render, screen } from "@testing-library/react-native";
 

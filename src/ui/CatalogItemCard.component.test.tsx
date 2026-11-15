@@ -4,7 +4,6 @@
  * See LICENSE file for details.
  */
 
-// @ts-nocheck
 // CatalogItemCard: la insignia de compatibilidad ES el veredicto de
 // la vía de carga (0.1.86): «red» significa que ningún peldaño de
 // contexto cabe en este aparato, ni el de emergencia con KV q8. La
@@ -15,6 +14,7 @@
 // La RAM fijada es la de la Tab A9+ del dueño (3416 MiB), cuyos
 // veredictos están censados en src/models/compatibility.test.ts:
 // Qwen2.5-7B = red, Qwen3-0.6B = green.
+import { jest, describe, it, expect } from "@jest/globals";
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react-native";
 
@@ -67,7 +67,7 @@ jest.mock("../utils/safeFormat", () => ({
 
 const { CatalogItemCard } = require("./CatalogItemCard");
 const { MODEL_CATALOG } = require("../models/manifest");
-const byId = (id: string) => MODEL_CATALOG.find((m) => m.id === id);
+const byId = (id: string) => MODEL_CATALOG.find((m: { id: string }) => m.id === id);
 
 const baseProps = {
   isActive: false,
@@ -103,7 +103,7 @@ describe("CatalogItemCard: botón de descarga según compatibilidad", () => {
     expect(screen.getByText("catalogItemCard.compat.green")).toBeTruthy();
     fireEvent.press(btn);
     expect(onDownload).toHaveBeenCalledTimes(1);
-    expect(onDownload.mock.calls[0][0].id).toBe("qwen3-0.6b-q4km");
+    expect((onDownload.mock.calls[0][0] as { id: string }).id).toBe("qwen3-0.6b-q4km");
   });
 });
 
@@ -123,7 +123,7 @@ describe("CatalogItemCard: la familia 3 en la tarjeta", () => {
     expect(screen.queryByText("catalogItemCard.downloadAsset")).toBeNull();
     fireEvent.press(btn);
     expect(onUse).toHaveBeenCalledTimes(1);
-    expect(onUse.mock.calls[0][0].id).toBe("qwen3-0.6b-q4km");
+    expect((onUse.mock.calls[0][0] as { id: string }).id).toBe("qwen3-0.6b-q4km");
     expect(onDownload).not.toHaveBeenCalled();
   });
 
@@ -173,7 +173,7 @@ describe("CatalogItemCard: un modelo en rojo con una parte ya descargada (0.1.92
     expect(screen.queryByText("catalogItemCard.downloadAsset")).toBeNull();
     fireEvent.press(screen.getByText("catalogItemCard.discardPartial"));
     expect(onDiscardPartial).toHaveBeenCalledTimes(1);
-    expect(onDiscardPartial.mock.calls[0][0].id).toBe("qwen2.5-7b-instruct-q4km");
+    expect((onDiscardPartial.mock.calls[0][0] as { id: string }).id).toBe("qwen2.5-7b-instruct-q4km");
   });
 
   it("en rojo y sin parte en disco: ni aviso de «descarga otra vez» ni botón de borrar", async () => {

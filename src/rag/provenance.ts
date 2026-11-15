@@ -19,8 +19,15 @@ export type ProvenanceLang = "es" | "en" | "pt";
 export type ProvenanceOrigin =
   /** Guía de NIDO Esencial mostrada tal cual (R1). */
   | { kind: "guide"; chunkId?: string }
-  /** Respaldada por la fuente n (1-based, como la cita [n]). */
-  | { kind: "source"; n: number; support: number; negationFixed?: boolean }
+  /**
+   * Respaldada por la fuente n (1-based, como la cita [n]).
+   * `replaced` (T-17, 0.1.99): la frase del modelo fue SUSTITUIDA
+   * por el texto de la fuente, palabra por palabra — lo que se lee
+   * es una cita literal. Sin la marca, «source» solo dice que la
+   * frase tiene respaldo: su texto sigue siendo del modelo. La
+   * distinción es la que pidió @Pezhonchain: respaldada no es cita.
+   */
+  | { kind: "source"; n: number; support: number; negationFixed?: boolean; replaced?: boolean }
   /** De la memoria de la persona. */
   | { kind: "memory" }
   /** Resultado de una herramienta (hora, conversión, recordatorio…). */
@@ -103,4 +110,41 @@ export function summarizeProvenance(sentences: readonly SentenceProvenance[], la
 /** Todas las frases salen de un mismo origen fijo (guía, texto fijo…). */
 export function allFrom(text: string, origin: ProvenanceOrigin, split: (t: string) => string[]): SentenceProvenance[] {
   return split(text).map((s) => ({ text: s, origin }));
+}
+
+/** Un tramo del texto final que es cita literal, con su fuente si la tiene. */
+export interface VerbatimSpan {
+  text: string;
+  /** Número de cita [n] de la fuente; la guía no lleva número. */
+  n?: number;
+}
+
+/** ¿La frase se lee palabra por palabra como salió de su origen? */
+export function isVerbatimSentence(s: SentenceProvenance): boolean {
+  return s.origin.kind === "guide" || (s.origin.kind === "source" && s.origin.replaced === true);
+}
+
+/**
+ * T-17 (0.1.99): los tramos verbatim de una respuesta, alineados
+ * contra su texto final tal y como se guarda, citas [n] incluidas.
+ *
+ * La alineación es búsqueda secuencial exacta: las frases de la
+ * procedencia aparecen en orden dentro del texto final, y cada
+ * tramo se busca a partir de donde terminó el anterior. Un tramo
+ * que no se encuentra exactamente (deriva por edición, truncado o
+ * limpieza de citas al pintar) NO se marca: fallar a «sin marca»,
+ * nunca a «marca equivocada» — pintar como cita lo que no lo es
+ * sería el engaño contrario al que esta marca existe para evitar.
+ */
+export function verbatimSpans(sentences: readonly SentenceProvenance[], fullText: string): VerbatimSpan[] {
+  const spans: VerbatimSpan[] = [];
+  let from = 0;
+  for (const s of sentences) {
+    if (!isVerbatimSentence(s) || s.text.length === 0) continue;
+    const at = fullText.indexOf(s.text, from);
+    if (at < 0) continue;
+    spans.push(s.origin.kind === "source" ? { text: s.text, n: s.origin.n } : { text: s.text });
+    from = at + s.text.length;
+  }
+  return spans;
 }

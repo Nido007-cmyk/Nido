@@ -4,11 +4,11 @@
  * See LICENSE file for details.
  */
 
-// @ts-nocheck
 // Pieza A (PI-3/AI-05): la sección de packs añadidos muestra la marca de
 // origen SOLO de los packs que la puerta verificó, ofrece el gesto de
 // añadir con su cadena, y quitar un pack pasa por la confirmación de
 // A.3. El servicio va mockeado: lo que se prueba es la superficie.
+import { jest, describe, it, expect, beforeEach, afterEach } from "@jest/globals";
 import React from "react";
 import { Alert } from "react-native";
 import { render, screen, fireEvent } from "@testing-library/react-native";
@@ -75,7 +75,7 @@ describe("ImportedPacksSection", () => {
     mockState.activeSha256 = "e4165e3a71af97f1b4820da61079826d8752a2088e313af0c7d346796c38eff5";
     jest.spyOn(Alert, "alert").mockImplementation(() => {});
   });
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => { jest.restoreAllMocks(); });
 
   it("muestra la cabecera, el gesto de añadir y la marca firmada del pack verificado", async () => {
     const { ImportedPacksSection } = require("./ImportedPacksSection");
@@ -128,7 +128,7 @@ describe("ImportedPacksSection", () => {
     await screen.findByText("SALVORA Home Emergencies");
     fireEvent.press(screen.getByLabelText("packImport.removeAction"));
     expect(Alert.alert).toHaveBeenCalled();
-    const call = (Alert.alert as jest.Mock).mock.calls.at(-1);
+    const call = (Alert.alert as jest.Mock).mock.calls.at(-1) as any[];
     expect(call[0]).toBe("packImport.removeAction");
     expect(call[1]).toBe("packImport.removeConfirmBody");
     const destructive = call[2].find((b: { style?: string }) => b.style === "destructive");

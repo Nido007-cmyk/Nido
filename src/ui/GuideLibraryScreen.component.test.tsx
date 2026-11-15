@@ -4,11 +4,11 @@
  * See LICENSE file for details.
  */
 
-// @ts-nocheck
 // Lector de guías como documentos (pieza 2026-11-08): la biblioteca lista
 // los packs instalados con sus guías, abrir una guía enseña su texto
 // entero, y la ruta jamás toca los motores ni monta el chat. El almacén
 // de packs va mockeado: lo que se prueba es la superficie y su aislamiento.
+import { jest, describe, it, expect, beforeEach } from "@jest/globals";
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react-native";
 
@@ -154,7 +154,7 @@ describe("GuideLibraryScreen", () => {
     const { GuideLibraryScreen } = require("./GuideLibraryScreen");
     const onClose = jest.fn();
     const view = await render(<GuideLibraryScreen onClose={onClose} />);
-    const flatStyle = (s) => Object.assign({}, ...(Array.isArray(s) ? s : [s]).filter(Boolean));
+    const flatStyle = (s: any) => Object.assign({}, ...(Array.isArray(s) ? s : [s]).filter(Boolean));
     const withInset = () => {
       const tree = view.toJSON();
       const root = Array.isArray(tree) ? tree[0] : tree;

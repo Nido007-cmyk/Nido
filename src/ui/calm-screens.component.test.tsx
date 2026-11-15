@@ -4,9 +4,9 @@
  * See LICENSE file for details.
  */
 
-// @ts-nocheck
 // Component tests for Calm-migrated screens.
 // Verifies: renders without crashing, has accessibility labels, uses Calm structure.
+import { jest, describe, it, expect } from "@jest/globals";
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react-native";
 

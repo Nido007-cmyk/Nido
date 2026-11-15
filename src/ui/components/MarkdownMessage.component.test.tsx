@@ -4,10 +4,10 @@
  * See LICENSE file for details.
  */
 
-// @ts-nocheck
 // Programa bounty, tanda 1: los marcadores [n] de la respuesta se
 // tiñen con el color de su fuente cuando la pantalla pasa la lista de
 // colores; sin lista, el texto se pinta como siempre.
+import { jest, describe, it, expect } from "@jest/globals";
 import React from "react";
 import { render, screen } from "@testing-library/react-native";
 
@@ -61,5 +61,62 @@ describe("MarkdownMessage: color por fuente en los marcadores", () => {
     await render(<MarkdownMessage content="Dato [9] sin fuente en la lista." citationColors={["#AA0000"]} />);
     expect(flatStyle(screen.getByText("[9]")).color).toBe("#eee");
     expect(screen.getByText(/Dato/)).toBeTruthy();
+  });
+});
+
+describe("MarkdownMessage: citas literales en el párrafo (T-17)", () => {
+  const SPAN = "El teléfono de la clínica es 520-555-0147 [1].";
+
+  function backgroundOf(el: any) {
+    let node = el;
+    while (node) {
+      const s = flatStyle(node);
+      if (s && s.backgroundColor) return s.backgroundColor;
+      node = node.parent;
+    }
+    return undefined;
+  }
+
+  it("un tramo de cita lleva comilla de apertura y fondo sutil del color de su fuente", async () => {
+    await render(
+      <MarkdownMessage
+        content={`${SPAN} Y una frase del modelo.`}
+        citationColors={["#AA0000"]}
+        verbatimSpans={[{ text: SPAN, n: 1 }]}
+      />,
+    );
+    expect(screen.getByText("«")).toBeTruthy();
+    expect(backgroundOf(screen.getByText(/520-555-0147/))).toBe("#AA000026");
+    // La frase del modelo, fuera del tramo, no lleva ese fondo.
+    expect(backgroundOf(screen.getByText(/frase del modelo/))).toBeUndefined();
+  });
+
+  it("un tramo de guía (sin número) usa el fondo sutil del tema", async () => {
+    await render(
+      <MarkdownMessage
+        content="Enfriar pronto una quemadura con agua. Luego el modelo sigue."
+        verbatimSpans={[{ text: "Enfriar pronto una quemadura con agua." }]}
+      />,
+    );
+    expect(screen.getByText("«")).toBeTruthy();
+    expect(backgroundOf(screen.getByText(/Enfriar pronto/))).toBe("#222");
+  });
+
+  it("sin la prop no hay comilla ni fondo: el render es el de siempre", async () => {
+    await render(<MarkdownMessage content={SPAN} citationColors={["#AA0000"]} />);
+    expect(screen.queryByText("«")).toBeNull();
+    expect(backgroundOf(screen.getByText(/520-555-0147/))).toBeUndefined();
+  });
+
+  it("un tramo que no está en el texto no se marca", async () => {
+    await render(
+      <MarkdownMessage
+        content="Otra cosa distinta por completo."
+        citationColors={["#AA0000"]}
+        verbatimSpans={[{ text: SPAN, n: 1 }]}
+      />,
+    );
+    expect(screen.queryByText("«")).toBeNull();
+    expect(screen.getByText(/Otra cosa distinta/)).toBeTruthy();
   });
 });

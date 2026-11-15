@@ -4,7 +4,6 @@
  * See LICENSE file for details.
  */
 
-// @ts-nocheck
 // 0.1.87 (pieza 5): el botón del lector en la pestaña Biblioteca.
 // El dueño no encontraba el lector con la app configurada («Tampoco
 // veo el Lector»): vivía solo tras la franja del asistente y un
@@ -14,6 +13,7 @@
 // por la sección de packs hasta el contenido de conocimiento.
 // ModelSetupScreen va mockeado: lo que se prueba es el cable de
 // esta pantalla y su botón, no el contenido de Ajustes.
+import { jest, describe, it, expect, beforeEach } from "@jest/globals";
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react-native";
 
@@ -82,7 +82,7 @@ describe("LibraryScreen · el botón del lector (0.1.87)", () => {
     );
     const knowledge = mockState.modelSetupProps.find((p) => p.section === "knowledge");
     expect(knowledge).toBeTruthy();
-    expect(knowledge.libraryEntryInside).toBe(false);
-    expect(knowledge.onOpenLibrary).toBeUndefined();
+    expect(knowledge!.libraryEntryInside).toBe(false);
+    expect(knowledge!.onOpenLibrary).toBeUndefined();
   });
 });

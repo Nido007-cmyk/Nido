@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * 0.1.90 · Familia 5 — el cuento del zorro en el peldaño de emergencia.
  *

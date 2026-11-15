@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * MIT License
  * Copyright (c) 2026 NIDO contributors
@@ -8,6 +7,7 @@
 // la lista de recientes era un ScrollView de 260 px dentro de otro, y en
 // Android el de dentro no se movía. Ahora hay un solo scroll y los atajos
 // siempre quedan a mano.
+import { jest, describe, it, expect } from "@jest/globals";
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react-native";
 
@@ -31,7 +31,7 @@ jest.mock("./components/icons/NidoIcon", () => ({ NidoIcon: () => null }));
 jest.mock("./DrawerFooterStats", () => ({ DrawerFooterStats: () => null }));
 jest.mock("./components/PrivateTextInput", () => {
   const { TextInput } = require("react-native");
-  return { PrivateTextInput: (p) => <TextInput {...p} /> };
+  return { PrivateTextInput: (p: any) => <TextInput {...p} /> };
 });
 
 const { Drawer } = require("./Drawer");
