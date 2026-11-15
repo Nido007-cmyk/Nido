@@ -69,10 +69,16 @@ class BridgeConnection {
       /* el traceback queda en el error de la operación que lo provocó */
     });
     this.proc.on("error", (e) => this.kill(e));
+    // Sin este listener, un EPIPE al escribir en el stdin de un hijo que
+    // acaba de morir se emite como evento 'error' del stream y Node lo
+    // lanza como excepción no capturada (la promesa SÍ se rechaza por el
+    // callback de write, pero el evento no tiene quién lo reciba).
+    this.proc.stdin.on("error", (e) => this.kill(e));
     this.proc.on("exit", (code) => {
-      if (this.pending.size > 0) {
-        this.kill(new Error(`puente.py terminó (código ${code}) con operaciones en vuelo`));
-      }
+      // Muerte registrada SIEMPRE, también sin operaciones en vuelo: si no,
+      // `dead` queda null y la siguiente operación de la cadena intenta
+      // escribir en el stdin de un proceso muerto (EPIPE).
+      this.kill(new Error(`puente.py terminó (código ${code})`));
     });
   }
 
