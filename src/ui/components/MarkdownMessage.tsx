@@ -9,6 +9,7 @@ import { View, Text, StyleSheet, Pressable, Share } from "react-native";
 import { impact, ImpactFeedbackStyle } from "../../services/haptics";
 import { useTheme } from "../theme";
 import { spacing, radii } from "../theme/spacing";
+import type { VerbatimSpan } from "../../rag/provenance";
 
 interface Props {
   content: string;
@@ -19,6 +20,16 @@ interface Props {
    * Sin la lista, los marcadores se pintan como texto normal.
    */
   citationColors?: string[];
+  /**
+   * T-17 (0.1.99): los tramos del texto que son CITA literal (la
+   * guía tal cual, o la frase que el juez sustituyó por la fuente),
+   * calculados por provenance.verbatimSpans contra el texto
+   * guardado. Un tramo se pinta con comilla de apertura y fondo
+   * sutil del color de su fuente. Sin la prop, el render es el de
+   * siempre, byte a byte. Un tramo que no se encuentra tal cual en
+   * la línea que se pinta no se marca: sin marca, nunca marca falsa.
+   */
+  verbatimSpans?: VerbatimSpan[];
 }
 
 interface Block {
@@ -158,13 +169,14 @@ function CodeBlockView({
   );
 }
 
-export function MarkdownMessage({ content, isStreaming, citationColors }: Props) {
+export function MarkdownMessage({ content, isStreaming, citationColors, verbatimSpans }: Props) {
   const { colors, typography } = useTheme();
   const blocks = parseBlocks(content);
 
-  const renderInline = (text: string) => {
+  const renderInlineParts = (text: string, keyPrefix: string) => {
     const parts = text.split(/(`[^`]+`|\*\*[^*]+\*\*|\[\d+\])/g);
     return parts.map((part, index) => {
+      const key = `${keyPrefix}${index}`;
       // Marcador de cita con el color de su fuente (el número manda:
       // quien no distinga el color sigue pudiendo seguir el [n] hasta
       // la píldora del mismo número en las notas de fuentes).
@@ -174,7 +186,7 @@ export function MarkdownMessage({ content, isStreaming, citationColors }: Props)
         if (color) {
           return (
             <Text
-              key={index}
+              key={key}
               style={[typography.ui.bodyLg, { color, fontWeight: "800" }]}
               selectable
             >
@@ -187,7 +199,7 @@ export function MarkdownMessage({ content, isStreaming, citationColors }: Props)
         const codeSnippet = part.slice(1, -1);
         return (
           <Text
-            key={index}
+            key={key}
             style={[
               typography.mono.sm,
               styles.inlineCode,
@@ -207,7 +219,7 @@ export function MarkdownMessage({ content, isStreaming, citationColors }: Props)
         const boldText = part.slice(2, -2);
         return (
           <Text
-            key={index}
+            key={key}
             style={[
               typography.ui.bodyLg,
               { fontWeight: "800", color: colors.text.heading },
@@ -220,7 +232,7 @@ export function MarkdownMessage({ content, isStreaming, citationColors }: Props)
       }
       return (
         <Text
-          key={index}
+          key={key}
           style={[typography.ui.bodyLg, { color: colors.text.primary }]}
           selectable
         >
@@ -228,6 +240,46 @@ export function MarkdownMessage({ content, isStreaming, citationColors }: Props)
         </Text>
       );
     });
+  };
+
+  /**
+   * T-17: trocea la línea en tramos normales y tramos de cita. La
+   * búsqueda es secuencial y exacta dentro de la línea: un tramo de
+   * cita que no aparece tal cual en esta línea no se marca aquí.
+   * Sin prop (o sin ningún tramo en la línea), el resultado es el
+   * render en línea de siempre.
+   */
+  const renderInline = (text: string) => {
+    if (!verbatimSpans || verbatimSpans.length === 0) return renderInlineParts(text, "");
+    const segments: { text: string; span?: VerbatimSpan }[] = [];
+    let rest = text;
+    for (const span of verbatimSpans) {
+      const at = rest.indexOf(span.text);
+      if (at < 0) continue;
+      if (at > 0) segments.push({ text: rest.slice(0, at) });
+      segments.push({ text: span.text, span });
+      rest = rest.slice(at + span.text.length);
+    }
+    if (rest.length > 0) segments.push({ text: rest });
+    if (!segments.some((s) => s.span)) return renderInlineParts(text, "");
+    const out: React.ReactNode[] = [];
+    segments.forEach((seg, i) => {
+      if (!seg.span) {
+        out.push(...renderInlineParts(seg.text, `s${i}-`));
+        return;
+      }
+      const citeColor =
+        seg.span.n != null && citationColors ? citationColors[seg.span.n - 1] : undefined;
+      const backgroundColor =
+        citeColor && /^#[0-9A-Fa-f]{6}$/.test(citeColor) ? `${citeColor}26` : colors.bg.subtle;
+      out.push(
+        <Text key={`v${i}`} style={{ backgroundColor }}>
+          <Text style={[typography.ui.bodyLg, { color: colors.text.primary }]}>«</Text>
+          {renderInlineParts(seg.text, `v${i}-`)}
+        </Text>,
+      );
+    });
+    return out;
   };
 
   return (

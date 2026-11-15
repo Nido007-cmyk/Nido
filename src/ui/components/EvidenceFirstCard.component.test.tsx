@@ -4,11 +4,11 @@
  * See LICENSE file for details.
  */
 
-// @ts-nocheck
 // Programa bounty, tanda 1: la tarjeta de evidencia primero enseña la
 // fuente principal y su frase que mejor responde, encima de la
 // respuesta; el enlace a la guía entera solo sale si la fuente es un
 // chunk de pack (lo único que el lector sabe abrir).
+import { jest, describe, it, expect } from "@jest/globals";
 import React from "react";
 import { render, screen } from "@testing-library/react-native";
 

@@ -4,13 +4,13 @@
  * See LICENSE file for details.
  */
 
-// @ts-nocheck
 // EmergencyScreen: la pestaña de emergencia en flujo (sana por el
 // SafeAreaView raíz del app) y su hoja de elección de país, un
 // <Modal> anclado al borde inferior de la ventana. 0.1.90: la
 // hoja cerraba con 12 de padding de diseño y el final de la
 // lista podía quedar bajo la barra del sistema; la regresión
 // fija el inset inferior en 34 y exige 12 + 34 en la hoja.
+import { jest, describe, it, expect, afterEach } from "@jest/globals";
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react-native";
 // Países que «tiene» el pack simulado; vacío = sin NIDO Local instalado.
@@ -75,10 +75,10 @@ jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 24, bottom: 34, left: 0, right: 0 }),
 }));
 
-const flatStyle = (s) => Object.assign({}, ...(Array.isArray(s) ? s : [s]).filter(Boolean));
-const findByStyle = (tree, pred) => {
-  const found = [];
-  const walk = (n) => {
+const flatStyle = (s: any) => Object.assign({}, ...(Array.isArray(s) ? s : [s]).filter(Boolean));
+const findByStyle = (tree: any, pred: (st: any) => boolean) => {
+  const found: any[] = [];
+  const walk = (n: any) => {
     if (!n || typeof n !== "object") return;
     if (pred(flatStyle(n.props?.style))) found.push(n);
     (n.children ?? []).forEach(walk);

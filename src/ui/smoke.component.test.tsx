@@ -4,9 +4,9 @@
  * See LICENSE file for details.
  */
 
-// @ts-nocheck
 // Smoke test: verifies Jest + @testing-library/react-native infrastructure.
 // v14 API: render is async, queries available on result.
+import { describe, it, expect } from "@jest/globals";
 import React from "react";
 import { Text, View, Pressable } from "react-native";
 import { render, fireEvent, screen } from "@testing-library/react-native";

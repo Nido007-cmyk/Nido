@@ -1,10 +1,10 @@
-// @ts-nocheck
 /**
  * 0.1.90 · Familia 3 — ningún motivo queda en silencio en la tarjeta.
  * La tabla de prioridad de installNoticeFor, caso por caso.
  */
 import { describe, it, expect } from "vitest";
 import { installNoticeFor } from "./installNotice";
+import type { InstallRecord } from "./installState";
 
 const st = (over: Partial<{ present: boolean; outdated: boolean; checksumOk: boolean | null }> = {}) => ({
   present: false,
@@ -12,7 +12,7 @@ const st = (over: Partial<{ present: boolean; outdated: boolean; checksumOk: boo
   checksumOk: null,
   ...over,
 });
-const rec = (over: Record<string, unknown> = {}) => ({
+const rec = (over: Partial<InstallRecord> = {}): InstallRecord => ({
   assetId: "qwen3-0.6b-q4km",
   status: "failed",
   sizeBytes: 396705472,

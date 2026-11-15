@@ -4,16 +4,16 @@
  * See LICENSE file for details.
  */
 
-// @ts-nocheck
 // Tests del modal compartido de la clave de backup (2026-10-12): es la
 // única superficie que muestra la clave en ambas rutas (pantalla de
 // respaldo y tarjeta de Ajustes). Se verifica que la clave se ve, que
 // «Copiar clave» usa copySecret y que la copia se confirma en pantalla
 // (antes copiaba en silencio y parecía que no hacía nada).
+import { jest, describe, it, expect, beforeEach } from "@jest/globals";
 import React from "react";
 import { render, fireEvent, screen } from "@testing-library/react-native";
 
-const mockCopySecret = jest.fn(async () => {});
+const mockCopySecret = jest.fn(async (..._args: unknown[]) => {});
 
 jest.mock("./theme", () => ({
   useTheme: () => ({

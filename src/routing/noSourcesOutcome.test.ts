@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * 0.1.90 · Familia 4 — la abstención ante una pregunta general.
  *

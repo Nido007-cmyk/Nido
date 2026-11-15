@@ -4,13 +4,13 @@
  * See LICENSE file for details.
  */
 
-// @ts-nocheck
 // SourceReader: el lector a pantalla completa de la guía fuente
 // (un <Modal> con ventana propia). 0.1.90: su raíz no aplicaba el
 // área segura ni arriba ni abajo; la regresión fija los insets
 // (arriba 24, abajo 34) y exige que la pantalla sume el de arriba
 // a su padding de diseño y el contenido del desplazamiento sume
 // el de abajo al suyo.
+import { jest, describe, it, expect } from "@jest/globals";
 import React from "react";
 import { render, screen } from "@testing-library/react-native";
 
@@ -44,10 +44,10 @@ jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 24, bottom: 34, left: 0, right: 0 }),
 }));
 
-const flatStyle = (s) => Object.assign({}, ...(Array.isArray(s) ? s : [s]).filter(Boolean));
-const findByStyle = (tree, pred) => {
-  const found = [];
-  const walk = (n) => {
+const flatStyle = (s: any) => Object.assign({}, ...(Array.isArray(s) ? s : [s]).filter(Boolean));
+const findByStyle = (tree: any, pred: (st: any) => boolean) => {
+  const found: any[] = [];
+  const walk = (n: any) => {
     if (!n || typeof n !== "object") return;
     // El margen inferior vive en el contentContainerStyle del
     // ScrollView, no en su style: se miran las dos props.

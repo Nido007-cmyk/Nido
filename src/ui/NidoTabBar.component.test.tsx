@@ -4,7 +4,6 @@
  * See LICENSE file for details.
  */
 
-// @ts-nocheck
 // 0.1.89 — la fila de pestañas de la pantalla NIDO: en el aparato
 // del dueño, «Negociaciones» se partía en dos líneas («s»
 // colgando) porque su columna igual no daba el ancho. RNTL no
@@ -13,6 +12,7 @@
 // pestaña sin encoger (flexShrink 0) y la fila en un ScrollView
 // horizontal que desplaza antes que partir. Con las etiquetas
 // reales de los tres idiomas, incluida la larga en cada uno.
+import { jest, describe, it, expect } from "@jest/globals";
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react-native";
 
@@ -41,11 +41,11 @@ const TABS_ES = [
   { key: "packs", label: "Packs" },
 ];
 
-function flatStyle(style) {
+function flatStyle(style: any) {
   return Object.assign({}, ...(Array.isArray(style) ? style : [style]).filter(Boolean));
 }
 
-function anyNode(node, pred) {
+function anyNode(node: any, pred: (n: any) => boolean): boolean {
   if (!node || typeof node !== "object") return false;
   if (Array.isArray(node)) return node.some((n) => anyNode(n, pred));
   if (pred(node)) return true;
@@ -86,7 +86,7 @@ describe("NidoTabBar", () => {
         <NidoTabBar
           tabs={TABS_ES}
           activeKey={active}
-          onSelect={(k) => {
+          onSelect={(k: string) => {
             onSelect(k);
             setActive(k);
           }}

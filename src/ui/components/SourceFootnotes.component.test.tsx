@@ -4,10 +4,10 @@
  * See LICENSE file for details.
  */
 
-// @ts-nocheck
 // 0.1.61: the provenance line under an answer's sources ("3 frases de la
 // guía · 1 del modelo sin fuente") is real text on screen, in the app's
 // language, and only appears when there is something to count.
+import { jest, describe, it, expect, beforeEach } from "@jest/globals";
 import React from "react";
 import { render, screen } from "@testing-library/react-native";
 

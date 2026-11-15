@@ -2620,7 +2620,7 @@ export function applyDatumRule(
     for (const [i, datumT] of replaceAt) {
       const fixed = addCitation(datumT.text, datumT.chunk + 1);
       kept[i] = fixed;
-      prov[i] = { text: fixed, origin: { kind: "source", n: datumT.chunk + 1, support: 1 } };
+      prov[i] = { text: fixed, origin: { kind: "source", n: datumT.chunk + 1, support: 1, replaced: true } };
       replaced = true;
     }
     for (const i of [...removeIdx].sort((a, b) => b - a)) {
@@ -2686,7 +2686,7 @@ export function applyDatumRule(
       const first = offenders[0];
       const fixed = addCitation(datum.text, datum.chunk + 1);
       kept[first] = fixed;
-      prov[first] = { text: fixed, origin: { kind: "source", n: datum.chunk + 1, support: 1 } };
+      prov[first] = { text: fixed, origin: { kind: "source", n: datum.chunk + 1, support: 1, replaced: true } };
       replaced = true;
       for (const i of offenders.slice(1).reverse()) {
         kept.splice(i, 1);
@@ -3563,7 +3563,7 @@ export function verifyGroundedAnswer(
       if (fix?.kind === "replace") {
         const fixed = addCitation(fix.text, fix.chunk + 1);
         kept.push(fixed);
-        langProv.push({ text: fixed, origin: { kind: "source", n: fix.chunk + 1, support: 1 } });
+        langProv.push({ text: fixed, origin: { kind: "source", n: fix.chunk + 1, support: 1, replaced: true } });
         sourceFixed++;
         continue;
       }
@@ -3861,7 +3861,7 @@ export function verifyGroundedAnswer(
       languageFixed++;
       const fixed = addCitation(langFix.text, langFix.chunk + 1);
       kept.push(fixed);
-      prov.push({ text: fixed, origin: { kind: "source", n: langFix.chunk + 1, support: 1 } });
+      prov.push({ text: fixed, origin: { kind: "source", n: langFix.chunk + 1, support: 1, replaced: true } });
       continue;
     }
     if (sup.total >= MIN_JUDGED_TERMS) judgedKept++;
@@ -3878,7 +3878,7 @@ export function verifyGroundedAnswer(
         negationFixed++;
         const fixed = addCitation(src, sup.bestChunk + 1);
         kept.push(fixed);
-        prov.push({ text: fixed, origin: { kind: "source", n: sup.bestChunk + 1, support: 1, negationFixed: true } });
+        prov.push({ text: fixed, origin: { kind: "source", n: sup.bestChunk + 1, support: 1, negationFixed: true, replaced: true } });
         continue;
       }
       // T-04 (P-06): la copia que perdió el condicional inicial de
@@ -3888,7 +3888,7 @@ export function verifyGroundedAnswer(
         negationFixed++;
         const fixed = addCitation(copySrc, sup.bestChunk + 1);
         kept.push(fixed);
-        prov.push({ text: fixed, origin: { kind: "source", n: sup.bestChunk + 1, support: 1, negationFixed: true } });
+        prov.push({ text: fixed, origin: { kind: "source", n: sup.bestChunk + 1, support: 1, negationFixed: true, replaced: true } });
         continue;
       }
       // Auditoría de la 0.1.70 (5b): la corta que quita (o pone) la
@@ -3898,7 +3898,7 @@ export function verifyGroundedAnswer(
         negationFixed++;
         const fixed = addCitation(clauseSrc, sup.bestChunk + 1);
         kept.push(fixed);
-        prov.push({ text: fixed, origin: { kind: "source", n: sup.bestChunk + 1, support: 1, negationFixed: true } });
+        prov.push({ text: fixed, origin: { kind: "source", n: sup.bestChunk + 1, support: 1, negationFixed: true, replaced: true } });
         continue;
       }
       // T-04 (M-06): la volcada de una raíz se retira; con una raíz
@@ -4014,7 +4014,7 @@ function abstainedResult(chunks: GroundingChunk[], lang: GroundingLang, removed:
   if (chunks.length > 0) {
     const i = primarySourceIndex(chunks);
     sentences.push({ text: EXTRACT_INTRO[lang].split("{{title}}").join(chunks[i].title), origin: { kind: "fixed" } });
-    sentences.push({ text: extractiveSnippet(chunks[i], i, 320, lang), origin: { kind: "source", n: i + 1, support: 1 } });
+    sentences.push({ text: extractiveSnippet(chunks[i], i, 320, lang), origin: { kind: "source", n: i + 1, support: 1, replaced: true } });
   }
   return { text: honestAbstention(chunks, lang), status: "abstained", removed, kept: 0, sentences };
 }

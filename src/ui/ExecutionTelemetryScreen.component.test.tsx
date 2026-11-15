@@ -4,9 +4,9 @@
  * See LICENSE file for details.
  */
 
-// @ts-nocheck
 // 0.1.33: la pantalla de Telemetría muestra el coste del pre-router y
 // adónde va cada mensaje — solo tiempos y cuentas, nunca texto.
+import { jest, describe, it, expect, beforeEach } from "@jest/globals";
 import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 
@@ -39,7 +39,7 @@ jest.mock("../inference/telemetry", () => ({
   listStoredRamRejections: async () => mockRejections.rows,
 }));
 jest.mock("../services/routerStats", () => {
-  const pure = jest.requireActual("../services/routerStats.pure");
+  const pure = jest.requireActual("../services/routerStats.pure") as any;
   return {
     ...pure,
     listRouterSamples: async () => mockRouter.samples,
@@ -53,7 +53,7 @@ jest.mock("expo-clipboard", () => ({
   },
 }));
 jest.mock("../services/missedPhrases", () => {
-  const pure = jest.requireActual("../services/missedPhrases.pure");
+  const pure = jest.requireActual("../services/missedPhrases.pure") as any;
   return {
     formatMissedForCopy: pure.formatMissedForCopy,
     missedSignal: pure.missedSignal,

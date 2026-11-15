@@ -182,29 +182,11 @@ CREATE TABLE IF NOT EXISTS learned_skills (
   refinements TEXT NOT NULL DEFAULT '[]'
 );
 
--- Knowledge graph store
-CREATE TABLE IF NOT EXISTS kg_entities (
-  id TEXT PRIMARY KEY,
-  type TEXT NOT NULL,
-  name TEXT NOT NULL,
-  aliases TEXT NOT NULL DEFAULT '[]',
-  created_at INTEGER NOT NULL,
-  last_seen_at INTEGER NOT NULL,
-  mention_count INTEGER NOT NULL DEFAULT 1
-);
-CREATE TABLE IF NOT EXISTS kg_relations (
-  id TEXT PRIMARY KEY,
-  from_id TEXT NOT NULL REFERENCES kg_entities(id) ON DELETE CASCADE,
-  to_id TEXT NOT NULL REFERENCES kg_entities(id) ON DELETE CASCADE,
-  type TEXT NOT NULL,
-  strength REAL NOT NULL DEFAULT 1.0,
-  created_at INTEGER NOT NULL,
-  last_reinforced_at INTEGER NOT NULL,
-  source TEXT NOT NULL DEFAULT 'user'
-);
-CREATE INDEX IF NOT EXISTS idx_kg_rel_from ON kg_relations(from_id);
-CREATE INDEX IF NOT EXISTS idx_kg_entities_name ON kg_entities(name);
-CREATE INDEX IF NOT EXISTS idx_kg_relations_to ON kg_relations(to_id);
+-- T-17 (0.1.99, m-92): el grafo de conocimiento se retiró entero
+-- (decisión del dueño). Ningún código de producción escribió nunca
+-- en kg_entities/kg_relations: las instalaciones existentes
+-- conservan esas dos tablas vacías como huérfanas inocuas y las
+-- nuevas ya no las crean.
 `;
 
 // ---------------------------------------------------------------------------
