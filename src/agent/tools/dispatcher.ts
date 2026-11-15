@@ -178,18 +178,34 @@ export function validateToolCall(call: {
  * «2026-11-20 09:00» no lo es). Los rangos se comprueban a mano porque
  * Date.parse no es igual de estricto en todos los motores JS; el
  * Date.parse final es solo una segunda red.
+ *
+ * T-30 (0.1.99, H-Z5-1): los rangos sueltos no bastan: el día tiene que
+ * EXISTIR en su mes. Date.parse no puede ser la red de eso: en V8
+ * normaliza el desborde (2027-02-30 pasa a ser 2027-03-02) en vez de
+ * devolver NaN, y el recordatorio o el evento se creaba en la fecha
+ * corrida, en silencio. La tabla de días por mes, con la regla
+ * gregoriana de bisiestos (÷4 sí, ÷100 no, ÷400 sí), se comprueba
+ * aquí, sin fiarse del motor.
  */
 const ISO_DATETIME_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:?\d{2})?$/;
+
+const DIAS_POR_MES = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 function isIsoDateTime(value: string): boolean {
   const m = ISO_DATETIME_RE.exec(value);
   if (!m) return false;
+  const year = Number(m[1]);
   const month = Number(m[2]);
   const day = Number(m[3]);
   const hour = Number(m[4]);
   const minute = Number(m[5]);
   const second = m[6] === undefined ? 0 : Number(m[6]);
   if (month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 || minute > 59 || second > 59) {
+    return false;
+  }
+  const bisiesto = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+  const diasDelMes = month === 2 && bisiesto ? 29 : DIAS_POR_MES[month - 1]!;
+  if (day > diasDelMes) {
     return false;
   }
   return !Number.isNaN(Date.parse(value));
