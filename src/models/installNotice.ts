@@ -27,9 +27,9 @@ import type { InstallRecord } from "./installState";
  * Prioridad:
  *   1. presente o desactualizado → sin aviso (la tarjeta ya lo dice).
  *   2. checksumOk === false → la integridad falló: el archivo no
- *      cuenta como descargado. Desde T-09 statusOf es una consulta y
- *      no borra: el archivo sigue en disco, sin usarse, hasta que una
- *      descarga nueva verificada lo reemplaza o el usuario lo borra.
+ *      cuenta como descargado (statusOf lo borra al dictaminar, como
+ *      en la 0.1.98; la reversa de la carga de la 0.1.102 retiró la
+ *      forma intermedia de T-09).
  *   3. diario «failed» → el motivo por su código (la huella mala y el
  *      tamaño malo tienen su texto; el resto, el genérico por clase).
  *   4. diario «paused» con bytes → hay una parte descargada que el

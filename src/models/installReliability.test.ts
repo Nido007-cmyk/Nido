@@ -665,7 +665,7 @@ describe("app terminated mid-download (restart honesty)", () => {
     expect((await getInstallRecord(asset.id))?.status).toBe("installed");
   });
 
-  it("crash leaving a corrupt same-size file at final path → detected, not trusted; the query leaves it and a fresh download replaces it", async () => {
+  it("crash leaving a corrupt same-size file at final path → detected, not trusted; statusOf deletes it and a fresh download installs clean", async () => {
     const asset = makeAsset("dl-crash-corrupt", 2048);
     serverSize = 2048;
     // Torn/corrupt file with the "right" size at the final path.
@@ -676,11 +676,12 @@ describe("app terminated mid-download (restart honesty)", () => {
     const st = await mgr.statusOf(asset);
     expect(st.present).toBe(false);
     expect(st.checksumOk).toBe(false);
-    // T-09 (F-10): statusOf is a query — it no longer deletes. The
-    // corrupt bytes stay on disk, unused, until an action path acts.
-    expect(files.has(finalPath("dl-crash-corrupt"))).toBe(true);
-    // The action path replaces them: a fresh download verifies staging
-    // and clears the corrupt destination only at promotion time.
+    // Forma 0.1.98 (restaurada en la reversa de la carga de la
+    // 0.1.102): el veredicto deleteFile se ejecuta en la propia
+    // consulta — los bytes corruptos no quedan en la ruta final.
+    // (La forma intermedia de T-09/F-10 los dejaba en disco.)
+    expect(files.has(finalPath("dl-crash-corrupt"))).toBe(false);
+    // Una descarga nueva instala limpio sobre la ruta ya libre.
     await mgr.downloadCatalogModel(asset);
     expect(shaOf(files.get(finalPath("dl-crash-corrupt"))!)).toBe(asset.sha256);
     expect((await mgr.statusOf(asset)).present).toBe(true);
@@ -745,17 +746,16 @@ describe("integrity enforcement", () => {
     expect(st2.present).toBe(true);
   });
 
-  it("legacy file with wrong bytes is not trusted (and the status query does not delete it)", async () => {
+  it("legacy file with wrong bytes is not trusted (and statusOf deletes it, as in 0.1.98)", async () => {
     const asset = makeAsset("dl-legacy-bad", 2048);
     files.set(finalPath("dl-legacy-bad"), serverBytes(2048, serverSeed + 1));
     const mgr = newManager([asset]);
     const st = await mgr.statusOf(asset);
     expect(st.present).toBe(false);
     expect(st.checksumOk).toBe(false);
-    // T-09 (F-10): not trusted, but not destroyed by a query either —
-    // deletion belongs to the action paths (load gate, delete, or a
-    // verified re-download replacing it at promotion).
-    expect(files.has(finalPath("dl-legacy-bad"))).toBe(true);
+    // Forma 0.1.98 (restaurada en la reversa de la carga de la
+    // 0.1.102): no fiable y borrado en la misma consulta.
+    expect(files.has(finalPath("dl-legacy-bad"))).toBe(false);
   });
 });
 

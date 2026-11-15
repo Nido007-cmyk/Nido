@@ -737,17 +737,6 @@ export function ChatScreen({
       // presión del aparato antes de cargar — batería y temperatura
       // de ahora, no las de un arranque anterior.
       refreshDevicePressure();
-      // F3-13 (auditoría 2026-11-13): el cruce de la sesión nativa
-      // corre AQUÍ, al abrir el arranque — antes de cargar el
-      // embedding, sembrar e indexar. Hasta la 0.1.98 esperaba a la
-      // primera carga del LLM (que desde las fases 1/4 es bajo
-      // demanda y puede tardar minutos), así que el apagado del
-      // indexado de fondo tras una muerte generando llegaba tarde a
-      // su propia sesión: el fondo arrancaba a plena residencia
-      // justo en el aparato que acababa de morir por memoria. El
-      // método es a prueba de fallos; la primera carga lo encuentra
-      // ya hecho y no lo repite.
-      await llamaEngine.crossNativeSessionAtStartup();
       const llm = await resolveActiveModel("llm");
       const emb = await resolveActiveModel("embedding");
       setActiveModel(llm);

@@ -283,23 +283,21 @@ describe("RAM-2026-10-11: perfiles de memoria del LLM", () => {
     expect(engine.getModelInfo()?.memoryProfile).toBe("small-batch");
   });
 
-  it("como último recurso, el perfil default: sin claves de caché y CON el lote de su clase (F3-06)", async () => {
-    // Hasta la 0.1.98 el último recurso era «exactamente los
-    // parámetros originales» — sin lote: lo que corría era el ubatch
-    // por defecto del binario, que el pre-flight nunca cobró. Desde
-    // F3-06 el default lleva el mismo lote que la escalera cobró y
-    // la cascada degrada solo en el eje KV (q8 → fp16): el rechazo
-    // ya no puede distinguir perfiles por el lote, así que este
-    // banco rechaza por NÚMERO de intento.
+  it("como último recurso, el perfil default: sin claves de caché y sin lote — la llamada original (forma 0.1.98)", async () => {
+    // El último recurso es «exactamente los parámetros originales»:
+    // sin lote, como cargó la 0.1.98. (La era intermedia F3-06 le
+    // añadía el lote de la clase; la reversa de la carga de la
+    // 0.1.102 lo retiró con el resto de esa maquinaria.) La cascada
+    // degrada en el eje KV (q8 → fp16) y en el lote de los dos
+    // primeros perfiles; este banco rechaza por NÚMERO de intento.
     let attempts = 0;
     rejectInit = () => ++attempts < 3;
     const engine = new LlamaEngine();
     await engine.load("models/a.gguf");
     expect(initCalls).toHaveLength(3);
     expect(Object.keys(initCalls[2]).sort()).toEqual(
-      ["model", "n_batch", "n_ctx", "n_gpu_layers", "n_threads", "n_ubatch", "use_mlock"].sort(),
+      ["model", "n_ctx", "n_gpu_layers", "n_threads", "use_mlock"].sort(),
     );
-    expect(initCalls[2]).toMatchObject({ n_batch: 512, n_ubatch: 256 });
     expect(engine.getModelInfo()?.memoryProfile).toBe("default");
   });
 
@@ -328,7 +326,7 @@ describe("Optimización 2026-11-08, fase 2: el lote sigue a la RAM del aparato",
     expect(initCalls[0]).toMatchObject({ n_batch: 384, n_ubatch: 192 });
   });
 
-  it("el perfil default lleva el lote de la clase pequeña, no el histórico sin lote (F3-06)", async () => {
+  it("el perfil default no lleva lote ni en aparatos pequeños: es la llamada original (forma 0.1.98)", async () => {
     mockTotalRamBytes = 3.3 * 1024 ** 3;
     let attempts = 0;
     rejectInit = () => ++attempts < 3;
@@ -336,7 +334,8 @@ describe("Optimización 2026-11-08, fase 2: el lote sigue a la RAM del aparato",
     await engine.load("models/a.gguf");
     expect(initCalls).toHaveLength(3);
     expect(initCalls[2].cache_type_k).toBeUndefined();
-    expect(initCalls[2]).toMatchObject({ n_batch: 256, n_ubatch: 128 });
+    expect(initCalls[2].n_batch).toBeUndefined();
+    expect(initCalls[2].n_ubatch).toBeUndefined();
     expect(engine.getModelInfo()?.memoryProfile).toBe("default");
   });
 });
@@ -345,23 +344,6 @@ describe("Optimización 2026-11-08, fase 3: la presión del aparato baja los hil
   it("con batería baja la carga nace con 3 hilos y n_ubatch 128", async () => {
     mockBattery = { levelPct: 10, charging: false, powerSave: false };
     refreshDevicePressure();
-    const engine = new LlamaEngine();
-    await engine.load("models/a.gguf");
-    expect(initCalls[0].n_threads).toBe(3);
-    expect(initCalls[0].n_ubatch).toBe(128);
-    mockBattery = null;
-    refreshDevicePressure();
-  });
-
-  it("la carga refresca la foto de presión ELLA MISMA: sin refresco previo de la pantalla, los topes llegan igual (F3-09)", async () => {
-    // Hasta la 0.1.98 solo ChatScreen refrescaba: una carga lanzada
-    // sin pasar por su efecto (el asistente de modelos, cualquier
-    // vía futura) leía la foto del arranque de la app, con las
-    // pilas ya cambiadas. La foto serena queda en caché…
-    mockBattery = null;
-    refreshDevicePressure();
-    // …la batería cae DESPUÉS, y nadie refresca: la carga lee fresco.
-    mockBattery = { levelPct: 10, charging: false, powerSave: false };
     const engine = new LlamaEngine();
     await engine.load("models/a.gguf");
     expect(initCalls[0].n_threads).toBe(3);
@@ -567,14 +549,15 @@ describe("Bounty tanda 3: escalera de memoria y CrashGuard", () => {
       crashes: number;
       pending: unknown;
     };
-    expect(after).toEqual({ crashes: 0, pending: null, lastCrashAt: null });
+    expect(after).toEqual({ crashes: 0, pending: null });
   });
 
-  it("un fallo de initLlama capturado en JS limpia el pendiente SIN contar: no es un choque (F3-15)", async () => {
-    // El proceso sigue vivo y el error ya está diagnosticado
-    // («Failed to load model»): dejar el pendiente escrito lo
-    // castigaba como choque nativo en el siguiente intento, y la
-    // cascada de reintentos idéntica degradaba sin muerte alguna.
+  it("un fallo de initLlama capturado en JS deja el pendiente escrito: el siguiente asentamiento lo cuenta (forma 0.1.98)", async () => {
+    // Como en la 0.1.98: el pendiente se escribe ANTES de crear el
+    // contexto y nada lo limpia cuando el error es capturable — el
+    // asentamiento de la siguiente carga lo cuenta como choque.
+    // (La limpieza sin contar de F3-15 se retiró en la reversa de
+    // la carga de la 0.1.102.)
     rejectInit = () => true;
     const engine = new LlamaEngine();
     await expect(engine.load("models/a.gguf")).rejects.toThrow(/Failed to load/);
@@ -583,30 +566,36 @@ describe("Bounty tanda 3: escalera de memoria y CrashGuard", () => {
       pending: unknown;
     };
     expect(rec.crashes).toBe(0);
-    expect(rec.pending).toBeNull();
-    // Y el siguiente intento, sano, no hereda castigo.
+    expect(rec.pending).not.toBeNull();
+    // El siguiente intento, sano, carga — y su asentamiento contó
+    // el pendiente heredado: el registro queda con un choque.
     rejectInit = null;
     await engine.load("models/a.gguf");
     expect(engine.isLoaded).toBe(true);
+    const rec2 = JSON.parse(fsStore.get("file:///docs/nido-crash-guard.json")!) as {
+      crashes: number;
+      pending: unknown;
+    };
+    expect(rec2.crashes).toBe(1);
   });
 
-  it("la vía de contexto EXPLÍCITO también se juzga con el factor del CrashGuard (F3-11)", async () => {
+  it("la vía de contexto EXPLÍCITO se juzga contra el disponible crudo, sin el factor del CrashGuard (forma 0.1.98)", async () => {
     const GUARD = "file:///docs/nido-crash-guard.json";
     const Q4 = "models/qwen2.5-0.5b-instruct-q4km.gguf";
     // Aparato justo: por total quedan ~0,9 GiB; el 0.5B a 2048
-    // cuesta ~0,50 GiB — cabe contra el disponible CRUDO pero no
-    // contra el presupuesto al 50 % de tres choques contados.
+    // cuesta ~0,50 GiB — cabe contra el disponible CRUDO. Con tres
+    // choques contados el factor bajaría el presupuesto al 50 % y
+    // no cabría, pero la vía explícita no aplica el factor: el
+    // factor manda en la ESCALERA (la vía automática), como en la
+    // 0.1.98. (El juicio factorizado de la vía explícita era F3-11,
+    // retirado en la reversa de la carga de la 0.1.102.)
     mockTotalRamBytes = 3.3 * 1024 ** 3;
     mockRssBytes = 0.4 * 1024 ** 3;
     fsStore.set(GUARD, JSON.stringify({ crashes: 3, pending: null }));
     const engine = new LlamaEngine();
-    await expect(engine.load(Q4, { nCtx: 2048 })).rejects.toThrow(/RAM/);
-    expect(engine.isLoaded).toBe(false);
-    // La gemela sin choques: el mismo contexto explícito carga.
-    fsStore.set(GUARD, JSON.stringify({ crashes: 0, pending: null }));
-    const engine2 = new LlamaEngine();
-    await engine2.load(Q4, { nCtx: 2048 });
-    expect(engine2.getModelInfo()?.nCtx).toBe(2048);
+    await engine.load(Q4, { nCtx: 2048 });
+    expect(engine.isLoaded).toBe(true);
+    expect(engine.getModelInfo()?.nCtx).toBe(2048);
   });
 });
 
@@ -789,21 +778,6 @@ describe("Crash nativo M2+M3: registro de sesión y CrashGuard que aprende", () 
     expect(readGuard().crashes).toBe(0);
     expect(isBackgroundIndexingHeld()).toBe(false);
     expect(readSession().crossedExitAt).toBe(2_000);
-  });
-
-  it("el cruce puede correr al ARRANQUE, antes de cualquier carga, y la carga no lo repite (F3-13)", async () => {
-    // La pantalla lo llama al abrir: el conteo y el apagado del
-    // fondo rigen desde el principio de la sesión (la indexación
-    // arranca antes que la primera respuesta). Sin este paso, el
-    // cruce esperaba a la primera carga del LLM.
-    seedDeadGeneration(true);
-    seedExit("CRASH_NATIVE");
-    const engine = new LlamaEngine();
-    await engine.crossNativeSessionAtStartup();
-    expect(readGuard().crashes).toBe(1);
-    expect(isBackgroundIndexingHeld()).toBe(true);
-    await engine.load("models/a.gguf");
-    expect(readGuard().crashes).toBe(1);
   });
 
   it("sin informe de cierres (build sin soporte): la carga sigue como siempre", async () => {
@@ -1613,7 +1587,7 @@ describe("0.1.85: la foto exacta de las 19:54 como motor completo (RAM total REA
     await engine.stop();
     await expect(gen).resolves.toBe("Hi");
     await new Promise((r) => setTimeout(r, 0));
-    expect(JSON.parse(fsStore.get(GUARD)!)).toEqual({ crashes: 0, pending: null, lastCrashAt: null });
+    expect(JSON.parse(fsStore.get(GUARD)!)).toEqual({ crashes: 0, pending: null });
   });
 
   it("JUSTICIA: descargar por las buenas y recargar NO degrada el factor (la descarga ordenada confirma)", async () => {
@@ -1625,7 +1599,7 @@ describe("0.1.85: la foto exacta de las 19:54 como motor completo (RAM total REA
     // pendiente quedaba vivo y la recarga lo contaba como choque.
     await engine.unload();
     await new Promise((r) => setTimeout(r, 0));
-    expect(JSON.parse(fsStore.get(GUARD)!)).toEqual({ crashes: 0, pending: null, lastCrashAt: null });
+    expect(JSON.parse(fsStore.get(GUARD)!)).toEqual({ crashes: 0, pending: null });
     // La recarga planifica con el factor curado (sin degradar) y el
     // ciclo completo descargar → recargar → generar deja el registro
     // limpio, sin choques fantasma.
@@ -1633,7 +1607,7 @@ describe("0.1.85: la foto exacta de las 19:54 como motor completo (RAM total REA
     expect(engine.getModelInfo()?.nCtx).toBe(1024);
     await engine.unload();
     await new Promise((r) => setTimeout(r, 0));
-    expect(JSON.parse(fsStore.get(GUARD)!)).toEqual({ crashes: 0, pending: null, lastCrashAt: null });
+    expect(JSON.parse(fsStore.get(GUARD)!)).toEqual({ crashes: 0, pending: null });
   });
 
   it("el simétrico que NO debe curarse: un pendiente de un proceso muerto sigue contando al recargar", async () => {
@@ -1662,10 +1636,10 @@ describe("0.1.85: la foto exacta de las 19:54 como motor completo (RAM total REA
     const rec = JSON.parse(fsStore.get(GUARD)!);
     expect(rec.crashes).toBe(1);
     expect(rec.pending).toBeNull();
-    // Lo único nuevo en el registro es la marca de caducidad (F3-07):
-    // el asentamiento estampa la hora del último choque heredado
-    // para que su cuenta atrás pueda correr. No es un castigo.
-    expect(typeof rec.lastCrashAt).toBe("number");
+    // Y nada más cambia en el registro: sin marcas ni castigos (la
+    // marca de caducidad de F3-07 se retiró con la reversa de la
+    // carga de la 0.1.102; el registro vuelve a su forma 0.1.98).
+    expect(Object.keys(rec).sort()).toEqual(["crashes", "pending"]);
   });
 
   it("LECTURA FRESCA entre intentos: dos fotos nativas distintas dan dos decisiones distintas en el motor", async () => {
@@ -2159,13 +2133,19 @@ describe("T-07: cascada de carga (m-73), validación de generación (m-74) y con
     await expect(engine.generate({ prompt: "hola" })).resolves.toBe("Hi");
   });
 
-  it("m-79: si la carga nueva falla, el modelo anterior vuelve a quedar residente", async () => {
+  it("m-79: si la carga nueva falla, el motor queda sin modelo (la restauración del anterior era de la era intermedia; forma 0.1.98)", async () => {
+    // En la 0.1.98 la carga soltaba el modelo residente antes de
+    // intentar la nueva, y un fallo dejaba el motor vacío y el
+    // error en manos del llamante. La restauración automática del
+    // anterior (la mitad de carga de m-79) se retiró en la reversa
+    // de la carga de la 0.1.102; la otra mitad de m-79 (recrear el
+    // contexto tras una generación fallida) se queda, abajo.
     const engine = new LlamaEngine();
     await engine.load("models/a.gguf");
     rejectInit = (p) => String(p.model).includes("b.gguf");
     await expect(engine.load("models/b.gguf")).rejects.toThrow(/Failed to load/);
-    expect(engine.isLoaded).toBe(true);
-    expect(engine.getModelInfo()?.filename).toBe("models/a.gguf");
+    expect(engine.isLoaded).toBe(false);
+    expect(engine.getModelInfo()).toBeNull();
   });
 
   it("m-79: tras una generación fallida, la siguiente recrea el contexto en vez de reutilizarlo", async () => {

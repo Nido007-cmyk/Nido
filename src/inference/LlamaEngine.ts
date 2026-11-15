@@ -30,7 +30,7 @@ import {
 import { assertTrustedModelFileByName } from "../models/modelTrust";
 import { MODEL_CATALOG, type CatalogModel } from "../models/manifest";
 import { contextCeilingForDevice } from "../models/defaultModel";
-import { currentDevicePressure, refreshDevicePressure } from "./devicePressure";
+import { currentDevicePressure } from "./devicePressure";
 import { withStage } from "../utils/stageError";
 import { recordInferenceEvent, recordRamRejection, type TelemetryStopReason } from "./telemetry";
 import { findRepetitionLoop, trimRepetitionLoop } from "./repetitionGuard";
@@ -338,11 +338,10 @@ export interface LoadedModelInfo {
 }
 
 /**
- * RAM-2026-10-11: perfiles de memoria para el contexto del LLM. Se
- * prueban en orden y se queda el primero que llama.cpp acepta. Los
- * tres comparten la base y el LOTE (ver llmInitParamsForProfile); lo
- * único que degrada la cascada es la KV: q8_0, luego fp16 con el lote
- * pequeño, luego fp16 «default».
+ * RAM-2026-10-11: perfiles de memoria para el contexto del LLM, del más
+ * ahorrador al original. Se prueban en orden y se queda el primero que
+ * llama.cpp acepta, así un dispositivo o build donde una opción no esté
+ * soportada sigue cargando exactamente como antes.
  *
  * - n_ubatch 256 (antes 512 por defecto): el búfer de cómputo de llama.cpp
  *   se reserva para el peor caso de n_ubatch tokens con logits completos
@@ -373,27 +372,15 @@ export function llmInitParamsForProfile(
     n_threads: base.n_threads,
     n_gpu_layers: 0, // CPU-only for broad device compatibility; adjust per-device
   };
+  if (profile === "default") return common;
   // Optimización 2026-11-08 (fase 2): el lote ya no es la constante
   // para todos — lo elige batchForRam según la RAM total del aparato
   // (y el techo de presión de la fase 3). Sin lectura de RAM, el
   // llamador pasa el lote de siempre y esta función se comporta
   // exactamente como antes.
-  //
-  // F3-06 (auditoría 2026-11-13, SOSPECHA dirimida): el perfil
-  // default TAMBIÉN lleva ese lote. Hasta la 0.1.98 volvía sin
-  // claves de lote — «exactamente la llamada original» — así que si
-  // la cascada llegaba a él, lo que corría era el n_ubatch por
-  // defecto del binario (512 en llama.cpp), un búfer que el
-  // pre-flight nunca cobró: la estimación decía una cosa y el
-  // proceso reservaba otra, justo en los aparatos donde las dos
-  // primeras opciones ya habían fallado. Con el lote compartido, lo
-  // que corre es lo que el pre-flight cobró en los tres perfiles, y
-  // la sospecha del «ubatch desconocido» queda cerrada por
-  // construcción: ya no hay llamada sin lote.
-  const withBatch = { ...common, n_batch: batch.nBatch, n_ubatch: batch.nUbatch };
-  if (profile === "default") return withBatch;
-  if (profile === "small-batch") return withBatch;
-  return { ...withBatch, cache_type_k: "q8_0", cache_type_v: "q8_0" };
+  const smallBatch = { ...common, n_batch: batch.nBatch, n_ubatch: batch.nUbatch };
+  if (profile === "small-batch") return smallBatch;
+  return { ...smallBatch, cache_type_k: "q8_0", cache_type_v: "q8_0" };
 }
 
 export const LLM_MEMORY_PROFILES: readonly LlmMemoryProfile[] = ["kv-q8", "small-batch", "default"];
@@ -574,7 +561,7 @@ export class LlamaEngine {
 
   private async crashGuardRead(): Promise<CrashGuardRecord> {
     if (this.crashGuard) return this.crashGuard;
-    let record: CrashGuardRecord = { crashes: 0, pending: null, lastCrashAt: null };
+    let record: CrashGuardRecord = { crashes: 0, pending: null };
     try {
       const raw = await FileSystem.readAsStringAsync(this.crashGuardPath());
       record = parseCrashGuardRecord(raw);
@@ -598,10 +585,7 @@ export class LlamaEngine {
    * Al abrir una carga: asienta el registro (un pendiente con el
    * proceso muerto cuenta como choque; con un modelo vivo, ese
    * pendiente es el modelo cargado y se confirma) y devuelve el
-   * factor de seguridad que manda en el plan de esta carga. El
-   * asentamiento recibe la hora (Date.now) para que la caducidad
-   * del contador (F3-07) corra: un choque se perdona por cada 24 h
-   * sin choques nuevos.
+   * factor de seguridad que manda en el plan de esta carga.
    */
   private async crashGuardSettle(): Promise<number> {
     let before = await this.crashGuardRead();
@@ -616,10 +600,7 @@ export class LlamaEngine {
       before = adjusted;
       await this.crashGuardWrite(adjusted);
     }
-    const { record, safety } = settleCrashGuardRecord(before, {
-      modelAlive: this.context !== null,
-      now: Date.now(),
-    });
+    const { record, safety } = settleCrashGuardRecord(before, { modelAlive: this.context !== null });
     if (record !== before) await this.crashGuardWrite(record);
     return safety;
   }
@@ -627,23 +608,7 @@ export class LlamaEngine {
   /** Deja el intento en vuelo persistido ANTES de crear el contexto. */
   private async crashGuardMarkPending(model: string, nCtx: number): Promise<void> {
     const record = await this.crashGuardRead();
-    await this.crashGuardWrite({ ...record, pending: { model, nCtx, at: Date.now() } });
-  }
-
-  /**
-   * F3-15 (auditoría 2026-11-13): limpia el pendiente SIN contar.
-   * Para la vía en que initLlama fracasó con un error JS capturable:
-   * el proceso sigue vivo, el error ya está diagnosticado y no es un
-   * choque — dejar el pendiente escrito lo castigaba como muerte
-   * nativa en el siguiente intento, y una cascada de reintentos con
-   * el mismo error degradaba el factor sin muerte alguna. Si el
-   * proceso muere dentro de initLlama, esta limpieza nunca corre y
-   * el pendiente cuenta, como está diseñado.
-   */
-  private async crashGuardClearPending(): Promise<void> {
-    const record = await this.crashGuardRead();
-    if (!record.pending) return;
-    await this.crashGuardWrite({ ...record, pending: null });
+    await this.crashGuardWrite({ crashes: record.crashes, pending: { model, nCtx, at: Date.now() } });
   }
 
   /**
@@ -838,12 +803,11 @@ export class LlamaEngine {
   /**
    * M2+M3 + C-02: el cruce del registro con los cierres registrados,
    * una vez por proceso, al abrir la primera carga (antes de asentar
-   * el CrashGuard, para que el factor de ESTA carga ya lo recoja) o
-   * al arrancar la pantalla (crossNativeSessionAtStartup). Devuelve
-   * el registro del CrashGuard ajustado cuando la muerte se cuenta
-   * aquí — con el pendiente consumido, para que el asentamiento
-   * normal no la cuente una segunda vez — o null si el cruce no
-   * contó nada.
+   * el CrashGuard, para que el factor de ESTA carga ya lo recoja).
+   * Devuelve el registro del CrashGuard ajustado cuando la muerte se
+   * cuenta aquí — con el pendiente consumido, para que el
+   * asentamiento normal no la cuente una segunda vez — o null si el
+   * cruce no contó nada.
    */
   private async nativeSessionCross(crashRecord: CrashGuardRecord): Promise<CrashGuardRecord | null> {
     if (this.nativeSessionCrossDone) return null;
@@ -854,32 +818,7 @@ export class LlamaEngine {
     if (cross.record !== record) await this.nativeSessionWrite(cross.record);
     if (cross.holdBackground) holdBackgroundIndexingForSession();
     if (!cross.countedNativeCrash && !cross.countedLowMemoryDeath) return null;
-    return {
-      crashes: Math.min(crashRecord.crashes + 1, 10),
-      pending: null,
-      lastCrashAt: Date.now(),
-    };
-  }
-
-  /**
-   * F3-13 (auditoría 2026-11-13): el cruce al ARRANQUE de la app, sin
-   * esperar a la primera carga del LLM. ChatScreen lo llama al abrir
-   * su arranque, antes de cargar el embedding, sembrar e indexar:
-   * hasta la 0.1.98 el cruce esperaba dentro de crashGuardSettle a
-   * que algo pidiera el LLM, así que el conteo de la muerte anterior
-   * y — lo que más importa — el apagado del indexado de fondo de M3
-   * llegaban tarde a su propia sesión (la indexación arranca antes
-   * que la primera respuesta). A prueba de fallos, como todo el
-   * instrumento: cualquier error deja la sesión como estaba.
-   */
-  async crossNativeSessionAtStartup(): Promise<void> {
-    try {
-      const before = await this.crashGuardRead();
-      const adjusted = await this.nativeSessionCross(before);
-      if (adjusted) await this.crashGuardWrite(adjusted);
-    } catch {
-      // El cruce es un instrumento, no una puerta: nunca bloquea el arranque.
-    }
+    return { crashes: Math.min(crashRecord.crashes + 1, 10), pending: null };
   }
 
   /**
@@ -934,17 +873,8 @@ export class LlamaEngine {
     // reales del aparato (política en ramBudget.ts); la opción
     // explícita sigue mandando, como manda con nCtx. Optimización
     // 2026-11-08 (fase 3): la presión del aparato (batería baja, modo
-    // de ahorro, calor) puede bajar ese número con su tope.
-    // F3-09 (auditoría 2026-11-13): la foto de presión la refresca la
-    // propia carga, no la pantalla. Hasta la 0.1.98 solo ChatScreen
-    // refrescaba (en su arranque y al volver a primer plano), así
-    // que una carga lanzada sin pasar por ese efecto — el asistente
-    // de modelos usa el mismo motor — leía la foto del arranque de
-    // la app con la batería ya caída o el aparato ya caliente, y
-    // nacía sin los topes que la política promete. refreshDevicePressure
-    // nunca lanza por diseño; los refrescos de la pantalla quedan,
-    // inocuos.
-    refreshDevicePressure();
+    // de ahorro, calor) puede bajar ese número con su tope; la foto
+    // de presión la refresca la pantalla y aquí solo se consulta.
     const pressure = currentDevicePressure();
     const baseThreads = opts?.nThreads ?? defaultThreadsForCores(readProcessorCount());
     const nThreads =
@@ -1038,22 +968,6 @@ export class LlamaEngine {
     };
     const spec = { ...specBase, nCtx };
     let verdict = snapshot ? checkRamBudget(spec, snapshot) : null;
-    // F3-10: el presupuesto que decidió de verdad (con el factor, o
-    // el de la vía de emergencia) — viaja al error de rechazo para
-    // que el diagnóstico pueda citar la cuenta que mandó.
-    let decidingBudget: number | null = null;
-    // F3-11 (auditoría 2026-11-13): la vía de contexto EXPLÍCITO
-    // también se juzga contra el presupuesto con el factor del
-    // CrashGuard. Hasta la 0.1.98 la escalera aplicaba el factor y
-    // la vía explícita no: tras dos muertes, una carga automática
-    // bajaba de peldaño y la MISMA carga pedida a mano desde los
-    // ajustes pasaba contra el disponible crudo y moría igual — la
-    // degradación aprendida se podía saltar sin saberlo. El veredicto
-    // conserva el disponible de la foto; lo que se recalcula es fits.
-    if (explicitCtx && verdict && crashSafety < 1) {
-      decidingBudget = Math.floor(verdict.availableBytes * crashSafety);
-      verdict = { ...verdict, fits: verdict.totalBytes <= decidingBudget };
-    }
     // La escalera solo actúa sin opción explícita y con lectura de
     // RAM: elige el peldaño mayor que cabe bajo el techo pedido, con
     // el presupuesto reducido por el CrashGuard si hubo un choque.
@@ -1075,7 +989,6 @@ export class LlamaEngine {
         nCtx = plan.nCtx;
         verdict = plan.verdict;
         contextNote = plan.note;
-        decidingBudget = plan.budgetBytes;
       }
       if (plan && plan.nCtx === EMERGENCY_CONTEXT) {
         const q8Plan: LadderPlan | null = planContext(
@@ -1094,7 +1007,6 @@ export class LlamaEngine {
           nCtx = q8Plan.nCtx;
           verdict = q8Plan.verdict;
           contextNote = q8Plan.note;
-          decidingBudget = q8Plan.budgetBytes;
           pinnedProfile = "kv-q8";
         }
       }
@@ -1121,13 +1033,6 @@ export class LlamaEngine {
         `"${modelFilename}" needs roughly ${toGb(verdict.totalBytes)}GB of RAM, but this ` +
           `device only has about ${toGb(verdict.availableBytes)}GB free (of ${toGb(verdict.totalRamBytes)}GB total). ` +
           `Try a smaller model from Settings > Tone & Model.` +
-          // F3-10: cuando lo que mandó fue un presupuesto reducido
-          // (el factor del CrashGuard o la vía de emergencia), el
-          // mensaje lo cita: sin la cifra, «cabe X, hay Y, rechazado»
-          // se leía como contradicción del propio instrumento.
-          (decidingBudget !== null && decidingBudget < verdict.availableBytes
-            ? ` (usable budget for this load: ~${toGb(decidingBudget)}GB)`
-            : "") +
           (contextNote ? ` (${contextNote})` : ""),
         verdict.totalBytes,
         verdict.availableBytes,
@@ -1135,7 +1040,6 @@ export class LlamaEngine {
         nCtx < requestedCtx ? requestedCtx : null,
         nCtx < requestedCtx ? nCtx : null,
         crashSafety < 1 ? crashSafety : null,
-        decidingBudget !== null && decidingBudget < verdict.availableBytes ? decidingBudget : null,
       );
     }
 
@@ -1152,9 +1056,6 @@ export class LlamaEngine {
       return;
     }
 
-    // m-79 (F2-m8): el modelo residente ANTES de soltarlo — si la carga
-    // nueva fracasa, el catch intenta dejar el motor como estaba.
-    const prevInfo = this.modelInfo;
     // Release any previously loaded model (e.g. actually switching models
     // from Settings) so we don't leak the old context's native memory.
     await this.unloadNow();
@@ -1166,20 +1067,8 @@ export class LlamaEngine {
     await this.crashGuardMarkPending(modelFilename, nCtx);
 
     try {
-      // M-37 (F2-M2): la puerta se repite pegada a initLlama. Entre la
-      // comprobación del principio de loadNow y este punto hay
-      // pre-flight, una descarga y escrituras del CrashGuard — una
-      // ventana en la que el fichero podía cambiar tras haber sido
-      // verificado (TOCTOU). Repetirla aquí la deja en lo que tarda la
-      // propia puerta (la vía rápida, con la cabecera comparada, no
-      // re-hashea). Va DENTRO del try: su rechazo es un error ya
-      // diagnosticado con el proceso vivo, y el catch de abajo limpia
-      // el pendiente del CrashGuard sin contar (F3-15) en vez de dejar
-      // que el siguiente arranque lo cuente como muerte nativa.
-      await withStage("trust-check", () => assertTrustedModelFileByName(modelFilename));
       // RAM-2026-10-11: primer perfil que llama.cpp acepte (ver
-      // LLM_MEMORY_PROFILES). Los tres llevan el lote que el
-      // pre-flight cobró; lo que degrada es solo la KV (F3-06).
+      // LLM_MEMORY_PROFILES). El último es exactamente la llamada original.
       // Si el plan fijó kv-q8 (solo cupo en el peldaño de emergencia con
       // su KV), la lista es ese perfil solo: cargar con otro sería
       // gastar una KV que el pre-flight no aprobó.
@@ -1229,25 +1118,6 @@ export class LlamaEngine {
         stripReasoning: catalogEntry?.capabilities?.stripReasoning,
       };
     } catch (e: any) {
-      // F3-15: el proceso sigue vivo y el error ya está diagnosticado
-      // — el pendiente se limpia SIN contar antes de relanzar (ver
-      // crashGuardClearPending). Si el proceso hubiera muerto dentro
-      // de initLlama, este catch nunca correría.
-      await this.crashGuardClearPending();
-      // m-79 (F2-m8): si había un modelo residente, la carga fallida no
-      // lo deja tirado — se intenta restaurar el anterior con sus
-      // parámetros y el motor queda como estaba. Best-effort: si la
-      // restauración también falla, el motor queda sin modelo y manda
-      // el error original, que es el de la petición del llamante. (La
-      // llamada recursiva no puede buclear: al entrar, modelInfo es
-      // null — unloadNow lo anuló y la cascada fallida no lo fijó.)
-      if (prevInfo) {
-        try {
-          await this.loadNow(prevInfo.filename, { nCtx: prevInfo.nCtx, nThreads: prevInfo.nThreads });
-        } catch {
-          // Sin restauración posible: vale el error original.
-        }
-      }
       // The native error here (from llama.rn/llama.cpp) is often terse
       // ("Failed to initialize context" with no further detail) — append
       // our own RAM estimate so the user (and future debugging) has an

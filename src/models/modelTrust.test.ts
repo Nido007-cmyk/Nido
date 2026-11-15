@@ -54,10 +54,6 @@ const hoisted = vi.hoisted(() => {
   }
   const files = new Map<string, MockFile>();
   const base64Reads: string[] = []; // model-path chunk reads (i.e. hashing happened)
-  // M-37: tamaños de cada lectura base64 por ruta — la vía rápida nueva
-  // lee SOLO la cabecera; los tests distinguen «leyó la cabecera» de
-  // «re-hasheó el fichero entero» por los tamaños, no por el conteo.
-  const base64ReadSizes = new Map<string, number[]>();
   const copiedSubPaths: string[] = []; // APK asset paths copyBundledAssetToFile was asked for
   let apkBytes: Uint8Array = new Uint8Array(0);
   let apkMtimeSec = 2000;
@@ -72,7 +68,6 @@ const hoisted = vi.hoisted(() => {
     JOURNAL,
     files,
     base64Reads,
-    base64ReadSizes,
     writeFile,
     fileExists: (path: string) => files.has(path),
     setMtime: (path: string, mtimeSec: number) => {
@@ -115,9 +110,6 @@ vi.mock("expo-file-system/legacy", () => ({
       hoisted.base64Reads.push(path);
       const pos = opts?.position ?? 0;
       const len = opts?.length ?? f.bytes.length - pos;
-      const sizes = hoisted.base64ReadSizes.get(path) ?? [];
-      sizes.push(len);
-      hoisted.base64ReadSizes.set(path, sizes);
       return Buffer.from(f.bytes.subarray(pos, pos + len)).toString("base64");
     }
     return hoisted.td.decode(f.bytes);
@@ -158,7 +150,6 @@ import {
   checkModelTrust,
   ModelNotTrustedError,
   resetInstallReconcileForTests,
-  settleBackgroundAdoptionsForTests,
   trustedAssetForFilename,
 } from "./modelTrust";
 import { MODEL_CATALOG } from "./manifest";
@@ -167,52 +158,8 @@ const sha256Of = (b: Uint8Array) => createHash("sha256").update(b).digest("hex")
 
 // Small deterministic "model": 4 KiB. The streaming-hash logic itself is
 // covered by verifyChecksum.test.ts; here we prove the trust decisions.
-// M-37: el «modelo bueno» es un GGUF de verdad — cabecera recorrible por
-// el parser de ggufHeader.ts y datos de tensor de relleno detrás —
-// porque la puerta ahora valida la estructura además del SHA: un patrón
-// de bytes cualquiera ya no es un modelo válido ni como fixture.
-function buildGgufBytes(totalSize: number): Uint8Array {
-  const bytes: number[] = [];
-  const push = (...bs: number[]) => {
-    bytes.push(...bs);
-  };
-  const u32 = (v: number) => {
-    for (let i = 0; i < 4; i++) push((v >>> (8 * i)) & 0xff);
-  };
-  const u64 = (v: number) => {
-    let x = BigInt(v);
-    for (let i = 0; i < 8; i++) {
-      push(Number(x & 0xffn));
-      x >>= 8n;
-    }
-  };
-  const str = (s: string) => {
-    const e = new TextEncoder().encode(s);
-    u64(e.length);
-    push(...e);
-  };
-  push(0x47, 0x47, 0x55, 0x46); // "GGUF"
-  u32(3); // versión
-  u64(1); // tensores
-  u64(2); // metadatos
-  str("general.name");
-  u32(8); // STRING
-  str("modelo de prueba");
-  str("general.sampling.temp");
-  u32(8);
-  str("0.7");
-  str("token_embd.weight");
-  u32(2); // n_dims
-  u64(4);
-  u64(8);
-  u32(0); // tipo ggml f32
-  u64(0); // offset
-  const out = new Uint8Array(totalSize);
-  out.set(bytes);
-  for (let i = bytes.length; i < totalSize; i++) out[i] = (i * 7 + 3) & 0xff;
-  return out;
-}
-const GOOD_BYTES = buildGgufBytes(300_000);
+const GOOD_BYTES = new Uint8Array(4096);
+for (let i = 0; i < GOOD_BYTES.length; i++) GOOD_BYTES[i] = (i * 7 + 3) & 0xff;
 const GOOD_SHA = sha256Of(GOOD_BYTES);
 
 const asset = {
@@ -238,7 +185,6 @@ function makeManager(): ModelManager {
 beforeEach(() => {
   hoisted.files.clear();
   hoisted.base64Reads.length = 0;
-  hoisted.base64ReadSizes.clear();
   hoisted.setApkBytes(GOOD_BYTES.slice());
   hoisted.setApkMtimeSec(2000);
   resetInstallReconcileForTests();
@@ -257,22 +203,10 @@ describe("installBundled integrity (same SHA-256 guarantee as downloads)", () =>
     expect(status.sizeOnDiskBytes).toBe(asset.sizeBytes);
     expect(hoisted.fileExists(modelPath)).toBe(true);
 
-    // Second call is idempotent. M-37: el diario del instalador aún no
-    // trae hechos GGUF; la consulta de estado ya no los adopta (esa
-    // adopción por re-hash completo en la puerta fue la regresión de
-    // arranque de la 0.1.99): los adopta la primera comprobación de
-    // CARGA, anclada a su verificación completa.
-    await mgr.installBundled(asset);
-    await mgr.assertTrustedForLoad(asset);
-    const { loadInstallState } = await import("./installState");
-    expect((await loadInstallState()).records[asset.id]?.gguf).toBeDefined();
-    // Third call: now the fast path applies — it reads only the header
-    // region to compare it against the journal facts (no re-hash).
+    // Second call is idempotent and takes the fast path (no re-hash).
     hoisted.base64Reads.length = 0;
-    hoisted.base64ReadSizes.clear();
     await mgr.installBundled(asset);
-    const sizes = hoisted.base64ReadSizes.get(modelPath) ?? [];
-    expect(sizes.reduce((a, b) => a + b, 0)).toBeLessThan(1024);
+    expect(hoisted.base64Reads.filter((p) => p === modelPath)).toEqual([]);
   });
 
   it("2. bundled asset with incorrect SHA → rejected, deleted, never installed", async () => {
@@ -325,26 +259,13 @@ describe("load-time trust gate", () => {
     await mgr.installBundled(asset);
 
     // "Restart": drop all in-memory state; the journal + file persist.
+    hoisted.base64Reads.length = 0;
     const mgr2 = makeManager();
 
-    // 0.1.101: el instalador anota los hechos GGUF en el mismo asiento
-    // (ver el test «el instalador anota los hechos GGUF al instalar»),
-    // así que la primera comprobación tras el reinicio ya va por la
-    // vía rápida. (En la 0.1.100 el diario del instalador no traía
-    // hechos y esta primera carga pagaba la vía lenta entera.)
-    await mgr2.assertTrustedForLoad(asset);
-    const { loadInstallState } = await import("./installState");
-    expect((await loadInstallState()).records[asset.id]?.gguf).toBeDefined();
-
-    hoisted.base64Reads.length = 0;
-    hoisted.base64ReadSizes.clear();
     await mgr2.assertTrustedForLoad(asset); // must resolve
-    // From here on, trust comes from the journal + unchanged mtime +
-    // the compared HEADER (fast path), not from re-hashing the file:
-    // the reads add up to the header region only.
-    const sizes = hoisted.base64ReadSizes.get(modelPath) ?? [];
-    expect(sizes.length).toBeGreaterThan(0);
-    expect(sizes.reduce((a, b) => a + b, 0)).toBeLessThan(1024);
+    // No byte reads of the model file: trust came from the journal +
+    // unchanged mtime (fast path), not from re-hashing ~GBs.
+    expect(hoisted.base64Reads.filter((p) => p === modelPath)).toEqual([]);
     expect((await mgr2.statusOf(asset)).present).toBe(true);
   });
 
@@ -521,7 +442,7 @@ describe("packs desactualizados (0.1.57)", () => {
     expect(hoisted.fileExists(packPath)).toBe(true);
   });
 
-  it("un pack reescrito con otros bytes no pasa por viejo: no es de confianza", async () => {
+  it("un pack reescrito con otros bytes no pasa por viejo: se borra como antes", async () => {
     await installOld();
     const tampered = OLD_PACK.slice();
     tampered[10] ^= 0xff;
@@ -530,11 +451,7 @@ describe("packs desactualizados (0.1.57)", () => {
     const status = await new ModelManager([newPack]).statusOf(newPack);
     expect(status.present).toBe(false);
     expect(status.outdated).toBeUndefined();
-    // T-09 (F-10): statusOf ya no borra al consultar (antes este test
-    // fijaba «se borra como antes»). El pack manipulado no se usa y
-    // sigue en disco hasta que una vía de acción lo reemplace o lo
-    // borre; la puerta de carga (assertTrustedModelFile) sí lo borra.
-    expect(hoisted.fileExists(packPath)).toBe(true);
+    expect(hoisted.fileExists(packPath)).toBe(false);
   });
 
   it("sin mtime comparable, solo un re-hash que coincide lo da por viejo", async () => {
@@ -547,7 +464,7 @@ describe("packs desactualizados (0.1.57)", () => {
     expect(hoisted.base64Reads.filter((p) => p === packPath).length).toBeGreaterThan(0);
   });
 
-  it("los modelos no cambian: un modelo de un catálogo viejo sigue sin ser de confianza", async () => {
+  it("los modelos no cambian: un modelo de un catálogo viejo sigue sin ser de confianza y se borra", async () => {
     const mgr = makeManager();
     await mgr.installBundled(asset);
     const newModel = { ...asset, sizeBytes: NEW_PACK.length, sha256: sha256Of(NEW_PACK) };
@@ -555,8 +472,7 @@ describe("packs desactualizados (0.1.57)", () => {
     const status = await new ModelManager([newModel]).statusOf(newModel);
     expect(status.present).toBe(false);
     expect(status.outdated).toBeUndefined();
-    // T-09 (F-10): sin ser de confianza, pero la consulta no lo borra.
-    expect(hoisted.fileExists(modelPath)).toBe(true);
+    expect(hoisted.fileExists(modelPath)).toBe(false);
   });
 
   it("una descarga nueva que falla o se corta no hace perder la prueba del pack viejo", async () => {
@@ -603,277 +519,7 @@ describe("packs desactualizados (0.1.57)", () => {
     expect(await packFileState(newPack)).toBe("outdated");
     hoisted.writeFile(packPath, OLD_PACK.slice(0, 100), 9999); // truncated
     expect(await packFileState(newPack)).toBe("unusable");
-    // M-35/F-03: a pack with no pin (no catalog entry, no import
-    // record) is never "current" for merely existing — the assertion
-    // this replaces ("current") sealed the audited defect.
-    expect(await packFileState({ ...oldPack, id: "local-x", sizeBytes: 0, sha256: "" })).toBe("unusable");
-  });
-
-  // -------------------------------------------------------------------------
-  // M-35 (auditoría 2026-11-13, carril 07: B1/B2/F-03) — la integridad de un
-  // pack no puede agotarse el día de la instalación: la puerta de apertura
-  // (packFileState, la que usa packs.ts) exige los bytes verificados contra
-  // el pin (catálogo o registro de importación), con el diario como vía
-  // rápida y el re-hash como adopción, igual que los GGUF.
-  // -------------------------------------------------------------------------
-
-  it("M-35/B1: un pack de catálogo sustituido por otros bytes del mismo tamaño no se abre", async () => {
-    const { packFileState } = await import("./modelTrust");
-    await installOld();
-    const tampered = OLD_PACK.slice();
-    tampered[10] ^= 0xff; // same size, different bytes, new mtime
-    hoisted.writeFile(packPath, tampered, 9999);
-    resetInstallReconcileForTests();
-    expect(await packFileState(oldPack)).toBe("unusable");
-    // And the tampered file is not silently deleted by a state query either:
-    // deletion belongs to the manager's status path, not to opening.
-    expect(hoisted.fileExists(packPath)).toBe(true);
-  });
-
-  it("M-35/B1: sin diario, los bytes correctos se adoptan con un re-hash y quedan en el diario", async () => {
-    const { packFileState } = await import("./modelTrust");
-    const { getInstallRecord } = await import("./installState");
-    await installOld();
-    hoisted.files.delete(hoisted.JOURNAL); // journal lost (reinstall, corruption…)
-    resetInstallReconcileForTests();
-    expect(await getInstallRecord(oldPack.id)).toBeNull();
-    expect(await packFileState(oldPack)).toBe("current");
-    const rec = await getInstallRecord(oldPack.id);
-    expect(rec?.status).toBe("installed");
-    expect(rec?.sha256).toBe(oldPack.sha256);
-  });
-
-  it("M-35/F-03: un fichero sin pin (ni catálogo ni registro) nunca es «current» por existir", async () => {
-    const { packFileState } = await import("./modelTrust");
-    hoisted.writeFile(packPath, OLD_PACK.slice(), 4242);
-    expect(await packFileState({ ...oldPack, id: "local-suelto", sizeBytes: 0, sha256: "" })).toBe("unusable");
-  });
-
-  it("M-35/B2: un pack importado (pin del registro) se verifica al abrir; manipulado, no se abre", async () => {
-    const { packFileState } = await import("./modelTrust");
-    const IMP = new Uint8Array(1200);
-    for (let i = 0; i < IMP.length; i++) IMP[i] = (i * 7 + 3) & 0xff;
-    const imported = {
-      ...oldPack,
-      id: "local-tienda",
-      filename: "corpus/tienda.sqlite",
-      sizeBytes: IMP.length,
-      sha256: sha256Of(IMP),
-    };
-    const impPath = `${hoisted.DOCS}${imported.filename}`;
-    hoisted.writeFile(impPath, IMP.slice(), 3000);
-    resetInstallReconcileForTests();
-    // First open: no journal yet — the bytes are hashed against the
-    // registry pin and adopted (the migration path for pre-0.1.99 imports).
-    expect(await packFileState(imported)).toBe("current");
-    const tampered = IMP.slice();
-    tampered[5] ^= 0xff;
-    hoisted.writeFile(impPath, tampered, 4000); // same size, new mtime
-    expect(await packFileState(imported)).toBe("unusable");
-  });
-});
-
-describe("M-37 (auditoría 2026-11-13, F2-M2): estructura GGUF y cabecera en la vía rápida", () => {
-  const readSizesOfModel = () => hoisted.base64ReadSizes.get(modelPath) ?? [];
-  const totalRead = () => readSizesOfModel().reduce((a, b) => a + b, 0);
-
-  it("la vía lenta anota los hechos GGUF verificados en el diario", async () => {
-    // Sin diario previo: la comprobación va por la vía lenta (SHA +
-    // recorrido estructural) y el diario queda con los hechos.
-    hoisted.writeFile(modelPath, GOOD_BYTES.slice(), 1000);
-    const verdict = await checkModelTrust(asset);
-    expect(verdict.trusted).toBe(true);
-    const { loadInstallState } = await import("./installState");
-    const gguf = (await loadInstallState()).records[asset.id]?.gguf;
-    expect(gguf?.version).toBe(3);
-    expect(gguf?.tensorCount).toBe(1);
-    expect(gguf?.metadataCount).toBe(2);
-    expect(gguf?.dataOffset).toBeGreaterThan(24);
-    expect(gguf?.dataOffset).toBeLessThan(GOOD_BYTES.length);
-    expect(gguf?.headerSha256).toBe(sha256Of(GOOD_BYTES.subarray(0, gguf?.dataOffset ?? 0)));
-  });
-
-  it("mismo tamaño y mismo mtime, un byte de la cabecera cambiado: no cuela", async () => {
-    const mgr = makeManager();
-    await mgr.installBundled(asset); // fichero con mtime 2000 (el del APK)
-    // Sustitución con el mismo tamaño y el MISMO mtime: hasta la 0.1.98
-    // la vía rápida la fiaba sin mirar un byte. El byte 60 cae dentro
-    // de los metadatos de la cabecera (el nombre del modelo).
-    const forged = GOOD_BYTES.slice();
-    forged[60] = forged[60] ^ 0xff;
-    hoisted.writeFile(modelPath, forged, 2000);
-    const mgr2 = makeManager();
-    const err = await mgr2.assertTrustedForLoad(asset).catch((e) => e);
-    expect(err).toBeInstanceOf(ModelNotTrustedError);
-    expect(err.reason).toBe("checksum-mismatch"); // la vía lenta corrió y juzgó
-    expect(hoisted.fileExists(modelPath)).toBe(false);
-  });
-
-  it("mismo tamaño y mismo mtime, otro conteo de tensores en el prefijo: no cuela", async () => {
-    const mgr = makeManager();
-    await mgr.installBundled(asset);
-    const forged = GOOD_BYTES.slice();
-    forged[8] = 2; // tensor_count (u64 en el offset 8): 1 → 2
-    hoisted.writeFile(modelPath, forged, 2000);
-    const mgr2 = makeManager();
-    const err = await mgr2.assertTrustedForLoad(asset).catch((e) => e);
-    expect(err).toBeInstanceOf(ModelNotTrustedError);
-    expect(err.reason).toBe("checksum-mismatch");
-  });
-
-  it("SHA del catálogo correcto pero estructura que no es GGUF: invalid-structure y NO se borra", async () => {
-    const garbage = new Uint8Array(4096);
-    for (let i = 0; i < garbage.length; i++) garbage[i] = (i * 7 + 3) & 0xff;
-    const badAsset = {
-      ...asset,
-      id: "trust-test-bad-structure",
-      filename: "models/bad-structure.gguf",
-      sizeBytes: garbage.length,
-      sha256: sha256Of(garbage),
-    };
-    const badPath = `${hoisted.DOCS}${badAsset.filename}`;
-    hoisted.writeFile(badPath, garbage, 1000);
-    const verdict = await checkModelTrust(badAsset);
-    expect(verdict).toMatchObject({ trusted: false, reason: "invalid-structure", deleteFile: false });
-    // Los bytes SON los del catálogo: borrarlos solo re-descargaría los mismos.
-    expect(hoisted.fileExists(badPath)).toBe(true);
-  });
-
-  it("diario sin hechos (anterior a la 0.1.99): la PUERTA (statusOf) fía por la base heredada leyendo solo la cabecera y no anota; la adopción es de la verificación en segundo plano", async () => {
-    const mgr = makeManager();
-    await mgr.installBundled(asset);
-    // Se borran los hechos del diario, como quedaría un registro viejo.
-    const raw = hoisted.td.decode(hoisted.files.get(hoisted.JOURNAL)?.bytes ?? new Uint8Array(0));
-    const parsed = JSON.parse(raw) as { records: Record<string, { gguf?: unknown }> };
-    delete parsed.records[asset.id].gguf;
-    hoisted.writeFile(hoisted.JOURNAL, hoisted.te.encode(JSON.stringify(parsed)), 1000);
-
-    // La puerta de arranque pregunta por statusOf (requiredModelsPresent).
-    hoisted.base64ReadSizes.clear();
-    const mgr2 = makeManager();
-    const status = await mgr2.statusOf(asset);
-    expect(status.present).toBe(true);
-    // REGRESIÓN DE ARRANQUE 0.1.99: la primera versión de esta regla
-    // mandaba el diario heredado a la vía lenta y esta consulta leía el
-    // fichero ENTERO (totalRead >= GOOD_BYTES.length) para hashearlo en
-    // JS puro. Con los GB reales de un LLM tras una actualización, la
-    // puerta se quedó en la rueda de carga en el dispositivo del dueño
-    // (2026-11-15). La conducta buena lee solo la región de cabecera.
-    expect(totalRead()).toBeLessThan(GOOD_BYTES.length);
-    // Y la consulta de estado NO anota hechos en el acto: no es notario.
-    const { loadInstallState } = await import("./installState");
-    expect((await loadInstallState()).records[asset.id]?.gguf).toBeUndefined();
-
-    // REGRESIÓN DE CARGA 0.1.100: la primera versión de la cura dejaba
-    // la adopción a la primera CARGA, y esa verificación entera en JS
-    // puro (0,6 MB/s medidos sin JIT: 4 min para el embedding de
-    // 132 MB, 27-66 min para un LLM de 1-2,4 GB) dejó la pantalla del
-    // dueño en «Cargando el modelo...» sin terminar (2026-11-15). La
-    // carga tampoco hashea: fía por la base heredada tras recorrer la
-    // cabecera, como la puerta — el comportamiento de la 0.1.98 — y la
-    // verificación completa corre en segundo plano.
-    hoisted.base64ReadSizes.clear();
-    await mgr2.assertTrustedForLoad(asset);
-    expect(totalRead()).toBeLessThan(GOOD_BYTES.length);
-    expect((await loadInstallState()).records[asset.id]?.gguf).toBeUndefined();
-
-    // La verificación en segundo plano SÍ hashea el fichero entero y,
-    // al casar el SHA, adopta los hechos anclados a él: la garantía de
-    // M-37 se cumple, solo que sin bloquear ni la puerta ni la carga.
-    await settleBackgroundAdoptionsForTests();
-    expect((await loadInstallState()).records[asset.id]?.gguf).toBeDefined();
-
-    hoisted.base64ReadSizes.clear();
-    const mgr3 = makeManager();
-    await mgr3.assertTrustedForLoad(asset); // ahora: solo la cabecera anotada
-    expect(totalRead()).toBeGreaterThan(0);
-    expect(totalRead()).toBeLessThan(1024);
-  });
-
-  it("diario sin hechos y pesos manipulados tras la cabecera: la carga fía una vez (0.1.98) y la verificación en segundo plano revoca", async () => {
-    const mgr = makeManager();
-    await mgr.installBundled(asset);
-    // Diario heredado (sin hechos) sobre un fichero sustituido con el
-    // mismo tamaño y el mismo mtime, la cabecera intacta y un byte de
-    // los PESOS cambiado: es el residuo declarado de la rama heredada.
-    const raw = hoisted.td.decode(hoisted.files.get(hoisted.JOURNAL)?.bytes ?? new Uint8Array(0));
-    const parsed = JSON.parse(raw) as { records: Record<string, { gguf?: unknown }> };
-    delete parsed.records[asset.id].gguf;
-    hoisted.writeFile(hoisted.JOURNAL, hoisted.te.encode(JSON.stringify(parsed)), 1000);
-    const forged = GOOD_BYTES.slice();
-    forged[200_000] = forged[200_000] ^ 0xff;
-    hoisted.writeFile(modelPath, forged, 2000);
-
-    // La carga no se bloquea: fía por la base heredada (la postura de
-    // la 0.1.98) leyendo solo la cabecera.
-    hoisted.base64ReadSizes.clear();
-    const mgr2 = makeManager();
-    await mgr2.assertTrustedForLoad(asset);
-    expect(totalRead()).toBeLessThan(GOOD_BYTES.length);
-
-    // Pero la mentira no sobrevive a la verificación en segundo plano:
-    // el SHA no casa, el fichero se borra y el registro se limpia — la
-    // siguiente consulta ya no fía nada.
-    await settleBackgroundAdoptionsForTests();
-    expect(hoisted.fileExists(modelPath)).toBe(false);
-    const verdict = await checkModelTrust(asset);
-    expect(verdict.trusted).toBe(false);
-    expect(verdict.reason).toBe("missing");
-  });
-
-  it("el instalador anota los hechos GGUF al instalar: la primera carga de un modelo recién instalado ya es vía rápida", async () => {
-    // Hasta la 0.1.100 el instalador verificaba el fichero entero al
-    // instalar (verifyChecksum / sha256OfFile) pero NO anotaba los
-    // hechos: la primera carga pagaba otra verificación completa. Los
-    // bytes verificados en la instalación son el ancla; el recorrido
-    // de cabecera sobre ellos deja los hechos en el mismo asiento.
-    const mgr = makeManager();
-    await mgr.installBundled(asset);
-    const { loadInstallState } = await import("./installState");
-    const gguf = (await loadInstallState()).records[asset.id]?.gguf;
-    expect(gguf?.version).toBe(3);
-    expect(gguf?.tensorCount).toBe(1);
-    expect(gguf?.headerSha256).toBe(sha256Of(GOOD_BYTES.subarray(0, gguf?.dataOffset ?? 0)));
-
-    hoisted.base64ReadSizes.clear();
-    const mgr2 = makeManager();
-    await mgr2.assertTrustedForLoad(asset); // solo la cabecera anotada
-    expect(totalRead()).toBeGreaterThan(0);
-    expect(totalRead()).toBeLessThan(1024);
-  });
-
-  it("diario sin hechos pero cabecera que no es GGUF: la base heredada NO fía a ciegas", async () => {
-    // El catálogo declara como bueno un fichero cuya estructura no es
-    // GGUF (el caso «invalid-structure» de arriba) y el diario trae un
-    // registro heredado que casa en tamaño, SHA y mtime. La rama
-    // heredada no puede fiarlo: el recorrido de cabecera lo declara
-    // inválido y la decisión cae a la vía lenta, que juzga igual que
-    // sin diario: invalid-structure y el fichero no se borra.
-    const garbage = new Uint8Array(4096);
-    for (let i = 0; i < garbage.length; i++) garbage[i] = (i * 7 + 3) & 0xff;
-    const badAsset = {
-      ...asset,
-      id: "trust-test-bad-structure-legacy",
-      filename: "models/bad-structure-legacy.gguf",
-      sizeBytes: garbage.length,
-      sha256: sha256Of(garbage),
-    };
-    const badPath = `${hoisted.DOCS}${badAsset.filename}`;
-    hoisted.writeFile(badPath, garbage, 1000);
-    const { recordInstall } = await import("./installState");
-    await recordInstall(badAsset.id, {
-      status: "installed",
-      sizeBytes: badAsset.sizeBytes,
-      sha256: badAsset.sha256,
-      mtimeMs: 1000 * 1000,
-    });
-    resetInstallReconcileForTests();
-    const verdict = await checkModelTrust(badAsset);
-    expect(verdict).toMatchObject({ trusted: false, reason: "invalid-structure", deleteFile: false });
-    // Ni siquiera la consulta de estado (la puerta) lo fía: el recorrido
-    // de cabecera lo declara inválido también sobre la base heredada.
-    const statusVerdict = await checkModelTrust(badAsset, { purpose: "status" });
-    expect(statusVerdict).toMatchObject({ trusted: false, reason: "invalid-structure", deleteFile: false });
-    expect(hoisted.fileExists(badPath)).toBe(true);
+    // A local pack (built by the user, no catalog size) opens as before.
+    expect(await packFileState({ ...oldPack, id: "local-x", sizeBytes: 0, sha256: "" })).toBe("current");
   });
 });
