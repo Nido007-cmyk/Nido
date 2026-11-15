@@ -219,6 +219,13 @@ fuente y la fecha. `scripts/check-pack-claims.mjs` vuelve a abrir cada fuente y
 comprueba que la cita sigue ahí; `.github/workflows/pack-claims.yml` lo ejecuta
 cada semana.
 
+Dos cifras de este pack parecen contradecirse y las dos son ciertas.
+Las guías de nido-local cubren 23 países y territorios (edition.json):
+son los lugares con una guía completa escrita. Su tabla de datos
+verificados (facts.json) llega más lejos, con 155 datos comprobados
+en 69 regiones (release-ledger.json), porque un solo dato verificado,
+como un número de emergencias, no necesita una guía completa detrás.
+
 Un pack v2 (`meta.formatVersion = 2`) añade las tablas `guides`, `regions`
 y `facts` y la columna `chunks.keys`; las versiones antiguas de la app lo
 siguen leyendo como antes.
@@ -231,8 +238,15 @@ siguen leyendo como antes.
 npm run pack:push -- build/knowledge-pack/<id>.sqlite
 ```
 
-Copia el archivo al almacenamiento de la app y lo verifica. NIDO usa cualquier pack
-válido en su carpeta `corpus/` desde la siguiente pregunta, sin cambios de código.
+Copia el archivo al almacenamiento de la app y comprueba que la copia
+coincide. Eso solo ya no basta para que la app lo use: un pack solo se
+abre si su integridad se prueba contra un pin: el pin del catálogo
+firmado para los packs del catálogo, o el asiento del registro de
+importación que se escribió cuando la puerta firmada lo verificó. Un
+archivo `.sqlite` que simplemente está en `corpus/` no es un pack y
+nunca se abre. El atajo de desarrollo `pack:push` ya no abre nada por
+sí mismo; los packs de desarrollo entran por el catálogo o por la
+puerta firmada, como cualquier otro pack.
 
 **Para todos los que instalen tu build**, añádelo al catálogo para que la app pueda
 descargarlo:

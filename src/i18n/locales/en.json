@@ -1302,7 +1302,7 @@
   },
   "networkLog": {
     "title": "NETWORK LOG",
-    "body": "Every network request NIDO makes is recorded here. Entries never contain your content: only the host and path, sizes, time and outcome.",
+    "body": "NIDO's own network activity is recorded here: downloads, local Wi-Fi connections, Bluetooth and nearby discovery. Entries never contain your content: only the kind of activity, where it went, sizes, time and outcome. Actions the system or another app performs, like opening a link or the system voice dictation, are not NIDO requests and do not appear here.",
     "empty": "No network requests recorded.",
     "showing": "Showing the latest {{shown}} of {{total}}.",
     "kind": {

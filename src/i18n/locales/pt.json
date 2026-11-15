@@ -1302,7 +1302,7 @@
   },
   "networkLog": {
     "title": "REGISTRO DE REDE",
-    "body": "Cada requisição de rede que o NIDO faz fica registrada aqui. As entradas nunca contêm seu conteúdo: apenas o servidor e o caminho, o tamanho, a hora e o resultado.",
+    "body": "Aqui fica registrada a atividade de rede do próprio NIDO: downloads, conexões por Wi-Fi local, Bluetooth e descoberta de proximidade. As entradas nunca contêm seu conteúdo: apenas o tipo de atividade, para onde foi, o tamanho, a hora e o resultado. O que o sistema ou outro app faz, como abrir um link ou o ditado por voz do sistema, não é uma requisição do NIDO e não aparece aqui.",
     "empty": "Nenhuma requisição de rede registrada.",
     "showing": "Mostrando as últimas {{shown}} de {{total}}.",
     "kind": {

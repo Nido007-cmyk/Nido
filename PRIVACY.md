@@ -17,7 +17,7 @@ NIDO runs on your phone. It has no accounts, no analytics, no advertising and no
 - On-device measurements for the Execution Telemetry screen: timings, and which path each message took (handled by NIDO's router or by the AI model, and which tool). They contain no message text.
 - Only if you turn it on (it is off by default): the last 50 commands NIDO's router did not recognize, so you can review them. Turning the option off deletes them.
 
-This data is stored in an encrypted database (SQLCipher). The encryption key is kept in the Android Keystore. Android automatic cloud backup is disabled for the app.
+Your chats, memory, documents and settings are stored in an encrypted database (SQLCipher), and the encryption key is kept in the Android Keystore. Downloaded AI models and knowledge packs are a different case: they are public files, not your data, so they are stored unencrypted in the app's private storage, where no other app can read them. Before a pack or a model is used, its integrity is checked against a pin: the signed catalog's, or the record written when the signed import door verified it. Android automatic cloud backup is disabled for the app.
 
 ## When NIDO uses the network
 
@@ -65,7 +65,7 @@ By default, voice dictation only works with a speech recognizer that runs on you
 ## Your controls
 
 - Delete any chat, memory, document or contact from inside the app.
-- Erase everything from Settings → Danger zone, or by uninstalling the app. This also deletes the local backups made from Settings; copies you saved elsewhere (Downloads, another app) are outside NIDO and stay. Text you copied to the system clipboard (for example the pairing code, which carries your name and public keys) is also outside NIDO: erasing does not clear the clipboard. The backup key is the exception: NIDO wipes it from the clipboard itself, 60 seconds after copying it.
+- Erase everything from Settings → Danger zone, or by uninstalling the app. This also deletes the local backups made from Settings; copies you saved elsewhere (Downloads, another app) are outside NIDO and stay. Text you copied to the system clipboard (for example the pairing code, which carries your name and public keys) is also outside NIDO: erasing does not clear the clipboard. The backup key is the exception: NIDO wipes it from the clipboard itself, 60 seconds after copying it, while the app is still running. If NIDO is closed first, or on Android versions before 13, a copy can remain in the keyboard's clipboard history.
 - Optional panic button (Settings → Security): holding it for 3 seconds erases all NIDO data at once, without asking for a fingerprint.
 - NIDO asks your keyboard not to learn from what you type in it (incognito keyboard). Major keyboards respect this; NIDO cannot force one that ignores it.
 - Create an encrypted backup and keep the key yourself. If you lose the key, nobody can recover the data, including the maintainers.
@@ -97,7 +97,7 @@ NIDO funciona en tu teléfono. No tiene cuentas, ni analítica, ni publicidad, n
 - Solo si lo activas (viene apagado): las últimas 50 órdenes que el enrutador de NIDO no reconoció, para que puedas revisarlas. Al apagar la opción se borran.
 - El registro de red (ver más abajo).
 
-Estos datos se guardan en una base de datos cifrada (SQLCipher). La clave de cifrado se guarda en el Keystore de Android. El respaldo automático en la nube de Android está desactivado para la app.
+Tus chats, tu memoria, tus documentos y tus ajustes se guardan en una base de datos cifrada (SQLCipher), y la clave de cifrado se guarda en el Keystore de Android. Los modelos de IA y los packs de conocimiento descargados son otra cosa: son archivos públicos, no datos tuyos, así que se guardan sin cifrar en el almacenamiento privado de la app, donde ninguna otra app puede leerlos. Antes de usar un pack o un modelo, su integridad se comprueba contra un pin: el del catálogo firmado, o el asiento que se escribió cuando la puerta de importación firmada lo verificó. El respaldo automático en la nube de Android está desactivado para la app.
 
 ## Cuándo usa NIDO la red
 
@@ -145,7 +145,7 @@ Por defecto, el dictado solo funciona con un reconocedor de voz que trabaja en t
 ## Tus controles
 
 - Borra cualquier chat, memoria, documento o contacto desde la app.
-- Borra todo desde Ajustes → Zona de peligro, o desinstalando la app. Eso borra también los respaldos locales hechos desde Ajustes; las copias que guardaste fuera (Descargas, otra app) quedan fuera de NIDO y siguen ahí. El texto que copiaste al portapapeles del sistema (por ejemplo el código de emparejamiento, que lleva tu nombre y tus claves públicas) también queda fuera de NIDO: el borrado no limpia el portapapeles. La llave del respaldo es la excepción: NIDO la borra del portapapeles por sí mismo, 60 segundos después de copiarla.
+- Borra todo desde Ajustes → Zona de peligro, o desinstalando la app. Eso borra también los respaldos locales hechos desde Ajustes; las copias que guardaste fuera (Descargas, otra app) quedan fuera de NIDO y siguen ahí. El texto que copiaste al portapapeles del sistema (por ejemplo el código de emparejamiento, que lleva tu nombre y tus claves públicas) también queda fuera de NIDO: el borrado no limpia el portapapeles. La llave del respaldo es la excepción: NIDO la borra del portapapeles por sí mismo, 60 segundos después de copiarla, mientras la app siga abierta. Si NIDO se cierra antes, o en versiones de Android anteriores a la 13, puede quedar una copia en el historial del teclado.
 - Botón de pánico opcional (Ajustes → Seguridad): mantenerlo 3 segundos borra todos los datos de NIDO de una vez, sin pedir huella.
 - NIDO pide a tu teclado que no aprenda de lo que escribes en la app (teclado incógnito). Los teclados principales lo respetan; NIDO no puede obligar a uno que lo ignore.
 - Crea un respaldo cifrado y guarda tú la clave. Si pierdes la clave, nadie puede recuperar los datos, tampoco quienes mantienen el proyecto.

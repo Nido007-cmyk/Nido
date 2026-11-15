@@ -179,8 +179,9 @@ Before and during a run:
 - **Check the phone isn't busy.** `eval:device` reloads the app. Don't run it,
   reinstall, force-stop or reload while a model download is in progress
   (`adb shell dumpsys power | grep NIDO:ModelDownload`, or a growing file in
-  `adb exec-out run-as team.nido.app ls -l files/models`); downloads can't
-  resume after a restart. The phone's owner may be using it: ask first.
+  `adb exec-out run-as team.nido.app ls -l files/models`); a download caught
+  mid-transfer by the restart may have to start over, and a paused download
+  resumes. The phone's owner may be using it: ask first.
 - **Don't edit app source files while a run is going.** Metro hot-reloads them
   into the running app, which can interrupt the evaluation. Docs and scripts are
   fine.
