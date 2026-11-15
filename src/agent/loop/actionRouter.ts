@@ -451,7 +451,22 @@ const PT_CLOCK_FORM_WORDS = new Set([
 // («cuna», «duna», «luna», «tuna») son la misma clase: «mirar a
 // la luna» y «llevar al bebé a la cuna» son contenido (un
 // destino), no un dictado de la una.
-const CLOCK_FRAME_ORDINARIES = new Set(["nueva", "nova", "cuna", "duna", "luna", "tuna"]);
+// 0.1.99 (T-38, H-Z4-5-R4): la lista de T-36 medía solo las
+// inserciones de primera letra con c/d/l/t; el vecindario entero
+// de una edición de las 28 palabras de reloj de ambos marcos,
+// re-medido por construcción, da la membresía real de la clase:
+// «puna» (la misma inserción con «p») y «urna» (inserción en el
+// medio) tras «a la»; «seta» y «sede» (de «sete»: «ir à sede»),
+// «nieve» (de «nueve»: «ir a la nieve»), «leis» (de «seis»:
+// «obedecer às leis») y «dunas» y «ruas» (de «duas»: destinos)
+// tras el marco PT. Ninguna de las ocho la genera la rejilla
+// sistemática de la repetición como distorsión; la palabra real
+// que la rejilla sí genera («nave», «neve», como «cuarto»)
+// sigue avisando: la rejilla es la cerca.
+const CLOCK_FRAME_ORDINARIES = new Set([
+  "nueva", "nova", "cuna", "duna", "luna", "tuna",
+  "puna", "urna", "seta", "sede", "nieve", "leis", "dunas", "ruas",
+]);
 // 0.1.99 (T-36, H-Z4-5-R3): la gemela también puede ser corta.
 // La guarda exigía que la palabra de la tabla midiera ≥4, y las
 // palabras de reloj de 3 letras de cada marco («dez» y «uma» en
