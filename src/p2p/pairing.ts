@@ -59,8 +59,17 @@ export interface PairingPayload {
   caps?: string[];
 }
 
-/** 0.1.49: capacidades que anuncia el QR de este NIDO. */
-export const PAIRING_CAPS: readonly string[] = ["c4", "cf2"];
+/**
+ * 0.1.49: lo que sabe hacer este NIDO, para no esperar a la primera
+ * conexión (que es justo la que un atacante podría degradar). El QR se
+ * escanea en persona, así que esto es auténtico. Un NIDO viejo ignora el
+ * campo. "c4" = saludo sellado; "cf2" = CONFIRM v2.
+ * T-12 (0.1.99, M-26): "r5" = protocolo v5 (ratchet + ML-KEM). Hasta esta
+ * tanda el HELLO anunciaba c4 pero NO v5: la capacidad v5 se aprendía en
+ * la primera conexión, que es justo la que un atacante en el aire puede
+ * degradar quitando la oferta. El QR es el canal que no puede quitar.
+ */
+export const PAIRING_CAPS: readonly string[] = ["c4", "cf2", "r5"];
 
 /**
  * Codifica el payload para mostrarlo como QR (siempre v2).

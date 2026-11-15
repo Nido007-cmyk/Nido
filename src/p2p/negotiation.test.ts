@@ -8,8 +8,7 @@
  * negotiation.test.ts — Tests del protocolo de negociación NIDO-to-NIDO.
  *
  * Happy paths:
- * - PROPOSE → ACCEPT → grant válido
- * - PROPOSE → COUNTER → ACCEPT → grant con scopes modificados
+ * - PROPOSE → COUNTER → ACCEPT
  * - DECLINE explícito
  * - EXPIRE por timeout
  *
@@ -18,9 +17,11 @@
  * - Payload modificado
  * - Receptor equivocado
  * - Replay de PROPOSE
- * - Grant expirado
- * - Grant con usos agotados
  * - Escalación de privilegios
+ *
+ * Los casos de grants (issueGrant/verifyGrant) se retiraron con esa
+ * superficie en T-12 (m-45, 0.1.99): no tenía llamadores de producción.
+ * RevocationRegistry sigue viva y sus casos quedan, con ids literales.
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
@@ -29,8 +30,6 @@ import {
   createProposal,
   verifyProposal,
   createCounter,
-  issueGrant,
-  verifyGrant,
   isExpired,
   isValidTransition,
   canonicalSerialize,
@@ -88,25 +87,6 @@ describe("negotiation: happy paths", () => {
     expect(counter.requestedScopes).toEqual(["read:notes"]);
     expect(counter.proposalId).toBe(original.proposalId);
     expect(verifyProposal(counter, bobKeys.publicKey)).toBe(true);
-  });
-
-  it("ACCEPT emite grant válido con límites", () => {
-    const grant = issueGrant(
-      bobKeys.secretKey,
-      bobPkHex,
-      alicePkHex,
-      ["read:notes"],
-      "task-123",
-      300000, // 5 min
-      3 // max 3 usos
-    );
-
-    expect(grant.grantId).toBeTruthy();
-    expect(grant.maxUses).toBe(3);
-    expect(grant.usesConsumed).toBe(0);
-
-    const check = verifyGrant(grant, bobKeys.publicKey);
-    expect(check.valid).toBe(true);
   });
 
   it("EXPIRE: propuesta vencida detectada", () => {
@@ -191,55 +171,14 @@ describe("negotiation: adversarial paths", () => {
     expect(verifyProposal(tampered, aliceKeys.publicKey)).toBe(false);
   });
 
-  it("RECHAZA grant expirado", () => {
-    const grant = issueGrant(
-      bobKeys.secretKey,
-      bobPkHex,
-      alicePkHex,
-      ["read:notes"],
-      "task-1",
-      100, // 100ms
-      5
-    );
-
-    // Verificar en el futuro → expirado
-    const check = verifyGrant(grant, bobKeys.publicKey, 0, Date.now() + 10000);
-    expect(check.valid).toBe(false);
-    expect(check.reason).toBe("expired");
-  });
-
-  it("RECHAZA grant con usos agotados", () => {
-    const grant = issueGrant(
-      bobKeys.secretKey,
-      bobPkHex,
-      alicePkHex,
-      ["read:notes"],
-      "task-1",
-      300000,
-      1 // Solo 1 uso
-    );
-
-    // Verificar con 1 uso consumido → agotado
-    const check = verifyGrant(grant, bobKeys.publicKey, 1);
-    expect(check.valid).toBe(false);
-    expect(check.reason).toBe("uses_exhausted");
-  });
-
   it("RECHAZA grant revocado", () => {
+    // T-12 (m-45): RevocationRegistry sigue viva (espejo de revocación de
+    // pares y sesiones); el caso usa un id de grant literal porque la
+    // emisión de grants se retiró con la superficie muerta.
     const registry = new RevocationRegistry();
-    const grant = issueGrant(
-      bobKeys.secretKey,
-      bobPkHex,
-      alicePkHex,
-      ["read:notes"],
-      "task-1",
-      300000,
-      5
-    );
-
-    registry.revokeGrant(grant.grantId, "compromised");
-    expect(registry.isGrantRevoked(grant.grantId)).toBe(true);
-    expect(registry.isGrantUsable(grant.grantId, alicePkHex)).toBe(false);
+    registry.revokeGrant("grant-literal-1", "compromised");
+    expect(registry.isGrantRevoked("grant-literal-1")).toBe(true);
+    expect(registry.isGrantUsable("grant-literal-1", alicePkHex)).toBe(false);
   });
 
   it("RECHAZA peer revocado", () => {

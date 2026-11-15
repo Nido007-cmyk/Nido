@@ -366,6 +366,16 @@ class NidoP2PModule : Module() {
       }
     }
 
+    /**
+     * T-12 (m-37): el transporte JS avisa de que la ruta con esta
+     * dirección quedó establecida y autenticada (CONFIRM verificado).
+     * Solo entonces el lector LAN retira el timeout del socket; sin la
+     * señal, la conexión muere al vencer la gracia post-saludo.
+     */
+    Function("markLanAuthenticated") { address: String ->
+      lan.markAuthenticated(address)
+    }
+
     AsyncFunction("shutdown") { promise: Promise ->
       io.execute {
         try {

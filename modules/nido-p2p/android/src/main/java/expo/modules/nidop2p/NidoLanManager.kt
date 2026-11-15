@@ -78,6 +78,27 @@ class NidoLanManager(
      * callada mucho rato.
      */
     const val HANDSHAKE_READ_TIMEOUT_MS = 20_000
+    /**
+     * T-12 (0.1.99, m-37): gracia POST-saludo. Antes, al llegar el segundo
+     * frame el lector retiraba el timeout PARA SIEMPRE, por conteo y no
+     * por autenticación: cualquier aparato de la red local que mandara
+     * dos frames cualesquiera se quedaba con un socket abierto sin
+     * límite. Ahora el segundo frame solo abre esta gracia; el timeout
+     * se retira cuando el transporte JS confirma que la ruta quedó
+     * establecida y autenticada (markLanAuthenticated, tras verificar el
+     * CONFIRM firmado). Sin esa señal, la conexión muere al vencer.
+     */
+    const val AUTH_GRACE_TIMEOUT_MS = 30_000
+    /**
+     * T-12 (0.1.99, m-39): tarifa de accepts. Los topes de conexiones
+     * simultáneas (8 y 2 por IP) no frenaban el ciclo abrir/cerrar: cada
+     * accept crea un hilo lector y eventos hacia JS. Por encima de la
+     * tarifa, el socket se acepta y se cierra al instante (el backlog no
+     * se atasca y el cliente legítimo puede reintentar tras la ventana).
+     */
+    const val ACCEPT_WINDOW_MS = 10_000
+    const val MAX_ACCEPTS_PER_IP_WINDOW = 12
+    const val MAX_ACCEPTS_GLOBAL_WINDOW = 48
     const val TAG = "NidoLan"
 
     private val ADDRESS_RE = Regex("^LAN:(\\d{1,3}(?:\\.\\d{1,3}){3}):(\\d{1,5})$")
@@ -290,6 +311,13 @@ class NidoLanManager(
         closeQuietly(socket)
         continue
       }
+      if (!acceptRateAllows(remote.hostAddress)) {
+        // T-12 (m-39): tarifa de accepts excedida: se acepta y se cierra
+        // al instante, sin crear hilo lector ni eventos hacia JS.
+        Log.w(TAG, "conexión cerrada al instante: tarifa de accepts excedida")
+        closeQuietly(socket)
+        continue
+      }
       if (connections.size >= MAX_CONNECTIONS) {
         Log.w(TAG, "conexión rechazada: tope de $MAX_CONNECTIONS conexiones")
         closeQuietly(socket)
@@ -307,6 +335,39 @@ class NidoLanManager(
       }
       onSocket(socket, formatAddress(remote, socket.port), incoming = true)
     }
+  }
+
+  // T-12 (m-39): ventana de tarifa de accepts (ver constantes).
+  private val acceptRateLock = Any()
+  private var acceptWindowStartMs = 0L
+  private var acceptWindowTotal = 0
+  private val acceptWindowPerIp = HashMap<String, Int>()
+
+  private fun acceptRateAllows(ip: String): Boolean {
+    val now = System.currentTimeMillis()
+    synchronized(acceptRateLock) {
+      if (now - acceptWindowStartMs >= ACCEPT_WINDOW_MS) {
+        acceptWindowStartMs = now
+        acceptWindowTotal = 0
+        acceptWindowPerIp.clear()
+      }
+      val perIp = acceptWindowPerIp[ip] ?: 0
+      if (perIp >= MAX_ACCEPTS_PER_IP_WINDOW || acceptWindowTotal >= MAX_ACCEPTS_GLOBAL_WINDOW) {
+        return false
+      }
+      acceptWindowPerIp[ip] = perIp + 1
+      acceptWindowTotal += 1
+      return true
+    }
+  }
+
+  /**
+   * T-12 (m-37): el transporte JS confirma que la ruta con esta
+   * dirección quedó establecida y autenticada (CONFIRM verificado).
+   * Solo entonces el lector de esa conexión retira su timeout.
+   */
+  fun markAuthenticated(address: String) {
+    connections[address]?.markAuthenticated()
   }
 
   // ------------------------------------------------------------ cliente
@@ -576,7 +637,20 @@ class NidoLanManager(
   ) {
     private val readerThread = Thread({ readLoop() }, "nido-lan-read")
     @Volatile private var closed = false
+    /**
+     * T-12 (m-37): true solo cuando JS confirmó la ruta autenticada
+     * (markAuthenticated). El conteo de frames ya NO retira el timeout.
+     */
+    @Volatile private var authenticated = false
     private var framesRead = 0
+
+    fun markAuthenticated() {
+      authenticated = true
+      try {
+        socket.soTimeout = 0
+      } catch (_: Exception) {
+      }
+    }
 
     fun start() {
       readerThread.isDaemon = true
@@ -626,9 +700,12 @@ class NidoLanManager(
           val body = ByteArray(bodyLen)
           readFully(input, body, bodyLen)
           if (framesRead == HANDSHAKE_FRAMES) {
-            // Saludo completo: sin tope de silencio a partir de aquí.
+            // Saludo completo en frames, pero aún NO autenticado: corre
+            // la gracia post-saludo (T-12, m-37). El timeout solo se
+            // retira del todo con la señal de ruta autenticada; si la
+            // conexión ya la traía, queda sin tope desde aquí.
             try {
-              socket.soTimeout = 0
+              socket.soTimeout = if (authenticated) 0 else AUTH_GRACE_TIMEOUT_MS
             } catch (_: Exception) {
             }
           }

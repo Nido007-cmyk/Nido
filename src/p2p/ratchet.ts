@@ -82,6 +82,12 @@ const NONCE_BYTES = nacl.secretbox.nonceLength;
 const MAC_BYTES = nacl.secretbox.overheadLength;
 /** Máximo de claves saltadas que se calculan/guardan (mensajes perdidos). */
 export const MAX_SKIP = 256;
+/**
+ * T-12 (m-48): desencapsulados ML-KEM de arranque que L tolera sin un
+ * open válido antes de dejar de desencapsular primeros frames. El
+ * arranque honesto gasta 1; 8 da margen a frames corruptos sueltos.
+ */
+const MAX_BOOT_ATTEMPTS = 8;
 /** Máximo de claves saltadas recordadas en total por sesión. */
 const MAX_SKIPPED_STORED = 512;
 
@@ -332,6 +338,17 @@ export class V5Ratchet {
   /** ¿Ya llegó al menos un frame v5 válido del peer? */
   private heardV5 = false;
   /**
+   * T-12 (0.1.99, m-48): presupuesto de arranques ML-KEM de L. Antes de
+   * autenticar nada, cada primer frame con ct costaba un desencapsulado
+   * ML-KEM completo (la operación cara del protocolo) a quien lo recibe,
+   * y cero al que lo manda: coste asimétrico a favor del atacante. El
+   * arranque honesto necesita exactamente UN desencapsulado bueno; tras
+   * MAX_BOOT_ATTEMPTS fallidos, los primeros frames se ignoran sin
+   * desencapsular hasta que haya un ratchet nuevo (reconexión). El modo
+   * clásico no se ve afectado.
+   */
+  private bootAttempts = 0;
+  /**
    * 0.1.50: ¿cabeceras cifradas? true/false una vez decidido; null = L
    * todavía no sabe si H lo entiende (lo sabrá con el primer frame de H).
    */
@@ -495,6 +512,9 @@ export class V5Ratchet {
       if (this.state === null) {
         // L (Bob) arrancando: hace falta el cifrado ML-KEM.
         if (this.role !== "low" || !this.offer || !p.ct) return null;
+        // T-12 (m-48): presupuesto de arranques (ver bootAttempts).
+        if (this.bootAttempts >= MAX_BOOT_ATTEMPTS) return null;
+        this.bootAttempts += 1;
         const ss = kemDecapsulate(p.ct, this.offer.kem.secretKey);
         const rk0 = deriveV5Root(this.sessionKey, ss, this.lowPk, this.highPk, this.offer.kem.publicKey, p.ct);
         ss.fill(0);

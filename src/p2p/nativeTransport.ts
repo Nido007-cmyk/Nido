@@ -84,6 +84,7 @@ import {
   tieBreakKey,
 } from "./handshakeV3";
 import { encodeBase64, decodeBase64 } from "./base64";
+import { inboundQuota } from "./inboundQuota";
 import { networkAudit } from "../privacy/networkAudit";
 import { withPermissionRequest } from "./permissionGuard";
 
@@ -129,6 +130,14 @@ export interface NidoP2PBindings {
    */
   startLan?(): Promise<void>;
   stopLan?(): Promise<void>;
+  /**
+   * T-12 (m-37): avisa al módulo LAN de que esta dirección ya autenticó
+   * (ruta establecida tras verificar el CONFIRM firmado). Solo entonces
+   * el lector nativo retira el timeout del socket; sin esta señal, una
+   * conexión que saludó pero nunca autenticó muere al vencer la gracia
+   * post-saludo. Opcional: módulos nativos anteriores no lo tienen.
+   */
+  markLanAuthenticated?(address: string): void;
   addListener(event: "onDeviceFound", fn: (d: { address: string; name: string | null }) => void): () => void;
   addListener(event: "onDiscoveryFinished", fn: () => void): () => void;
   addListener(
@@ -276,7 +285,12 @@ export function parseHello(body: Uint8Array): HelloPayload {
   if (body.length > MAX_HANDSHAKE_BODY_BYTES) throw new Error("HELLO demasiado grande.");
   let obj: Record<string, unknown>;
   try {
-    obj = JSON.parse(new TextDecoder().decode(body)) as Record<string, unknown>;
+    // T-12 (m-40): decodificación ESTRICTA. Estos bytes aún no están
+    // autenticados; un decodificador permisivo convertiría secuencias
+    // UTF-8 inválidas en U+FFFD y el JSON «parsearía» igual, dejando que
+    // dos cuerpos distintos colapsen en el mismo objeto. Con fatal:true,
+    // lo malformado es simplemente «no es JSON».
+    obj = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body)) as Record<string, unknown>;
   } catch {
     throw new Error("HELLO no es JSON.");
   }
@@ -1836,6 +1850,12 @@ export class NidoBluetoothTransport implements P2PTransport {
     }
     const pk = this.macToPk.get(mac);
     if (pk) {
+      // T-12 (M-24 capa 1): cubeta de frames por par en la ruta
+      // establecida. Un par autenticado que inunda deja de entregar
+      // frames a la capa de mensajería hasta que su ventana gira; los
+      // descartes se cuentan en inboundQuota. La ruta NO se corta: solo
+      // se deja de reenviar el exceso.
+      if (!inboundQuota.tryFrame(pk)) return;
       this.events?.onFrame?.(pk, body);
       return;
     }
@@ -2168,6 +2188,17 @@ export class NidoBluetoothTransport implements P2PTransport {
     }
     this.macToPk.set(mac, pkLower);
     this.pkToMac.set(pkLower, mac);
+    // T-12 (m-37): la ruta queda establecida y AUTENTICADA en este punto
+    // (el CONFIRM verificó firma y nonces). Si la dirección es LAN, se
+    // avisa al módulo nativo para que el lector retire el timeout del
+    // socket; hasta este aviso solo corre la gracia post-saludo.
+    if (isLanAddress(mac)) {
+      try {
+        this.bindings?.markLanAuthenticated?.(mac);
+      } catch {
+        /* best-effort: un módulo sin la señal conserva la gracia */
+      }
+    }
     this.lastHandshakeAt.set(pkLower, Date.now());
     this.confirmedPair.set(mac, {
       pkLower,

@@ -185,3 +185,89 @@ export class RevocationRegistry {
 /** Instancia global (una por proceso). */
 export const globalReplayProtection = new ReplayProtection();
 export const globalRevocationRegistry = new RevocationRegistry();
+
+/**
+ * T-12 (0.1.99, M-25): anti-replay de NEGOCIACIÓN por cubetas.
+ *
+ * La cache única anterior tenía un fallo de aislamiento: era global y
+ * fail-closed, así que UN solo par podía llenarla con 10.000 nonces
+ * basura (el nonce se consume antes de comprobar la firma anclada al QR)
+ * y dejar mudas a TODAS las negociaciones legítimas durante la ventana.
+ *
+ * Aquí cada par tiene su cubeta (tope por par), con un tope global como
+ * cota de memoria de respaldo. Dentro de cada cubeta se mantiene la regla
+ * M2: fail-closed, jamás FIFO (expulsar un nonce vigente permitiría
+ * re-aceptar su replay). Un par solo puede llenar SU cubeta: para agotar
+ * también el respaldo global harían falta muchos pares inundando a la vez,
+ * y aun así cada cubeta conserva lo ya registrado.
+ */
+export class BucketedReplayProtection {
+  private buckets = new Map<string, Map<string, number>>();
+  private total = 0;
+  private readonly windowMs: number;
+  private perPeerMax: number;
+  private globalMax: number;
+
+  constructor(windowMs: number = 600000, perPeerMax: number = 1000, globalMax: number = 10000) {
+    this.windowMs = windowMs;
+    this.perPeerMax = perPeerMax;
+    this.globalMax = globalMax;
+  }
+
+  /**
+   * Verifica y registra un nonce DENTRO de la cubeta de su par.
+   * false si es replay, si la cubeta del par está llena o si el respaldo
+   * global está lleno.
+   */
+  checkAndRecord(peerKey: string, nonce: string, now: number = Date.now()): boolean {
+    const key = peerKey.toLowerCase();
+    this.evictExpired(now);
+    let bucket = this.buckets.get(key);
+    if (bucket?.has(nonce)) return false; // replay dentro de su cubeta
+    if (bucket && bucket.size >= this.perPeerMax) return false; // su cubeta, llena
+    if (this.total >= this.globalMax) return false; // respaldo global, lleno
+    if (!bucket) {
+      bucket = new Map<string, number>();
+      this.buckets.set(key, bucket);
+    }
+    bucket.set(nonce, now);
+    this.total += 1;
+    return true;
+  }
+
+  private evictExpired(now: number): void {
+    const cutoff = now - this.windowMs;
+    for (const [key, bucket] of this.buckets) {
+      for (const [nonce, seenAt] of bucket) {
+        if (seenAt < cutoff) {
+          bucket.delete(nonce);
+          this.total -= 1;
+        }
+      }
+      if (bucket.size === 0) this.buckets.delete(key);
+    }
+  }
+
+  /** Limpia todo (para tests). */
+  clear(): void {
+    this.buckets.clear();
+    this.total = 0;
+  }
+
+  get size(): number {
+    return this.total;
+  }
+
+  peerSize(peerKey: string): number {
+    return this.buckets.get(peerKey.toLowerCase())?.size ?? 0;
+  }
+
+  /** Ajuste de topes para tests (patrón de la casa: featureFlags). */
+  setLimitsForTests(perPeerMax: number, globalMax: number): void {
+    this.perPeerMax = perPeerMax;
+    this.globalMax = globalMax;
+  }
+}
+
+/** Anti-replay de negociación: cubetas por par (M-25). */
+export const globalNegotiationReplayProtection = new BucketedReplayProtection();
