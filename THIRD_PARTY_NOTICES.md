@@ -9,7 +9,7 @@ The list covers every package that `package-lock.json` does not mark as developm
 
 AI models are not part of the app: they are downloaded separately and keep their own licenses. Two of NIDO's own knowledge packs ship inside the APK since 0.1.95 (NIDO Essentials and NIDO Local, CC BY 4.0); the other packs are downloaded separately. All of them keep their own licenses (see [ATTRIBUTION.md](ATTRIBUTION.md) and `docs/release/MODEL_LICENSE_AUDIT.md`). Android libraries resolved by Gradle at build time (AndroidX, Kotlin, SQLCipher and their dependencies) do not come from npm: since 0.1.55 the exact list for each build is attached to its GitHub release as `android-runtime-dependencies.txt` (see below).
 
-Source: `package-lock.json sha256:3377d623a755` · 594 packages.
+Source: `package-lock.json sha256:0b5d5ba343ce` · 592 packages.
 
 ## License elections
 
@@ -334,7 +334,6 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | fontfaceobserver | 2.3.0 | BSD-2-Clause |
 | fresh | 0.5.2 | MIT |
 | fs.realpath | 1.0.0 | ISC |
-| fsevents | 2.3.3 | MIT |
 | function-bind | 1.1.2 | MIT |
 | gensync | 1.0.0-beta.2 | MIT |
 | get-caller-file | 2.0.5 | ISC |
@@ -358,7 +357,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | html-parse-stringify | 4.0.1 | MIT |
 | http-errors | 2.0.1 | MIT |
 | https-proxy-agent | 7.0.6 | MIT |
-| i18next | 26.7.1 | MIT |
+| i18next | 27.1.1 | MIT |
 | ignore | 5.3.2 | MIT |
 | imurmurhash | 0.1.4 | MIT |
 | inflight | 1.0.6 | ISC |
@@ -516,7 +515,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | range-parser | 1.2.1 | MIT |
 | react | 19.2.3 | MIT |
 | react-devtools-core | 6.1.5 | MIT |
-| react-i18next | 17.1.12 | MIT |
+| react-i18next | 18.0.1 | MIT |
 | react-is | 18.3.1 | MIT |
 | react-native | 0.86.3 | MIT |
 | react-native-safe-area-context | 5.11.1 | MIT |
@@ -593,7 +592,6 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | unicode-property-aliases-ecmascript | 2.2.0 | MIT |
 | unpipe | 1.0.0 | MIT |
 | update-browserslist-db | 1.3.3 | MIT |
-| use-sync-external-store | 1.7.0 | MIT |
 | utils-merge | 1.0.1 | MIT |
 | validate-npm-package-name | 5.0.1 | ISC |
 | vary | 1.1.2 | MIT |
@@ -10006,7 +10004,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### i18next@26.7.1 — LICENSE
+### i18next@27.1.1 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -14896,7 +14894,7 @@ SOFTWARE.
 
 Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
 
-### react-i18next@17.1.12 — LICENSE
+### react-i18next@18.0.1 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -16737,32 +16735,6 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### use-sync-external-store@1.7.0 — LICENSE
-
-```text
-MIT License
-
-Copyright (c) Meta Platforms, Inc. and affiliates.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
 ### utils-merge@1.0.1 — LICENSE
 
 ```text
@@ -17874,7 +17846,6 @@ These packages declare a license in their `package.json` but ship no license fil
 - bser@2.1.1
 - fb-dotslash@0.5.8
 - fb-watchman@2.0.2
-- fsevents@2.3.3
 - imurmurhash@0.1.4
 - jimp-compact@0.16.1
 - stream-buffers@2.2.0
