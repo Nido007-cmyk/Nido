@@ -4,6 +4,58 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.101-alpha - 2026-11-15
+
+The fix for the fix: 0.1.100 opened, but the first model load
+never finished. Installed as an update over the withdrawn 0.1.99
+on the owner's tablet, the app reached its home screen and then
+sat on "Loading the model..." for good, and the owner judged it
+unusable. This release fixes exactly that; everything else is
+the 0.1.100 release, unchanged.
+
+**What broke.** 0.1.100 separated the startup gate from the full
+verification, but left the full verification, and its whole cost,
+on the first load of each model. With an install journal written
+before the structural facts existed, loading a model first hashed
+the whole file in pure JavaScript: the 132 MB search model and a
+language model of up to 2.4 GB, at interpreter speed (measured at
+about 0.6 MB/s without a JIT), with no progress shown and no way
+to cancel. That is minutes for the search model and up to an
+hour for the largest language model, and if the process died
+halfway, the next attempt started the hash from zero. The
+installer made it worse: it verified each file in full at
+install time but never wrote down the structural facts, so even
+a freshly installed model paid the same verification on its
+first load.
+
+**The fix.** Three pieces, all in the model trust check. First,
+the inherited branch now covers loading too: a journal without
+facts whose recorded base still matches (installed, same size,
+same recorded fingerprint, same modification time, the full
+verification the installer ran and vouched for at install time)
+plus a header that walks as a valid model structure is trusted
+for loading, reading only the header, the stance 0.1.98 had plus
+the structural walk 0.1.98 never did; an invalid header is
+trusted for nothing. Second, the full verification now runs in
+the background, once per model: if the whole-file hash matches,
+it writes down the structural facts anchored to that hash, so
+the M-37 guarantee is settled for good; if it does not match, it
+deletes the file and clears the record, revoking what the
+inherited branch trusted. Third, the installer now writes down
+the structural facts at install time, over bytes it has just
+verified in full, so every model installed from this release on
+is born on the fast path.
+
+**What did not change.** With facts on record, M-37 is intact
+before any load: a different header still sends the file to the
+slow path before it loads. With no journal, or a base that does
+not match, the first sight of a file still pays the full
+verification before anything trusts it.
+
+**If you installed 0.1.100.** Install this release as an update
+over it. Your downloads and data are preserved, and the chat
+loads its model at its normal speed again, as in 0.1.98.
+
 ## 0.1.100-alpha - 2026-11-15
 
 The fix for the update that never opened. 0.1.99 was published and
