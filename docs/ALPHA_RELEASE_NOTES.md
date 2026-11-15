@@ -80,7 +80,7 @@ so, plainly.
 
 | Version | CI green | Run on a real device (Tab A9+) | Notes |
 | --- | --- | --- | --- |
-| 0.1.102 | Yes | Not yet | [TEST COUNT] tests; the model load path rolled back to 0.1.98's form by the owner's order, after 0.1.101's tablet pass failed too; its device pass is installing it as an update over 0.1.101 on the owner's tablet and checking the chat loads its model at its normal speed, as in 0.1.98 |
+| 0.1.102 | Yes | Not yet | 8,714 tests; the model load path rolled back to 0.1.98's form by the owner's order, after 0.1.101's tablet pass failed too; its device pass is installing it as an update over 0.1.101 on the owner's tablet and checking the chat loads its model at its normal speed, as in 0.1.98 |
 | 0.1.101 | Yes | Yes: installed as an update over 0.1.100, the app stayed very slow, buttons answered with a lag and the model load never finished ("Cargando el modelo..."); the owner ordered the load path rolled back to 0.1.98's form | 8,756 tests; fixed by 0.1.102 |
 | 0.1.100 | Yes | Yes: it opened as an update over the withdrawn 0.1.99, but the first model load never finished ("Cargando el modelo...") and the owner judged it unusable | 8,754 tests; fixed by 0.1.101 |
 | 0.1.99 | Yes | Yes: as an update it hung on the loading screen, and the release was withdrawn the same day | 8,752 tests; fixed by 0.1.100 |
