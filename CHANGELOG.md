@@ -4,6 +4,37 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.99-alpha - 2026-11-15
+
+The full-audit release. A professional audit of the whole app found 187
+items; this release fixes them, batch by batch, and then had the fixes
+re-audited by separate passes whose job was to break them.
+
+**The judge.** The grounding judge now compares meaning as well as
+words, with the multilingual search model that ships in the app. The
+declared failures of the 0.1.97 hunt went from 108 to 4;
+each remaining case is declared in the release notes, next to the
+claim, with its cause. Replaced sentences are now marked as replaced in
+the answer, so you can see which parts are the source itself.
+
+**The agent.** Stop is honoured at every point of the shutdown path.
+The knowledge graph was removed whole.
+
+**Packs and downloads.** A pack altered on disk is refused, never
+served. Downloads install only after their fingerprint checks out and
+only from the pinned sources; a download that changes size halfway
+leaves the previous file untouched; resuming survives a restart.
+
+**The engine.** llama.rn is pinned at 0.13.0-rc.11, chosen after
+reading how it cleans context between conversations in its own code.
+The crash guard and memory ladder kept their sealed factors, verified
+one by one.
+
+**Languages.** An exact million no longer falls back to English in
+Spanish and Portuguese count phrases. Every public document was
+brought back in line with what the code does, and the third-party
+license notices were regenerated against the shipped tree (592 packages).
+
 ## 0.1.98-alpha - 2026-11-13
 
 An audit of 0.1.97 attacked the judge and the search again, in the
