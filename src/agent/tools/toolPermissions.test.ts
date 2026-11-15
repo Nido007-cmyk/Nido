@@ -42,10 +42,17 @@ describe("tool permissions", () => {
   });
 
   it("an unconfirmed sensitive action is logged as cancelled", async () => {
-    const handler = vi.fn(async () => "sent");
+    const handler = vi.fn(async () => "borrada");
+    // T-11 (m-11): la cancelación EN ESTA CAPA se fija con delete_note,
+    // la irreversible que sigue preguntando en el dispatcher.
+    // nido_send_message es auto-confirmada: su pregunta (y su
+    // cancelación sin canal) vive en el handler envuelto, y con un stub
+    // sin envolver esta capa ya no la cancela — ese reparto lo fijan
+    // dispatcher.t11.test.ts y consentParity.test.ts con los handlers
+    // reales.
     await dispatchToolCall(
-      { name: "nido_send_message", arguments: { to: "ana", text: "hola" } },
-      { nido_send_message: handler },
+      { name: "delete_note", arguments: { id: "n1", title: "Receta" } },
+      { delete_note: handler },
     );
     expect(handler).not.toHaveBeenCalled();
     expect(actionLog.list()[0].outcome).toBe("cancelled");

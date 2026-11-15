@@ -26,6 +26,7 @@ import {
   type LabeledContent,
   type PolicyDecision,
 } from "../policy/policyEngine";
+import { SENSITIVE_TOOLS } from "./confirm";
 
 import { actionLog } from "../actionLog";
 import { isToolDisabled } from "./toolPermissions";
@@ -258,17 +259,39 @@ export async function dispatchToolCallDetailed(
   }
 
   if (decision.requiresConfirmation) {
-    const confirmed = options.onConfirm
-      ? await options
-          .onConfirm(decision, { tool: validated.tool.name, args: validated.args })
-          .catch(() => false)
-      : false;
-    if (!confirmed) {
-      actionLog.record(validated.tool.name, "cancelled", false, undefined, decision.injectionOrigin);
-      return {
-        status: "cancelled",
-        text: `Acción "${validated.tool.name}" cancelada: requiere confirmación del usuario.`,
-      };
+    // T-11 (0.1.99, m-11): UNA sola pregunta por acción, y que sea la
+    // informada. Las herramientas auto-confirmadas (SENSITIVE_TOOLS:
+    // su handler va envuelto en withConfirmation y pregunta con el
+    // payload exacto, con paridad N2 describir/ejecutar) NO reciben
+    // además la pregunta genérica de esta capa: hasta hoy el usuario
+    // veía dos diálogos por envío/emparejamiento/aprobación, el
+    // primero sin destinatario ni texto. La política se sigue
+    // evaluando igual (los bloqueos de arriba no cambian); lo que se
+    // omite es solo la pregunta duplicada. La puerta del handler sigue
+    // siendo ineludible y fail-closed: sin canal de confirmación el
+    // handler no ejecuta.
+    //
+    // Excepción medida: si la decisión trae `injectionOrigin`, esta
+    // capa SÍ pregunta primero. Su diálogo es el único que puede
+    // llevar el aviso de procedencia sospechosa (RED TEAM 2026-11-08);
+    // omitirlo aquí silenciaría la señal justo en las herramientas
+    // más peligrosas. Confirmada esta pregunta, pregunta la del
+    // handler con el payload.
+    const selfConfirmed =
+      SENSITIVE_TOOLS.has(validated.tool.name) && !decision.injectionOrigin;
+    if (!selfConfirmed) {
+      const confirmed = options.onConfirm
+        ? await options
+            .onConfirm(decision, { tool: validated.tool.name, args: validated.args })
+            .catch(() => false)
+        : false;
+      if (!confirmed) {
+        actionLog.record(validated.tool.name, "cancelled", false, undefined, decision.injectionOrigin);
+        return {
+          status: "cancelled",
+          text: `Acción "${validated.tool.name}" cancelada: requiere confirmación del usuario.`,
+        };
+      }
     }
   }
 
@@ -394,7 +417,10 @@ export function describeToolsForPromptVerbose(): string {
  */
 const TOOLS_BY_INTENT: Record<"recordar" | "actuar" | "conversar", string[]> = {
   // Memory intent: the hint already says "usa remember_fact".
-  recordar: ["remember_fact"],
+  // T-11 (P-09): save_person es espejo de remember_fact en las listas de
+  // memoria y conversación (NO en «actuar»: su presupuesto de prompt es
+  // el justo y una herramienta más lo desborda).
+  recordar: ["remember_fact", "save_person"],
   // Action intent: everything that does something in the world or reads
   // local data. remember_fact is reachable via conversar if needed.
   actuar: [
@@ -424,5 +450,5 @@ const TOOLS_BY_INTENT: Record<"recordar" | "actuar" | "conversar", string[]> = {
   ],
   // Chat intent: the 3 most common tools; the hint says tools only "si
   // aportan algo concreto".
-  conversar: ["device_time", "calculate", "remember_fact"],
+  conversar: ["device_time", "calculate", "remember_fact", "save_person"],
 };

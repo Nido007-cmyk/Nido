@@ -104,6 +104,18 @@ export const LOCAL_TOOLS: ToolDefinition[] = [
     },
   },
   {
+    // T-11 (0.1.99, P-09): el handler existía desde PEOPLE-FIX
+    // 2026-10-07 pero nunca entró en el manifiesto: el modelo no podía
+    // invocarla y «guarda a Ana como mi hermana» no guardaba a nadie.
+    name: "save_person",
+    description: "Guarda una persona en la memoria persistente (nombre, parentesco o relación y notas).",
+    parameters: {
+      name: { type: "string", description: "Nombre de la persona", required: true },
+      relationship: { type: "string", description: "Parentesco o relación con el usuario (p. ej. hermana, médico, jefe)" },
+      notes: { type: "string", description: "Notas sobre la persona" },
+    },
+  },
+  {
     name: "device_time",
     description: "Devuelve la fecha y hora actual del dispositivo.",
     parameters: {},
@@ -119,7 +131,9 @@ export const LOCAL_TOOLS: ToolDefinition[] = [
       link: {
         type: "string",
         description:
-          "Enlace explícito a abrir (p.ej. https://ejemplo.com, tel:+15551234567). Solo https/http/tel/sms/mailto.",
+          // T-11 (P-10a): el hint prometía http y la descripción (y el
+          // clasificador) lo rechazan. Manda el clasificador.
+          "Enlace explícito a abrir (p.ej. https://ejemplo.com, tel:+15551234567). Solo https/tel/sms/mailto.",
         required: true,
       },
     },

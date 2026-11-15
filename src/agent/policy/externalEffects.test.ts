@@ -45,6 +45,10 @@ const INTERNAL = [
   "read_note",
   "create_reminder",
   "remember_fact",
+  // T-11 (P-09): save_person guarda dentro de NIDO, como remember_fact
+  // (con contexto no confiable pide confirmación por la puerta R11,
+  // extendida a save_person en la misma tanda).
+  "save_person",
   "device_time",
   "calculate",
   "convert_units",
