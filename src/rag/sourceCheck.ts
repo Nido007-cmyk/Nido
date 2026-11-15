@@ -283,7 +283,10 @@ const INTERVAL_UNITS: Record<string, { unit: string; factor: number }> = {
 
 const RANGE_RES = [
   /(\d+(?:[.,]\d+)?)\s*(?:[-–—]|\ba\b|\bto\b|\baté\b)\s*(\d+(?:[.,]\d+)?)/g,
-  /\bentre\s+(\d+(?:[.,]\d+)?)\s+(?:y|e|and)\s+(\d+(?:[.,]\d+)?)/g,
+  // T-43 (H-B1): el marco incluye «between», como en evidenceRanges;
+  // solo con «entre», el interior fiel contra «between 37 and 40 °C»
+  // acusaba conflicto y su gemelo contra «entre» callaba.
+  /\b(?:entre|between)\s+(\d+(?:[.,]\d+)?)\s+(?:y|e|and)\s+(\d+(?:[.,]\d+)?)/g,
 ];
 const CADA_HOURS_RE = /\b(?:cada|every)\s+(\d+(?:[.,]\d+)?)\s+(horas|hora|hours|hour|h)\b/g;
 const CADA_INTERVAL_RE = /\b(?:cada|every)\s+(\d+(?:[.,]\d+)?)\s+([a-z]+)\b/g;
@@ -326,7 +329,7 @@ function measuresIn(sentence: string): FigureMeasure[] {
     consumed.push([at, at + len]);
   };
 
-  // (1) Rangos: «10 a 14 días», «entre 37 y 40 °C», «5–6 %».
+  // (1) Rangos: «10 a 14 días», «entre 37 y 40 °C», «between 37 and 40 °C», «5–6 %».
   for (const re of RANGE_RES) {
     for (const m of folded.matchAll(re)) {
       const at = m.index;

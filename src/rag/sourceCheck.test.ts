@@ -343,6 +343,17 @@ describe("C-08: las unidades de Esencial y los rangos entran en la caja", () => 
     ).toEqual([]);
   });
 
+  it("T-43 (H-B1): el marco «between» tampoco acusa a su interior, y el exterior sigue disparando", () => {
+    const fuente = [chunk("Heat the warm water between 37 and 40 °C.")];
+    expect(findNumberConflicts("Heat the water to 39 °C.", fuente)).toEqual([]);
+    expect(
+      findNumberConflicts("Heat the water between 38 and 42 °C.", fuente)
+    ).toEqual([]);
+    const fuera = findNumberConflicts("Heat the water to 45 °C.", fuente);
+    expect(fuera).toHaveLength(1);
+    expect(fuera[0].unit).toBe("°c");
+  });
+
   it("los controles que ya disparaban siguen disparando idénticos (km, minutos)", () => {
     const km = findNumberConflicts("La ruta mide 5 km.", [chunk("La ruta mide 3 km.")]);
     expect(km).toHaveLength(1);
