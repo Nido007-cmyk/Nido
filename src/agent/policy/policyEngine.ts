@@ -67,6 +67,22 @@ export function neutralizeUntrustedTags(text: string): string {
   return text.replace(/<(?=\s*\/?\s*untrusted)/gi, "\u2039");
 }
 
+/**
+ * T-10 (0.1.99, m-29): neutraliza también los mímicos ESTRUCTURALES del
+ * protocolo del agente dentro de contenido no confiable: la valla
+ * exacta ```tool (un resultado que la trajera podría colarse como
+ * llamada si el historial se re-parsea) y las líneas que imitan el
+ * encabezado de las observaciones del bucle. SOLO la valla exacta de
+ * herramienta: el código legítimo (```python, ```ts, ``` a secas) pasa
+ * intacto, y el prefijo U+2039 espeja la técnica de
+ * neutralizeUntrustedTags.
+ */
+export function neutralizeStructuralMimics(text: string): string {
+  return text
+    .replace(/```tool(?=[\s]|$)/gm, "``` tool")
+    .replace(/^Observación de herramientas:/gm, "\u2039Observación de herramientas:");
+}
+
 /** Escapa un valor para usarlo como atributo del bloque <untrusted>. */
 export function escapeUntrustedAttr(value: string): string {
   return value
@@ -82,7 +98,7 @@ export function wrapUntrusted(content: LabeledContent): string {
     return content.content;
   }
   const origin = content.origin ? ` origin="${escapeUntrustedAttr(content.origin)}"` : "";
-  return `<untrusted source="${content.source}"${origin}>\n${neutralizeUntrustedTags(content.content)}\n</untrusted>`;
+  return `<untrusted source="${content.source}"${origin}>\n${neutralizeStructuralMimics(neutralizeUntrustedTags(content.content))}\n</untrusted>`;
 }
 
 /** Action risk level */

@@ -62,7 +62,28 @@ export interface DispatchOptions {
      */
     action?: { tool: string; args: Record<string, unknown> }
   ) => Promise<boolean>;
+  /**
+   * T-10 (0.1.99, M-20): señal de aborto del turno. Si aborta mientras
+   * el handler está en vuelo, el despacho se asienta como cancelado en
+   * vez de esperar a que el handler termine. La espera humana de
+   * confirmación NO se interrumpe: pensar no es un cuelgue.
+   */
+  signal?: AbortSignal;
+  /**
+   * T-10 (0.1.99, M-15): plazo máximo del handler, en ms. Al vencer, el
+   * despacho se da por fallido con resultado DESCONOCIDO (la acción
+   * puede completar tarde). Por defecto, DEFAULT_TOOL_TIMEOUT_MS.
+   */
+  toolTimeoutMs?: number;
 }
+
+/**
+ * T-10 (0.1.99, M-15): plazo por defecto de un handler. Los handlers
+ * tocan E/S real (Linking, SQLCipher, notificaciones): generoso para
+ * no matar trabajo legítimo lento, finito para que un handler colgado
+ * no deje el turno (y la batería) esperando para siempre.
+ */
+export const DEFAULT_TOOL_TIMEOUT_MS = 60_000;
 
 export function validateToolCall(call: {
   name: string;
@@ -106,6 +127,40 @@ export function validateToolCall(call: {
         error: `"${call.name}".${paramName} debe ser ${def.type}, llegó ${actual}`,
       };
     }
+    // T-10 (0.1.99, M-17): la validación central ya no mira solo tipos.
+    // Un number debe ser FINITO: el JSON del modelo admite 1e999, que
+    // parsea a Infinity, y una cadena numérica de cientos de dígitos
+    // coercionada en el bucle anterior también. Y las restricciones
+    // que la descripción del parámetro ya promete (enum, formato,
+    // topes) se imponen aquí, en el centro, con un error que el modelo
+    // puede corregir, en vez de degradar en silencio en cada handler.
+    if (def.type === "number" && typeof value === "number" && !Number.isFinite(value)) {
+      return { ok: false, error: `"${call.name}".${paramName} debe ser un número finito` };
+    }
+    if (def.enum && (typeof value !== "string" || !def.enum.includes(value))) {
+      return {
+        ok: false,
+        error: `"${call.name}".${paramName} debe ser uno de: ${def.enum.join(", ")}`,
+      };
+    }
+    if (def.maxLength !== undefined && typeof value === "string" && value.length > def.maxLength) {
+      return {
+        ok: false,
+        error: `"${call.name}".${paramName} supera el máximo de ${def.maxLength} caracteres`,
+      };
+    }
+    if (def.min !== undefined && typeof value === "number" && value < def.min) {
+      return { ok: false, error: `"${call.name}".${paramName} debe ser ≥ ${def.min}` };
+    }
+    if (def.max !== undefined && typeof value === "number" && value > def.max) {
+      return { ok: false, error: `"${call.name}".${paramName} debe ser ≤ ${def.max}` };
+    }
+    if (def.format === "iso-datetime" && (typeof value !== "string" || !isIsoDateTime(value))) {
+      return {
+        ok: false,
+        error: `"${call.name}".${paramName} debe ser una fecha/hora ISO-8601 (p. ej. 2026-11-20T09:00)`,
+      };
+    }
   }
 
   for (const key of Object.keys(args)) {
@@ -115,6 +170,28 @@ export function validateToolCall(call: {
   }
 
   return { ok: true, tool, args };
+}
+
+/**
+ * T-10 (0.1.99, M-17): ISO-8601 con fecha y hora (la «T» es obligatoria:
+ * «2026-11-20 09:00» no lo es). Los rangos se comprueban a mano porque
+ * Date.parse no es igual de estricto en todos los motores JS; el
+ * Date.parse final es solo una segunda red.
+ */
+const ISO_DATETIME_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:?\d{2})?$/;
+
+function isIsoDateTime(value: string): boolean {
+  const m = ISO_DATETIME_RE.exec(value);
+  if (!m) return false;
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  const hour = Number(m[4]);
+  const minute = Number(m[5]);
+  const second = m[6] === undefined ? 0 : Number(m[6]);
+  if (month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 || minute > 59 || second > 59) {
+    return false;
+  }
+  return !Number.isNaN(Date.parse(value));
 }
 
 /** Número decimal completo: "5", "-2.5", "3,75". Nada de "5 km" ni "0x10". */
@@ -203,14 +280,65 @@ export async function dispatchToolCallDetailed(
       text: `Error de herramienta: "${validated.tool.name}" no está implementada en este dispositivo.`,
     };
   }
-  try {
-    const result = await handler(validated.args);
-    actionLog.record(validated.tool.name, "executed", decision.requiresConfirmation, undefined, decision.injectionOrigin);
-    return { status: "executed", text: typeof result === "string" ? result : JSON.stringify(result) };
-  } catch (e: any) {
-    actionLog.record(validated.tool.name, "failed", false, undefined, decision.injectionOrigin);
-    return { status: "failed", text: `Error ejecutando "${validated.tool.name}": ${e?.message ?? String(e)}` };
+  // T-10 (0.1.99, M-15 + M-20): el handler corre con plazo y con la
+  // señal del turno, en la ÚNICA costura por la que pasa todo despacho
+  // (modelo, rutas deterministas y tareas programadas). La espera
+  // humana de confirmación de arriba queda FUERA de la carrera a
+  // propósito. Si el plazo vence, el resultado es DESCONOCIDO — la
+  // acción puede completar tarde — y el rechazo tardío del handler
+  // queda atrapado para que no flote una promesa sin manejar.
+  const timeoutMs = options.toolTimeoutMs ?? DEFAULT_TOOL_TIMEOUT_MS;
+  const handlerPromise = (async () => handler(validated.args))();
+  void handlerPromise.catch(() => {});
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let onAbort: (() => void) | undefined;
+  const racers: Array<Promise<{ kind: "done"; result: string } | { kind: "error"; error: unknown } | { kind: "timeout" } | { kind: "aborted" }>> = [
+    handlerPromise.then(
+      (result) => ({ kind: "done" as const, result }),
+      (error: unknown) => ({ kind: "error" as const, error })
+    ),
+    new Promise<{ kind: "timeout" }>((resolve) => {
+      timer = setTimeout(() => resolve({ kind: "timeout" }), timeoutMs);
+    }),
+  ];
+  if (options.signal) {
+    const signal = options.signal;
+    racers.push(
+      new Promise<{ kind: "aborted" }>((resolve) => {
+        if (signal.aborted) {
+          resolve({ kind: "aborted" });
+          return;
+        }
+        onAbort = () => resolve({ kind: "aborted" });
+        signal.addEventListener("abort", onAbort, { once: true });
+      })
+    );
   }
+  const outcome = await Promise.race(racers);
+  if (timer) clearTimeout(timer);
+  if (options.signal && onAbort) options.signal.removeEventListener("abort", onAbort);
+
+  if (outcome.kind === "timeout") {
+    actionLog.record(validated.tool.name, "failed", false, undefined, decision.injectionOrigin);
+    return {
+      status: "failed",
+      text: `Error ejecutando "${validated.tool.name}": tardó más de ${Math.round(timeoutMs / 1000)} s y se dio por fallida. Su resultado es DESCONOCIDO: puede haber completado tarde. No la reintentes a ciegas.`,
+    };
+  }
+  if (outcome.kind === "aborted") {
+    actionLog.record(validated.tool.name, "cancelled", false, undefined, decision.injectionOrigin);
+    return {
+      status: "cancelled",
+      text: `Ejecución de "${validated.tool.name}" interrumpida: el usuario detuvo el turno.`,
+    };
+  }
+  if (outcome.kind === "error") {
+    const e = outcome.error as { message?: string } | undefined;
+    actionLog.record(validated.tool.name, "failed", false, undefined, decision.injectionOrigin);
+    return { status: "failed", text: `Error ejecutando "${validated.tool.name}": ${e?.message ?? String(outcome.error)}` };
+  }
+  actionLog.record(validated.tool.name, "executed", decision.requiresConfirmation, undefined, decision.injectionOrigin);
+  return { status: "executed", text: typeof outcome.result === "string" ? outcome.result : JSON.stringify(outcome.result) };
 }
 
 /** Describe las herramientas para el system prompt (compacto, en español).
