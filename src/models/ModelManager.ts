@@ -386,7 +386,11 @@ export class ModelManager {
    */
   async statusOf(asset: CatalogModel): Promise<AssetStatus> {
     await this.ensureReconciled();
-    const verdict = await checkModelTrust(asset);
+    // Consulta de ESTADO: es la puerta de arranque (requiredModelsPresent)
+    // y las pantallas de estado. Nunca paga el re-hash de adopción de un
+    // diario sin hechos GGUF — esa adopción es de la vía de carga (ver
+    // checkModelTrust, propósito «status»).
+    const verdict = await checkModelTrust(asset, { purpose: "status" });
     if (verdict.trusted) {
       return { asset, present: true, sizeOnDiskBytes: verdict.sizeOnDiskBytes, checksumOk: true };
     }

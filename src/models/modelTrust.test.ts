@@ -257,10 +257,12 @@ describe("installBundled integrity (same SHA-256 guarantee as downloads)", () =>
     expect(hoisted.fileExists(modelPath)).toBe(true);
 
     // Second call is idempotent. M-37: el diario del instalador aún no
-    // trae hechos GGUF, así que esta llamada paga la adopción por la
-    // vía lenta (verificación completa, una vez) y el diario queda con
-    // los hechos anotados.
+    // trae hechos GGUF; la consulta de estado ya no los adopta (esa
+    // adopción por re-hash completo en la puerta fue la regresión de
+    // arranque de la 0.1.99): los adopta la primera comprobación de
+    // CARGA, anclada a su verificación completa.
     await mgr.installBundled(asset);
+    await mgr.assertTrustedForLoad(asset);
     const { loadInstallState } = await import("./installState");
     expect((await loadInstallState()).records[asset.id]?.gguf).toBeDefined();
     // Third call: now the fast path applies — it reads only the header
@@ -325,7 +327,9 @@ describe("load-time trust gate", () => {
     const mgr2 = makeManager();
 
     // M-37: el diario del instalador no trae hechos GGUF — la primera
-    // comprobación adopta por la vía lenta (verificación completa).
+    // comprobación DE CARGA los adopta por la vía lenta (verificación
+    // completa, una vez, ya dentro de la app; la puerta de arranque ya
+    // no paga ese coste: ver el test de diario heredado de M-37).
     await mgr2.assertTrustedForLoad(asset);
     const { loadInstallState } = await import("./installState");
     expect((await loadInstallState()).records[asset.id]?.gguf).toBeDefined();
@@ -733,7 +737,7 @@ describe("M-37 (auditoría 2026-11-13, F2-M2): estructura GGUF y cabecera en la 
     expect(hoisted.fileExists(badPath)).toBe(true);
   });
 
-  it("diario sin hechos (anterior a la 0.1.99): la vía lenta adopta y la siguiente ya es rápida", async () => {
+  it("diario sin hechos (anterior a la 0.1.99): la PUERTA (statusOf) fía por la base heredada leyendo solo la cabecera y no anota; la adopción es de la primera carga", async () => {
     const mgr = makeManager();
     await mgr.installBundled(asset);
     // Se borran los hechos del diario, como quedaría un registro viejo.
@@ -742,11 +746,27 @@ describe("M-37 (auditoría 2026-11-13, F2-M2): estructura GGUF y cabecera en la 
     delete parsed.records[asset.id].gguf;
     hoisted.writeFile(hoisted.JOURNAL, hoisted.te.encode(JSON.stringify(parsed)), 1000);
 
+    // La puerta de arranque pregunta por statusOf (requiredModelsPresent).
     hoisted.base64ReadSizes.clear();
     const mgr2 = makeManager();
-    await mgr2.assertTrustedForLoad(asset); // resuelve, pero hasheando entero
-    expect(totalRead()).toBeGreaterThanOrEqual(GOOD_BYTES.length);
+    const status = await mgr2.statusOf(asset);
+    expect(status.present).toBe(true);
+    // REGRESIÓN DE ARRANQUE 0.1.99: la primera versión de esta regla
+    // mandaba el diario heredado a la vía lenta y esta consulta leía el
+    // fichero ENTERO (totalRead >= GOOD_BYTES.length) para hashearlo en
+    // JS puro. Con los GB reales de un LLM tras una actualización, la
+    // puerta se quedó en la rueda de carga en el dispositivo del dueño
+    // (2026-11-15). La conducta buena lee solo la región de cabecera.
+    expect(totalRead()).toBeLessThan(GOOD_BYTES.length);
+    // Y la consulta de estado NO anota hechos: no es notario.
     const { loadInstallState } = await import("./installState");
+    expect((await loadInstallState()).records[asset.id]?.gguf).toBeUndefined();
+
+    // La primera CARGA sí paga la verificación completa (una vez) y
+    // adopta los hechos anclados a ella: la garantía de M-37 intacta.
+    hoisted.base64ReadSizes.clear();
+    await mgr2.assertTrustedForLoad(asset);
+    expect(totalRead()).toBeGreaterThanOrEqual(GOOD_BYTES.length);
     expect((await loadInstallState()).records[asset.id]?.gguf).toBeDefined();
 
     hoisted.base64ReadSizes.clear();
@@ -754,5 +774,40 @@ describe("M-37 (auditoría 2026-11-13, F2-M2): estructura GGUF y cabecera en la 
     await mgr3.assertTrustedForLoad(asset); // ahora: solo la cabecera anotada
     expect(totalRead()).toBeGreaterThan(0);
     expect(totalRead()).toBeLessThan(1024);
+  });
+
+  it("diario sin hechos pero cabecera que no es GGUF: la base heredada NO fía a ciegas", async () => {
+    // El catálogo declara como bueno un fichero cuya estructura no es
+    // GGUF (el caso «invalid-structure» de arriba) y el diario trae un
+    // registro heredado que casa en tamaño, SHA y mtime. La rama
+    // heredada no puede fiarlo: el recorrido de cabecera lo declara
+    // inválido y la decisión cae a la vía lenta, que juzga igual que
+    // sin diario: invalid-structure y el fichero no se borra.
+    const garbage = new Uint8Array(4096);
+    for (let i = 0; i < garbage.length; i++) garbage[i] = (i * 7 + 3) & 0xff;
+    const badAsset = {
+      ...asset,
+      id: "trust-test-bad-structure-legacy",
+      filename: "models/bad-structure-legacy.gguf",
+      sizeBytes: garbage.length,
+      sha256: sha256Of(garbage),
+    };
+    const badPath = `${hoisted.DOCS}${badAsset.filename}`;
+    hoisted.writeFile(badPath, garbage, 1000);
+    const { recordInstall } = await import("./installState");
+    await recordInstall(badAsset.id, {
+      status: "installed",
+      sizeBytes: badAsset.sizeBytes,
+      sha256: badAsset.sha256,
+      mtimeMs: 1000 * 1000,
+    });
+    resetInstallReconcileForTests();
+    const verdict = await checkModelTrust(badAsset);
+    expect(verdict).toMatchObject({ trusted: false, reason: "invalid-structure", deleteFile: false });
+    // Ni siquiera la consulta de estado (la puerta) lo fía: el recorrido
+    // de cabecera lo declara inválido también sobre la base heredada.
+    const statusVerdict = await checkModelTrust(badAsset, { purpose: "status" });
+    expect(statusVerdict).toMatchObject({ trusted: false, reason: "invalid-structure", deleteFile: false });
+    expect(hoisted.fileExists(badPath)).toBe(true);
   });
 });
