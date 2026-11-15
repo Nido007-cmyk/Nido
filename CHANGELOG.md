@@ -4,6 +4,67 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.102-alpha - 2026-11-15
+
+The model loading goes back to exactly the form 0.1.98 had.
+0.1.101 was published the same day as the fix for the 0.1.100
+load that never finished, and its pass on the owner's tablet
+failed too: the app stayed very slow, buttons answered with a
+lag, and the model load never finished. The owner ordered the
+whole model loading path back to 0.1.98's form, with everything
+that is not model loading kept. This release is that rollback;
+the answer fixes of 0.1.99 to 0.1.101 are all still here.
+
+**What broke in 0.1.101.** Its trust gate trusted the inherited
+install journal, but it still paid verification on the load
+path: it walked the model file's header before loading and
+scheduled a full re-hash in the background that competed with
+the model load itself on the app's single JavaScript thread.
+Measured with the real search model of the catalog (36.8 MB),
+trusting a file still read it 37 times; at the roughly
+0.6 MB/s of the app's pure JavaScript hash in interpreter
+regime, that is about 61 seconds of JavaScript thread for the
+search model alone, and 27 to 66 minutes for a language model
+of 986 MB to 2.4 GB, competing with its own load. That is
+exactly what the tablet showed: a lagging interface and a
+"Loading the model..." band that never ends. 0.1.98 had no
+verification at all after installation: nothing competed with
+the load.
+
+**The rollback.** The core of the load path is byte for byte
+0.1.98 again (the model trust check, the install journal, the
+embedding loader, the RAM budget and the memory ladder are
+restored identical), the structural-facts machinery that
+0.1.99 to 0.1.101 added around loading is removed, and
+llama.rn returns to 0.13.0-rc.9, the version 0.1.98 shipped.
+With an install journal that vouches for a file, loading reads
+none of the file and schedules nothing: a new permanent
+regression test pins exactly that (on 0.1.101's code it read
+the file 37 times; now it reads it zero times).
+
+**Security, declared plainly.** Removed from loading, by the
+owner's order: the M-37 structural check and its companions. A
+file replaced in its final path with the same size and the
+same modification time after a verified installation would be
+trusted again without a re-hash; reaching that path at all
+means already writing inside the app's private storage, where
+Android's sandbox is the barrier on a normal device, and M-37
+was defence in depth against exactly that writer. What stays,
+as in 0.1.98: the full SHA-256 verification at install time
+(downloads, pack imports and bundled models), with the journal
+recording size, fingerprint and modification time of the
+verified bytes; and a load with no valid journal, or with a
+size or modification time that no longer matches, still
+hashes the whole file before trusting it. One more declared
+item: the M-38 code check (no context reuse between
+conversations) was performed on llama.rn rc.11; this release
+ships rc.9, so that check does not carry over and is formally
+outstanding on rc.9.
+
+**If you installed 0.1.101.** Install this release as an
+update over it. Your downloads and data are preserved, and the
+chat loads its model at its normal speed again, as in 0.1.98.
+
 ## 0.1.101-alpha - 2026-11-15
 
 The fix for the fix: 0.1.100 opened, but the first model load
