@@ -34,6 +34,7 @@ import {
   checkModelTrust,
   currentMtimeMs,
   ensureInstallReconciled,
+  ggufFactsForInstalledFile,
   sameSha,
   sha256OfFile,
   stagingPathFor,
@@ -548,6 +549,28 @@ export class ModelManager {
       sizeBytes: asset.sizeBytes,
       sha256: asset.sha256,
       mtimeMs: (await currentMtimeMs(destPath)) ?? undefined,
+    });
+    await this.annotateGgufFacts(asset);
+  }
+
+  /**
+   * 0.1.101: el instalador acaba de verificar el fichero ENTERO (aquí y
+   * en verifyChecksum de la descarga); anota también los hechos GGUF
+   * de esos bytes verificados en el diario. Hasta la 0.1.100 el asiento
+   * quedaba sin hechos y la primera carga pagaba otra verificación
+   * completa en JS puro (la pantalla «Cargando el modelo...» eterna
+   * del 2026-11-15). Best-effort: si la cabecera no se puede recorrer,
+   * el asiento queda sin hechos y manda la rama heredada de
+   * modelTrust (fianza + verificación en segundo plano).
+   */
+  private async annotateGgufFacts(asset: CatalogModel): Promise<void> {
+    const gguf = await ggufFactsForInstalledFile(asset).catch(() => undefined);
+    if (!gguf) return;
+    await recordInstall(asset.id, {
+      status: "installed",
+      sizeBytes: asset.sizeBytes,
+      sha256: asset.sha256,
+      gguf,
     });
   }
 
@@ -1194,6 +1217,9 @@ export class ModelManager {
       // baseline. Any later rewrite changes mtime and forces re-verify.
       mtimeMs: (await currentMtimeMs(destPath)) ?? undefined,
     });
+    // 0.1.101: los hechos GGUF de los bytes recién verificados, en el
+    // mismo asiento — la primera carga nace en la vía rápida.
+    await this.annotateGgufFacts(asset);
     networkAudit.log({
       kind: "download_complete",
       endpoint,
