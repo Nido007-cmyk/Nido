@@ -78,7 +78,7 @@ so, plainly.
 
 | Version | CI green | Run on a real device (Tab A9+) | Notes |
 | --- | --- | --- | --- |
-| 0.1.100 | Yes | Not yet | [TEST COUNT] tests; the fix for the 0.1.99 update that never opened; its device pass is installing it as an update over the withdrawn 0.1.99 on the owner's tablet |
+| 0.1.100 | Yes | Not yet | 8,754 tests; the fix for the 0.1.99 update that never opened; its device pass is installing it as an update over the withdrawn 0.1.99 on the owner's tablet |
 | 0.1.99 | Yes | Yes: as an update it hung on the loading screen, and the release was withdrawn the same day | 8,752 tests; fixed by 0.1.100 |
 | 0.1.98 | Yes | Not yet | 7,907 tests; its pass on the owner's tablet is still open |
 
