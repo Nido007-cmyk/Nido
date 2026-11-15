@@ -77,7 +77,7 @@ so, plainly.
 
 | Version | CI green | Run on a real device (Tab A9+) | Notes |
 | --- | --- | --- | --- |
-| 0.1.99 | Yes | Not yet | [TEST COUNT] tests; its pass on the owner's tablet is still open |
+| 0.1.99 | Yes | Not yet | 8,752 tests; its pass on the owner's tablet is still open |
 | 0.1.98 | Yes | Not yet | 7,907 tests; its pass on the owner's tablet is still open |
 
 ## Earlier releases (0.1.1 – 0.1.18)
