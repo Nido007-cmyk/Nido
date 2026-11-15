@@ -118,11 +118,16 @@ describe("i18n interpolation calls", () => {
             } else if (options.properties.some((p) => ts.isSpreadAssignment(p) || (p.name && ts.isComputedPropertyName(p.name)))) {
               dynamic.push(at);
             } else {
-              const passed = new Set(
-                options.properties
-                  .filter((p) => ts.isPropertyAssignment(p) || ts.isShorthandPropertyAssignment(p))
-                  .map((p) => p.name.text),
-              );
+              const passed = new Set<string>();
+              for (const p of options.properties) {
+                if (
+                  (ts.isPropertyAssignment(p) || ts.isShorthandPropertyAssignment(p)) &&
+                  p.name &&
+                  "text" in p.name
+                ) {
+                  passed.add(p.name.text);
+                }
+              }
               const faltan = [...vars].filter((v) => !passed.has(v));
               if (faltan.length > 0) {
                 missing.push(`${at} no pasa ${faltan.sort().join(", ")} (pasa: ${[...passed].sort().join(", ")})`);
