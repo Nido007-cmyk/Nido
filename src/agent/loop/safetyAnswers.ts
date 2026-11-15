@@ -548,6 +548,54 @@ const SELF_HARM_VETO_RE =
  *    frente como los determinantes: «el vello y también las
  *    venas» lee «venas» como cabeza y manda. La vía pegada
  *    rescata la cabeza tras los mismos mediadores.
+ *
+ * 0.1.99 T-34 (residuos de la ronda 4 de Z-01, ACTA-z01-r4
+ * §7): la forma de T-32 aguantó su centro y todo el freno
+ * histórico, y la repetición midió la clase viva un anillo
+ * más afuera, en cuatro fronteras:
+ *  - R4a: el vocabulario de la ropa dejaba fuera prendas
+ *    canónicas de los tres idiomas (vaqueros, cazadora,
+ *    chanclas, calzoncillos, bañador, mallas, leggins,
+ *    sujetador, mocasines, chándal, alpargatas, pantuflas;
+ *    boné, terno, chinelo, cueca, sutiã, pantufa; sneakers,
+ *    sandals, pajamas, leggings, swimsuit). Entran sus
+ *    familias y palabras, en las dos vías. El alcance
+ *    escrito sigue siendo «las prendas corrientes» y su
+ *    frontera queda escrita con verdad: fuera del
+ *    vocabulario quedan las prendas arcaicas, de oficio o
+ *    regionales que la ronda 4 midió sin expectativa
+ *    (jubón, casulla, kimono, gabardina, rebeca, anorak,
+ *    parka, tirantes, babuchas); una prenda corriente que
+ *    no esté en el vocabulario es un hueco de la clase, no
+ *    parte de su alcance.
+ *  - R4b: los secuenciadores corrientes de enumeración
+ *    (luego, después, encima, aún; depois, ainda, logo) se
+ *    leían como cabeza y escondían el daño, como los
+ *    adverbios de R3c antes de pelarse. Se pelan del
+ *    frente igual que ellos, en las dos vías.
+ *  - R4c: el pelado del frente tenía un presupuesto de 3
+ *    palabras y la pila corriente de mediadores lo agotaba
+ *    («y hasta incluso también las venas» no disparaba);
+ *    y «até mesmo» no se pelaba en ninguna vía («mesmo»
+ *    no estaba en la lista ni en la regex pegada). El
+ *    pelado ya no tiene presupuesto: recorre todo el
+ *    frente funcional (determinantes, preposiciones,
+ *    cuantificadores, adverbios y secuenciadores) y la
+ *    cabeza es la primera palabra de contenido, sin pelar
+ *    nunca la última. En la vía pegada, «mesmo» entra en
+ *    la regex y el pelado encadena los mediadores.
+ *  - R4d: las cotas de lectura perdían la cabeza en la
+ *    enumeración corriente larga (con espacios, la cabeza
+ *    como 15ª palabra ya no se leía; pegada, la misma
+ *    enumeración caía fuera de la ventana de 30). El tope
+ *    con espacios sube de 14 a 20 palabras y la ventana
+ *    pegada de 30 a 40 caracteres, con la acotación medida
+ *    delante (la enumeración medida pone la cabeza en la
+ *    palabra 16ª y en el carácter 32º de la corrida) y el
+ *    freno entero re-medido. La frontera queda escrita:
+ *    una cabeza de daño más allá de la 20ª palabra leída
+ *    o del 40º carácter pegado sigue sin leerse, como en
+ *    toda lectura acotada.
  */
 const CUT_ANCHOR_RE =
   /\b(?:cortarme|cortar-me|me\s+(?:quiero\s+|voy\s+a\s+)?cortar|(?:cut|cutting)\s+myself)\b/g;
@@ -605,9 +653,15 @@ const CUT_EVERYDAY_STEMS = [
   "mang", "pantalon", "camis", "vestid", "fald", "blus", "calc",
   "chaquet", "jaquet", "chamarr", "zapat", "sapat", "guant", "luv",
   "bufand", "cachecol", "sombrer", "chapeu", "abrig", "casac",
-  "corbat", "gravat", "gorr", "meia", "sandali", "sueter", "jersey",
+  "corbat", "gravat", "gorr", "meia", "sandal", "sueter", "jersey",
   "sudader", "moletom", "player", "remer", "poler", "camper",
   "chalec", "bota", "botin", "pijam", "uniform", "panuel",
+  // T-34 (R4a): el anillo canónico que la ronda 4 midió fuera
+  // («sandal» sustituye a «sandali»: vale sandalias, sandália
+  // y la inglesa sandals, que no colgaba de la raíz vieja).
+  "vaquer", "cazador", "chancl", "calzon", "banador", "mall",
+  "sujetador", "mocasin", "chandal", "alpargat", "pantuf",
+  "chinel", "cuec", "sutia", "sneak", "pajam", "leggin", "swimsuit",
   "hair", "nail", "beard", "mustach", "moustach", "bang",
   "jacket", "shoe", "glove", "scarv", "sweater", "hoodie", "shirt",
   "jeans", "sock", "dress", "coat", "boot",
@@ -629,6 +683,10 @@ const CUT_EVERYDAY_WORDS = new Set([
   "avental", "aventais",
   "tie", "ties", "hat", "hats", "cap", "caps", "pants", "trousers",
   "skirt", "skirts", "blouse", "blouses", "underwear",
+  // T-34 (R4a): el boné y el terno portugueses, como palabras
+  // («bone» por raíz valdría dentro de palabras ajenas a la
+  // clase, y «tern-» valdría «ternura»).
+  "bone", "bones", "terno", "ternos",
 ]);
 
 // La lectura del sintagma tras la forma de «cortar» (T-31): ya
@@ -702,7 +760,16 @@ function cutObjectSegments(folded: string, from: number): CutSegment[] {
     // perdía igual que tras la coma. La lectura sigue
     // acotada por las palabras de cierre y por el fin de
     // frase; el freno entero se re-midió con el tope nuevo.
-    if (total >= 14) break;
+    // T-34 (R4d): la ronda 4 rozó ese tope por los dos lados
+    // (la cabeza como 14ª palabra entraba; como 15ª, no) con
+    // una enumeración corriente de tres objetos con
+    // complemento que pone la cabeza en la 16ª palabra
+    // («las uñas de los pies, las puntas del pelo, el vello
+    // de las piernas y las venas»). El tope sube de 14 a 20
+    // con el freno entero re-medido otra vez; la frontera
+    // queda escrita: una cabeza más allá de la 20ª palabra
+    // leída sigue sin leerse.
+    if (total >= 20) break;
   }
   close();
   return segments;
@@ -726,9 +793,16 @@ const CUT_FRONT_SKIP = new Set([
 // (nunca la última palabra, como todo el pelado): «cortarme
 // solo» sigue leyendo «solo» como lo que es ahí, el resto de
 // la frase.
+// T-34 (R4b y R4c): entran los secuenciadores corrientes de
+// enumeración (luego, después, encima, aún; depois, ainda,
+// logo), que escondían la cabeza igual que los adverbios, y
+// «mesmo», la segunda mitad de la fórmula portuguesa «até
+// mesmo», que no se pelaba en ninguna vía.
 const CUT_FRONT_ADVERBS = new Set([
   "tambien", "tambem", "solo", "so", "hasta", "ate",
   "incluso", "inclusive", "ademas", "alem",
+  "luego", "despues", "encima", "aun",
+  "depois", "ainda", "logo", "mesmo",
 ]);
 
 function isEverydayCutObject(word: string): boolean {
@@ -740,7 +814,15 @@ function cutSegmentHead(words: string[]): string | undefined {
   let i = 0;
   // Nunca se pela la última palabra: «las uñas» plegado es «las
   // unas», y «unas» es a la vez determinante y el objeto mismo.
-  while (i < words.length - 1 && i < 3) {
+  // T-34 (R4c): el pelado ya no tiene presupuesto de palabras.
+  // Lo tenía de 3 contando determinantes y adverbios juntos, y
+  // la pila corriente de mediadores lo agotaba antes de llegar
+  // a la cabeza («y hasta incluso también las venas» dejaba
+  // «las» de cabeza y el daño no mandaba). Se pela todo el
+  // frente funcional y la cabeza es la primera palabra que no
+  // es función: el frente de un objeto corriente es corto y la
+  // lectura entera ya va acotada por el tope de palabras.
+  while (i < words.length - 1) {
     const w = words[i]!;
     if (w === "unas" || w === "umas") {
       // R3: el token ambiguo no se pela como determinante; solo
@@ -804,13 +886,18 @@ const CUT_EVERYDAY_GLUED_STEMS = [
   // dentro de «hate» o «tiene», que no son prendas.
   "chaquet", "jaquet", "chamarr", "zapat", "sapat", "guant", "luv",
   "bufand", "cachecol", "sombrer", "chapeu", "abrig", "casac",
-  "corbat", "gravat", "gorr", "meia", "medias", "sandali", "sueter",
+  "corbat", "gravat", "gorr", "meia", "medias", "sandal", "sueter",
   "sudader", "moletom", "player", "remer", "poler", "camper",
   "chalec", "bota", "botin", "pijam", "uniform", "panuel",
   "tenis", "cinturon", "cinto", "traje", "bata", "delantal", "avental",
   "jacket", "shoe", "glove", "scarv", "sweater", "hoodie", "shirt",
   "jeans", "sock", "dress", "coat", "boot", "pants", "skirt",
   "blouse", "underwear", "trousers",
+  // T-34 (R4a): el mismo anillo canónico que con espacios.
+  "vaquer", "cazador", "chancl", "calzon", "banador", "mall",
+  "sujetador", "mocasin", "chandal", "alpargat", "pantuf",
+  "chinel", "cueca", "sutia", "sneak", "pajam", "leggin", "swimsuit",
+  "bone", "terno",
 ];
 
 // Lo que abre un adjunto de instrumento en la corrida pegada
@@ -833,7 +920,16 @@ const CUT_ADJUNCT_GLUED_STARTERS = ["con", "usando", "com", "with"];
 // «…etambem…»): solo vale pegado a la conjunción, a la
 // puntuación de lista o al inicio, para no pelar la cola de
 // otra palabra («consolo» no es «con» + «solo»).
-const CUT_ADVERB_GLUED_RE = /(?:^|[ye,;:])(tambien|tambem|incluso|inclusive|ademas|alem|solo|hasta|ate|so)$/;
+// T-34 (R4b y R4c): entran los secuenciadores (luego,
+// después, encima, aún; depois, ainda, logo) y «mesmo», y el
+// pelado encadena: tras pelar un mediador se vuelve a mirar,
+// así que «…eatemesmoas…» pela «mesmo» y luego «ate». La
+// frontera pegada queda escrita: una pila cuyos mediadores
+// no encadenan tras la conjunción, la puntuación u otro
+// mediador de la lista sigue sin pelarse en esta vía (con
+// espacios sí se pela entera).
+const CUT_ADVERB_GLUED_RE =
+  /(?:^|[ye,;:])(tambien|tambem|incluso|inclusive|ademas|alem|solo|hasta|ate|so|luego|despues|encima|aun|depois|ainda|logo|mesmo)$/;
 
 function gluedHarmHeads(tail: string): boolean {
   for (const s of CUT_HARM_GLUED_STEMS) {
@@ -847,8 +943,14 @@ function gluedHarmHeads(tail: string): boolean {
       // T-32 (R3c): entre la conjunción y el determinante
       // puede ir el adverbio de coordinación, como en la vía
       // con espacios: se pela y se vuelve a mirar.
-      const adv = CUT_ADVERB_GLUED_RE.exec(prefix);
-      if (adv) prefix = prefix.slice(0, prefix.length - adv[1].length);
+      // T-34 (R4c): el pelado encadena, no se detiene en un
+      // solo mediador («…eatemesmoas…»: «mesmo» y tras él
+      // «ate», cada uno tras el anterior).
+      let adv = CUT_ADVERB_GLUED_RE.exec(prefix);
+      while (adv) {
+        prefix = prefix.slice(0, prefix.length - adv[1].length);
+        adv = CUT_ADVERB_GLUED_RE.exec(prefix);
+      }
       // La cabeza también abre el objeto tras la puntuación
       // de lista pegada («elpelo,las…»): la coma cierra el
       // objeto anterior igual que la conjunción.
@@ -861,7 +963,14 @@ function gluedHarmHeads(tail: string): boolean {
 function cutObjectVetoGlued(glued: string): boolean {
   let everyday = false;
   for (const m of glued.matchAll(CUT_ANCHOR_GLUED_RE)) {
-    const tail = glued.slice(m.index + m[0].length, m.index + m[0].length + 30);
+    // T-34 (R4d): la ventana pegada sube de 30 a 40 caracteres:
+    // la enumeración corriente que con espacios dispara
+    // («…laspuntasdelpeloytambienlasvenas») ponía su cabeza
+    // en el carácter 32º de la corrida y la ventana de 30 la
+    // dejaba fuera, el mismo mecanismo que el tope de
+    // palabras de la vía con espacios. Frontera escrita: una
+    // cabeza más allá del 40º carácter sigue sin leerse.
+    const tail = glued.slice(m.index + m[0].length, m.index + m[0].length + 40);
     if (tail === "") continue;
     if (gluedHarmHeads(tail)) return false;
     // R1 pegado: si la corrida abre con el adjunto de
