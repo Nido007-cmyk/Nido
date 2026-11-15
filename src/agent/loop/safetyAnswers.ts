@@ -679,6 +679,90 @@ const SELF_HARM_VETO_RE =
  *    frontera (inicio, conjunción, puntuación, mediador
  *    o determinante), como con espacios (R3); como cola
  *    de otra palabra («algunas») no se pelan.
+ *
+ * 0.1.99 T-37 (residuos de la ronda 6 de Z-01, ACTA-z01-r6
+ * §7, y la paridad pegada de locuciones de su §6): la forma
+ * de T-35 aguantó su centro entero, todo el freno
+ * histórico y la clase de ropa contra su alcance
+ * reescrito, y la repetición midió cuatro fronteras nuevas
+ * en la dirección grave sobre la forma concreta de la
+ * cura, más una frontera pegada asentada sin veredicto:
+ *  - R6a: la unidad pegada de la fórmula española «más
+ *    temprano» estaba escrita «maistemprano» — el «mais»
+ *    portugués pegado al «temprano» español, una forma
+ *    que no ocurre en ninguna lengua — y la forma real,
+ *    «mastemprano», perdía el verdadero pegado. La unidad
+ *    se escribe «mastemprano»; la forma mixta sale de la
+ *    cadena (no es forma de ninguna lengua y ninguna
+ *    batería la espera: era la sonda discriminadora del
+ *    acta). Las demás unidades de la familia se revisaron
+ *    una a una contra su forma real: «mastarde» (más +
+ *    tarde), «maistarde» (mais + tarde) y «maiscedo»
+ *    (mais + cedo) están bien escritas.
+ *  - R6b: el cuantificador fundido perdía el verdadero
+ *    pegado («quierocortarmealgunasvenas»): la corrida
+ *    vetaba por la subcadena cotidiana «unas» dentro del
+ *    cuantificador y la cabeza tras él no se reconocía,
+ *    porque el «unas» de «algunas» es cola de otra
+ *    palabra y la frontera de R5e no lo pelaba. La
+ *    cabeza tras un cuantificador fundido se reconoce
+ *    ahora: el cuantificador entero («algunas» y su
+ *    familia es/pt) se pela como unidad cuando va
+ *    pegado a una frontera, en peelGluedDeterminer, y
+ *    gluedHarmHeads manda antes que el veto por
+ *    subcadena. La frontera de R5e se re-escribe a lo
+ *    que la cura cubre de verdad: «unas»/«umas» como
+ *    cola de una palabra que no es el cuantificador
+ *    sigue sin pelarse como determinante; el
+ *    cuantificador como palabra sí se pela. La gemela
+ *    portuguesa («algumas») dispara ahora por lectura,
+ *    no por la doble ausencia de la ronda 6. El freno
+ *    de R5e no se mueve: «…unasvenas» sigue disparando
+ *    y «…lasunas» sigue vetando por su objeto.
+ *  - R6c: la familia «más/mais + adverbio de tiempo» se
+ *    decide COMO FAMILIA, no por dos segundas palabras:
+ *    la fórmula del segmentador y las locuciones cubren
+ *    «tarde», «temprano», «luego» y «adelante» en
+ *    español y «tarde», «cedo», «logo» y «adiante» en
+ *    portugués, y la cadena pegada trae las ocho como
+ *    unidades. «Más luego» perdía el verdadero y «más
+ *    adelante»/«mais adiante» daban el resultado
+ *    correcto solo por el accidente de letra pegado (el
+ *    prefijo acabado en «e»); ahora la cabeza se lee
+ *    por la fórmula en las dos vías, sin apoyarse en
+ *    ese accidente. La familia queda escrita donde
+ *    está: «mas» seguido de cualquier otra palabra
+ *    sigue cerrando la lectura (es el cierre portugués
+ *    de contraste, diseño declarado, y su control
+ *    «mas agora» sigue verde), y el cierre ante «pero»
+ *    no se toca.
+ *  - R6d: los secuenciadores ingleses «then»/«next» no
+ *    se leían en ninguna vía: no estaban en el pelado
+ *    con espacios ni en la cadena pegada, y su verde
+ *    con «the»/«my» era el accidente de letra («and
+ *    then her veins», «and then his veins» y «and next
+ *    her veins» perdían el verdadero). Entran en
+ *    CUT_FRONT_ADVERBS y en la cadena pegada, y la vía
+ *    pegada aprende la frontera inglesa que le faltaba:
+ *    los determinantes «the»/«her»/«his»/«my» se pelan
+ *    ante la cabeza y la conjunción «and» vale como
+ *    frontera de la cadena y del test final, como la
+ *    «y»/«e» de una letra en es/pt. La cobertura de
+ *    «and then the veins» pasa a ser lectura en las dos
+ *    vías, no rescate por la «e» de «the».
+ *  - Paridad pegada de locuciones (la frontera de R6
+ *    §6, medida sin expectativa): las locuciones
+ *    enteras de CUT_FRONT_LOCUTIONS entran como
+ *    unidades en la cadena pegada, como ya entraban las
+ *    fórmulas de «tarde». Donde la locución abre un
+ *    objeto (tras conjunción o puntuación de lista), la
+ *    cabeza se lee ahora también pegada; donde va
+ *    fundida sobre el primer objeto sin separador
+ *    («…peloacontinuacionlas…»), las dos vías dejan
+ *    mandar al primer objeto igual que con espacios,
+ *    que es la paridad medida: la locución sin
+ *    separador no abre objeto en ninguna de las dos
+ *    vías.
  */
 const CUT_ANCHOR_RE =
   /\b(?:cortarme|cortar-me|me\s+(?:quiero\s+|voy\s+a\s+)?cortar|(?:cut|cutting)\s+myself)\b/g;
@@ -799,6 +883,20 @@ const CUT_EVERYDAY_WORDS = new Set([
 // venas»): ese sí se lee como objeto.
 const CUT_CONJUNCTIONS = new Set(["y", "e", "and"]);
 const CUT_STOP_WORDS = new Set(["que", "pero", "mas"]);
+// T-37 (R6c): la familia «más + adverbio de tiempo» que el
+// segmentador reconoce como fórmula española ante el token
+// plegado «mas» (R5c la abrió con «tarde»/«temprano»; la
+// ronda 6 midió que la familia corriente es más ancha:
+// «más luego» perdía el verdadero y «más adelante» solo se
+// rescataba por el accidente de letra pegado). La familia
+// se decide entera y queda escrita aquí: «mas» seguido de
+// una de estas segundas palabras abre el objeto siguiente;
+// seguido de cualquier otra, cierra, que es el diseño
+// declarado. La gemela portuguesa («mais») no pasa por el
+// segmentador —«mais» no es palabra de cierre— y su familia
+// va en CUT_FRONT_LOCUTIONS («tarde», «cedo», «logo»,
+// «adiante»).
+const CUT_MAS_FORMULA_SECONDS = new Set(["tarde", "temprano", "luego", "adelante"]);
 const CUT_ADJUNCT_STARTERS = new Set(["con", "com", "with", "usando", "using", "utilizando"]);
 
 interface CutSegment {
@@ -838,8 +936,10 @@ function cutObjectSegments(folded: string, from: number): CutSegment[] {
       // tras cualquier mediador). «Mas» seguido de
       // cualquier otra cosa sigue cerrando la lectura,
       // como manda el diseño declarado.
+      // T-37 (R6c): la fórmula es la familia entera de
+      // CUT_MAS_FORMULA_SECONDS, no dos palabras.
       const next = ri + 1 < raws.length ? cleanWord(raws[ri + 1]!) : "";
-      if (word === "mas" && (next === "tarde" || next === "temprano")) {
+      if (word === "mas" && CUT_MAS_FORMULA_SECONDS.has(next)) {
         close();
         adjunct = false;
         words.push("mas", next);
@@ -926,12 +1026,18 @@ const CUT_FRONT_SKIP = new Set([
 // pegada (el prefijo acabado en «e» o en «y»), no la
 // lectura con espacios; ahora se pelan también aquí y la
 // cabeza se lee por lectura en las dos vías.
+// T-37 (R6d): entran los secuenciadores ingleses «then» y
+// «next», la fórmula corriente de enumeración de la tercera
+// lengua («and then»): la ronda 6 midió que no se leían en
+// ninguna vía y que su verde con «the»/«my» era el mismo
+// accidente de letra («and then her veins» no disparaba).
 const CUT_FRONT_ADVERBS = new Set([
   "tambien", "tambem", "solo", "so", "hasta", "ate",
   "incluso", "inclusive", "ademas", "alem",
   "luego", "despues", "encima", "aun",
   "depois", "ainda", "logo", "mesmo",
   "finalmente", "finally", "also", "even",
+  "then", "next",
 ]);
 
 // T-35 (R5b): las locuciones corrientes de enumeración, la
@@ -947,6 +1053,12 @@ const CUT_FRONT_ADVERBS = new Set([
 // lugar»; «mas tarde»/«mas temprano» es la fórmula
 // española plegada que el segmentador ya dejó pasar (R5c)
 // y «mais tarde»/«mais cedo» su gemela portuguesa.
+// T-37 (R6c): la familia «más/mais + adverbio de tiempo»
+// entera, con las segundas palabras que la ronda 6 midió
+// («luego», «adelante»/«adiante») y la gemela portuguesa de
+// «luego» («logo»): sin la locución, la primera palabra de
+// la fórmula quedaría de cabeza («mas» no se pela suelto y
+// «mais» tampoco).
 const CUT_FRONT_LOCUTIONS: readonly string[][] = [
   ["a", "continuacion"],
   ["en", "seguida"],
@@ -958,8 +1070,12 @@ const CUT_FRONT_LOCUTIONS: readonly string[][] = [
   ["em", "primeiro", "lugar"],
   ["mais", "tarde"],
   ["mais", "cedo"],
+  ["mais", "logo"],
+  ["mais", "adiante"],
   ["mas", "tarde"],
   ["mas", "temprano"],
+  ["mas", "luego"],
+  ["mas", "adelante"],
 ];
 
 function isEverydayCutObject(word: string): boolean {
@@ -1092,7 +1208,13 @@ const CUT_ADJUNCT_GLUED_STARTERS = ["con", "usando", "com", "with"];
 // El determinante pegado que puede preceder a la cabeza
 // («lasvenas»): la misma lista que pela la rama del
 // adjunto (la paridad de R3b).
-const CUT_DET_GLUED_RE = /(?:las|los|la|el|as|os|uma|um|una|un|a|o)$/;
+// T-37 (R6d): entran los determinantes ingleses («the»,
+// «her», «his», «my»): sin ellos, la cabeza inglesa tras
+// su determinante no se reconocía pegada y solo la
+// rescataba el accidente de la letra final del prefijo.
+// Ninguna palabra es/pt acaba en esas formas, así que la
+// lista de las dos lenguas no se contamina.
+const CUT_DET_GLUED_RE = /(?:las|los|la|el|as|os|uma|um|una|un|the|her|his|my|a|o)$/;
 
 // T-32 (R3c): el adverbio de coordinación pegado que puede
 // preceder al determinante de la cabeza («…ytambienlas…»,
@@ -1107,8 +1229,27 @@ const CUT_DET_GLUED_RE = /(?:las|los|la|el|as|os|uma|um|una|un|a|o)$/;
 // complemento. El enlace de la cadena ya no es esta regex
 // con su guarda de letra: es el bucle de gluedHarmHeads,
 // por mediador.
+// T-37 (R6a, R6c, R6d y la paridad de locuciones): la
+// unidad de «más temprano» se escribe «mastemprano», la
+// fórmula española real (la ronda 6 midió que traía
+// «maistemprano», el «mais» portugués pegado al
+// «temprano» español, una forma que no ocurre en ninguna
+// lengua: sale de la cadena). Entran las demás unidades
+// de la familia «más/mais» («masluego», «masadelante»,
+// «maislogo», «maisadiante»), las locuciones enteras de
+// CUT_FRONT_LOCUTIONS fundidas (la paridad pegada que la
+// ronda 6 dejó medida: donde la locución abre un objeto,
+// tras conjunción o puntuación, la cabeza se lee también
+// en esta vía) y los secuenciadores ingleses «then» y
+// «next», como unidades y mediadores al principio de la
+// alternativa por la misma razón de siempre.
 const CUT_MEDIATOR_GLUED_RE =
-  /(?:mastarde|maistemprano|maistarde|maiscedo|tambien|tambem|finalmente|finally|incluso|inclusive|ademas|alem|despues|depois|solo|also|hasta|ate|so|luego|encima|aun|ainda|logo|mesmo|even)$/;
+  /(?:mastarde|mastemprano|maistarde|maiscedo|masluego|masadelante|maislogo|maisadiante|acontinuacion|enseguida|emseguida|sobretodo|despuesdetodo|actoseguido|enprimerlugar|emprimeirolugar|tambien|tambem|finalmente|finally|incluso|inclusive|ademas|alem|despues|depois|solo|also|hasta|ate|so|luego|encima|aun|ainda|logo|mesmo|even|then|next)$/;
+
+// T-37 (R6b): el cuantificador fundido que puede preceder
+// a la cabeza («algunasvenas»): la familia entera, es/pt.
+const CUT_QUANTIFIER_GLUED_RE =
+  /(?:algunas|algunos|alguna|alguno|algumas|alguns|alguma|algum)$/;
 
 /**
  * El prefijo sin su determinante pegado final. T-35 (R5e):
@@ -1118,8 +1259,29 @@ const CUT_MEDIATOR_GLUED_RE =
  * cabeza reconocida son el artículo, como con espacios
  * (R3); como cola de otra palabra («algunas») no se
  * pelan, y la lista corta pela su «as» como siempre.
+ * T-37 (R6b): la frontera de arriba se re-escribe a lo
+ * que la cura cubre de verdad. El cuantificador entero
+ * («algunas» y su familia) SÍ se pela como unidad cuando
+ * va pegado a una frontera, antes de mirar su cola: la
+ * ronda 6 midió que «quierocortarmealgunasvenas» perdía
+ * el verdadero porque la corrida vetaba por la subcadena
+ * «unas» sin que la cabeza tras el cuantificador se
+ * reconociera. Lo que sigue sin pelarse es el «unas»
+ * cola de una palabra que no es el cuantificador.
  */
 function peelGluedDeterminer(prefix: string): string {
+  const quant = CUT_QUANTIFIER_GLUED_RE.exec(prefix);
+  if (quant) {
+    const before = prefix.slice(0, prefix.length - quant[0].length);
+    if (
+      before === "" ||
+      /[ye,;:]$/.test(before) ||
+      CUT_MEDIATOR_GLUED_RE.test(before) ||
+      CUT_DET_GLUED_RE.test(before)
+    ) {
+      return before;
+    }
+  }
   const amb = /(?:unas|umas)$/.exec(prefix);
   if (amb) {
     const before = prefix.slice(0, prefix.length - amb[0].length);
@@ -1161,7 +1323,11 @@ function gluedHarmHeads(tail: string): boolean {
           before !== "" &&
           !/[ye,;:]$/.test(before) &&
           !CUT_MEDIATOR_GLUED_RE.test(before) &&
-          !CUT_DET_GLUED_RE.test(before)
+          !CUT_DET_GLUED_RE.test(before) &&
+          // T-37 (R6d): la conjunción inglesa «and» es
+          // frontera de la cadena, como la «y»/«e» de una
+          // letra («…andthen…» pela «then»).
+          !before.endsWith("and")
         ) {
           break;
         }
@@ -1176,7 +1342,10 @@ function gluedHarmHeads(tail: string): boolean {
       // La cabeza también abre el objeto tras la puntuación
       // de lista pegada («elpelo,las…»): la coma cierra el
       // objeto anterior igual que la conjunción.
-      if (prefix === "" || prefix.endsWith("y") || prefix.endsWith("e") || /[,;:]$/.test(prefix)) return true;
+      // T-37 (R6d): el prefijo acabado en la conjunción
+      // inglesa «and» es frontera, como el acabado en «y»
+      // o en «e».
+      if (prefix === "" || prefix.endsWith("y") || prefix.endsWith("e") || prefix.endsWith("and") || /[,;:]$/.test(prefix)) return true;
     }
   }
   return false;
