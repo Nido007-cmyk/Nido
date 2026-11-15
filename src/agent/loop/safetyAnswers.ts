@@ -227,8 +227,20 @@ export const EMERGENCY_NUMBERS: readonly EmergencyEntry[] = [
 // llamo en España?» también devolvía null, medido en la tanda):
 // admite la misma estructura («es el» y el relativo), misma
 // clase m-09, misma regex.
+// 0.1.99 T-31 (H-Z4-2-R1, repetición de Z-01): la rama portuguesa
+// se quedó sin la forma con «é» («qual é o número que ligo em
+// Portugal?» devolvía null), que es la gemela exacta de la «es
+// el» española que T-27 sí admitió: entra el «é» (plegado, «e»).
+// Con la medición delante (las cuatro formas daban null), entran
+// también el relativo con modal («que devo ligar», «que eu devo
+// ligar») y el «para ligar»; y por la simetría que T-27 declaró,
+// las gemelas españolas medidas en el mismo null («¿cuál es el
+// número que debo llamar…?», «…para llamar…?») admiten la misma
+// estructura. La puerta no se mueve: «número de telefone … para
+// ligar» sigue fuera, porque la rama sigue exigiendo el verbo
+// pegado a «número» (con su relativo, su modal o su «para»).
 const EMERGENCY_Q_RE =
-  /\b(numero|telefono|tel)s? (de |del |para )?(las? )?(emergencias?|urgencias?|emergency|policia|ambulancia|bomberos)\b|\b(?:a )?(que|cual) (?:es el )?numero (?:que )?(llamo|llamar|marco|marcar)\b|\bemergency (number|phone|line)s?\b|\bwhat number (do i|should i|to) (call|dial)\b|\bnumber (for|to call) (the )?(police|ambulance|fire)\b|\bnumeros? de (emergencia|urgencia)\b|\b(?:qual|que) (?:o |a )?numero (?:que )?(?:eu )?(?:ligar|ligo|discar)\b|\btelefone (de |da )?(emergencia|emergency)\b/;
+  /\b(numero|telefono|tel)s? (de |del |para )?(las? )?(emergencias?|urgencias?|emergency|policia|ambulancia|bomberos)\b|\b(?:a )?(que|cual) (?:es el )?numero (?:(?:que )?(?:debo )?(?:llamo|llamar|marco|marcar)|para (?:llamar|marcar))\b|\bemergency (number|phone|line)s?\b|\bwhat number (do i|should i|to) (call|dial)\b|\bnumber (for|to call) (the )?(police|ambulance|fire)\b|\bnumeros? de (emergencia|urgencia)\b|\b(?:qual|que) (?:e )?(?:o |a )?numero (?:(?:que )?(?:eu )?(?:devo )?(?:ligar|ligo|discar)|para (?:ligar|discar))\b|\btelefone (de |da )?(emergencia|emergency)\b/;
 
 function findCountry(folded: string): EmergencyEntry | null {
   for (const e of EMERGENCY_NUMBERS) {
@@ -461,6 +473,43 @@ const SELF_HARM_VETO_RE =
  * vale puntas y pontas), no la frase entera; el freno es el de
  * siempre en las dos direcciones y lo fijan las sondas de T-01 y
  * de esta tanda.
+ *
+ * 0.1.99 T-31 (residuos de la repetición de Z-01, ACTA-z01-r2
+ * §5): la forma de T-27 decidía con medio sintagma y con tokens
+ * ambiguos, y la repetición lo midió en las dos direcciones:
+ *  - R1: «unas» es a la vez el artículo y «uñas» plegado, y
+ *    vetaba como objeto aunque fuera el artículo de un
+ *    instrumento («quiero cortarme con unas tijeras» no
+ *    disparaba). El sintagma de instrumento («con…», «usando…»,
+ *    «com…», «with…») es un ADJUNTO, no el objeto: ya no decide
+ *    el veto. Si tras el adjunto viene otro objeto con su
+ *    determinante («con unas tijeras las venas»), ese objeto se
+ *    lee como objeto.
+ *  - R2: la lectura se cortaba en la conjunción y el segundo
+ *    objeto coordinado no se leía («las uñas y las venas» no
+ *    disparaba). Ahora se leen TODOS los objetos coordinados:
+ *    una cabeza de daño en cualquiera de ellos manda.
+ *  - R3: el pelado de determinantes se comía «uñas» como si
+ *    fuera el artículo cuando llevaba complemento detrás
+ *    («las uñas de los pies» disparaba otra vez: regresión
+ *    contra la ronda 1). «Unas»/«umas» son ambiguos y no se
+ *    pelan como determinantes: como cabeza leída son el objeto
+ *    (las uñas); solo ceden cuando lo que sigue es ya una
+ *    cabeza reconocida («unas venas», «unas pestañas»).
+ * La cabeza de cada objeto se lee pelando determinantes,
+ * cuantificadores («las dos muñecas») y la preposición del
+ * frente; el daño manda solo como CABEZA de un objeto, y el
+ * «de» interno sigue siendo complemento («el vello de las
+ * piernas» veta por «vello», «las uñas de los pies» por «uñas»,
+ * «la piel de la muñeca» dispara por «piel»).
+ * Dos decisiones que el acta asentó sin enumerar y esta tanda
+ * toma con conocimiento: la ropa (mangas, pantalón, camisa y
+ * familia) es tan cotidiana como el pelo —cortarse la ropa
+ * puesta es sastrería, no un lugar del cuerpo— y entra en las
+ * clases cotidianas; y «barbilla» es el mentón, un lugar del
+ * cuerpo como su gemelo «mentón» (que sí dispara), así que
+ * entra en las cabezas de daño y deja de vetarse por la raíz
+ * «barb-» de la barba.
  */
 const CUT_ANCHOR_RE =
   /\b(?:cortarme|cortar-me|me\s+(?:quiero\s+|voy\s+a\s+)?cortar|(?:cut|cutting)\s+myself)\b/g;
@@ -489,6 +538,10 @@ const CUT_HARM_HEADS = new Set([
   "yugular", "jugular", "arteria", "arterias", "tendon", "tendones", "tendao", "tendoes",
   "pie", "pies", "pe", "pes", "ojo", "ojos", "olho", "olhos",
   "lengua", "lingua", "oreja", "orejas", "orelha", "orelhas", "nariz",
+  // T-31: la barbilla es el mentón, un lugar del cuerpo; vetarla
+  // por la raíz «barb-» de la barba era la frontera medida en el
+  // acta (su gemelo «el mentón» sí dispara).
+  "barbilla",
   "vein", "veins", "wrist", "wrists", "throat", "neck", "arm", "arms",
   "forearm", "forearms", "thigh", "thighs", "leg", "legs",
   "finger", "fingers", "hand", "hands", "skin", "face", "head",
@@ -499,12 +552,15 @@ const CUT_HARM_HEADS = new Set([
 // Raíces de clase cotidiana (prefijos sobre el texto plegado):
 // aseo y pelo en es/pt, porciones, y el vocabulario inglés de
 // servirse comida y de los modismos («some slack», «a break»).
+// T-31 suma la ropa (decisión del acta de la repetición, §4):
+// mang-, pantalon, camis-, vestid-, fald-, blus-, calc-.
 const CUT_EVERYDAY_STEMS = [
   "cabel", "pel", "flequill", "franj", "unh", "barb", "bigot", "bigod",
   "cuticul", "punt", "pont", "patill", "perill", "vell", "cej",
   "sobrancelh", "pestan", "melen", "trenz", "colet",
   "troz", "pedaz", "pedac", "rebanad", "tajad", "fati", "rodaj",
   "porc", "racion", "pastel", "tarta", "torta", "bolo", "pizza",
+  "mang", "pantalon", "camis", "vestid", "fald", "blus", "calc",
   "hair", "nail", "beard", "mustach", "moustach", "bang",
   "slice", "piece", "chunk", "cake", "bread",
 ];
@@ -512,37 +568,120 @@ const CUT_EVERYDAY_STEMS = [
 // Palabras cotidianas que no pueden ir por raíz sin colisionar
 // («pie» es el pie, un lugar de daño, y queda fuera a propósito;
 // «pan» por raíz valdría también «pantalón»).
-const CUT_EVERYDAY_WORDS = new Set(["unas", "pan", "pao", "queso", "quesos", "queijo", "queijos", "slack", "break"]);
+const CUT_EVERYDAY_WORDS = new Set([
+  "unas", "pan", "pao", "queso", "quesos", "queijo", "queijos", "slack", "break",
+  // T-31: la ropa que no va por raíz.
+  "ropa", "roupa", "saia", "saias", "shorts", "bermuda", "bermudas",
+]);
 
-/** Las palabras del sintagma tras la forma de «cortar», sin determinantes del frente ni preposiciones. */
-function cutObjectWords(folded: string, from: number): string[] {
-  const words: string[] = [];
+// La lectura del sintagma tras la forma de «cortar» (T-31): ya
+// no es una sola corrida de palabras, son SEGMENTOS. La
+// conjunción («y», «e», «and») separa objetos coordinados y se
+// leen todos; el relativo y el contraste («que», «pero»,
+// «mas») cierran la lectura, como antes; y lo que abre un
+// adjunto de instrumento («con», «com», «with», «usando»,
+// «using», «utilizando») abre un segmento adjunto, que no es el
+// objeto y no decide el veto — salvo que tras el instrumento
+// venga otro objeto con su determinante («con unas tijeras las
+// venas»): ese sí se lee como objeto.
+const CUT_CONJUNCTIONS = new Set(["y", "e", "and"]);
+const CUT_STOP_WORDS = new Set(["que", "pero", "mas"]);
+const CUT_ADJUNCT_STARTERS = new Set(["con", "com", "with", "usando", "using", "utilizando"]);
+
+interface CutSegment {
+  adjunct: boolean;
+  words: string[];
+}
+
+function cutObjectSegments(folded: string, from: number): CutSegment[] {
+  const segments: CutSegment[] = [];
+  let adjunct = false;
+  let words: string[] = [];
+  const close = () => {
+    segments.push({ adjunct, words });
+    words = [];
+  };
+  // ¿El segmento adjunto ya leyó su instrumento? (una palabra
+  // que no es determinante ni preposición: «tijeras», «par»…)
+  const adjunctHasInstrument = () =>
+    words.some((w) => !CUT_DETERMINERS.has(w) && !CUT_PREPOSITIONS.has(w) && w !== "unas" && w !== "umas");
+  let total = 0;
   for (const raw of folded.slice(from).split(" ")) {
     if (raw === "") continue;
     const word = raw.replace(/^[¿?¡!.,;:()"'«»]+/g, "").replace(/[.,;:!?)"'»]+$/g, "");
-    if (word === "que" || word === "y" || word === "e" || word === "and" || word === "pero" || word === "mas") break;
-    if (word !== "") words.push(word);
-    if (/[.,;:!?]/.test(raw) || words.length >= 5) break;
+    if (CUT_STOP_WORDS.has(word)) break;
+    if (CUT_CONJUNCTIONS.has(word)) {
+      close();
+      adjunct = false;
+    } else if (CUT_ADJUNCT_STARTERS.has(word)) {
+      close();
+      adjunct = true;
+    } else if (word !== "") {
+      // Dentro de un adjunto ya completo, un determinante abre
+      // el objeto que sigue al instrumento.
+      if (adjunct && adjunctHasInstrument() && CUT_DETERMINERS.has(word)) {
+        close();
+        adjunct = false;
+      }
+      words.push(word);
+      total++;
+    }
+    if (/[.,;:!?]/.test(raw) || total >= 8) break;
   }
-  let start = 0;
-  // Nunca se pela la última palabra: «las uñas» plegado es «las
-  // unas», y «unas» es a la vez determinante y el objeto mismo.
-  while (start < words.length - 1 && start < 2 && CUT_DETERMINERS.has(words[start]!)) start++;
-  return words.slice(start).filter((w) => !CUT_PREPOSITIONS.has(w));
+  close();
+  return segments;
 }
+
+// Lo que se puede pelar del frente de un objeto para leer su
+// cabeza: determinantes, la preposición («de nuevo») y los
+// cuantificadores («las dos muñecas», «as duas mãos»).
+const CUT_FRONT_SKIP = new Set([
+  ...CUT_DETERMINERS,
+  "de", "del", "do", "da", "dos", "das", "of",
+  "dois", "duas", "tres", "both",
+]);
 
 function isEverydayCutObject(word: string): boolean {
   return CUT_EVERYDAY_WORDS.has(word) || CUT_EVERYDAY_STEMS.some((s) => word.startsWith(s));
+}
+
+/** La cabeza de un objeto: su primera palabra tras el frente pelable. */
+function cutSegmentHead(words: string[]): string | undefined {
+  let i = 0;
+  // Nunca se pela la última palabra: «las uñas» plegado es «las
+  // unas», y «unas» es a la vez determinante y el objeto mismo.
+  while (i < words.length - 1 && i < 3) {
+    const w = words[i]!;
+    if (w === "unas" || w === "umas") {
+      // R3: el token ambiguo no se pela como determinante; solo
+      // cede cuando lo que sigue ya es una cabeza reconocida
+      // («unas venas», «unas pestañas»), porque entonces sí era
+      // el artículo. Con complemento («las uñas de los pies»)
+      // la cabeza es «uñas» misma.
+      const next = words[i + 1]!;
+      if (CUT_HARM_HEADS.has(next) || (next !== "unas" && next !== "umas" && isEverydayCutObject(next))) {
+        i++;
+        continue;
+      }
+      break;
+    }
+    if (!CUT_FRONT_SKIP.has(w)) break;
+    i++;
+  }
+  return words[i];
 }
 
 /** ¿Alguna forma de «cortar» del mensaje lleva un objeto cotidiano (y ninguna un lugar de daño)? */
 function cutObjectVeto(folded: string): boolean {
   let everyday = false;
   for (const m of folded.matchAll(CUT_ANCHOR_RE)) {
-    const words = cutObjectWords(folded, m.index + m[0].length);
-    if (words.length === 0) continue;
-    if (CUT_HARM_HEADS.has(words[0]!)) return false;
-    if (words.some(isEverydayCutObject)) everyday = true;
+    const objects = cutObjectSegments(folded, m.index + m[0].length).filter(
+      (s) => !s.adjunct && s.words.length > 0,
+    );
+    // La cabeza de daño manda en cualquier objeto del sintagma
+    // completo, también en el segundo coordinado (R2).
+    if (objects.some((s) => CUT_HARM_HEADS.has(cutSegmentHead(s.words) ?? ""))) return false;
+    if (objects.some((s) => s.words.some(isEverydayCutObject))) everyday = true;
   }
   return everyday;
 }
@@ -556,6 +695,8 @@ const CUT_HARM_GLUED_STEMS = [
   "tobill", "tornozel", "jugular", "yugular", "arteri", "puls",
   "cabec", "cabez", "ojo", "pie", "wrist", "vein", "throat", "neck",
   "arm", "thigh", "finger", "skin", "ankle",
+  // T-31: la barbilla, como en la vía con espacios.
+  "barbill",
 ];
 const CUT_EVERYDAY_GLUED_STEMS = [
   "cabel", "pel", "flequill", "franj", "unh", "unas", "barb", "bigot", "bigod",
@@ -565,18 +706,64 @@ const CUT_EVERYDAY_GLUED_STEMS = [
   "porc", "racion", "pastel", "tarta", "torta", "bolo", "pizza",
   "ques", "queij", "pan", "pao", "slack", "break", "slice", "piece", "chunk",
   "cake", "bread", "hair", "nail", "beard", "mustach", "moustach", "bang",
+  // T-31: la ropa, las mismas clases que con espacios.
+  "mang", "pantalon", "camis", "vestid", "fald", "blus", "calc",
+  "ropa", "roupa", "saia", "bermud",
 ];
+
+// Lo que abre un adjunto de instrumento en la corrida pegada
+// («conunastijeras», «comumatesoura»): el adjunto no veta (R1).
+const CUT_ADJUNCT_GLUED_STARTERS = ["con", "usando", "com", "with"];
+
+/**
+ * ¿La corrida pegada nombra un lugar de daño como CABEZA de un
+ * objeto? Sin espacios no hay sintagma que leer, así que la
+ * cabeza se reconoce por su sitio: abre la corrida (con su
+ * determinante pegado delante, «lasvenas») o abre un objeto
+ * coordinado («…ylasvenas»). Tras el «de» del complemento no
+ * manda: «lasunasdelospies» lleva su «pies» de complemento de
+ * «uñas», no de objeto, y «elvellodelaspiernas» su «piernas»
+ * de modificador — los dos vetan por su palabra cotidiana,
+ * como fijó T-27.
+ */
+function gluedHarmHeads(tail: string): boolean {
+  for (const s of CUT_HARM_GLUED_STEMS) {
+    for (let i = tail.indexOf(s); i >= 0; i = tail.indexOf(s, i + 1)) {
+      let prefix = tail.slice(0, i);
+      const det = /(?:las|los|la|el|as|os|uma|um|una|un|a|o)$/.exec(prefix);
+      if (det) prefix = prefix.slice(0, prefix.length - det[0].length);
+      // Tras el «de» del complemento no es cabeza («…de» acaba
+      // en «e» y no es la conjunción): es el caso de arriba.
+      if (/(?:de|del|do|da|dos|das)$/.test(prefix)) continue;
+      if (prefix === "" || prefix.endsWith("y") || prefix.endsWith("e")) return true;
+    }
+  }
+  return false;
+}
 
 function cutObjectVetoGlued(glued: string): boolean {
   let everyday = false;
   for (const m of glued.matchAll(CUT_ANCHOR_GLUED_RE)) {
     const tail = glued.slice(m.index + m[0].length, m.index + m[0].length + 30);
     if (tail === "") continue;
-    // Sin espacios no hay sintagma que leer: el lugar de daño solo
-    // manda si abre la corrida (determinante pegado + cabeza,
-    // «lasvenas», «ospulsos»); «elvellodelaspiernas» lleva su
-    // «piernas» de modificador, no de cabeza, y veta por «vell».
-    if (CUT_HARM_GLUED_STEMS.some((s) => tail.indexOf(s) >= 0 && tail.indexOf(s) <= 8)) return false;
+    if (gluedHarmHeads(tail)) return false;
+    // R1 pegado: si la corrida abre con el adjunto de
+    // instrumento, el adjunto mismo no veta: es con qué se
+    // corta, no el objeto («quierocortarmeconunastijeras»
+    // dispara). Pero un objeto cotidiano que venga DESPUÉS del
+    // instrumento, con su determinante pegado, sí veta, como
+    // en la vía con espacios («…tijeraselpelo» no dispara).
+    const starter = CUT_ADJUNCT_GLUED_STARTERS.find((s) => tail.startsWith(s));
+    if (starter) {
+      for (const s of CUT_EVERYDAY_GLUED_STEMS) {
+        for (let i = tail.indexOf(s); i >= 0; i = tail.indexOf(s, i + 1)) {
+          if (i > starter.length + 2 && /(?:las|los|la|el|as|os|una|un|unas|uma|umas)$/.test(tail.slice(0, i))) {
+            everyday = true;
+          }
+        }
+      }
+      continue;
+    }
     if (CUT_EVERYDAY_GLUED_STEMS.some((s) => tail.includes(s))) everyday = true;
   }
   return everyday;
