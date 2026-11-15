@@ -596,6 +596,89 @@ const SELF_HARM_VETO_RE =
  *    una cabeza de daño más allá de la 20ª palabra leída
  *    o del 40º carácter pegado sigue sin leerse, como en
  *    toda lectura acotada.
+ *
+ * 0.1.99 T-35 (residuos de la ronda 5 de Z-01, ACTA-z01-r5
+ * §8): la forma de T-34 aguantó su centro entero y todo el
+ * freno histórico, y la repetición midió la clase viva un
+ * anillo más afuera en las mismas formas enumerativas. Las
+ * cinco fronteras se curan aquí, y la primera con una
+ * decisión de coordinación tomada con tres rondas de la
+ * misma forma delante (R3a, R4a, R5a):
+ *  - R5a: se hacen las dos salidas del acta a la vez. El
+ *    vocabulario cubre el anillo medido entero: la palabra
+ *    con guion «t-shirt» como token, raincoat, sweatshirt,
+ *    cardigan, el «tank» de «tank top», brag- (bragas),
+ *    macac- (macacão), el singular corriente «short» con
+ *    su paridad pegada, y los corrientes de la frontera
+ *    medida (overall- de overalls, jumpsuit). Y cerrado
+ *    ese anillo, el alcance escrito de la clase se
+ *    redefine A LA VERDAD MEDIDA: la ropa de esta clase
+ *    es una LISTA ENUMERADA de prendas corrientes (las
+ *    raíces y palabras de CUT_EVERYDAY_STEMS,
+ *    CUT_EVERYDAY_WORDS y su gemela pegada), no «las
+ *    prendas corrientes» en general, que es lo que las
+ *    rondas 3, 4 y 5 desmintieron. La frontera medida
+ *    que queda fuera de la lista queda nombrada:
+ *    chubasquero, sostén, tacones, leotardos, mono,
+ *    regata, touca, boina, bathrobe, gafas y glasses,
+ *    medidos sin expectativa en la ronda 5. El residuo
+ *    posible queda declarado con su dirección probada:
+ *    una prenda no listada puede disparar el texto fijo
+ *    sobre una petición benigna (falso positivo), pero
+ *    nunca esconder una cabeza de daño, porque la
+ *    lectura de las cabezas no depende de la clase de
+ *    ropa: una coordinación con prenda no listada y
+ *    cabeza de daño sigue disparando por la cabeza
+ *    (probado en la regresión de esta tanda). Esa
+ *    asimetría es la que hace cerrable la clase.
+ *  - R5b: las locuciones corrientes de enumeración (de
+ *    dos o tres palabras: «a continuación», «en
+ *    seguida»/«em seguida», «sobre todo», «después de
+ *    todo», «acto seguido», «en primer lugar»/«em
+ *    primeiro lugar», «mais tarde»/«mais cedo») escondían
+ *    la cabeza igual que las palabras sueltas de R4b. Se
+ *    tratan como CLASE de locuciones (CUT_FRONT_LOCUTIONS)
+ *    y se pelan como unidad del frente del objeto. Y los
+ *    mediadores de una palabra que la ronda 5 midió
+ *    verdes solo por el accidente de letra de la vía
+ *    pegada («finalmente», «finally», «also», «even»)
+ *    entran en el pelado con espacios: la lectura ya no
+ *    se apoya en ese accidente, y el test de frontera
+ *    pegado no se toca.
+ *  - R5c: la palabra de cierre «mas» se comía la fórmula
+ *    española «más tarde»: el texto va plegado y «más»
+ *    y el «mas» portugués son el mismo token, así que la
+ *    lectura se cerraba antes de la cabeza. Se dirime
+ *    por la fórmula, como el acta manda: «mas» seguido
+ *    de «tarde» o «temprano» es el secuenciador español
+ *    y abre el objeto siguiente; «mas» seguido de
+ *    cualquier otra cosa sigue cerrando, y el cierre
+ *    portugués de contraste queda intacto.
+ *  - R5d: la cadena de pelado pegado enlazaba por letra,
+ *    no por mediador: tras un mediador acabado en «m»
+ *    («também só», «também até») el siguiente no se
+ *    reconocía. La cadena enlaza ahora por mediador:
+ *    uno se pela cuando va precedido de la conjunción,
+ *    la puntuación de lista, el inicio, otro mediador o
+ *    un determinante; y las fórmulas «mas tarde»/«mais
+ *    tarde»/«mais cedo» se pelan como unidad en la
+ *    cadena, antes de que el «de» final de «tarde» las
+ *    haga pasar por complemento. La frontera pegada
+ *    queda re-escrita a lo que la cadena cubre: un
+ *    mediador fundido como cola de una palabra de
+ *    contenido («consolo», el «logo» de «catálogo»)
+ *    sigue sin pelarse, y el test final de frontera de
+ *    la vía (inicio, «y», «e» o puntuación de lista) no
+ *    cambia.
+ *  - R5e: la paridad de determinantes pegados que R3b
+ *    cerró para el adjunto no había llegado a la lista
+ *    que pela el determinante ante la cabeza de daño:
+ *    ante «…unasvenas» pelaba «as», dejaba «un» y la
+ *    cabeza no se reconocía. «Unas»/«umas» se pelan
+ *    enteros ante la cabeza cuando van pegados a una
+ *    frontera (inicio, conjunción, puntuación, mediador
+ *    o determinante), como con espacios (R3); como cola
+ *    de otra palabra («algunas») no se pelan.
  */
 const CUT_ANCHOR_RE =
   /\b(?:cortarme|cortar-me|me\s+(?:quiero\s+|voy\s+a\s+)?cortar|(?:cut|cutting)\s+myself)\b/g;
@@ -662,6 +745,16 @@ const CUT_EVERYDAY_STEMS = [
   "vaquer", "cazador", "chancl", "calzon", "banador", "mall",
   "sujetador", "mocasin", "chandal", "alpargat", "pantuf",
   "chinel", "cuec", "sutia", "sneak", "pajam", "leggin", "swimsuit",
+  // T-35 (R5a): el anillo medido por la ronda 5 — «t-shirt»
+  // como token con guion (la palabra leída entera, que no
+  // cuelga de «shirt»), raincoat (que no cuelga de «coat»),
+  // sweatshirt, cardigan, brag- (bragas), macac- (macacão) —
+  // y los corrientes de la frontera medida de la misma
+  // ronda (overall- de overalls, jumpsuit). La clase es la
+  // lista enumerada; su alcance redefinido va en el
+  // comentario de la clase, arriba.
+  "t-shirt", "raincoat", "sweatshirt", "cardigan", "brag", "macac",
+  "overall", "jumpsuit",
   "hair", "nail", "beard", "mustach", "moustach", "bang",
   "jacket", "shoe", "glove", "scarv", "sweater", "hoodie", "shirt",
   "jeans", "sock", "dress", "coat", "boot",
@@ -687,6 +780,11 @@ const CUT_EVERYDAY_WORDS = new Set([
   // («bone» por raíz valdría dentro de palabras ajenas a la
   // clase, y «tern-» valdría «ternura»).
   "bone", "bones", "terno", "ternos",
+  // T-35 (R5a): el singular corriente de «shorts» («el
+  // short», «o short», la forma de nombrarlo en es/pt) y el
+  // «tank» de «tank top», como palabras: por raíz valdrían
+  // dentro de palabras ajenas a la clase.
+  "short", "tank",
 ]);
 
 // La lectura del sintagma tras la forma de «cortar» (T-31): ya
@@ -720,12 +818,36 @@ function cutObjectSegments(folded: string, from: number): CutSegment[] {
   // que no es determinante ni preposición: «tijeras», «par»…)
   const adjunctHasInstrument = () =>
     words.some((w) => !CUT_DETERMINERS.has(w) && !CUT_PREPOSITIONS.has(w) && w !== "unas" && w !== "umas");
+  const cleanWord = (raw: string) =>
+    raw.replace(/^[¿?¡!.,;:()"'«»]+/g, "").replace(/[.,;:!?)"'»]+$/g, "");
   let total = 0;
-  for (const raw of folded.slice(from).split(" ")) {
+  const raws = folded.slice(from).split(" ");
+  for (let ri = 0; ri < raws.length; ri++) {
+    const raw = raws[ri]!;
     if (raw === "") continue;
-    const word = raw.replace(/^[¿?¡!.,;:()"'«»]+/g, "").replace(/[.,;:!?)"'»]+$/g, "");
-    if (CUT_STOP_WORDS.has(word)) break;
-    if (CUT_CONJUNCTIONS.has(word)) {
+    const word = cleanWord(raw);
+    // El token cuyos cierres de puntuación rigen esta vuelta
+    // (la fórmula de R5c consume dos tokens).
+    let lastRaw = raw;
+    if (CUT_STOP_WORDS.has(word)) {
+      // T-35 (R5c): «mas» seguido de «tarde» o «temprano»
+      // no es el «mas» portugués de cierre: es la fórmula
+      // española «más tarde» plegada, un secuenciador de
+      // enumeración, y abre el objeto siguiente con la
+      // fórmula dentro (la cabeza se lee tras ella, como
+      // tras cualquier mediador). «Mas» seguido de
+      // cualquier otra cosa sigue cerrando la lectura,
+      // como manda el diseño declarado.
+      const next = ri + 1 < raws.length ? cleanWord(raws[ri + 1]!) : "";
+      if (word === "mas" && (next === "tarde" || next === "temprano")) {
+        close();
+        adjunct = false;
+        words.push("mas", next);
+        total += 2;
+        lastRaw = raws[ri + 1]!;
+        ri++;
+      } else break;
+    } else if (CUT_CONJUNCTIONS.has(word)) {
       close();
       adjunct = false;
     } else if (CUT_ADJUNCT_STARTERS.has(word)) {
@@ -747,8 +869,8 @@ function cutObjectSegments(folded: string, from: number): CutSegment[] {
     // cutículas, las puntas y la barbilla» lee los tres
     // objetos). La de fin de frase (punto, !, ?) sí cierra la
     // lectura, como siempre.
-    if (/[.!?]/.test(raw)) break;
-    if (/[,;:]/.test(raw)) {
+    if (/[.!?]/.test(lastRaw)) break;
+    if (/[,;:]/.test(lastRaw)) {
       close();
       adjunct = false;
     }
@@ -798,12 +920,47 @@ const CUT_FRONT_SKIP = new Set([
 // logo), que escondían la cabeza igual que los adverbios, y
 // «mesmo», la segunda mitad de la fórmula portuguesa «até
 // mesmo», que no se pelaba en ninguna vía.
+// T-35 (R5b): entran «finalmente» y los mediadores ingleses
+// («finally», «also», «even»): la ronda 5 midió que su
+// cobertura verde era un accidente de letra de la vía
+// pegada (el prefijo acabado en «e» o en «y»), no la
+// lectura con espacios; ahora se pelan también aquí y la
+// cabeza se lee por lectura en las dos vías.
 const CUT_FRONT_ADVERBS = new Set([
   "tambien", "tambem", "solo", "so", "hasta", "ate",
   "incluso", "inclusive", "ademas", "alem",
   "luego", "despues", "encima", "aun",
   "depois", "ainda", "logo", "mesmo",
+  "finalmente", "finally", "also", "even",
 ]);
+
+// T-35 (R5b): las locuciones corrientes de enumeración, la
+// clase que la ronda 5 midió escondiendo la cabeza igual
+// que las palabras sueltas de R4b. No son palabras que se
+// pelan una a una: son fórmulas de dos o tres palabras
+// («a continuación» deja «continuación» de cabeza si solo
+// se pela la «a»; «en seguida», «después de todo» dejan
+// «seguida» o «todo»), así que se pelan como unidad del
+// frente del objeto, con la misma regla de siempre (nunca
+// a través de la última palabra). La lista es la medida
+// por la ronda 5 con su gemela portuguesa de «en primer
+// lugar»; «mas tarde»/«mas temprano» es la fórmula
+// española plegada que el segmentador ya dejó pasar (R5c)
+// y «mais tarde»/«mais cedo» su gemela portuguesa.
+const CUT_FRONT_LOCUTIONS: readonly string[][] = [
+  ["a", "continuacion"],
+  ["en", "seguida"],
+  ["em", "seguida"],
+  ["sobre", "todo"],
+  ["despues", "de", "todo"],
+  ["acto", "seguido"],
+  ["en", "primer", "lugar"],
+  ["em", "primeiro", "lugar"],
+  ["mais", "tarde"],
+  ["mais", "cedo"],
+  ["mas", "tarde"],
+  ["mas", "temprano"],
+];
 
 function isEverydayCutObject(word: string): boolean {
   return CUT_EVERYDAY_WORDS.has(word) || CUT_EVERYDAY_STEMS.some((s) => word.startsWith(s));
@@ -836,6 +993,18 @@ function cutSegmentHead(words: string[]): string | undefined {
         continue;
       }
       break;
+    }
+    // T-35 (R5b): una locución de enumeración al frente se
+    // pela entera, como unidad, antes de mirar la palabra
+    // suelta (si no, su primera palabra se pela como
+    // determinante o preposición y el resto queda de
+    // cabeza: «a continuación», «después de todo»).
+    const loc = CUT_FRONT_LOCUTIONS.find(
+      (l) => i + l.length < words.length && l.every((lw, k) => words[i + k] === lw),
+    );
+    if (loc) {
+      i += loc.length;
+      continue;
     }
     if (!CUT_FRONT_SKIP.has(w) && !CUT_FRONT_ADVERBS.has(w)) break;
     i++;
@@ -898,6 +1067,11 @@ const CUT_EVERYDAY_GLUED_STEMS = [
   "sujetador", "mocasin", "chandal", "alpargat", "pantuf",
   "chinel", "cueca", "sutia", "sneak", "pajam", "leggin", "swimsuit",
   "bone", "terno",
+  // T-35 (R5a): el anillo de la ronda 5, como con espacios.
+  // «losshorts» no tenía raíz pegada: entra «short» (vale
+  // también el singular pegado). «t-shirt» y «raincoat» ya
+  // vetaban por sus raíces «shirt» y «coat» como subcadena.
+  "short", "tank", "cardigan", "brag", "macac", "overall", "jumpsuit",
 ];
 
 // Lo que abre un adjunto de instrumento en la corrida pegada
@@ -915,42 +1089,90 @@ const CUT_ADJUNCT_GLUED_STARTERS = ["con", "usando", "com", "with"];
  * de modificador — los dos vetan por su palabra cotidiana,
  * como fijó T-27.
  */
+// El determinante pegado que puede preceder a la cabeza
+// («lasvenas»): la misma lista que pela la rama del
+// adjunto (la paridad de R3b).
+const CUT_DET_GLUED_RE = /(?:las|los|la|el|as|os|uma|um|una|un|a|o)$/;
+
 // T-32 (R3c): el adverbio de coordinación pegado que puede
 // preceder al determinante de la cabeza («…ytambienlas…»,
-// «…etambem…»): solo vale pegado a la conjunción, a la
-// puntuación de lista o al inicio, para no pelar la cola de
-// otra palabra («consolo» no es «con» + «solo»).
+// «…etambem…»), como en la vía con espacios.
 // T-34 (R4b y R4c): entran los secuenciadores (luego,
 // después, encima, aún; depois, ainda, logo) y «mesmo», y el
-// pelado encadena: tras pelar un mediador se vuelve a mirar,
-// así que «…eatemesmoas…» pela «mesmo» y luego «ate». La
-// frontera pegada queda escrita: una pila cuyos mediadores
-// no encadenan tras la conjunción, la puntuación u otro
-// mediador de la lista sigue sin pelarse en esta vía (con
-// espacios sí se pela entera).
-const CUT_ADVERB_GLUED_RE =
-  /(?:^|[ye,;:])(tambien|tambem|incluso|inclusive|ademas|alem|solo|hasta|ate|so|luego|despues|encima|aun|depois|ainda|logo|mesmo)$/;
+// pelado encadena: tras pelar un mediador se vuelve a mirar.
+// T-35 (R5b y R5d): entran «finalmente» y «finally», y las
+// fórmulas con «tarde»/«cedo»/«temprano» van como unidades
+// al principio de la alternativa: sueltas, el «tarde»
+// final haría pasar la fórmula por el «de» del
+// complemento. El enlace de la cadena ya no es esta regex
+// con su guarda de letra: es el bucle de gluedHarmHeads,
+// por mediador.
+const CUT_MEDIATOR_GLUED_RE =
+  /(?:mastarde|maistemprano|maistarde|maiscedo|tambien|tambem|finalmente|finally|incluso|inclusive|ademas|alem|despues|depois|solo|also|hasta|ate|so|luego|encima|aun|ainda|logo|mesmo|even)$/;
+
+/**
+ * El prefijo sin su determinante pegado final. T-35 (R5e):
+ * «unas»/«umas» se pelan ENTEROS cuando van pegados a una
+ * frontera (el inicio, la conjunción, la puntuación de
+ * lista, otro mediador o un determinante), porque ante la
+ * cabeza reconocida son el artículo, como con espacios
+ * (R3); como cola de otra palabra («algunas») no se
+ * pelan, y la lista corta pela su «as» como siempre.
+ */
+function peelGluedDeterminer(prefix: string): string {
+  const amb = /(?:unas|umas)$/.exec(prefix);
+  if (amb) {
+    const before = prefix.slice(0, prefix.length - amb[0].length);
+    if (
+      before === "" ||
+      /[ye,;:]$/.test(before) ||
+      CUT_MEDIATOR_GLUED_RE.test(before) ||
+      CUT_DET_GLUED_RE.test(before)
+    ) {
+      return before;
+    }
+  }
+  const det = CUT_DET_GLUED_RE.exec(prefix);
+  return det ? prefix.slice(0, prefix.length - det[0].length) : prefix;
+}
 
 function gluedHarmHeads(tail: string): boolean {
   for (const s of CUT_HARM_GLUED_STEMS) {
     for (let i = tail.indexOf(s); i >= 0; i = tail.indexOf(s, i + 1)) {
-      let prefix = tail.slice(0, i);
-      const det = /(?:las|los|la|el|as|os|uma|um|una|un|a|o)$/.exec(prefix);
-      if (det) prefix = prefix.slice(0, prefix.length - det[0].length);
+      let prefix = peelGluedDeterminer(tail.slice(0, i));
+      // T-35 (R5d): la cadena de mediadores enlaza POR
+      // MEDIADOR, no por letra. La forma de T-34 exigía
+      // que el carácter anterior al mediador fuera «y»,
+      // «e» o puntuación, así que la pila corriente
+      // «também só» no se pelaba (el mediador va tras la
+      // «m» de «também») y «também até» solo se reconocía
+      // por la «e» final de «até». Ahora un mediador se
+      // pela cuando lo que lo precede es el inicio, la
+      // conjunción, la puntuación, otro mediador o un
+      // determinante; si lo precede cualquier otra cosa
+      // no se pela: es la cola de una palabra de
+      // contenido («consolo» no es «con» + «solo», ni el
+      // «logo» de «catálogo» un secuenciador).
+      for (;;) {
+        const med = CUT_MEDIATOR_GLUED_RE.exec(prefix);
+        if (!med) break;
+        const before = prefix.slice(0, prefix.length - med[0].length);
+        if (
+          before !== "" &&
+          !/[ye,;:]$/.test(before) &&
+          !CUT_MEDIATOR_GLUED_RE.test(before) &&
+          !CUT_DET_GLUED_RE.test(before)
+        ) {
+          break;
+        }
+        prefix = before;
+      }
       // Tras el «de» del complemento no es cabeza («…de» acaba
       // en «e» y no es la conjunción): es el caso de arriba.
+      // La cadena va antes de este control para que las
+      // fórmulas con «tarde» se pelen como unidad y no
+      // caigan en él.
       if (/(?:de|del|do|da|dos|das)$/.test(prefix)) continue;
-      // T-32 (R3c): entre la conjunción y el determinante
-      // puede ir el adverbio de coordinación, como en la vía
-      // con espacios: se pela y se vuelve a mirar.
-      // T-34 (R4c): el pelado encadena, no se detiene en un
-      // solo mediador («…eatemesmoas…»: «mesmo» y tras él
-      // «ate», cada uno tras el anterior).
-      let adv = CUT_ADVERB_GLUED_RE.exec(prefix);
-      while (adv) {
-        prefix = prefix.slice(0, prefix.length - adv[1].length);
-        adv = CUT_ADVERB_GLUED_RE.exec(prefix);
-      }
       // La cabeza también abre el objeto tras la puntuación
       // de lista pegada («elpelo,las…»): la coma cierra el
       // objeto anterior igual que la conjunción.
