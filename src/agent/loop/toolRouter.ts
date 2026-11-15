@@ -476,7 +476,9 @@ const WEEKDAY_RULES: Array<{ re: RegExp; lang: RouterLang; order: "dm" | "md-or-
     order: "dm",
   },
   {
-    re: /^what\s+day(?:\s+of\s+the\s+week)?\s+(?:is|was|will\s+be|does)\s+([a-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?(?:\s+fall\s+on)?$/i,
+    // 0.1.99 (T-28, H-Z4-3): la abreviatura con punto («what day is
+    // Sept. 15») entra igual que sin punto, como en el recordatorio.
+    re: /^what\s+day(?:\s+of\s+the\s+week)?\s+(?:is|was|will\s+be|does)\s+([a-z]+)\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?(?:\s+fall\s+on)?$/i,
     lang: "en",
     order: "md-or-dm",
   },
