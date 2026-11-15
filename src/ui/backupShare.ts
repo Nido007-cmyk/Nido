@@ -102,8 +102,16 @@ export async function createBackupFile(unlockReason = "Crear backup"): Promise<C
 /** Ruta del backup más reciente, o null si no hay ninguno. */
 export async function findLatestBackup(): Promise<string | null> {
   const files = await FS.readDirectoryAsync(FS.documentDirectory ?? "");
+  // T-29 de la 0.1.99: el filtro excluye el `.knowledge.db` con la
+  // misma condición que la poda de T-03 usa en este fichero. Sin la
+  // exclusión, el orden alfabético ponía el de conocimiento el
+  // último y esta función lo devolvía como si fuera el principal:
+  // el compartir de ModelSetupScreen empaquetaba la base de
+  // conocimiento como principal (createPortableBundle deriva de la
+  // ruta el manifest y el propio knowledge). Defecto preexistente
+  // (era TESTFIX-2026-10-08) cazado por la re-auditoría de la zona 4.
   const backups = files
-    .filter((f) => f.startsWith("nido-backup-") && f.endsWith(".db"))
+    .filter((f) => f.startsWith("nido-backup-") && f.endsWith(".db") && !f.endsWith(".knowledge.db"))
     .sort();
   if (backups.length === 0) return null;
   return `${FS.documentDirectory}${backups[backups.length - 1]}`;
