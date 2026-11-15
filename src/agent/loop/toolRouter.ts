@@ -461,12 +461,14 @@ const MONTH_LOOKUP: Record<string, number> = (() => {
 
 const WEEKDAY_RULES: Array<{ re: RegExp; lang: RouterLang; order: "dm" | "md-or-dm" }> = [
   {
-    re: /^(?:en\s+)?qu[eé]\s+d[ií]a(?:\s+de\s+la\s+semana)?\s+(?:cae|es|ser[aá]|fue|toca)\s+(?:el\s+)?(\d{1,2})\s+de\s+([\p{L}]+)(?:\s+(?:de|del)\s+(\d{4}))?$/iu,
+    // 0.1.99 (T-33): la desnuda sin «de» («qué día cae el 15
+    // ene») entra igual que con «de», como en el recordatorio.
+    re: /^(?:en\s+)?qu[eé]\s+d[ií]a(?:\s+de\s+la\s+semana)?\s+(?:cae|es|ser[aá]|fue|toca)\s+(?:el\s+)?(\d{1,2})\s+(?:de\s+)?([\p{L}]+)(?:\s+(?:de|del)\s+(\d{4}))?$/iu,
     lang: "es",
     order: "dm",
   },
   {
-    re: /^(?:em\s+)?que\s+dia(?:\s+da\s+semana)?\s+(?:cai|[eé]|ser[aá]|foi)\s+(?:o\s+(?:dia\s+)?)?(\d{1,2})\s+de\s+([\p{L}]+)(?:\s+de\s+(\d{4}))?$/iu,
+    re: /^(?:em\s+)?que\s+dia(?:\s+da\s+semana)?\s+(?:cai|[eé]|ser[aá]|foi)\s+(?:o\s+(?:dia\s+)?)?(\d{1,2})\s+(?:de\s+)?([\p{L}]+)(?:\s+de\s+(\d{4}))?$/iu,
     lang: "pt",
     order: "dm",
   },

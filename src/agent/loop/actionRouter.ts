@@ -423,18 +423,42 @@ function withinOneEdit(a: string, b: string): boolean {
  * (CLOCK_WORDS vive más abajo en el fichero; esto se evalúa al
  * llamar, con el módulo ya cargado.)
  */
-const WORD_CLOCK_FRAME_RE = /(?<![\p{L}])(?:a\s+las|a\s+la|às|à)\s+(\p{L}+)/giu;
+const ES_CLOCK_FRAME_RE = /(?<![\p{L}])(?:a\s+las|a\s+la)\s+(\p{L}+)/giu;
+const PT_CLOCK_FRAME_RE = /(?<![\p{L}])(?:às|à)\s+(\p{L}+)/giu;
+// 0.1.99 (T-33, H-Z4-5-R2): la palabra se decide por el idioma del
+// marco. La guarda de T-28 validaba contra CLOCK_WORDS entero, que
+// mezcla los tres idiomas: «onse» es palabra de la tabla (dictado
+// ES de «once») y tras «às» la guarda callaba, pero el parser PT
+// no la lee y el aviso nacía a las 09:00 en silencio. Ahora cada
+// marco valida contra las palabras que SU parser lee de verdad
+// (las alternancias de parseWordClock de su idioma): tras «às»,
+// «onse» no es palabra válida y está a una edición de «onze»:
+// avisa. Y el ES «a las onse» sigue siendo válido en su marco.
+const ES_CLOCK_FORM_WORDS = new Set([
+  "una", "dos", "tres", "cuatro", "cinco", "sinco", "seis", "siete",
+  "ocho", "nueve", "diez", "once", "onse", "doce", "dose",
+]);
+const PT_CLOCK_FORM_WORDS = new Set([
+  "uma", "duas", "três", "tres", "quatro", "cinco", "seis", "sete",
+  "oito", "nove", "dez", "onze", "doze",
+]);
 // Adjetivos ordinarios que casualmente viven a una edición de una
 // palabra de reloj («nueva» de «nueve», «nova» de «nove»): «a la
 // nueva jefa» es contenido, no un dictado de las nueve — nadie
 // dicta «nueva» queriendo decir la hora.
 const CLOCK_FRAME_ORDINARIES = new Set(["nueva", "nova"]);
 function hasNearMissWordClock(text: string): boolean {
-  for (const m of text.matchAll(WORD_CLOCK_FRAME_RE)) {
-    const w = m[1]!.toLowerCase();
-    if (w.length < 4 || CLOCK_WORDS[w] !== undefined || CLOCK_FRAME_ORDINARIES.has(w)) continue;
-    for (const key of Object.keys(CLOCK_WORDS)) {
-      if (key.length >= 4 && withinOneEdit(w, key)) return true;
+  const frames: Array<readonly [RegExp, ReadonlySet<string>]> = [
+    [ES_CLOCK_FRAME_RE, ES_CLOCK_FORM_WORDS],
+    [PT_CLOCK_FRAME_RE, PT_CLOCK_FORM_WORDS],
+  ];
+  for (const [frameRe, words] of frames) {
+    for (const m of text.matchAll(frameRe)) {
+      const w = m[1]!.toLowerCase();
+      if (w.length < 4 || words.has(w) || CLOCK_FRAME_ORDINARIES.has(w)) continue;
+      for (const key of words) {
+        if (key.length >= 4 && withinOneEdit(w, key)) return true;
+      }
     }
   }
   return false;
@@ -460,7 +484,10 @@ export function hasImpossibleWhen(text: string): boolean {
   // «31 de febrero», «30 de fevereiro», «february 30», «el 32».
   // 0.1.99 (T-28, H-Z4-3): la abreviatura con punto («Sept. 31»)
   // entra igual que sin punto en la rama mes-primero.
-  const re = new RegExp(`(?<![\\d])(\\d{1,2})\\s+de\\s+(${MONTH_WORD})(?![\\p{L}])|(?<![\\p{L}])(${MONTH_WORD})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?(?!\\d)`, "giu");
+  // 0.1.99 (T-33): la desnuda sin «de» («31 abr», «30 feb»)
+  // avisa igual en la rama día-primero; la frontera tras el
+  // mes ya la exigía el patrón.
+  const re = new RegExp(`(?<![\\d])(\\d{1,2})\\s+(?:de\\s+)?(${MONTH_WORD})(?![\\p{L}])|(?<![\\p{L}])(${MONTH_WORD})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?(?!\\d)`, "giu");
   for (const m of text.matchAll(re)) {
     const day = Number(m[1] ?? m[4]);
     const month = (m[2] ?? m[3]) as string;
@@ -919,13 +946,21 @@ const MIDNIGHT_RE = /(?<![\p{L}])(?:(?:a|al|at|à|pela|por)\s+(?:(?:la|the|a)\s+
 /** «el viernes 10», «friday 10», «sexta 10»: día de la semana con un número detrás que no es hora escrita ni fecha con mes. */
 const WEEKDAY_NUMBER_RE =
   /(?<![\p{L}])(lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday|segunda(?:-feira)?|ter[çc]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?)\s+(?:the\s+|dia\s+)?(\d{1,2})(?:st|nd|rd|th)?(?![\d:.,])(?!\s*(?:(?:de|of)\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|january|february|march|april|may|june|july|august|september|october|november|december|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro)|h\b|hs?\b|horas?|hours?|minutos?|minutes?|am\b|pm\b))/iu;
-const MONTH_DATE_RE = /\d{1,2}\s+(?:de|of)\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|january|february|march|april|may|june|july|august|september|october|november|december|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro|ene|feb|mar|abr|mai|jun|jul|ago|sep|sept|set|oct|out|nov|dic|jan|fev|apr|aug|dec|dez)(?![\p{L}])|(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\.?\s+\d{1,2}/iu;
+// 0.1.99 (T-33): el separador «de/of» es opcional — la forma
+// desnuda («el 15 ene») también es fecha con mes y manda sobre
+// el día de la semana, como la de «de». La frontera tras el mes
+// ya la exigía el patrón («15 marcos» no casa).
+const MONTH_DATE_RE = /\d{1,2}\s+(?:(?:de|of)\s+)?(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|january|february|march|april|may|june|july|august|september|october|november|december|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro|ene|feb|mar|abr|mai|jun|jul|ago|sep|sept|set|oct|out|nov|dic|jan|fev|apr|aug|dec|dez)(?![\p{L}])|(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\.?\s+\d{1,2}/iu;
 const DAY_AFTER_TOMORROW_RE = /(?<![\p{L}])(?:pasado\s+ma[ñn]ana|the\s+day\s+after\s+tomorrow|depois\s+de\s+amanh[ãa])(?![\p{L}])/iu;
 /** «el 15» / «on the 15th» / «no dia 15», sin mes detrás ni forma de hora.
  *  0.1.99 (A-C1): un «/N» detrás ya no es «el día suelto»: es la fecha
- *  numérica (o una fracción), y la lee readNumericDate con su doctrina. */
+ *  numérica (o una fracción), y la lee readNumericDate con su doctrina.
+ *  0.1.99 (T-33): un mes desnudo detrás («el 15 ene», «dia 15 fev»)
+ *  tampoco es el día suelto: es la fecha nombrada sin «de», y en
+ *  stripDateWords este patrón corre antes que el de la nombrada —
+ *  sin el bloqueo se comía el día y dejaba el mes en el título. */
 const DAY_OF_MONTH_RE =
-  /(?<![\p{L}])(?:el\s+(?:d[ií]a\s+)?(\d{1,2})(?!\s*(?:[:.,]\d|\/\d|de\s|del\s|h\b|hs?\b|horas?|minutos?|%|°|º|\d))|on\s+the\s+(\d{1,2})(?:st|nd|rd|th)?(?!\s*(?:of\s|[:.]\d|\/\d|\d))|(?:no\s+)?dia\s+(\d{1,2})(?!\s*(?:de\s+(?:janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?![\p{L}])|[:.]\d|\/\d|\d)))(?![\p{L}\d])/iu;
+  /(?<![\p{L}])(?:el\s+(?:d[ií]a\s+)?(\d{1,2})(?!\s*(?:[:.,]\d|\/\d|de\s|del\s|h\b|hs?\b|horas?|minutos?|%|°|º|\d))(?!\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro|ene|feb|mar|abr|mai|jun|jul|ago|sep|sept|set|oct|out|nov|dic|jan|fev|apr|aug|dec|dez)\.?(?![\p{L}]))|on\s+the\s+(\d{1,2})(?:st|nd|rd|th)?(?!\s*(?:of\s|[:.]\d|\/\d|\d))|(?:no\s+)?dia\s+(\d{1,2})(?!\s*(?:de\s+(?:janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?![\p{L}])|[:.]\d|\/\d|\d))(?!\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro|ene|feb|mar|abr|mai|jun|jul|ago|sep|sept|set|oct|out|nov|dic|jan|fev|apr|aug|dec|dez)\.?(?![\p{L}])))(?![\p{L}\d])/iu;
 const THIS_PERIOD_RE = /(?<![\p{L}])(?:esta\s+(?:tarde|noche)|tonight|this\s+(?:afternoon|evening)|(?:hoje\s+)?[àa]\s+noite|esta\s+noite)(?![\p{L}])/iu;
 
 function dayPeriod(t: string): "am" | "pm" | null {
@@ -980,7 +1015,10 @@ export function stripDateWords(input: string): string {
       // «on March 15th»): el título del aviso quedaba con la fecha dentro.
       // 0.1.99 (T-28, H-Z4-3): el punto de la abreviatura sale con la
       // fecha («15 de ene.» no deja «. comprar pan» en el título).
-      .replace(/(?:(?<![\p{L}])(?:el|em|no|on)\s+)?(?:(?<![\p{L}])(?:d[ií]a)\s+)?(?<![\p{L}\d])\d{1,2}\s+de\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro|ene|feb|mar|abr|mai|jun|jul|ago|sep|sept|set|oct|out|nov|dic|jan|fev|apr|aug|dec|dez)\.?(?:\s+de(?:l)?\s+\d{4})?(?![\p{L}])/giu, "")
+      // 0.1.99 (T-33): la desnuda sin «de» sale igual («15 ene» no
+      // deja «ene» en el título); la frontera tras el mes ya la
+      // exigía el patrón, así que «15 marcos» sigue sin tocarse.
+      .replace(/(?:(?<![\p{L}])(?:el|em|no|on)\s+)?(?:(?<![\p{L}])(?:d[ií]a)\s+)?(?<![\p{L}\d])\d{1,2}\s+(?:de\s+)?(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro|ene|feb|mar|abr|mai|jun|jul|ago|sep|sept|set|oct|out|nov|dic|jan|fev|apr|aug|dec|dez)\.?(?:\s+de(?:l)?\s+\d{4})?(?![\p{L}])/giu, "")
       .replace(/(?:(?<![\p{L}])on\s+)?(?<![\p{L}])(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\.?\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?(?![\p{L}\d])/giu, "")
       .replace(/\ba\s+las\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b(?:\s*(?:y\s+(?:media|cuarto)|menos\s+(?:un\s+)?cuarto))?/gi, "")
       // B14: el singular «a la 1» / «à 1», espejo de las dos anteriores.
@@ -1587,14 +1625,33 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
       jun: 5, jul: 6, ago: 7, aug: 7, sep: 8, sept: 8, set: 8,
       oct: 9, out: 9, nov: 10, dic: 11, dec: 11, dez: 11,
     };
-    const mEs = /(\d{1,2})\s+(?:de|of)\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro|ene|feb|mar|abr|mai|jun|jul|ago|sep|sept|set|oct|out|nov|dic|jan|fev|apr|aug|dec|dez)(?:\s+de(?:l)?\s+(\d{4}))?/i.exec(t);
+    // 0.1.99 (T-33, repetición de Z-02): la forma desnuda sin
+    // «de» («el 15 ene», «15 fev») se lee igual que con «de» —
+    // en ES caía al día suelto del mes en curso con la
+    // abreviatura dentro del título, y en PT no daba fecha.
+    // La alternativa desnuda exige frontera tras el mes (con
+    // su punto opcional): «15 marcos» no es una fecha. La rama
+    // con «de» queda como estaba.
+    const MESES_DIA_RE =
+      "enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro|ene|feb|mar|abr|mai|jun|jul|ago|sep|sept|set|oct|out|nov|dic|jan|fev|apr|aug|dec|dez";
+    const mEs = new RegExp(
+      `(\\d{1,2})\\s+(?:de|of)\\s+(${MESES_DIA_RE})(?:\\s+de(?:l)?\\s+(\\d{4}))?|(\\d{1,2})\\s+(${MESES_DIA_RE})\\.?(?![\\p{L}])(?:\\s+de(?:l)?\\s+(\\d{4}))?`,
+      "iu",
+    ).exec(t);
     // 0.1.99 (T-28, H-Z4-3): la abreviatura EN con punto («Jan. 15»,
     // «Sept. 15», la forma corriente en EE. UU.) parsea igual que sin
     // punto; el punto quedaba entre el mes y el día y la vía de
     // recordatorio no veía la fecha (dueAt null, la sordera de M-08).
     const mEn = /(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?/i.exec(t);
     let month: number | undefined, day: number | undefined, year: number | undefined;
-    if (mEs) { day = parseInt(mEs[1], 10); month = meses[mEs[2].toLowerCase()]; year = mEs[3] ? parseInt(mEs[3], 10) : undefined; }
+    let bareNamedDate = false;
+    if (mEs) {
+      bareNamedDate = mEs[4] !== undefined;
+      day = parseInt(bareNamedDate ? mEs[4]! : mEs[1]!, 10);
+      month = meses[(bareNamedDate ? mEs[5]! : mEs[2]!).toLowerCase()];
+      const yearRaw = bareNamedDate ? mEs[6] : mEs[3];
+      year = yearRaw ? parseInt(yearRaw, 10) : undefined;
+    }
     else if (mEn) { month = meses[mEn[1].toLowerCase()]; day = parseInt(mEn[2], 10); year = mEn[3] ? parseInt(mEn[3], 10) : undefined; }
     if (month !== undefined && day !== undefined && day >= 1 && day <= 31) {
       // Validar fecha real (M5) en el año en que caería. Antes se validaba
@@ -1621,6 +1678,12 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
           endOfDay.setHours(23, 59, 59, 999);
           if (endOfDay.getTime() > now.getTime()) targetDate = d;
         }
+        // T-33: la desnuda que casó pero no existe en ningún
+        // año («31 abr», «30 feb») no cae al día suelto (que la
+        // convertía en el 31 de diciembre) ni a la hora suelta:
+        // no hay fecha, y el aviso lo levanta hasImpossibleWhen
+        // en la capa de la orden.
+        if (!targetDate && bareNamedDate) return null;
       }
     }
   }
