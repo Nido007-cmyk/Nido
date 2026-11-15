@@ -58,6 +58,12 @@ interface NidoP2PNativeModule {
   startLan(): Promise<void>;
   stopLan(): Promise<void>;
   getLanStatus(): { active: boolean; port: number; connections: number };
+  /**
+   * T-12 (m-37): marca una conexión LAN como autenticada (la ruta JS se
+   * estableció tras verificar el CONFIRM). Solo entonces el lector
+   * nativo retira el timeout del socket. Síncrona.
+   */
+  markLanAuthenticated(address: string): void;
   /** 0.1.15: true if Android's battery saver leaves NIDO alone in the background. */
   isIgnoringBatteryOptimizations(): boolean;
   /** Opens the system dialog (or NIDO's app info) to allow background running. */
@@ -154,6 +160,15 @@ export function stopLan(): Promise<void> {
 
 export function getLanStatus(): { active: boolean; port: number; connections: number } {
   return native.getLanStatus();
+}
+
+/**
+ * T-12 (m-37): avisa al módulo LAN de que la ruta con esta dirección
+ * quedó establecida y autenticada. Lo llama el transporte al mutar la
+ * ruta, solo para direcciones "LAN:".
+ */
+export function markLanAuthenticated(address: string): void {
+  native.markLanAuthenticated(address);
 }
 
 /** Suscribe un listener a un evento nativo; devuelve la función para desuscribir. */

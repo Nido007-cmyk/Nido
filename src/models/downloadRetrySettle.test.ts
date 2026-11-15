@@ -216,7 +216,8 @@ const ASSET: CatalogModel = {
   filename: "models/test-model-retry.gguf",
   sizeBytes: BYTES.length,
   sha256: SHA,
-  sourceUrl: "https://huggingface.co/test/Test-GGUF/resolve/main/test.gguf",
+  // T-09 (M-34): la puerta exige un origen fijado; repo real fijado.
+  sourceUrl: "https://huggingface.co/bartowski/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/test.gguf",
   revision: "0123456789abcdef0123456789abcdef01234567",
   license: "Apache-2.0",
   description: "test fixture",

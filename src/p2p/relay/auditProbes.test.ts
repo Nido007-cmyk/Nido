@@ -137,15 +137,19 @@ describe("P1 el mensajero retoca lo de fuera", () => {
     expect(openCarry(touched, [caroKey.secret], caro.pk, contactsOfCaro, NOW + H + 1)).toBeNull();
   });
 
-  it("el eid no va autenticado: el mismo sobre con otro eid se abre igual (la deduplicación vive en el interior)", () => {
+  it("el eid no va autenticado: el mismo sobre con otro eid se abre igual; el almacén lo reconoce por la huella (T-13, M-27)", () => {
     const e = sealToCaro("hola");
     const rebadged = { ...e, eid: toHex(randomNonce(16)) };
     expect(openCarry(rebadged, [caroKey.secret], caro.pk, contactsOfCaro, NOW)?.text).toBe("hola");
     const st = new CarryStore();
     expect(st.accept(e, beto.pk, NOW)).toBe("stored");
+    // T-13 (M-27): en ESTE teléfono el reetiquetado ya no entra dos veces:
+    // la deduplicación del almacén ya no vive solo en el interior.
+    expect(st.accept(rebadged, beto.pk, NOW)).toBe("duplicate");
+    // Un teléfono que nunca lo vio sí lo acepta una vez (límite honesto:
+    // la huella es memoria local de cada teléfono, no un registro global).
     const st2 = new CarryStore();
-    st2.accept(e, beto.pk, NOW);
-    expect(st2.accept(rebadged, beto.pk, NOW)).toBe("stored"); // otro teléfono lo ve como nuevo
+    expect(st2.accept(rebadged, beto.pk, NOW)).toBe("stored");
   });
 
   it("cambiar la etiqueta por la de OTRA clave de buzón de la misma destinataria lo invalida (contexto atado a la clave)", () => {
@@ -202,13 +206,25 @@ describe("P4 topes del almacén", () => {
     expect(st.size()).toBe(accepted);
   }, 120_000);
 
-  it("con el almacén lleno de sobres ajenos, ni mi propio sobre entra (se queda en solo directo)", () => {
+  it("con el almacén lleno de sobres ajenos, mi propio sobre SÍ entra (reserva de m-49)", () => {
+    // Era la sonda del asiento m-49 («ni mi propio sobre entra»): la
+    // T-14 la cierra con la reserva, y esta prueba queda como su
+    // regresión: los ajenos paran en el tope menos la reserva y los
+    // propios usan el tope entero.
     const st = new CarryStore();
     const sources = ["a", "b", "c", "d", "e", "f", "g"].map((c) => c.repeat(64));
+    let foreign = 0;
     for (let i = 0; i < 200; i++) {
-      expect(st.accept(sealToCaro("hola", { id: `f-${i}` }), sources[i % sources.length], NOW)).toBe("stored");
+      const r = st.accept(sealToCaro("hola", { id: `f-${i}` }), sources[i % sources.length], NOW);
+      if (r !== "stored") break;
+      foreign++;
     }
-    expect(st.addOwn(sealToCaro("mio", { id: "own-1" }), NOW)).toBe("full");
+    expect(foreign).toBe(STORE_LIMITS.maxEnvelopes - STORE_LIMITS.ownReserve);
+    for (let i = 0; i < STORE_LIMITS.ownReserve; i++) {
+      expect(st.addOwn(sealToCaro("mio", { id: `own-${i}` }), NOW)).toBe("stored");
+    }
+    expect(st.size()).toBe(STORE_LIMITS.maxEnvelopes);
+    expect(st.addOwn(sealToCaro("mio", { id: "own-x" }), NOW)).toBe("full");
   }, 120_000);
 
   it("borde de caducidad en el almacén: exp == ahora ya es tarde; exp == ahora+1 entra y el barrido lo tira al llegar", () => {

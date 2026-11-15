@@ -584,20 +584,30 @@ async function isProvenOutdatedPack(
 export type PackFileState = "current" | "outdated" | "unusable";
 
 /**
- * Whether a knowledge pack's file can be opened: "current" (complete for the
- * catalog, as before), "outdated" (older verified bytes, see above) or
- * "unusable". Local packs (sizeBytes 0, built by the user) have no catalog
- * entry to compare against and are "current" when present.
+ * Whether a knowledge pack's file can be opened: "current" (its bytes
+ * verify against its pin), "outdated" (older verified bytes, see above)
+ * or "unusable".
+ *
+ * M-35 (auditoría 2026-11-13, carril 07 · F-03/B1/B2): the pin is the
+ * catalog's for a catalog pack and the import registry's for an
+ * imported one (rag/packs.ts builds the entry from
+ * models/importedPacksRegistry.ts) — and a pack with NO pin is never
+ * current for merely existing: until 0.1.99 this shortcut returned
+ * "current" for any file with sizeBytes 0 and never re-hashed a pack
+ * whose size still matched, so a file dropped into corpus/ by anything
+ * (or a verified pack rewritten afterwards) opened as trusted
+ * knowledge. The verdict is now checkModelTrust's, exactly the gate
+ * the models pass: the install journal is the fast path (same size,
+ * same mtime, no re-hash), a first sight or a rewritten file pays one
+ * streaming re-hash against the pin and is adopted into the journal.
+ * Nothing here deletes: deletion stays with the manager's status path.
  */
 export async function packFileState(asset: CatalogModel): Promise<PackFileState> {
-  await ensureInstallReconciled();
-  const path = assetPath(asset);
-  const info = await FileSystem.getInfoAsync(path).catch(() => null);
-  if (!info?.exists || info.isDirectory) return "unusable";
-  const size = info.size ?? 0;
-  if (asset.sizeBytes <= 0) return "current";
-  if (await isProvenOutdatedPack(asset, path, size, mtimeMsOf(info), await getInstallRecord(asset.id))) return "outdated";
-  return size === asset.sizeBytes ? "current" : "unusable";
+  if (asset.sizeBytes <= 0 || !asset.sha256) return "unusable";
+  const verdict = await checkModelTrust(asset);
+  if (verdict.trusted) return "current";
+  if (verdict.outdated) return "outdated";
+  return "unusable";
 }
 
 /**

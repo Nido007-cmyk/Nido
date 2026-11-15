@@ -138,7 +138,7 @@ movement, radio range and battery will change the numbers.
 
 | Who | Can | Can't |
 |---|---|---|
-| A carrier (a contact) | See the outside of the envelopes it carries: a random envelope id, a tag, the expiry, the hops left, the ephemeral key, the KEM ciphertext, a nonce and the ciphertext (and so their size bucket); know who handed them over (a contact of theirs). If the writer hands an envelope over in person, the carrier can guess the writer (it can't tell an envelope written by that contact from one it was only carrying). | Read the text; change the message or forge a sender (authenticated with the sender's identity key inside); make it last longer for the recipient (authenticated expiry inside); know the recipient unless it is a contact of the recipient (then the tag tells it "for Caro"). |
+| A carrier (a contact) | See the outside of the envelopes it carries: a random envelope id, a tag, the expiry, the hops left, the ephemeral key, the KEM ciphertext, a nonce and the ciphertext (and so their size bucket); know who handed them over (a contact of theirs). If the writer hands an envelope over in person, the carrier can guess the writer (it can't tell an envelope written by that contact from one it was only carrying). | Read the text; change the message or forge a sender (authenticated with the sender's identity key inside); make it last longer for the recipient (authenticated expiry inside); know the recipient unless it is a contact of the recipient (then the tag tells it "for Caro"); keep an envelope it accepted and never pass it on, undetectably. |
 | A contact of the recipient | Recognize envelopes for the recipient by the tag while the mailbox key lasts (up to 14 days), and so link them. | Read them. |
 | A carrier who is not a contact of the recipient | Link envelopes with the same tag on the same day (same recipient). | Link them across days (the tag changes daily); know who the recipient is. |
 | A stranger nearby | Nothing new: the radio link is the same encrypted, contacts-only session as today. | Receive, inject or carry envelopes. |
@@ -148,13 +148,8 @@ movement, radio range and battery will change the numbers.
 
 Known limits:
 
-- **The outer envelope id is not authenticated.** A carrier can copy
-  an envelope under a fresh envelope id, so a phone that deduplicates
-  the envelopes it stores by that id may hold or pass the same envelope
-  more than once. The caps still bound it (30 per contact, 200 and
-  2 MB in total), and the recipient never gets the message twice:
-  their deduplication is by the inside (sender, kind and message id),
-  not by the envelope id.
+- **The outer envelope is not authenticated, and re-injection is bounded, not impossible.** A carrier can copy an envelope under a fresh envelope id with a fresh outer expiry. A phone deduplicates what it stores by the envelope's immutable core as well as by its id, so the same physical envelope is accepted only once per phone; the caps still bound the rest (30 per contact, 200 and 2 MB in total), the recipient checks the authenticated expiry inside, and a copy that reaches a phone that has never seen it can still be stored there once. The recipient never gets the message twice: their deduplication is by the inside (sender, kind and message id).
+- **A carrier can silently keep an envelope.** There are no transit receipts and no custody log: a carrier who accepts an envelope and never passes it on looks exactly like two phones that never met. The writer's only signal is that the delivery receipt never comes back, which is also what bad luck looks like. What bounds the damage is redundancy: the writer gives the envelope to up to 8 contacts and each carrier to up to 3 more, so one silent carrier only kills the copies that passed through it. Detecting it would need infrastructure (servers, or receipts at every hop) that would itself record who carries for whom, so NIDO does not try.
 - **Tag linkability:** contacts of the recipient can link envelopes to
   them for up to 14 days (the life of the mailbox key). Others can only
   link them within one day.
@@ -173,6 +168,11 @@ Known limits:
 - **Relationships:** whoever carries for you learns that you have
   envelopes for someone; Briar documents the same kind of leak for its
   forums. Carrying is off by default for this reason.
+- **Envelopes are deniable, not anonymous against a network-wide
+  observer.** Anyone who sees enough of the network can correlate
+  envelope tags and timing; carriers learn that you had envelopes for
+  someone, as above. Deniability protects you against a carrier proving
+  later that you wrote a message; it does not hide that envelopes moved.
 
 ## Phase 2: how it works in the app
 

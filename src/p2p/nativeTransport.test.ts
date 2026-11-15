@@ -40,6 +40,18 @@ import { NidoMessenger } from "./messenger";
 import { P2PSession, makeEnvelope } from "./protocol";
 import { LoopbackTransport } from "./transport";
 import type { P2PTransportEvents, P2PPeerInfo } from "./transport";
+import { resetFeatureFlagsForTests, setFeatureOverrideForTests } from "../config/featureFlags";
+
+// T-14 (M-21): este fichero ejercita la mecánica del handshake llamando
+// a dispositivos descubiertos, sin contacto conocido. Desde la 0.1.99
+// ese mundo es el de la elección del usuario con «Solo saludo privado»
+// APAGADO: con el defecto nuevo, llamar a un desconocido se rechaza
+// antes de abrir el socket (eso lo cubre t14PrivateHello.test.ts). Aquí
+// se fija esa elección para seguir midiendo la mecánica.
+beforeEach(() => {
+  resetFeatureFlagsForTests();
+  setFeatureOverrideForTests("p2p.privateHelloOnly", false);
+});
 
 const MY_PK = new Uint8Array(32).fill(1);
 const MY_PK_HEX = toHex(MY_PK);
@@ -247,6 +259,18 @@ const nowSec = () => Math.floor(Date.now() / 1000);
  * Construye un HELLO v3 válido firmado por `signer` (por defecto el peer).
  * Devuelve también el nonce para poder citarlo en el CONFIRM.
  */
+/**
+ * T-13 (M-22): el par simulado de estas pruebas es anterior a `rs`
+ * (0.1.98): su HELLO no lo anuncia y la respuesta le llega en claro,
+ * que es lo que estas pruebas miden. La respuesta sellada a un HELLO
+ * que anuncia `rs` es el sujeto de t13Handshake.test.ts.
+ */
+function withoutRs(b64: string): string {
+  const obj = JSON.parse(new TextDecoder().decode(decodeBase64(b64))) as Record<string, unknown>;
+  delete obj.rs;
+  return encodeBase64(new TextEncoder().encode(JSON.stringify(obj)));
+}
+
 function peerHello(
   ephHex: string,
   pkHex: string = PEER_PK_HEX,
@@ -257,7 +281,7 @@ function peerHello(
   const msg = buildHelloSignMessageV3(pkHex, ephHex, nonceHex, ts);
   const sigHex = toHex(signDetached(msg, signer.secretKey));
   return {
-    b64: encodeBase64(buildHello(pkHex, ephHex, nonceHex, ts, sigHex)),
+    b64: withoutRs(encodeBase64(buildHello(pkHex, ephHex, nonceHex, ts, sigHex))),
     nonceHex,
   };
 }
@@ -314,7 +338,8 @@ describe("nativeTransport: utilidades", () => {
     const msg = buildHelloSignMessageV3(MY_PK_HEX, eph, nonceHex, ts);
     const sigHex = toHex(signDetached(msg, MY_SIGN.secretKey));
     const body = buildHello(MY_PK_HEX, eph, nonceHex, ts, sigHex);
-    expect(parseHello(body)).toEqual({ pk: MY_PK_HEX, eph, nonce: nonceHex, ts, sig: sigHex, c4: true });
+    // T-13 (M-22): buildHello anuncia también `rs` y parseHello lo expone.
+    expect(parseHello(body)).toEqual({ pk: MY_PK_HEX, eph, nonce: nonceHex, ts, sig: sigHex, c4: true, rs: true });
     // v1 → error claro de versión antigua
     expect(() =>
       parseHello(

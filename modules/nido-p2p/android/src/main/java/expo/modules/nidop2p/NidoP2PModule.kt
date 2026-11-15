@@ -239,11 +239,15 @@ class NidoP2PModule : Module() {
      * Solicita que el dispositivo sea visible (discoverable) para otros
      * dispositivos Bluetooth. Muestra el diálogo del sistema. Necesario
      * para que dos tablets NIDO se encuentren durante el emparejamiento.
+     * T-13 (m-35): la ventana es el mínimo por defecto de Android (120 s),
+     * no 300: mientras dura, el sistema enseña el nombre real del aparato
+     * a cualquier Bluetooth cercano. El aviso previo al usuario lo da la
+     * capa TS antes de llamar (nativeTransport.requestDiscoverable).
      */
     AsyncFunction("requestDiscoverable") { promise: Promise ->
       try {
         val intent = android.content.Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE).apply {
-          putExtra(android.bluetooth.BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300)
+          putExtra(android.bluetooth.BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 120)
           addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         val ctx = appContext.reactContext ?: throw IllegalStateException("Sin reactContext")
@@ -364,6 +368,16 @@ class NidoP2PModule : Module() {
       } catch (e: Exception) {
         mapOf("active" to false, "port" to 0, "connections" to 0)
       }
+    }
+
+    /**
+     * T-12 (m-37): el transporte JS avisa de que la ruta con esta
+     * dirección quedó establecida y autenticada (CONFIRM verificado).
+     * Solo entonces el lector LAN retira el timeout del socket; sin la
+     * señal, la conexión muere al vencer la gracia post-saludo.
+     */
+    Function("markLanAuthenticated") { address: String ->
+      lan.markAuthenticated(address)
     }
 
     AsyncFunction("shutdown") { promise: Promise ->

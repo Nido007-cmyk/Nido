@@ -861,13 +861,16 @@ export function ModelSetupScreen(props: Props) {
                       // anotarla o fotografiarla (evidencia física). Compartir
                       // sigue disponible en su propio botón de esta tarjeta.
                       setLastBackupPath(path);
-                      // 0.1.29 (B-2): sin PIN en el teléfono, aviso visible
-                      // antes de la clave (misma política en todas las puertas).
-                      if (noLock) {
+                      // T-03 de la 0.1.99 (m-65, decisión del dueño):
+                      // sin bloqueo del dispositivo, el respaldo se
+                      // creó igual pero la clave no sale (createBackupFile
+                      // ni la exporta: key es null). Se avisa de que
+                      // hace falta un bloqueo de pantalla para verla.
+                      if (noLock || key === null) {
                         Alert.alert(
-                          t("backup.noLockTitle"),
-                          t("backup.noLockBody"),
-                          [{ text: t("backup.understood"), onPress: () => setBackupKeyModal({ dek: key, dest: path }) }],
+                          t("backup.keyNeedsLockTitle"),
+                          t("backup.keyNeedsLockBody"),
+                          [{ text: t("backup.understood") }],
                           { cancelable: false },
                         );
                       } else {

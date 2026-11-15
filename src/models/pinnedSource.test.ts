@@ -5,7 +5,12 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { pinnedSourceUrl, MODEL_CATALOG, type CatalogModel } from "./manifest";
+import {
+  pinnedSourceUrl,
+  sourceContractOf,
+  MODEL_CATALOG,
+  type CatalogModel,
+} from "./manifest";
 
 const base: CatalogModel = {
   id: "qwen-test",
@@ -79,29 +84,56 @@ describe("catalog GGUF pinning (C/F2)", () => {
   // Every downloadable GGUF in the catalog must resolve to an immutable,
   // revision-pinned URL — a mutable /resolve/main/ branch pointer must
   // never reach the downloader.
-  const GGUF_IDS = [
+  //
+  // T-09 (audit 2026-11-14, F-08): the set is DERIVED from the catalog
+  // (every llm/embedding entry is a GGUF file), not a hand-kept literal
+  // list — the old literal list named 6 of the 10 GGUFs, so the four
+  // newest models were silently outside this pinning net. The census
+  // below still names today's ten explicitly, so adding or dropping a
+  // GGUF is a deliberate, visible change to this expectation.
+  const GGUF_ASSETS = MODEL_CATALOG.filter(
+    (a) => a.kind === "llm" || a.kind === "embedding"
+  );
+  const EXPECTED_GGUF_IDS = [
     "phi-3.5-mini-instruct-q4km",
     "bge-small-en-v1.5-q8",
+    "multilingual-e5-small-q8",
     "qwen2.5-1.5b-instruct-q4km",
+    "qwen2.5-0.5b-instruct-q4km",
+    "qwen2.5-0.5b-instruct-q5km",
+    "qwen3-0.6b-q4km",
     "qwen2.5-7b-instruct-q4km",
     "lfm2.5-8b-a1b-q4km",
     "gemma-4-e4b-it-q4_0",
   ];
 
-  it("all 6 catalog GGUFs pin a 40-hex commit revision", () => {
-    expect(GGUF_IDS).toHaveLength(6);
-    for (const id of GGUF_IDS) {
-      const asset = MODEL_CATALOG.find((a) => a.id === id);
-      expect(asset).toBeDefined();
-      expect(asset!.revision).toMatch(/^[0-9a-f]{40}$/);
+  it("census: the derived GGUF set is exactly today's ten models", () => {
+    expect(GGUF_ASSETS.map((a) => a.id).sort()).toEqual([...EXPECTED_GGUF_IDS].sort());
+    for (const asset of GGUF_ASSETS) {
+      expect(asset.filename.endsWith(".gguf"), `${asset.id}: not a GGUF file`).toBe(true);
+    }
+  });
+
+  it("every branch-served GGUF pins a 40-hex commit revision", () => {
+    for (const asset of GGUF_ASSETS) {
+      if (sourceContractOf(asset.sourceUrl) === "github-release-asset") continue;
+      expect(asset.revision, `${asset.id}: missing revision`).toMatch(/^[0-9a-f]{40}$/);
     }
   });
 
   it("every effective GGUF download URL is immutable — no /resolve/main/ survives", () => {
-    for (const id of GGUF_IDS) {
-      const asset = MODEL_CATALOG.find((a) => a.id === id)!;
+    for (const asset of GGUF_ASSETS) {
       const url = pinnedSourceUrl(asset);
-      expect(url).toContain(`/resolve/${asset.revision}/`);
+      if (sourceContractOf(asset.sourceUrl) === "github-release-asset") {
+        // The e5 embedding ships as a GitHub release asset: no revision
+        // applies; its integrity pin is the catalog sha256.
+        expect(asset.id).toBe("multilingual-e5-small-q8");
+        expect(url).toBe(asset.sourceUrl);
+        continue;
+      }
+      expect(url, `${asset.id}: URL not pinned to its revision`).toContain(
+        `/resolve/${asset.revision}/`
+      );
       expect(url).not.toContain("/resolve/main/");
     }
   });

@@ -40,6 +40,7 @@ const nativeFns = vi.hoisted(() => ({
   startLan: vi.fn(async () => undefined),
   stopLan: vi.fn(async () => undefined),
   getLanStatus: vi.fn(() => ({ active: true, port: 41234, connections: 1 })),
+  markLanAuthenticated: vi.fn(() => undefined),
 }));
 
 vi.mock("expo-modules-core", () => ({
@@ -91,6 +92,7 @@ describe("puente nido-p2p: superficie exportada", () => {
       "startLan",
       "stopLan",
       "getLanStatus",
+      "markLanAuthenticated",
       "addListener",
     ];
     for (const name of expected) {
@@ -99,5 +101,10 @@ describe("puente nido-p2p: superficie exportada", () => {
         `export faltante en modules/nido-p2p/src/index.ts: ${name}`,
       ).toBeDefined();
     }
+  });
+
+  it("markLanAuthenticated delega al módulo nativo con la dirección exacta (T-12, m-37)", () => {
+    bindings.markLanAuthenticated("LAN:192.168.1.50:40443");
+    expect(nativeFns.markLanAuthenticated).toHaveBeenCalledWith("LAN:192.168.1.50:40443");
   });
 });

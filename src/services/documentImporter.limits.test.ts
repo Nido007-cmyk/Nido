@@ -89,6 +89,7 @@ vi.mock("../rag/db", () => ({
   createCustomCollection: async (c: { id: string }) => {
     W().created.push(c.id);
   },
+  measureCollectionStoredBytes: async () => 0,
   deleteCustomCollection: async (id: string) => {
     W().deleted.push(id);
   },

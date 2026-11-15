@@ -124,6 +124,21 @@ export interface GenerateOptions {
   timeoutMs?: number;
   /** Called once, right before the timeout triggers stop() — lets the caller distinguish a timeout from a natural finish or a user-initiated stop. */
   onTimeout?: () => void;
+  /**
+   * T-10 (0.1.99, M-20): señal de aborto del llamador. Si aborta
+   * durante la generación, el motor pide stop() — la misma parada que
+   * la del usuario, con su recorte a frase completa — y la promesa se
+   * asienta con el texto parcial. Si ya viene abortada, la generación
+   * se para en cuanto arranca la completion.
+   */
+  signal?: AbortSignal;
+  /**
+   * T-10 (0.1.99, m-31): semilla de muestreo explícita. Sin ella, los
+   * presets structured y factual fijan DETERMINISTIC_SEED (salidas
+   * reproducibles donde importa el formato); chat no manda ninguna,
+   * como hasta la 0.1.98.
+   */
+  seed?: number;
 }
 
 /**
@@ -136,6 +151,9 @@ export interface GenerateOptions {
  * paths where it could distort machine-readable output.
  */
 export type SamplingPresetName = "structured" | "factual" | "chat";
+
+/** T-10 (0.1.99, m-31): semilla fija de los presets reproducibles. */
+export const DETERMINISTIC_SEED = 1234567;
 
 export interface SamplingPreset {
   temperature: number;
@@ -1471,6 +1489,8 @@ export class LlamaEngine {
     stop,
     timeoutMs,
     onTimeout,
+    signal,
+    seed,
     telemetryContext,
   }: GenerateOptions): Promise<string> {
     // P2.4: telemetry measurement. All local, fire-and-forget, never throws.
@@ -1484,6 +1504,19 @@ export class LlamaEngine {
     // Foto del contador de paradas: si stop() se pide durante ESTA
     // generación, su texto se recorta aunque el nativo diga interrupted.
     const stopsAtStart = this.stopCounter;
+    // T-10 (0.1.99, M-20): la señal del llamador para la generación
+    // como un stop() del usuario (mismo contador, mismo recorte a
+    // frase completa al asentarse). El listener se retira en el
+    // finally exterior; una señal ya abortada antes de arrancar la
+    // completion la trata startCompletion, que es quien la crea.
+    let detachAbort: (() => void) | null = null;
+    if (signal) {
+      const onAbort = () => {
+        void this.stop().catch(() => {});
+      };
+      signal.addEventListener("abort", onAbort, { once: true });
+      detachAbort = () => signal.removeEventListener("abort", onAbort);
+    }
     let firstTokenAt: number | null = null;
     let tokenCount = 0;
     let timedOut = false;
@@ -1491,8 +1524,10 @@ export class LlamaEngine {
     // otra vez («las aluminosas, las aluminosas…», visto en la Tab A9+),
     // se corta la generación (ahorra batería) y el texto final queda en
     // la primera aparición.
-    // Salida estructurada (JSON/gramática): sin guarda, para no tocar
-    // nunca un formato que se va a parsear.
+    // guardLoops gobierna el RECORTE del texto asentado: la salida
+    // estructurada (JSON/gramática) nunca se recorta, para no tocar un
+    // formato que se va a parsear. La detección y el corte de la
+    // generación sí corren en todos los modos (m-26, T-10, 0.1.99).
     const guardLoops = responseFormat === undefined && grammar === undefined;
     let streamed = "";
     let loopCut = false;
@@ -1513,7 +1548,11 @@ export class LlamaEngine {
     // OTRA generación posterior sobre el mismo contexto.
     let generationSettled = false;
     const watchLoop = (piece: string) => {
-      if (!guardLoops) return;
+      // m-26 (T-10, 0.1.99): la detección también vigila en modo
+      // structured — un bucle ahí quemaba la generación entera sin que
+      // nadie lo cortara (batería y un turno colgado hasta el timeout).
+      // Lo que sigue reservado a la prosa es el recorte del texto
+      // asentado (trimRepetitionLoop/trimToCompleteSentences, abajo).
       streamed += piece;
       if (loopCut || tokenCount % 8 !== 0) return;
       if (findRepetitionLoop(streamed)) {
@@ -1573,7 +1612,7 @@ export class LlamaEngine {
         // de reutilizarlo a ciegas. Dentro de la cola de carga, como el
         // propio arranque: el orden con load/unload no cambia.
         if (this.contextSuspect) await this.recreateContext();
-        return this.startCompletion({ prompt, messages, nPredict, temperature, topK, topP, minP, repeatPenalty, samplingPreset, responseFormat, grammar, enableThinking, onToken: wrappedOnToken, stop, timeoutMs, onTimeout: wrappedOnTimeout });
+        return this.startCompletion({ prompt, messages, nPredict, temperature, topK, topP, minP, repeatPenalty, samplingPreset, responseFormat, grammar, enableThinking, onToken: wrappedOnToken, stop, timeoutMs, onTimeout: wrappedOnTimeout, signal, seed });
       });
       try {
         let result: { text?: string };
@@ -1654,6 +1693,7 @@ export class LlamaEngine {
       throw e;
     } finally {
       keepAliveDone = true;
+      detachAbort?.();
       (releaseKeepAlive as (() => void) | null)?.();
       if (timedOut) stopReason = "timeout";
       else if (loopCut && stopReason === "completed") stopReason = "stopped";
@@ -1695,6 +1735,8 @@ export class LlamaEngine {
     stop,
     timeoutMs,
     onTimeout,
+    signal,
+    seed,
   }: GenerateOptions): Promise<{ completion: Promise<{ text?: string }>; getFull: () => string; timer: ReturnType<typeof setTimeout> | null }> {
     if (!this.context) throw new Error("LlamaEngine: model not loaded");
     if (!prompt && !messages) {
@@ -1757,6 +1799,12 @@ export class LlamaEngine {
     };
     if (responseFormat !== undefined) extraParams.response_format = responseFormat;
     if (grammar !== undefined) extraParams.grammar = grammar;
+    // T-10 (0.1.99, m-31): semilla — la explícita manda; sin ella, los
+    // presets reproducibles (structured/factual) fijan la constante y
+    // chat no manda clave (llamada nativa como hasta la 0.1.98).
+    // llama.rn la acepta en los params de completion (rc.11).
+    const effectiveSeed = seed ?? (samplingPreset === "structured" || samplingPreset === "factual" ? DETERMINISTIC_SEED : undefined);
+    if (effectiveSeed !== undefined) extraParams.seed = effectiveSeed;
 
     // messages+jinja lets llama.cpp apply the loaded GGUF's own embedded
     // chat_template — DEFAULT_STOP_SEQUENCES exist specifically because
@@ -1796,6 +1844,13 @@ export class LlamaEngine {
       full += data.token;
       onToken?.(data.token);
     });
+    // T-10 (0.1.99, M-20): si la señal ya venía abortada (o abortó
+    // mientras la generación esperaba su turno en la cola), la parada
+    // se pide ahora que la completion existe: antes de este punto no
+    // había nada que parar.
+    if (signal?.aborted) {
+      void this.stop().catch(() => {});
+    }
     this.inFlight.add(completion);
     return { completion, getFull: () => full, timer };
   }

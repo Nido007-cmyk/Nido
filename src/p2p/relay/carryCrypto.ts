@@ -392,6 +392,20 @@ export function envelopeBytes(e: CarryEnvelope): number {
   return JSON.stringify(e).length;
 }
 
+/**
+ * T-13 (M-27): huella del NÚCLEO INMUTABLE del sobre. Del sobre, solo
+ * `eid`, `exp` y `hops` viajan sin autenticar y un portador puede
+ * reescribirlos; el resto (etiqueta, efímera, cifrado de la clave de
+ * buzón, nonce y caja) queda fijado al sellar: dos sobres con la misma
+ * huella SON el mismo sobre físico, traiga la etiqueta que traiga. La
+ * huella no revela nada que el portador no vea ya en claro, y no sirve
+ * para abrir el sobre: es solo para reconocerlo.
+ */
+export function envelopeFingerprint(e: CarryEnvelope): string {
+  const core = `nido-carry-fp-v1|${e.tag}|${e.eph}|${e.kct}|${e.nonce}|${e.box}`;
+  return toHex(sha512(utf8Encode(core)).slice(0, 32));
+}
+
 export interface OpenedCarry {
   from: string;
   id: string;

@@ -863,12 +863,20 @@ export function fuseRetrievalResults(
 
   const sorted = Array.from(byId.values()).sort((a, b) => b.score - a.score);
 
-  // At most MAX_CHUNKS_PER_ARTICLE per title, so one article's chunks can't crowd out a
+  // At most MAX_CHUNKS_PER_ARTICLE per article, so one article's chunks can't crowd out a
   // second topic (knowledge packs store up to 3 chunks per article).
+  // T-05 (P-07 de la auditoría): la clave es el DOCUMENTO (docId),
+  // no el título: dos artículos distintos con el mismo título
+  // compartían cupo y el segundo quedaba fuera por homonimia. El
+  // título queda de respaldo para fragmentos sin docId; en los
+  // packs el docId ya incorpora el título (`pack:<id>:<título>`),
+  // así que su cupo no cambia.
+  const articleKey = (c: RetrievedChunk): string =>
+    c.docId ? `doc:${c.docId}` : `title:${c.title.trim().toLowerCase()}`;
   const perTitle = new Map<string, number>();
   const out: RetrievedChunk[] = [];
   for (const c of sorted) {
-    const key = c.title.trim().toLowerCase();
+    const key = articleKey(c);
     const n = perTitle.get(key) ?? 0;
     if (n >= MAX_CHUNKS_PER_ARTICLE) continue;
     perTitle.set(key, n + 1);
@@ -890,7 +898,7 @@ export function fuseRetrievalResults(
   if (topK > 0 && !out.some((c) => c.sourceKind === "user")) {
     const bestUser = sorted.find((c) => c.sourceKind === "user");
     if (bestUser) {
-      const key = bestUser.title.trim().toLowerCase();
+      const key = articleKey(bestUser);
       const titleCount = perTitle.get(key) ?? 0;
       const insertAt = out.findIndex((c) => c.score <= bestUser.score);
       if (titleCount < MAX_CHUNKS_PER_ARTICLE) {

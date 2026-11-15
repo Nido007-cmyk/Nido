@@ -1041,6 +1041,33 @@ export async function setCustomCollectionActive(id: string, active: boolean): Pr
   });
 }
 
+/**
+ * T-03 de la 0.1.99 (M-32): cuánto ocupa de verdad una colección en
+ * la base — el texto de sus chunks (título + cuerpo en bytes UTF-8),
+ * la copia de ese texto en el índice FTS y los blobs de sus
+ * vectores. Es la medida que alimenta custom_collections.size_bytes
+ * de las colecciones importadas desde esta versión; antes se
+ * guardaba la suma de los tamaños de los ficheros fuente del
+ * selector, que no dice nada de lo almacenado: un PDF escaneado de
+ * 100 MB aporta casi nada de texto, y un .txt breve aporta sus
+ * chunks y, sobre todo, sus embeddings (que no contaban).
+ */
+export async function measureCollectionStoredBytes(collectionId: string): Promise<number> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<{ total: number }>(
+    `SELECT
+       (SELECT COALESCE(SUM(COALESCE(LENGTH(CAST(title AS BLOB)), 0) + COALESCE(LENGTH(CAST(body AS BLOB)), 0)), 0)
+          FROM chunks WHERE collection_id = ?) +
+       (SELECT COALESCE(SUM(COALESCE(LENGTH(CAST(f.title AS BLOB)), 0) + COALESCE(LENGTH(CAST(f.body AS BLOB)), 0)), 0)
+          FROM chunks_fts f JOIN chunks c ON c.chunk_id = f.chunk_id WHERE c.collection_id = ?) +
+       (SELECT COALESCE(SUM(LENGTH(e.embedding)), 0)
+          FROM chunk_embeddings e JOIN chunks c ON c.chunk_id = e.chunk_id WHERE c.collection_id = ?)
+       AS total`,
+    [collectionId, collectionId, collectionId]
+  );
+  return Number(row?.total ?? 0);
+}
+
 export async function deleteCustomCollection(id: string): Promise<void> {
   await writeTransaction(async (txn) => {
     const rows = await txn.getAllAsync<{ chunk_id: string }>(

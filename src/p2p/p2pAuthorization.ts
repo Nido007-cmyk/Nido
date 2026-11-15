@@ -23,9 +23,6 @@
 
 import { authorize, type AuthDecision } from "../agent/policy/authorization";
 import type { ToolAction } from "../agent/policy/policyEngine";
-import type { CapabilityGrant } from "./negotiation";
-import { verifyGrant } from "./negotiation";
-import { fromHex } from "./crypto";
 import { globalRevocationRegistry } from "./replayProtection";
 
 /**
@@ -140,64 +137,10 @@ export function evaluateProposalScopes(
 }
 
 /**
- * Valida un grant para ejecución: firma, expiración, usos, revocación.
+ * T-12 (0.1.99, m-45): aquí vivían `validateGrantForExecution` y
+ * `consumeGrantUse`, la mitad ejecutora de la superficie de grants.
+ * Retiradas junto con `CapabilityGrant`/`issueGrant`/`verifyGrant` de
+ * negotiation.ts: ningún llamador de producción las alcanzaba (la
+ * autorización real de una propuesta pasa por evaluateProposalScopes,
+ * arriba, y por la decisión del usuario en su tarjeta).
  */
-export function validateGrantForExecution(
-  grant: CapabilityGrant,
-  issuerPkHex: string,
-  requiredScope: string,
-  now: number = Date.now()
-): { valid: boolean; reason?: string; requiresHumanApproval?: boolean } {
-  // 1. Verificar firma, expiración y usos (usesConsumed del grant)
-  const issuerBytes = fromHex(issuerPkHex);
-  const grantCheck = verifyGrant(grant, issuerBytes, grant.usesConsumed, now);
-  if (!grantCheck.valid) {
-    return { valid: false, reason: grantCheck.reason };
-  }
-
-  // 2. Verificar revocación
-  if (!globalRevocationRegistry.isGrantUsable(grant.grantId, grant.granteePkHex)) {
-    return { valid: false, reason: "revoked" };
-  }
-
-  // 3. Verificar que el grant incluye el scope requerido
-  if (!grant.scopes.includes(requiredScope)) {
-    return { valid: false, reason: "scope_not_granted" };
-  }
-
-  // 4. Verificar que el scope sigue permitido por política local
-  // (la política puede haber cambiado desde la emisión del grant)
-  const evalResult = evaluateProposalScopes([requiredScope], grant.granteePkHex);
-  if (evalResult.decision === "DENY") {
-    return { valid: false, reason: "scope_now_denied_by_policy" };
-  }
-
-  // ASK: el grant es criptográficamente válido, pero la política local exige
-  // confirmación humana para este scope. Antes esto era indistinguible de
-  // AUTO; ahora el llamador DEBE comprobar `requiresHumanApproval` antes de
-  // ejecutar (auditoría 2026-10-10, M3).
-  if (evalResult.decision === "ASK") {
-    return { valid: true, requiresHumanApproval: true };
-  }
-
-  return { valid: true };
-}
-
-/**
- * Registra el uso de un grant (incrementa contador).
- * Retorna false si el grant ya no es válido.
- */
-export function consumeGrantUse(
-  grant: CapabilityGrant,
-  issuerPkHex: string,
-  requiredScope: string,
-  now: number = Date.now(),
-  /** El usuario confirmó ESTA ejecución (obligatorio si la política dice ASK). */
-  humanApproved: boolean = false
-): boolean {
-  const validation = validateGrantForExecution(grant, issuerPkHex, requiredScope, now);
-  if (!validation.valid) return false;
-  if (validation.requiresHumanApproval && !humanApproved) return false;
-  grant.usesConsumed += 1;
-  return true;
-}

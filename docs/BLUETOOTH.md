@@ -81,6 +81,17 @@ everything (already the case).
   relay-then-drop after CONFIRM is a blackhole (delivery semantics are
   N6's scope, separate). Messages still carry sender verification,
   recipient verification, and anti-replay IDs.
+- **Presence is visible; identity is not.** NIDO's Bluetooth service name and UUID and its Wi-Fi service type are fixed and public, so a nearby scanner can tell that a phone runs NIDO, and can see its Bluetooth MAC. It cannot tell whose phone it is: announcements carry no name, no identity key and no capabilities. Making the identifiers per-user would stop contacts from finding each other at all.
+- **The Bluetooth server listens while the app lives; the Wi-Fi local
+  server stops when you leave the NIDO screen.** That asymmetry is
+  deliberate: it is what lets a contact reach you without you opening
+  anything first. The always-on responder is quiet until it validates a
+  signed HELLO from a paired contact, pre-authentication quotas bound
+  what a stranger can make it do, and every connection (Bluetooth and
+  Wi-Fi local) is written to the network log. A setting to accept
+  connections only while the NIDO screen is open was considered and not
+  added: nobody has asked for it, and the quiet responder plus the log
+  are the current answer.
 
 ## Permissions (Android)
 

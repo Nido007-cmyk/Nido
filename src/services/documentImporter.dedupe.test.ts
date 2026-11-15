@@ -160,6 +160,7 @@ vi.mock("../rag/db", () => ({
     const w = W();
     w.collections.set(c.id, { ...c, active: true, createdAt: w.clock++, lastAccessed: 0 });
   },
+  measureCollectionStoredBytes: async () => 0,
   deleteCustomCollection: async (id: string) => {
     const w = W();
     w.collections.delete(id);

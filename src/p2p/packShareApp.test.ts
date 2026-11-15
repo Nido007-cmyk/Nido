@@ -20,6 +20,7 @@ const registered = vi.hoisted(() => ({
   provider: null as unknown,
   importer: null as unknown,
   filter: null as null | ((adv: unknown) => boolean),
+  gate: null as null | ((senderPkHex: string) => Promise<boolean>),
 }));
 const knowledgePacksMock = vi.hoisted(() => vi.fn(async () => [
   { id: "nido-esencial", filename: "nido-esencial.sqlite", sha256: "ab".repeat(32), sizeBytes: 10 },
@@ -47,6 +48,7 @@ vi.mock("./packShareService", () => ({
     setDataProvider: (p: unknown) => { registered.provider = p; },
     setImporter: (i: unknown) => { registered.importer = i; },
     setOfferFilter: (f: typeof registered.filter) => { registered.filter = f; },
+    setOfferGate: (g: typeof registered.gate) => { registered.gate = g; },
   },
 }));
 vi.mock("../rag/packs", () => ({
@@ -64,6 +66,7 @@ describe("wirePackShare (F6-09)", () => {
     registered.provider = null;
     registered.importer = null;
     registered.filter = null;
+    registered.gate = null;
   });
 
   it("registra identidad, envío, proveedor, importador y filtro", async () => {
@@ -74,6 +77,8 @@ describe("wirePackShare (F6-09)", () => {
     expect(registered.provider).toBeTruthy();
     expect(registered.importer).toBeTruthy();
     expect(registered.filter).toBeTypeOf("function");
+    // T-13 (M-23): también la puerta de cotejo de huella de las ofertas.
+    expect(registered.gate).toBeTypeOf("function");
     expect(knowledgePacksMock).toHaveBeenCalled();
   });
 

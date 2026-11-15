@@ -301,7 +301,7 @@ describe("guarda de negaciones en las respuestas del modelo (0.1.59)", () => {
   });
 
   it("el caso de la tablet: la frase con la negación perdida se cambia por la de la guía, palabra por palabra", () => {
-    const r = verifyGroundedAnswer(MODEL, [{ title: "Dolor de pecho e infarto — Qué hacer", body: CHEST }], "es");
+    const r = verifyGroundedAnswer(MODEL, [{ title: "Dolor de pecho e infarto — Qué hacer", body: CHEST }], "es", "");
     expect(r.text).toContain("no está sangrando");
     expect(r.text).not.toMatch(/aspirina, está sangrando/);
   });
@@ -309,7 +309,7 @@ describe("guarda de negaciones en las respuestas del modelo (0.1.59)", () => {
   it("una frase que conserva sus negaciones no se toca", () => {
     const ok = "Que la persona deje de hacer esfuerzo y no la dejes sola.";
     const src = [{ title: "Dolor de pecho", body: "Afloja la ropa, tranquilízala y no la dejes sola. Que la persona deje de hacer esfuerzo." }];
-    expect(verifyGroundedAnswer(ok, src, "es").text).toContain("no la dejes sola");
+    expect(verifyGroundedAnswer(ok, src, "es", "").text).toContain("no la dejes sola");
   });
 });
 

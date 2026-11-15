@@ -22,21 +22,29 @@
  *   3. the manifest proves one of our two origins (models/packImport.ts:
  *      a SALVORA PACKS Ed25519 signature, or a NIDO catalog pin);
  *   4. the file is a knowledge pack by the same meta checks openPack
- *      applies when it opens one.
+ *      applies when it opens one;
+ *   5. its internal schema is the one the readers query — the tables
+ *      and columns of its format version, with row counts under the
+ *      caps (M-35/m-91: the meta alone used to pass).
  *
  * Only then does the caller confirm (the UI shows who signed, A.3 chain 3)
  * and the file is promoted into corpus/ with a rename, never half-copied —
- * the same discipline as a catalog download (ModelManager.ts). The engine
- * accepts any pack file it finds in corpus/ (packs.ts), so this door is
- * where all of the piece's trust is earned: it is the only user-reachable
- * path that writes pack files there besides the catalog itself (whose
- * downloads are checksum-verified against the signed catalog) and the
- * friend-to-friend importer (which only installs catalog-identical bytes).
+ * the same discipline as a catalog download (ModelManager.ts).
  *
  * The origin the door verified is recorded in a small registry inside
- * corpus/ (imported-packs.json): the "Signed by" mark in the list is shown
- * only for packs this door verified, and the total wipe already deletes
- * the whole corpus/ directory (appReset.ts), registry included.
+ * corpus/ (imported-packs.json, models/importedPacksRegistry.ts): the
+ * "Signed by" mark in the list is shown only for packs this door
+ * verified, and the total wipe already deletes the whole corpus/
+ * directory (appReset.ts), registry included. Since M-35 the registry
+ * is also the pack's pin: the engine (packs.ts) lists an imported pack
+ * from its record and the open gate verifies its bytes against the
+ * recorded hash, so neither a file dropped into corpus/ by anything
+ * else nor a verified file rewritten afterwards opens as a pack. The
+ * door also seats the pack in the install journal at promotion, so the
+ * first open takes the same proven fast path as a catalog install;
+ * imports from before that seat themselves on their first open, by
+ * re-hash against the registry pin (the migration is the gate's slow
+ * path, not a special case).
  *
  * Everything here is local: no network, no account, no new dependency.
  */
@@ -47,17 +55,24 @@ import {
   PACK_IMPORT_MAX_BYTES,
   parsePackManifest,
   summarizePackMeta,
+  validatePackSchema,
   verifyPackOrigin,
   type PackMetaSummary,
   type PackOrigin,
+  type PackSchemaDescriptor,
 } from "../models/packImport";
-import { sameSha, sha256OfFile } from "../models/modelTrust";
+import { packFileState, sameSha, sha256OfFile } from "../models/modelTrust";
+import {
+  readImportedPacks,
+  writeImportedPacks,
+  type ImportedPackRecord,
+} from "../models/importedPacksRegistry";
+import { clearInstallRecord, recordInstall } from "../models/installState";
 import { CORPUS_CATALOG, type CatalogModel } from "../models/manifest";
 import { closePack } from "../rag/packs";
 import { deletePackIndexes } from "../rag/vectorIndex";
 
 const CORPUS_DIR = "corpus/";
-const REGISTRY_NAME = "imported-packs.json";
 
 export interface ImportedPackItem {
   filename: string;
@@ -76,14 +91,6 @@ export interface ImportedPackItem {
   embeddingModelSha256?: string;
 }
 
-interface ImportedPackRecord {
-  origin: PackOrigin;
-  sha256: string;
-  sizeBytes: number;
-  name: string;
-  importedAt: string;
-}
-
 export type PackImportRejectionReason =
   | "missing-manifest"
   | "hash-mismatch"
@@ -99,7 +106,6 @@ export type PackImportOutcome =
   | { status: "rejected"; reason: PackImportRejectionReason };
 
 const corpusUri = () => `${FileSystem.documentDirectory}${CORPUS_DIR}`;
-const registryUri = () => `${corpusUri()}${REGISTRY_NAME}`;
 /** The id knowledgePacks() gives a non-catalog pack file (packs.ts). */
 const localPackId = (filename: string) => `local-${filename.replace(/\.sqlite$/, "")}`;
 
@@ -127,25 +133,15 @@ function localPackModel(filename: string): CatalogModel {
 }
 
 // ---------------------------------------------------------------------------
-// Registry of what this door verified (origin marks live here, nowhere else)
+// Registry of what this door verified (origin marks live here, nowhere else).
+// The read/write itself lives in models/importedPacksRegistry.ts, shared
+// with the engine (M-35): the same record that carries the origin mark is
+// the pack's pin at open time.
 // ---------------------------------------------------------------------------
 
-async function readRegistry(): Promise<Record<string, ImportedPackRecord>> {
-  try {
-    const text = await FileSystem.readAsStringAsync(registryUri());
-    const parsed = JSON.parse(text) as { packs?: Record<string, ImportedPackRecord> };
-    if (parsed && typeof parsed === "object" && parsed.packs && typeof parsed.packs === "object") {
-      return parsed.packs;
-    }
-  } catch {
-    // No registry yet (or unreadable): no pack carries an origin mark.
-  }
-  return {};
-}
-
-async function writeRegistry(packs: Record<string, ImportedPackRecord>): Promise<void> {
-  await FileSystem.makeDirectoryAsync(corpusUri(), { intermediates: true }).catch(() => {});
-  await FileSystem.writeAsStringAsync(registryUri(), JSON.stringify({ version: 1, packs }));
+/** The CatalogModel knowledgePacks() builds for an imported pack: the record is the pin. */
+function importedPackModel(filename: string, record: ImportedPackRecord): CatalogModel {
+  return { ...localPackModel(filename), sizeBytes: record.sizeBytes, sha256: record.sha256 };
 }
 
 /**
@@ -157,14 +153,23 @@ async function writeRegistry(packs: Record<string, ImportedPackRecord>): Promise
  * a catalog file name presents as the catalog item, never as an import,
  * so it is not reported here; a record whose file is gone is stale and
  * is not reported either.
+ *
+ * M-35/B2: existence used to be the whole check, so the mark — and the
+ * literal route it feeds — survived any later rewrite of the file. The
+ * mark now requires the bytes to verify against the record's hash at
+ * read time (packFileState: journal fast path, one re-hash when the
+ * file changed or was never seated); a manipulated pack loses the mark
+ * exactly as it loses the right to open.
  */
 export async function verifiedImportedPacks(): Promise<Map<string, { name: string; origin: PackOrigin }>> {
-  const registry = await readRegistry();
+  const registry = await readImportedPacks();
   const out = new Map<string, { name: string; origin: PackOrigin }>();
   for (const [filename, record] of Object.entries(registry)) {
     if (catalogEntryForFilename(filename)) continue;
     const info = await FileSystem.getInfoAsync(`${corpusUri()}${filename}`).catch(() => null);
     if (!info?.exists || info.isDirectory) continue;
+    const state = await packFileState(importedPackModel(filename, record)).catch(() => "unusable" as const);
+    if (state !== "current") continue;
     out.set(localPackId(filename), { name: record.name, origin: record.origin });
   }
   return out;
@@ -176,7 +181,7 @@ export async function verifiedImportedPacks(): Promise<Map<string, { name: strin
  * catalog item it byte-for-byte is, in the downloadable packs list.
  */
 export async function listImportedPacks(): Promise<ImportedPackItem[]> {
-  const registry = await readRegistry();
+  const registry = await readImportedPacks();
   const items: ImportedPackItem[] = [];
   for (const [filename, record] of Object.entries(registry)) {
     if (catalogEntryForFilename(filename)) continue;
@@ -215,6 +220,51 @@ async function readPackMeta(uri: string): Promise<Record<string, string> | null>
     db = await SQLite.openDatabaseAsync(path.slice(slash + 1), { useNewConnection: true }, path.slice(0, slash));
     const rows = await db.getAllAsync<{ key: string; value: string }>("SELECT key, value FROM meta");
     return Object.fromEntries(rows.map((r) => [r.key, r.value]));
+  } catch {
+    return null;
+  } finally {
+    await db?.closeAsync().catch(() => {});
+  }
+}
+
+/**
+ * M-35/m-91: a picked file's internal schema (which tables exist, their
+ * columns, and the content row counts) for the door's step 5, read with
+ * the same path handling as readPackMeta. Null when the file cannot be
+ * opened as a database at all; a table the PRAGMA finds no columns for
+ * simply does not exist.
+ */
+async function readPackSchema(uri: string): Promise<PackSchemaDescriptor | null> {
+  const path = uri.replace(/^file:\/\//, "");
+  const slash = path.lastIndexOf("/");
+  if (slash < 0) return null;
+  let db: SQLite.SQLiteDatabase | null = null;
+  try {
+    db = await SQLite.openDatabaseAsync(path.slice(slash + 1), { useNewConnection: true }, path.slice(0, slash));
+    const database = db;
+    const tables: Record<string, string[]> = {};
+    for (const table of ["meta", "chunks", "guides", "regions", "facts"]) {
+      const cols = await database
+        .getAllAsync<{ name: string }>(`PRAGMA table_info(${table})`)
+        .catch(() => [] as Array<{ name: string }>);
+      if (cols.length > 0) tables[table] = cols.map((c) => c.name);
+    }
+    const count = async (table: string): Promise<number> => {
+      if (!tables[table]) return 0;
+      const rows = await database
+        .getAllAsync<{ n: number }>(`SELECT COUNT(*) AS n FROM ${table}`)
+        .catch(() => [] as Array<{ n: number }>);
+      return rows.length > 0 && Number.isFinite(rows[0].n) ? rows[0].n : 0;
+    };
+    return {
+      tables,
+      counts: {
+        chunks: await count("chunks"),
+        guides: await count("guides"),
+        regions: await count("regions"),
+        facts: await count("facts"),
+      },
+    };
   } catch {
     return null;
   } finally {
@@ -303,11 +353,21 @@ export async function importPackFromFile(
   const summary: PackMetaSummary | null = summarizePackMeta(meta);
   if (!summary) return { status: "rejected", reason: "not-a-pack" };
 
+  // PI-2 · 5 (M-35/m-91) — the internal schema, not just the meta: the
+  // tables and columns the readers query, at least one chunk of
+  // content, and the row caps. A signed file whose schema is broken
+  // would pass every check above and then fail inside the app pack by
+  // pack; here it is simply not a pack.
+  const schema = await readPackSchema(sqliteAsset.uri);
+  if (!schema || !validatePackSchema(summary.formatVersion, schema)) {
+    return { status: "rejected", reason: "not-a-pack" };
+  }
+
   // RI-3 — duplicates are defined, never silent: the same verified bytes
   // already in place are simply already imported; different verified
   // bytes under the same file name replace the old pack (an updated
   // edition), after the same confirmation as any import.
-  const registry = await readRegistry();
+  const registry = await readImportedPacks();
   const targetUri = `${corpusUri()}${filename}`;
   const targetInfo = await FileSystem.getInfoAsync(targetUri).catch(() => null);
   const existing = registry[filename];
@@ -339,7 +399,21 @@ export async function importPackFromFile(
     importedAt: new Date().toISOString(),
   };
   registry[filename] = record;
-  await writeRegistry(registry);
+  await writeImportedPacks(registry);
+  // M-35: seat the pack in the install journal with the bytes just
+  // verified, so its first open takes the gate's fast path instead of
+  // paying a re-hash — the same proof a catalog install leaves. Best
+  // effort like every journal write: without the seat, the first open
+  // re-hashes against the registry pin and seats it then.
+  const placed = await FileSystem.getInfoAsync(targetUri).catch(() => null);
+  await recordInstall(model.id, {
+    status: "installed",
+    sizeBytes,
+    sha256: fileSha256,
+    ...(placed?.exists && typeof placed.modificationTime === "number"
+      ? { mtimeMs: placed.modificationTime * 1000 }
+      : {}),
+  }).catch(() => {});
   return {
     status: "imported",
     item: { filename, name: record.name, origin, sizeBytes, sha256: fileSha256 },
@@ -347,10 +421,11 @@ export async function importPackFromFile(
 }
 
 /**
- * PI-4: removing an imported pack deletes its file (it disappears from the
- * list and from search results, since the engine only searches files that
- * exist) and drops its origin record. Re-adding the same file afterwards
- * works exactly like the first time.
+ * PI-4: removing an imported pack deletes its file (it disappears from
+ * the list and from search results: without its registry record it is
+ * not a pack at all, M-35) and drops its origin record and its install
+ * journal seat. Re-adding the same file afterwards works exactly like
+ * the first time.
  */
 export async function removeImportedPack(filename: string): Promise<void> {
   const model = localPackModel(filename);
@@ -358,9 +433,11 @@ export async function removeImportedPack(filename: string): Promise<void> {
   if (model.id !== localPackId(filename)) await closePack(localPackId(filename)).catch(() => {});
   await deletePackIndexes(model).catch(() => {});
   await FileSystem.deleteAsync(`${corpusUri()}${filename}`, { idempotent: true });
-  const registry = await readRegistry();
+  await clearInstallRecord(model.id).catch(() => {});
+  if (model.id !== localPackId(filename)) await clearInstallRecord(localPackId(filename)).catch(() => {});
+  const registry = await readImportedPacks();
   if (registry[filename]) {
     delete registry[filename];
-    await writeRegistry(registry);
+    await writeImportedPacks(registry);
   }
 }

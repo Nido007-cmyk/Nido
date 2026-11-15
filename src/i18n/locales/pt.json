@@ -37,7 +37,7 @@
   },
   "installNotice": {
     "pausedTooHeavy": "Há uma parte baixada ({{done}}) de um modelo que não cabe neste dispositivo. Você pode apagá-la para liberar espaço.",
-    "integrity": "O arquivo baixado não coincidiu com sua impressão digital e foi apagado. Se baixar de novo, chegará uma cópia nova.",
+    "integrity": "O arquivo baixado não coincide com sua impressão digital, então não conta como baixado. Se baixar de novo, a cópia nova o substitui.",
     "interrupted": "O último download foi interrompido antes de terminar. Se baixar de novo, começará do início.",
     "sizeMismatch": "O último download chegou incompleto e foi apagado. Se baixar de novo, chegará uma cópia nova.",
     "storage": "Não houve espaço livre suficiente para terminar o download. Libere espaço e tente de novo.",
@@ -444,6 +444,7 @@
     "proposeButton": "+ Propor colaboração",
     "selectContactAndDescribe": "Selecione um contato e escreva a proposta.",
     "sendFailed": "Não foi possível enviar.",
+    "contactNotVerified": "Vocês ainda não compararam a impressão digital com este contato. Façam isso na conversa dele ou na aba Contatos e tentem de novo.",
     "proposePlaceholder": "O que você quer propor?",
     "contactLabel": "Contato:",
     "proposalLabel": "Proposta:",
@@ -816,6 +817,7 @@
     "verifyConfirm": "Coincidem",
     "verifiedNotice": "✓ {{name}} verificado.",
     "verifyFailed": "Não foi possível verificar este contato.",
+    "unverifiedBanner": "Vocês ainda não compararam a impressão digital com {{name}}. Até que o façam, as negociações, as tarefas delegadas e os pacotes com este contato ficam em pausa.",
     "linkActive": "🟢 Enlace ativo",
     "linkStopped": "⚪ Enlace parado",
     "tabChats": "Conversas",
@@ -937,7 +939,10 @@
       "usage": "Ligado · levando {{count}} envelopes ({{kb}} KB)",
       "privacy": "Só de contatos, no máximo 200 envelopes e 2 MB, e cada envelope é apagado após 72 horas ou ao ser entregue. Mensagens temporárias nunca viajam assim.",
       "viaFriends": "via amigos",
-      "travelling": "viajando por amigos"
+      "travelling": "viajando por amigos",
+      "sendToggle": "Enviar minhas mensagens por amigos quando não chegarem",
+      "sendDesc": "Se uma mensagem sua não sair direto, ela é selada em um envelope para um contato levar. Desativado, suas mensagens só viajam direto: se não chegarem, ficam no seu telefone.",
+      "storeFull": "Uma mensagem sua não pôde ser selada: o espaço para envelopes está cheio. Será tentado de novo com a próxima."
     },
     "disappearShort": "Temporária: {{value}}",
     "v5Active": "chave por mensagem",
@@ -959,6 +964,10 @@
     "createEventMessageWithEnd": "Criar “{{title}}” no teu calendário de {{start}} até {{end}}?",
     "sendMessageTitle": "Enviar mensagem NIDO",
     "sendMessageMessage": "Enviar para “{{to}}” via NIDO (criptografado)?\n\n“{{text}}”",
+    "placeCallTitle": "Chamada telefônica",
+    "placeCallMessage": "Abrir o discador com {{phone}}? Mais um toque inicia a chamada.",
+    "sendSmsTitle": "Mensagem de texto (SMS)",
+    "sendSmsMessage": "Abrir o Mensagens para {{phone}} com este texto pronto para enviar?\n\n“{{text}}”",
     "pairTitle": "Emparelhar contato NIDO",
     "pairMessage": "Emparelhar com “{{name}}”?\nImpressão digital: {{fingerprint}}\n\nConfirme apenas se você escaneou este código pessoalmente.",
     "pairInvalidCode": "Este código não parece um código de emparelhamento NIDO válido.",
@@ -1143,7 +1152,9 @@
     "unavailableMessage": "O NIDO ainda está carregando sua identidade. Espere alguns segundos e tente de novo.",
     "tooLargeTitle": "Pacote grande demais",
     "tooLargeMessage": "Este pacote tem {{size}} MB e o limite para compartilhar é {{max}} MB.",
-    "choosePeerTitle": "Para quem você quer enviar?"
+    "choosePeerTitle": "Para quem você quer enviar?",
+    "offerHeldUnverified": "A oferta de {{name}} ficou em pausa: vocês ainda não compararam a impressão digital. Quando compararem, peçam para enviar de novo.",
+    "offerHeldUnverifiedGeneric": "Uma oferta ficou em pausa: vocês ainda não compararam a impressão digital com esse contato. Quando compararem, peçam para enviar de novo."
   },
   "voiceInputAlert": {
     "unavailableTitle": "Entrada de voz indisponível",
@@ -1154,6 +1165,7 @@
   },
   "tasks": {
     "approvalTitle": "Solicitação de tarefa",
+    "contactNotVerified": "Vocês ainda não compararam a impressão digital com este contato. Façam isso na conversa dele ou na aba Contatos e tentem de novo.",
     "fromPeer": "De {{name}} ({{pk}})",
     "untrustedLabel": "Mensagem deles (não confiável):",
     "scopesLabel": "Será permitido:",
@@ -1187,7 +1199,7 @@
     "ratchetV5Title": "Chave nova por mensagem + resistência quântica",
     "ratchetV5Desc": "Cada mensagem usa sua própria chave, como o Double Ratchet do Signal: uma chave roubada hoje não abre as mensagens anteriores. A sessão também mistura ML-KEM-768, para que o tráfego gravado hoje continue fechado para computadores quânticos futuros. Ativado por padrão; é usado quando os dois telefones o têm. Vale a partir da próxima conexão.",
     "privateHelloOnlyTitle": "Só saudação privada",
-    "privateHelloOnlyDesc": "Seu telefone nunca diz às claras quem você é: não chama contatos com um NIDO antigo (anterior à 0.1.49) nem dispositivos que não são seus contatos, e não responde saudações às claras. Desativada por padrão porque deixa sem conexão quem não atualizou.",
+    "privateHelloOnlyDesc": "Ao chamar, seu telefone nunca diz às claras quem você é: não chama contatos com um NIDO antigo (anterior à 0.1.49) nem dispositivos que não são seus contatos. Vem ativada; se você a desativar, poderá chamar também quem não atualizou. Se você a ativar aqui por conta própria, ela também deixa de responder às saudações às claras que chegarem.",
     "recoveredTitle": "Configurações redefinidas",
     "recoveredNotice": "Suas configurações estavam danificadas e voltaram aos padrões de fábrica. Revise suas configurações, incluindo as ferramentas que você tinha desativado: elas podem ter sido ativadas de novo."
   },
@@ -1233,8 +1245,8 @@
       "staging": "Não foi possível preparar a troca de chave. Nada foi alterado.",
       "storeFailed": "Não foi possível salvar a nova chave; a anterior foi mantida."
     },
-    "noLockTitle": "Seu telefone não tem PIN",
-    "noLockBody": "Sem PIN nem digital, o NIDO não consegue proteger sua chave: qualquer pessoa com o telefone poderia vê-la. Vamos mostrá-la mesmo assim para você guardá-la. Recomendamos definir um PIN nas configurações do Android.",
+    "keyNeedsLockTitle": "Para ver sua chave, você precisa de um bloqueio de tela",
+    "keyNeedsLockBody": "Seu telefone não tem PIN, padrão nem digital, então qualquer pessoa com ele na mão poderia ler a chave. Defina um bloqueio de tela nas configurações do Android e volte aqui para vê-la. Criar backups continua funcionando como sempre. Só a chave fica oculta.",
     "errors": {
       "storage": "Não foi possível acessar o armazenamento do telefone.",
       "dbMissing": "O banco de dados não foi encontrado.",
@@ -1297,7 +1309,9 @@
       "download_start": "Download iniciado",
       "download_complete": "Download concluído",
       "download_failed": "Download com falha",
-      "lan_connect": "Conexão por Wi-Fi local"
+      "lan_connect": "Conexão por Wi-Fi local",
+      "bt_connect": "Conexão por Bluetooth",
+      "discovery": "Descoberta iniciada"
     }
   },
   "skillsCard": {

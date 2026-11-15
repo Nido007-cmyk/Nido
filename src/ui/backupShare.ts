@@ -25,12 +25,54 @@ import { BackupError } from "../security/backupErrors";
 
 export interface CreatedBackup {
   path: string;
-  key: string;
+  /**
+   * La clave en hex, o null si no se exportó. T-03 de la 0.1.99
+   * (m-65, decisión del dueño): sin bloqueo del dispositivo la clave
+   * no sale — ni se muestra ni se exporta; el respaldo se crea
+   * igual. key === null ⇔ noLock === true.
+   */
+  key: string | null;
   /** 0.1.29 (B-2): el teléfono no tiene PIN; la pantalla debe avisar. */
   noLock: boolean;
 }
 
-/** Crea el backup y devuelve ruta + clave. */
+/** Grupos de respaldo local que se conservan (el más reciente y el anterior). */
+export const LOCAL_BACKUPS_KEPT = 2;
+
+/**
+ * T-03 de la 0.1.99 (m-64): poda de los respaldos locales. Cada
+ * «Crear backup» dejaba un grupo completo (`.db` + `.knowledge.db` +
+ * `.manifest.json`: una copia entera de las dos bases) en el
+ * directorio de documentos y nada lo borraba jamás fuera del wipe
+ * total: N respaldos, N copias. Se conservan los `keep` grupos más
+ * recientes y se borran los demás enteros. Best-effort: nunca lanza
+ * (una poda fallida no puede tumbar la creación del respaldo).
+ * Devuelve cuántos ficheros borró.
+ */
+export async function pruneLocalBackups(keep: number = LOCAL_BACKUPS_KEPT): Promise<number> {
+  try {
+    const dir = FS.documentDirectory;
+    if (!dir) return 0;
+    const names = await FS.readDirectoryAsync(dir).catch(() => [] as string[]);
+    const mains = names
+      .filter((n) => n.startsWith("nido-backup-") && n.endsWith(".db") && !n.endsWith(".knowledge.db"))
+      .sort();
+    let deleted = 0;
+    for (const main of mains.slice(0, Math.max(0, mains.length - keep))) {
+      const group = [main, main.replace(/\.db$/, ".knowledge.db"), `${main}.manifest.json`];
+      for (const name of group) {
+        if (!names.includes(name)) continue;
+        await FS.deleteAsync(`${dir}${name}`, { idempotent: true }).catch(() => {});
+        deleted++;
+      }
+    }
+    return deleted;
+  } catch {
+    return 0;
+  }
+}
+
+/** Crea el backup y devuelve ruta + clave (o null sin bloqueo, m-65). */
 export async function createBackupFile(unlockReason = "Crear backup"): Promise<CreatedBackup> {
   // FIX 2026-10-09 (NEW-CR-2): biométrico obligatorio antes de exponer la DEK.
   // Antes se mostraba sin autenticación en el flujo real.
@@ -47,7 +89,13 @@ export async function createBackupFile(unlockReason = "Crear backup"): Promise<C
     .slice(0, 19);
   const dest = `${FS.documentDirectory}nido-backup-${timestamp}.db`;
   await createBackup(dest);
-  const key = await exportDatabaseKey();
+  // m-64: con el respaldo nuevo ya en disco, la poda deja el
+  // directorio acotado a los dos grupos más recientes.
+  await pruneLocalBackups().catch(() => 0);
+  // m-65: sin bloqueo del dispositivo, la clave no se exporta
+  // siquiera: no hay nada que mostrar ni que copiar. El respaldo
+  // creado queda en disco como siempre.
+  const key = noLock ? null : await exportDatabaseKey();
   return { path: dest, key, noLock };
 }
 

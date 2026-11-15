@@ -93,6 +93,9 @@ vi.mock("./store", () => {
 
 vi.mock("../config/featureFlags", () => ({
   isFeatureEnabled: (f: string) => f === "p2p.sealedHandshake" && keys.state.flag,
+  // T-14 (M-21): el respondedor lee el encendido EXPRESO; en este arnés
+  // nadie lo enciende, así que los saludos en claro se contestan.
+  isFeatureExplicitlyEnabled: () => false,
 }));
 
 vi.mock("../agent/memory/memoryStore", () => {
@@ -174,7 +177,13 @@ function peerHello(): { b64: string; nonceHex: string } {
   const eph = toHex(generateEphemeral().publicKey);
   const ts = nowSec();
   const sig = toHex(signDetached(buildHelloSignMessageV3(PEER, eph, nonceHex, ts), keys.peerSign.secretKey));
-  return { b64: encodeBase64(buildHello(PEER, eph, nonceHex, ts, sig)), nonceHex };
+  // T-13 (M-22): el par simulado es anterior a `rs` (0.1.98): se quita del
+  // JSON para que su cable sea el de entonces y la respuesta le llegue en
+  // claro, que es lo que esta prueba mide (la respuesta sellada a un HELLO
+  // con `rs` es el sujeto de t13Handshake.test.ts).
+  const obj = JSON.parse(new TextDecoder().decode(buildHello(PEER, eph, nonceHex, ts, sig))) as Record<string, unknown>;
+  delete obj.rs;
+  return { b64: encodeBase64(new TextEncoder().encode(JSON.stringify(obj))), nonceHex };
 }
 
 /** CONFIRM del peer. `to` = destinatario que nombra la firma v2; null = sin v2 (NIDO viejo). */
