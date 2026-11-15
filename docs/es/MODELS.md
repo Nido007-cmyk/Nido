@@ -276,8 +276,8 @@ Dos situaciones distintas, dos mecanismos distintos:
 
   ```bash
   adb push primary-llm.gguf /sdcard/Download/
-  adb shell run-as team.sopa.aoair mkdir -p files/models
-  adb shell run-as team.sopa.aoair cp /sdcard/Download/primary-llm.gguf files/models/primary-llm.gguf
+  adb shell run-as team.nido.app mkdir -p files/models
+  adb shell run-as team.nido.app cp /sdcard/Download/primary-llm.gguf files/models/primary-llm.gguf
   ```
 
   Repite por asset. Dos cosas deben coincidir exactamente o `ModelManager.statusOf`

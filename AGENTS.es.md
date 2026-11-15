@@ -186,8 +186,9 @@ Antes y durante una ejecución:
   No lo ejecutes, reinstales, fuerces la detención ni recargues mientras una
   descarga de modelo esté en curso (`adb shell dumpsys power | grep
   NIDO:ModelDownload`, o un archivo creciendo en `adb exec-out run-as
-  team.sopa.aoair ls -l files/models`); las descargas no pueden reanudarse tras
-  un reinicio. Es posible que el dueño del teléfono lo esté usando: pregunta
+  team.nido.app ls -l files/models`); una descarga sorprendida a mitad de
+  transferencia por el reinicio puede tener que empezar de nuevo, y una en
+  pausa sí se reanuda. Es posible que el dueño del teléfono lo esté usando: pregunta
   primero.
 - **No edites archivos fuente de la app durante una ejecución.** Metro los
   hot-reload en la app en ejecución, lo que puede interrumpir la evaluación.

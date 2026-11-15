@@ -100,7 +100,7 @@ el progreso), y el script sondea hasta completar y descarga el resultado.
 - El teléfono conectado por USB con la **depuración USB** activada y este ordenador
   **autorizado** (acepta el aviso "Allow USB debugging"). `adb devices` debe
   listarlo como `device`, no como `unauthorized` ni `offline`.
-- Un **build de desarrollo debuggable** de la app (paquete `team.sopa.aoair`),
+- Un **build de desarrollo debuggable** de la app (paquete `team.nido.app`),
   p. ej. de `npx expo run:android`. Los builds de release/EAS no sirven: leer los
   resultados necesita `run-as`, y la recogida de solicitudes solo existe en builds
   de desarrollo. Con `--install` (o si falta la app) el script compila e instala uno
@@ -131,7 +131,7 @@ y lista lo instalado.
 ### Qué hace
 
 1. Comprueba con `adb devices` que haya exactamente un dispositivo autorizado (o `--serial`).
-2. Comprueba que `team.sopa.aoair` esté instalada y sea debuggable, instalándola si
+2. Comprueba que `team.nido.app` esté instalada y sea debuggable, instalándola si
    falta.
 3. Comprueba Metro y ejecuta `adb reverse tcp:8081 tcp:8081`.
 4. Escribe `files/eval/requests/pending.json` mediante `run-as` y recarga la
@@ -188,8 +188,8 @@ Cualquiera de estas sirve:
 - **adb** (builds debuggable/dev-client):
 
   ```bash
-  adb exec-out run-as team.sopa.aoair ls files/eval
-  adb exec-out run-as team.sopa.aoair cat files/eval/<runId>.jsonl > <runId>.jsonl
+  adb exec-out run-as team.nido.app ls files/eval
+  adb exec-out run-as team.nido.app cat files/eval/<runId>.jsonl > <runId>.jsonl
   ```
 
 Cada fila también se escribe en la telemetría de ejecución normal, así las ejecuciones

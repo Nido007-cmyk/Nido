@@ -12,7 +12,7 @@ npm run eval:device -- --models lfm2.5
 
 ```
 ✓ device SSYLAQFILNBEKBEQ
-✓ team.sopa.aoair installed (debuggable)
+✓ team.nido.app installed (debuggable)
 ✓ Metro running, adb reverse tcp:8081 set
 ✓ request req-20260924t054219-safr written: {"requestId":"req-20260924t054219-safr","models":["lfm2.5"]}
 ✓ app reloading from Metro
@@ -129,7 +129,8 @@ print the report
   de corridas en condiciones similares, y anota la temperatura de batería
   (`adb shell dumpsys battery`).
 - **No inicies una corrida durante una descarga de modelo.** La corrida
-  recarga la app, y una descarga no puede reanudarse tras una recarga.
+  recarga la app, y una descarga sorprendida a mitad de transferencia por
+  la recarga puede tener que empezar de nuevo (una en pausa sí se reanuda).
 - **Un modelo que falla al cargar no se salta silenciosamente.** Cada
   pregunta se registra como fallo con la razón, y la corrida sigue con el
   siguiente modelo.

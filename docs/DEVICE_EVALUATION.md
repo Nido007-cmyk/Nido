@@ -120,7 +120,8 @@ print the report
   the phone warmed up. Compare models from runs in similar conditions, and
   note the battery temperature (`adb shell dumpsys battery`).
 - **Don't start a run during a model download.** The run reloads the app, and
-  a download can't resume after a reload.
+  a download caught mid-transfer by the reload may have to start over (a
+  paused one resumes).
 - **A model that fails to load isn't skipped silently.** Every question is
   recorded as a failure with the reason, and the run moves on to the next
   model.

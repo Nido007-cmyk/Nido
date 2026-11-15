@@ -210,6 +210,13 @@ and cites the source and date. `scripts/check-pack-claims.mjs` reopens every
 source and checks the quote is still there; `.github/workflows/pack-claims.yml`
 runs it weekly.
 
+Two numbers in this pack look inconsistent and are both right. The
+nido-local guides cover 23 countries and territories (edition.json):
+those are the places with a full written guide. Its verified-facts
+table (facts.json) reaches further, with 155 checked facts across 69
+regions (release-ledger.json), because a single verified fact, like an
+emergency number, does not need a full guide behind it.
+
 A v2 pack (`meta.formatVersion = 2`) adds the tables `guides`, `regions`,
 `facts` and the column `chunks.keys`; older app versions keep reading it as
 before.
@@ -222,8 +229,14 @@ before.
 npm run pack:push -- build/knowledge-pack/<id>.sqlite
 ```
 
-It copies the file into the app's storage and verifies it. NIDO uses any valid
-pack in its `corpus/` folder from the next question on, no code changes needed.
+It copies the file into the app's storage and verifies the copy. That
+alone no longer makes the app use it: a pack is only opened if its
+integrity is proven against a pin: the signed catalog's pin for
+catalog packs, or the import registry entry written when the signed
+import door verified it. A `.sqlite` file that merely sits in
+`corpus/` is not a pack and is never opened. The development shortcut
+`pack:push` no longer opens anything by itself; development packs
+enter through the catalog or the signed door, like any other pack.
 
 **For everyone who installs your build**, add it to the catalog so the app can
 download it:

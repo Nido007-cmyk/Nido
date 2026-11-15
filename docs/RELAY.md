@@ -146,6 +146,14 @@ movement, radio range and battery will change the numbers.
 | A future quantum computer recording traffic | Attack X25519. | Attack ML-KEM-768 too, which it also needs (hybrid). |
 | Someone who steals Caro's unlocked phone | Read envelopes for her mailbox keys that have not expired yet. **Key-compromise impersonation:** with Caro's mailbox secret key, make envelopes that Caro's phone would accept as coming from any of her contacts, until that key expires (14 days at most). | Prove to anyone else that Ana wrote a message (no signatures, deniable); impersonate Caro to others. |
 
+One consequence of the clear hops counter deserves plain words. The
+counter measures distance to the writer, and it starts at 3. A carrier
+who receives an envelope with hops = 2 can be practically certain that
+the contact who handed it over wrote it, rather than carrying it for
+someone else. With each further hop the certainty fades, but the first
+hand-off is not deniable in this respect, and this document does not
+claim otherwise.
+
 Known limits:
 
 - **The outer envelope is not authenticated, and re-injection is bounded, not impossible.** A carrier can copy an envelope under a fresh envelope id with a fresh outer expiry. A phone deduplicates what it stores by the envelope's immutable core as well as by its id, so the same physical envelope is accepted only once per phone; the caps still bound the rest (30 per contact, 200 and 2 MB in total), the recipient checks the authenticated expiry inside, and a copy that reaches a phone that has never seen it can still be stored there once. The recipient never gets the message twice: their deduplication is by the inside (sender, kind and message id).

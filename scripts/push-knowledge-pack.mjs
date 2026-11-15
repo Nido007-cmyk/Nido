@@ -10,7 +10,10 @@
 //
 //   npm run pack:push -- build/knowledge-pack/wiki-vital5.sqlite [--serial SERIAL]
 //
-// The app picks up any valid pack in its corpus/ folder on the next question.
+// Copying is all this does: the app opens a pack only against a pin (the
+// signed catalog's, or the import registry entry the signed door wrote),
+// so a file copied into corpus/ this way is not used on its own. See
+// docs/KNOWLEDGE_PACKS.md, "Putting a pack on your phone".
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
@@ -49,4 +52,4 @@ const remote = createHash("sha256")
   .update(execFileSync("adb", ["-s", serial, "exec-out", `run-as ${DEFAULT_PACKAGE} cat files/corpus/${name}`], { maxBuffer: 1024 * 1024 * 1024 }))
   .digest("hex");
 if (local !== remote) fail("the copy on the phone doesn't match; try again");
-console.log(`✓ ${name} is on the phone (sha256 ${local.slice(0, 16)}…). NIDO searches it from the next question.`);
+console.log(`✓ ${name} is on the phone (sha256 ${local.slice(0, 16)}…). The app opens it only with a catalog pin or a signed-door registry entry; see docs/KNOWLEDGE_PACKS.md.`);
