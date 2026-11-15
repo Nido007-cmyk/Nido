@@ -438,17 +438,22 @@ describe("P-31: una sola descarga por asset dentro de ModelManager", () => {
   });
 });
 
-describe("m-71: statusOf es una consulta y no destruye", () => {
-  it("archivo final con tamaño equivocado: statusOf dice no presente y el archivo sigue en disco", async () => {
+describe("m-71: statusOf borra lo no fiable (forma 0.1.98, reversa 0.1.102)", () => {
+  // La forma intermedia de T-09/F-10 («statusOf es una consulta y no
+  // destruye») se retiró en la reversa de la carga de la 0.1.102 por
+  // orden del dueño: la puerta de estado vuelve a comportarse como en
+  // la 0.1.98, donde un veredicto deleteFile borra el archivo y limpia
+  // el registro en el acto. Este bloque fija ESA forma restaurada.
+  it("archivo final con tamaño equivocado: statusOf dice no presente y borra el archivo", async () => {
     const asset = makeAsset("t09-m71-size", 4096);
     files.set(assetPath(asset), new Uint8Array(100).fill(3));
     const mgr = newManager([asset]);
     const st = await mgr.statusOf(asset);
     expect(st.present).toBe(false);
-    expect(files.has(assetPath(asset))).toBe(true);
+    expect(files.has(assetPath(asset))).toBe(false);
   });
 
-  it("archivo final con SHA equivocado: statusOf no lo borra y la re-descarga lo reemplaza", async () => {
+  it("archivo final con SHA equivocado: statusOf lo borra y la re-descarga instala limpio", async () => {
     const asset = makeAsset("t09-m71-sha", 4096, 7);
     serverSize = 4096;
     files.set(assetPath(asset), serverBytes(4096, 99)); // tamaño correcto, bytes ajenos
@@ -456,10 +461,9 @@ describe("m-71: statusOf es una consulta y no destruye", () => {
     const st = await mgr.statusOf(asset);
     expect(st.present).toBe(false);
     expect(st.checksumOk).toBe(false);
-    expect(files.has(assetPath(asset))).toBe(true);
+    expect(files.has(assetPath(asset))).toBe(false);
 
-    // La vía de acción (descargar de nuevo) sí sustituye el archivo:
-    // la promoción borra el destino corrupto tras verificar staging.
+    // Descargar de nuevo deja los bytes buenos en la ruta final.
     await mgr.downloadCatalogModel(asset);
     expect(shaOf(files.get(assetPath(asset))!)).toBe(asset.sha256);
     expect((await mgr.statusOf(asset)).present).toBe(true);

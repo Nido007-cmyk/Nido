@@ -222,7 +222,7 @@ describe("M-35/m-91: la puerta valida el esquema interno, no solo la meta", () =
   });
 });
 
-describe("M-35/B2: la marca de verificado exige los bytes verificados ahora", () => {
+describe("M-35/B2: la marca de verificado — bytes verificados en la puerta, veredicto de apertura en su forma 0.1.98", () => {
   function seedImported() {
     seed(FULL_SCHEMA, { chunks: 12, guides: 3, regions: 2, facts: 9 });
     const w = W();
@@ -249,13 +249,27 @@ describe("M-35/B2: la marca de verificado exige los bytes verificados ahora", ()
     expect(marks.get("local-tienda")).toEqual({ name: "Tienda de prueba", origin: "salvora" });
   });
 
-  it("con los bytes manipulados tras la importación, la marca cae", async () => {
+  it("con los bytes manipulados tras la importación (mismo tamaño), la marca se mantiene: el veredicto de apertura es el de la 0.1.98", async () => {
+    // Reversa de la carga de la 0.1.102: packFileState volvió a su
+    // forma de la 0.1.98 dentro de modelTrust — existe + tamaño +
+    // prueba de diario, SIN re-hashear al abrir. La verificación de
+    // los bytes de un pack importado vive en la puerta de
+    // importación (que los verificó enteros antes de registrarlos),
+    // como en la 0.1.98; la era intermedia de M-35 delegaba el
+    // veredicto en checkModelTrust y re-hasheaba al abrir, y eso se
+    // retiró con el resto de la maquinaria. Lo que sí sigue
+    // cayendo: un tamaño distinto del registrado.
     seedImported();
     const tampered = PACK_BYTES.slice();
     tampered[7] ^= 0xff; // same size, different bytes
     W().files.set(`${CORPUS}tienda.sqlite`, tampered);
     W().mtimes.set(`${CORPUS}tienda.sqlite`, 2000);
     const marks = await verifiedImportedPacks();
-    expect(marks.has("local-tienda")).toBe(false);
+    expect(marks.has("local-tienda")).toBe(true);
+
+    const resized = PACK_BYTES.slice(0, PACK_BYTES.length - 10);
+    W().files.set(`${CORPUS}tienda.sqlite`, resized);
+    const marks2 = await verifiedImportedPacks();
+    expect(marks2.has("local-tienda")).toBe(false);
   });
 });

@@ -67,10 +67,8 @@ import {
   loadInstallState,
   recordInstall,
   verifiedProofOf,
-  type GgufJournalFacts,
   type InstallRecord,
 } from "./installState";
-import { parseGgufHeader, ggufPrefixMatches } from "./ggufHeader";
 import { CatalogModel, MODEL_CATALOG } from "./manifest";
 
 /**
@@ -111,7 +109,6 @@ export type TrustFailureReason =
   | "size-mismatch"
   | "no-expected-sha256"
   | "checksum-mismatch"
-  | "invalid-structure"
   | "unverifiable"
   | "unknown-model-file"
   | "outdated-pack";
@@ -297,256 +294,6 @@ export async function currentMtimeMs(path: string): Promise<number | null> {
 }
 
 // ---------------------------------------------------------------------------
-// M-37 (auditoría 2026-11-13, F2-M2): validación estructural GGUF.
-//
-// El SHA-256 del catálogo prueba que los bytes son los publicados; no
-// prueba que sean un GGUF bien formado, y la vía rápida de abajo ni
-// siquiera lo miraba: fiaba tamaño + SHA del diario + mtime, y el propio
-// encabezado de este módulo lleva años diciendo que reescribir dentro
-// del mismo segundo o falsificar el mtime es invisible para esa vía.
-// Ahora, para los assets GGUF (kind llm/embedding sin format — los packs
-// declaran sqlite-pack y no pasan por aquí):
-//
-//  - La vía lenta, tras casar el SHA, recorre la cabecera entera con el
-//    parser puro de ggufHeader.ts. Una cabecera que no se puede recorrer
-//    es «invalid-structure» y no se fía (deleteFile: false — los bytes
-//    SÍ son los del catálogo; borrarlos solo re-descargaría los mismos).
-//    Los hechos del recorrido quedan en el diario.
-//  - La vía rápida exige además que la cabecera actual sea la
-//    verificada: prefijo de 24 bytes + recorrido + SHA-256 de la región
-//    de cabecera [0, dataOffset) contra lo anotado. Leer la cabecera
-//    (KB–MB) no es re-hashear el fichero (cientos de MB), y un fichero
-//    sustituido con el mismo tamaño y el mismo mtime ya no cuela si su
-//    cabecera difiere. Si el diario aún no trae hechos (lo escribió una
-//    versión anterior a la 0.1.99, o el instalador de la 0.1.99/0.1.100,
-//    que verificaba al instalar pero no anotaba), la consulta — de
-//    ESTADO (statusOf, la puerta de arranque) o de CARGA
-//    (assertTrustedForLoad, la que alimenta al parser nativo) — fía
-//    sobre la base heredada (tamaño + SHA del diario + mtime ya
-//    casados: la verificación completa que el diario atestigua se hizo
-//    al instalar) tras recorrer la cabecera, y la verificación
-//    completa corre EN SEGUNDO PLANO (adoptFactsInBackground): si el
-//    SHA casa, los hechos quedan adoptados anclados a él; si no casa,
-//    el fichero se borra y el registro se limpia, y ninguna consulta
-//    posterior fía. La consulta nunca anota hechos en el acto: no es
-//    notario de lo que haya en el disco. Historia de esta regla, en
-//    dos regresiones del dispositivo del dueño (2026-11-15): la
-//    primera versión de M-37 mandaba el diario heredado a la vía lenta
-//    TAMBIÉN en la puerta, y el re-hash entero en JS puro sobre los
-//    0,4–2,4 GB de quien actualizaba dejó la app en la rueda de carga;
-//    la cura de la 0.1.100 separó los propósitos pero dejó la adopción
-//    a la primera carga, y esa misma verificación (medida: 0,6 MB/s
-//    sin JIT, el régimen de Hermes — 4 min el embedding de 132 MB,
-//    27–66 min un LLM de 1–2,4 GB, sin progreso ni cancelación, y
-//    desde cero si el proceso muere a mitad) dejó la pantalla en
-//    «Cargando el modelo...» sin terminar. Una cabecera que el
-//    recorrido declara inválida no se fía en ningún caso. Residuo
-//    declarado de la rama heredada: una sustitución que conserve
-//    cabecera, tamaño y mtime y solo cambie los PESOS se fía hasta que
-//    la verificación en segundo plano la juzga (minutos en el peor
-//    caso) y la revoca borrando el fichero; si el motor ya la había
-//    cargado, la copia en memoria vive hasta la descarga del modelo o
-//    el reinicio — el adversario que puede reescribir el
-//    almacenamiento privado de la app conservando tamaño y mtime es
-//    el privilegiado que el encabezado de este módulo ya declara
-//    fuera de alcance. Con hechos anotados (instalador de la 0.1.101
-//    en adelante, o adopción ya asentada) no hay ventana: la cabecera
-//    distinta manda a la vía lenta ANTES de cargar, como siempre.
-// ---------------------------------------------------------------------------
-
-/** Primera lectura de cabecera; se multiplica hasta el tope si hace falta. */
-const GGUF_HEADER_READ_START = 256 * 1024;
-/** Las cabeceras reales (con vocabulario del tokenizador) quedan muy por debajo. */
-const GGUF_HEADER_READ_MAX = 32 * 1024 * 1024;
-
-function isGgufAsset(asset: CatalogModel): boolean {
-  return (asset.kind === "llm" || asset.kind === "embedding") && asset.format === undefined;
-}
-
-async function readRangeBytes(path: string, position: number, length: number): Promise<Uint8Array> {
-  const b64 = await FileSystem.readAsStringAsync(path, {
-    encoding: FileSystem.EncodingType.Base64,
-    position,
-    length,
-  });
-  return decodeBase64(b64);
-}
-
-function sha256HexOf(bytes: Uint8Array): string {
-  const hasher = createSha256();
-  hasher.update(bytes);
-  return Array.from(hasher.digest(), (b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-type GgufWalk =
-  | { kind: "ok"; facts: GgufJournalFacts }
-  | { kind: "invalid"; reason: string }
-  | { kind: "unknown" };
-
-/**
- * Recorre la cabecera GGUF del fichero, leyendo por tramos crecientes.
- * «unknown» = la cabecera pasa del tope de lectura o no se pudo leer:
- * con el SHA ya casado no es motivo de rechazo (ver checkModelTrust).
- */
-async function walkGgufHeader(path: string, sizeBytes: number): Promise<GgufWalk> {
-  let want = Math.min(sizeBytes, GGUF_HEADER_READ_START);
-  for (;;) {
-    let bytes: Uint8Array;
-    try {
-      bytes = await readRangeBytes(path, 0, want);
-    } catch {
-      return { kind: "unknown" };
-    }
-    const verdict = parseGgufHeader(bytes, sizeBytes);
-    if (verdict.status === "invalid") return { kind: "invalid", reason: verdict.reason };
-    if (verdict.status === "ok") {
-      return {
-        kind: "ok",
-        facts: { ...verdict.facts, headerSha256: sha256HexOf(bytes.subarray(0, verdict.facts.dataOffset)) },
-      };
-    }
-    if (want >= sizeBytes || want >= GGUF_HEADER_READ_MAX) return { kind: "unknown" };
-    want = Math.min(sizeBytes, GGUF_HEADER_READ_MAX, want * 4);
-  }
-}
-
-/**
- * ¿La cabecera actual es la que el diario dice que se verificó? Lee solo
- * la región de cabecera anotada. Cualquier desajuste o error devuelve
- * false y la decisión pasa a la vía lenta, que es la juez.
- */
-async function fastPathHeaderMatches(
-  path: string,
-  sizeBytes: number,
-  recorded: GgufJournalFacts,
-): Promise<boolean> {
-  try {
-    if (recorded.dataOffset < 24 || recorded.dataOffset > sizeBytes) return false;
-    const head = await readRangeBytes(path, 0, recorded.dataOffset);
-    if (!ggufPrefixMatches(head, recorded)) return false;
-    const verdict = parseGgufHeader(head, sizeBytes);
-    if (verdict.status !== "ok") return false;
-    if (
-      verdict.facts.version !== recorded.version ||
-      verdict.facts.tensorCount !== recorded.tensorCount ||
-      verdict.facts.metadataCount !== recorded.metadataCount ||
-      verdict.facts.dataOffset !== recorded.dataOffset
-    ) {
-      return false;
-    }
-    return sha256HexOf(head) === recorded.headerSha256;
-  } catch {
-    return false;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Adopción de hechos en segundo plano (0.1.101).
-//
-// Un diario sin hechos GGUF (anterior a la 0.1.99, o del instalador de
-// la 0.1.99/0.1.100) atestigua una verificación completa hecha al
-// instalar: checkModelTrust fía sobre esa base tras recorrer la
-// cabecera, sin bloquear ni la puerta ni la carga con un re-hash de
-// gigabytes en JS puro. Pero la fianza no es el final: esta verificación
-// corre una sola vez por asset y proceso, fuera del camino de nadie, y
-// asienta el caso al estándar de M-37 — si el SHA-256 completo casa,
-// los hechos quedan adoptados anclados a él; si no casa, los bytes no
-// son los del catálogo y lo fiado queda revocado (fichero borrado,
-// registro limpio: ninguna consulta posterior fía). Si el fichero
-// cambia durante la verificación (tamaño o mtime distintos de los de
-// la decisión), no se adopta ni se borra nada: la próxima consulta
-// juzga el fichero nuevo.
-// ---------------------------------------------------------------------------
-
-const backgroundAdoptions = new Map<string, Promise<void>>();
-
-async function adoptFactsInBackground(
-  asset: CatalogModel,
-  path: string,
-  sizeOnDisk: number,
-  mtime: number | null
-): Promise<void> {
-  let digest: string;
-  try {
-    digest = await sha256OfFile(path, { assetId: asset.id, filename: asset.filename });
-  } catch {
-    return; // ilegible ahora; una consulta posterior juzgará
-  }
-  // El fichero de la decisión tiene que seguir siendo el fichero: si
-  // algo lo reescribió mientras se hasheaba, este veredicto no es suyo.
-  const info = await FileSystem.getInfoAsync(path).catch(() => null);
-  if (!info?.exists || info.isDirectory || (info.size ?? 0) !== sizeOnDisk) return;
-  const nowMtime = mtimeMsOf(info);
-  if (mtime != null && nowMtime != null && nowMtime !== mtime) return;
-  if (!sameSha(digest, asset.sha256)) {
-    dlog(
-      asset.id,
-      "checkModelTrust: la verificación en segundo plano NO casa con el catálogo — revocando lo fiado por la base heredada (fichero borrado, registro limpio)"
-    );
-    await FileSystem.deleteAsync(path, { idempotent: true }).catch(() => {});
-    await clearInstallRecord(asset.id);
-    return;
-  }
-  const walk = await walkGgufHeader(path, sizeOnDisk);
-  if (walk.kind !== "ok") return; // bytes del catálogo sin hechos anotables: la rama heredada se repetirá
-  await recordInstall(asset.id, {
-    status: "installed",
-    sizeBytes: asset.sizeBytes,
-    sha256: asset.sha256,
-    ...(mtime != null ? { mtimeMs: mtime } : {}),
-    gguf: walk.facts,
-  });
-  dlog(asset.id, "checkModelTrust: hechos GGUF adoptados por la verificación en segundo plano");
-}
-
-function scheduleBackgroundAdoption(
-  asset: CatalogModel,
-  path: string,
-  sizeOnDisk: number,
-  mtime: number | null
-): void {
-  if (backgroundAdoptions.has(asset.id)) return;
-  const p = (async () => {
-    // Un respiro de un tick de temporizador: la decisión que fía ya
-    // volvió y la pantalla ya pintó; la verificación es fondo de
-    // verdad, no el siguiente await de nadie.
-    await new Promise((r) => setTimeout(r, 0));
-    await adoptFactsInBackground(asset, path, sizeOnDisk, mtime);
-  })()
-    .catch(() => {})
-    .finally(() => {
-      backgroundAdoptions.delete(asset.id);
-    });
-  backgroundAdoptions.set(asset.id, p);
-}
-
-/** Test hook: espera a que las adopciones en segundo plano en curso terminen. */
-export async function settleBackgroundAdoptionsForTests(): Promise<void> {
-  while (backgroundAdoptions.size > 0) {
-    await Promise.all([...backgroundAdoptions.values()]);
-  }
-}
-
-/**
- * Los hechos GGUF del fichero instalado, para que el INSTALADOR los
- * anote en el mismo asiento en que registra la instalación: el
- * instalador acaba de verificar el fichero entero (verifyChecksum en
- * la descarga, sha256OfFile en el bundled), así que recorrer la
- * cabecera de esos bytes verificados y guardar sus hechos es anclar,
- * no notarizar — la primera carga de un modelo recién instalado nace
- * ya en la vía rápida. undefined si el asset no es GGUF o la cabecera
- * no se puede recorrer (el asiento queda sin hechos y manda la rama
- * heredada con su verificación en segundo plano).
- */
-export async function ggufFactsForInstalledFile(
-  asset: CatalogModel
-): Promise<GgufJournalFacts | undefined> {
-  if (!isGgufAsset(asset)) return undefined;
-  const walk = await walkGgufHeader(assetPath(asset), asset.sizeBytes);
-  return walk.kind === "ok" ? walk.facts : undefined;
-}
-
-// ---------------------------------------------------------------------------
 // The trust gate.
 // ---------------------------------------------------------------------------
 
@@ -559,10 +306,7 @@ export async function ggufFactsForInstalledFile(
  * so the next check takes the fast path. On proof of corruption the verdict
  * carries deleteFile=true.
  */
-export async function checkModelTrust(
-  asset: CatalogModel,
-  opts?: { purpose?: "status" | "load" }
-): Promise<TrustVerdict> {
+export async function checkModelTrust(asset: CatalogModel): Promise<TrustVerdict> {
   await ensureInstallReconciled();
   const path = assetPath(asset);
   const info = await FileSystem.getInfoAsync(path).catch(() => null);
@@ -600,49 +344,7 @@ export async function checkModelTrust(
   ) {
     // Fast path: these exact bytes were verified before, and the file has
     // not been rewritten since. No re-hash.
-    // M-37: para un GGUF eso ya no basta — la cabecera actual debe ser
-    // la verificada (hechos del diario). Sin hechos anotados (diario
-    // anterior a la 0.1.99, o del instalador que aún no los anota) fía
-    // la base heredada tras el recorrido de cabecera, para ESTADO y
-    // para CARGA (rama de abajo), y la verificación completa corre en
-    // segundo plano. Con hechos que no casan, vía lenta siempre.
-    if (!isGgufAsset(asset)) {
-      return { trusted: true, reason: "ok", deleteFile: false, sizeOnDiskBytes: sizeOnDisk };
-    }
-    if (rec.gguf && (await fastPathHeaderMatches(path, sizeOnDisk, rec.gguf))) {
-      return { trusted: true, reason: "ok", deleteFile: false, sizeOnDiskBytes: sizeOnDisk };
-    }
-    if (!rec.gguf) {
-      // Diario sin hechos (anterior a la 0.1.99, o del instalador de la
-      // 0.1.99/0.1.100 que verificaba al instalar pero no anotaba): el
-      // registro atestigua la verificación completa hecha al instalar
-      // (tamaño + SHA del catálogo + mtime idéntico, comprobados
-      // arriba) y eso basta para fiar — es la postura que la 0.1.98
-      // tuvo sin incidente, para la puerta y para la carga. Aquí solo
-      // se recorre la cabecera (KB-MB): si el recorrido la declara
-      // inválida no se fía en ningún caso; si es «ok» o «unknown» se
-      // fía SIN anotar hechos en el acto, porque anotar la cabecera
-      // actual sin la verificación completa convertiría esta consulta
-      // en notario de lo que haya en el disco (el hueco que M-37
-      // cerraba). La adopción anclada al SHA completo la hace la
-      // verificación en segundo plano (adoptFactsInBackground), que
-      // también revoca: si el SHA no casa, borra el fichero y limpia
-      // el registro. Historia: la primera versión de M-37 mandaba esta
-      // consulta a la vía lenta y el re-hash entero en JS puro sobre
-      // los 0,4-2,4 GB de quien actualizaba dejó la 0.1.99 en la rueda
-      // de carga; la 0.1.100 lo sacó de la puerta pero lo dejó en la
-      // primera carga, y la pantalla se quedó en «Cargando el
-      // modelo...» (dispositivo del dueño, 2026-11-15, ambas).
-      const walk = await walkGgufHeader(path, sizeOnDisk);
-      if (walk.kind === "invalid") {
-        dlog(asset.id, `checkModelTrust: diario sin hechos y estructura GGUF inválida (${walk.reason}) — no se fía`);
-        return { trusted: false, reason: "invalid-structure", deleteFile: false, sizeOnDiskBytes: sizeOnDisk };
-      }
-      scheduleBackgroundAdoption(asset, path, sizeOnDisk, mtime);
-      dlog(asset.id, "checkModelTrust: diario sin hechos — fiado por la base heredada (verificación completa en segundo plano)");
-      return { trusted: true, reason: "ok", deleteFile: false, sizeOnDiskBytes: sizeOnDisk };
-    }
-    dlog(asset.id, "checkModelTrust: vía rápida denegada (cabecera GGUF sin hechos o distinta) — verificando bytes");
+    return { trusted: true, reason: "ok", deleteFile: false, sizeOnDiskBytes: sizeOnDisk };
   }
 
   // Slow path: size matches but there is no valid cached verification
@@ -678,28 +380,11 @@ export async function checkModelTrust(
     dlog(asset.id, "checkModelTrust: checksum mismatch — untrusted, file must be deleted");
     return { trusted: false, reason: "checksum-mismatch", deleteFile: true, sizeOnDiskBytes: sizeOnDisk };
   }
-  // M-37: con el SHA casado, la estructura manda. Una cabecera GGUF que
-  // no se puede recorrer no llega al parser nativo aunque los bytes sean
-  // los del catálogo (deleteFile: false — borrarlos solo traería los
-  // mismos bytes otra vez; lo que estaría mal es la entrada del catálogo).
-  let ggufFacts: GgufJournalFacts | undefined;
-  if (isGgufAsset(asset)) {
-    const walk = await walkGgufHeader(path, sizeOnDisk);
-    if (walk.kind === "invalid") {
-      dlog(asset.id, `checkModelTrust: GGUF structure invalid (${walk.reason}) — untrusted`);
-      return { trusted: false, reason: "invalid-structure", deleteFile: false, sizeOnDiskBytes: sizeOnDisk };
-    }
-    if (walk.kind === "ok") ggufFacts = walk.facts;
-    // «unknown» (cabecera mayor que el tope o ilegible): los bytes ya son
-    // los verificados por SHA; se acepta sin anotar hechos y la vía
-    // rápida simplemente no se usará para este fichero.
-  }
   await recordInstall(asset.id, {
     status: "installed",
     sizeBytes: asset.sizeBytes,
     sha256: asset.sha256,
     mtimeMs: mtime ?? undefined,
-    ...(ggufFacts ? { gguf: ggufFacts } : {}),
   });
   return { trusted: true, reason: "ok", deleteFile: false, sizeOnDiskBytes: sizeOnDisk };
 }
@@ -748,30 +433,20 @@ async function isProvenOutdatedPack(
 export type PackFileState = "current" | "outdated" | "unusable";
 
 /**
- * Whether a knowledge pack's file can be opened: "current" (its bytes
- * verify against its pin), "outdated" (older verified bytes, see above)
- * or "unusable".
- *
- * M-35 (auditoría 2026-11-13, carril 07 · F-03/B1/B2): the pin is the
- * catalog's for a catalog pack and the import registry's for an
- * imported one (rag/packs.ts builds the entry from
- * models/importedPacksRegistry.ts) — and a pack with NO pin is never
- * current for merely existing: until 0.1.99 this shortcut returned
- * "current" for any file with sizeBytes 0 and never re-hashed a pack
- * whose size still matched, so a file dropped into corpus/ by anything
- * (or a verified pack rewritten afterwards) opened as trusted
- * knowledge. The verdict is now checkModelTrust's, exactly the gate
- * the models pass: the install journal is the fast path (same size,
- * same mtime, no re-hash), a first sight or a rewritten file pays one
- * streaming re-hash against the pin and is adopted into the journal.
- * Nothing here deletes: deletion stays with the manager's status path.
+ * Whether a knowledge pack's file can be opened: "current" (complete for the
+ * catalog, as before), "outdated" (older verified bytes, see above) or
+ * "unusable". Local packs (sizeBytes 0, built by the user) have no catalog
+ * entry to compare against and are "current" when present.
  */
 export async function packFileState(asset: CatalogModel): Promise<PackFileState> {
-  if (asset.sizeBytes <= 0 || !asset.sha256) return "unusable";
-  const verdict = await checkModelTrust(asset);
-  if (verdict.trusted) return "current";
-  if (verdict.outdated) return "outdated";
-  return "unusable";
+  await ensureInstallReconciled();
+  const path = assetPath(asset);
+  const info = await FileSystem.getInfoAsync(path).catch(() => null);
+  if (!info?.exists || info.isDirectory) return "unusable";
+  const size = info.size ?? 0;
+  if (asset.sizeBytes <= 0) return "current";
+  if (await isProvenOutdatedPack(asset, path, size, mtimeMsOf(info), await getInstallRecord(asset.id))) return "outdated";
+  return size === asset.sizeBytes ? "current" : "unusable";
 }
 
 /**

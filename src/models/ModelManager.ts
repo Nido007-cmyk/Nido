@@ -34,7 +34,6 @@ import {
   checkModelTrust,
   currentMtimeMs,
   ensureInstallReconciled,
-  ggufFactsForInstalledFile,
   sameSha,
   sha256OfFile,
   stagingPathFor,
@@ -357,9 +356,7 @@ export class ModelManager {
    * to load such a file with a generic, unhelpful error. Catching this
    * here means the UI correctly offers "Download"/"Retry" instead of
    * showing a green "Downloaded" badge for a file that will fail the
-   * moment it's used. (T-09: statusOf no longer deletes the file — see
-   * its doc comment; the bytes stay on disk until an action path
-   * replaces or removes them.)
+   * moment it's used.
    */
   /**
    * Whether an asset is honestly installed. "Installed" means: the file is
@@ -372,26 +369,20 @@ export class ModelManager {
    *
    * Never throws for untrusted files: it returns present=false.
    *
-   * T-09 (audit 2026-11-14, F-10): this is a QUERY, and a query must not
-   * destroy. Earlier versions deleted the file (and cleared the journal)
-   * whenever the trust verdict advised deleteFile — so a mere status
-   * listing destroyed bytes no action had decided to remove, and races
-   * with a concurrent load or a retry were possible. Now the verdict is
-   * reported honestly (present=false, checksumOk=false, the real
-   * on-disk size) and the file stays where it is. Deletion lives on the
-   * ACTION paths: assertTrustedModelFile() on load, deleteModel(), and
-   * downloadCatalogModel(), which clears a corrupt destination only
-   * after the replacement staging file is fully verified, right before
-   * promotion. The inference path uses assertTrustedForLoad(), which
-   * throws instead.
+   * Reversa 0.1.102 (orden del dueño, 2026-11-15): la puerta vuelve a
+   * su forma de la 0.1.98 — cuando el veredicto manda borrar
+   * (deleteFile), statusOf borra el archivo y limpia el registro,
+   * como hizo siempre hasta la 0.1.98. La forma intermedia de T-09
+   * (F-10: «una consulta no destruye», el archivo corrupto quedaba en
+   * disco hasta que una descarga lo reemplazara) se retiró con el
+   * resto de la maquinaria de esa era en la reversa de la carga; la
+   * promoción de la descarga conserva además su borrado del destino
+   * tras verificar el staging, así que ninguna vía deja bytes no
+   * fiables en la ruta final.
    */
   async statusOf(asset: CatalogModel): Promise<AssetStatus> {
     await this.ensureReconciled();
-    // Consulta de ESTADO: es la puerta de arranque (requiredModelsPresent)
-    // y las pantallas de estado. Nunca paga el re-hash de adopción de un
-    // diario sin hechos GGUF — esa adopción es de la vía de carga (ver
-    // checkModelTrust, propósito «status»).
-    const verdict = await checkModelTrust(asset, { purpose: "status" });
+    const verdict = await checkModelTrust(asset);
     if (verdict.trusted) {
       return { asset, present: true, sizeOnDiskBytes: verdict.sizeOnDiskBytes, checksumOk: true };
     }
@@ -401,11 +392,10 @@ export class ModelManager {
       return { asset, present: false, sizeOnDiskBytes: verdict.sizeOnDiskBytes, checksumOk: null, outdated: true };
     }
     if (verdict.deleteFile) {
-      dlog(
-        asset.id,
-        `statusOf(): untrusted file left in place (${verdict.reason}) — a query does not delete; a fresh download replaces it after verification`
-      );
-      return { asset, present: false, sizeOnDiskBytes: verdict.sizeOnDiskBytes, checksumOk: false };
+      dlog(asset.id, `statusOf(): deleting untrusted file (${verdict.reason})`);
+      await FileSystem.deleteAsync(assetPath(asset), { idempotent: true }).catch(() => {});
+      await clearInstallRecord(asset.id);
+      return { asset, present: false, sizeOnDiskBytes: 0, checksumOk: false };
     }
     return { asset, present: false, sizeOnDiskBytes: 0, checksumOk: null };
   }
@@ -549,28 +539,6 @@ export class ModelManager {
       sizeBytes: asset.sizeBytes,
       sha256: asset.sha256,
       mtimeMs: (await currentMtimeMs(destPath)) ?? undefined,
-    });
-    await this.annotateGgufFacts(asset);
-  }
-
-  /**
-   * 0.1.101: el instalador acaba de verificar el fichero ENTERO (aquí y
-   * en verifyChecksum de la descarga); anota también los hechos GGUF
-   * de esos bytes verificados en el diario. Hasta la 0.1.100 el asiento
-   * quedaba sin hechos y la primera carga pagaba otra verificación
-   * completa en JS puro (la pantalla «Cargando el modelo...» eterna
-   * del 2026-11-15). Best-effort: si la cabecera no se puede recorrer,
-   * el asiento queda sin hechos y manda la rama heredada de
-   * modelTrust (fianza + verificación en segundo plano).
-   */
-  private async annotateGgufFacts(asset: CatalogModel): Promise<void> {
-    const gguf = await ggufFactsForInstalledFile(asset).catch(() => undefined);
-    if (!gguf) return;
-    await recordInstall(asset.id, {
-      status: "installed",
-      sizeBytes: asset.sizeBytes,
-      sha256: asset.sha256,
-      gguf,
     });
   }
 
@@ -1196,8 +1164,8 @@ export class ModelManager {
 
     // Promotion: rename within the same directory. Only AFTER the rename
     // succeeds is the install recorded as complete.
-    // T-09 (F-10): the destination may still hold a corrupt file that
-    // statusOf (now a pure query) reported but did not remove. The
+    // The destination may still hold a file no status pass has judged
+    // (written after the last one, or left by an interrupted run). The
     // staging file is fully verified at this point, so clearing the
     // destination here — inside the action path, immediately before the
     // rename — cannot sacrifice a valid install to a failed download:
@@ -1217,9 +1185,6 @@ export class ModelManager {
       // baseline. Any later rewrite changes mtime and forces re-verify.
       mtimeMs: (await currentMtimeMs(destPath)) ?? undefined,
     });
-    // 0.1.101: los hechos GGUF de los bytes recién verificados, en el
-    // mismo asiento — la primera carga nace en la vía rápida.
-    await this.annotateGgufFacts(asset);
     networkAudit.log({
       kind: "download_complete",
       endpoint,
