@@ -9,11 +9,17 @@
  *  2. DEGRADACIÓN DEL CONSTRUCTOR: sin motor residente, con perfil no
  *     multilingüe o con el motor fallando a mitad, no hay contexto
  *     (null) y el turno sigue como hoy.
- *  3. INVARIANCIA DEL JUEZ EN T-20: el juez acepta y valida el
- *     contexto, pero ninguna puerta lo lee todavía — con un contexto
- *     válido, con uno inválido (que se ignora entero) y sin contexto,
- *     el veredicto es idéntico en la muestra (abstención, cruzado y
- *     polisemia, las tres familias que las puertas de T-21 miran).
+ *  3. DEGRADACIÓN DEL JUEZ: un contexto inválido (perfil, longitudes,
+ *     alineación o sims no finitas) se ignora entero — el veredicto
+ *     es idéntico al de sin contexto en la muestra (abstención,
+ *     cruzado y polisemia). En T-20 eso valía también para el
+ *     contexto válido (ninguna puerta lo leía); desde T-21 las
+ *     puertas SÍ lo leen, así que la identidad con contexto válido
+ *     solo se fija donde es estructural (la abstención pura, que
+ *     ninguna puerta juzga). Los veredictos de las puertas se fijan
+ *     en la batería de la caza con vectores e5 reales
+ *     (caza0197-contexto), no con el motor falso de este fichero:
+ *     sus vectores hash no miden nada.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -197,7 +203,7 @@ describe("buildJudgeSemanticContext: degradación a sin contexto", () => {
 
 // ---------------------------------------------------------- invariancia
 
-describe("verifyGroundedAnswer con contexto (T-20: se valida, no se lee)", () => {
+describe("verifyGroundedAnswer con contexto (T-20: validación; T-21: las puertas lo leen)", () => {
   const FECHA = new Date("2026-11-14T12:00:00Z");
   const casos: { nombre: string; respuesta: string; pregunta: string; fuentes: GroundingChunk[]; lang: "es" | "en" | "pt" }[] = [
     {
@@ -229,12 +235,19 @@ describe("verifyGroundedAnswer con contexto (T-20: se valida, no se lee)", () =>
   ];
 
   for (const caso of casos) {
-    it(`veredicto idéntico con contexto válido, inválido y sin contexto: ${caso.nombre}`, async () => {
+    it(`veredicto idéntico con contexto inválido y sin contexto: ${caso.nombre}`, async () => {
       const sin = verifyGroundedAnswer(caso.respuesta, caso.fuentes, caso.lang, caso.pregunta, FECHA);
       const ctx = await buildJudgeSemanticContext({ answer: caso.respuesta, chunks: caso.fuentes, query: caso.pregunta });
       expect(ctx).not.toBeNull();
-      const conValido = verifyGroundedAnswer(caso.respuesta, caso.fuentes, caso.lang, caso.pregunta, FECHA, ctx!);
-      expect(conValido).toEqual(sin);
+      // Con contexto VÁLIDO la identidad solo es estructural en la
+      // abstención pura (ninguna puerta la juzga). En los demás
+      // casos, desde T-21 el contexto válido lo leen las puertas y
+      // su veredicto no se fija aquí (motor falso): se fija en la
+      // batería de la caza con vectores reales.
+      if (caso.nombre === "abstención") {
+        const conValido = verifyGroundedAnswer(caso.respuesta, caso.fuentes, caso.lang, caso.pregunta, FECHA, ctx!);
+        expect(conValido).toEqual(sin);
+      }
 
       // Inválido por perfil: se ignora entero.
       const malPerfil = { ...ctx!, profileId: "bge-small-en" as const };

@@ -9,7 +9,8 @@
  */
 import { describe, expect, it, afterAll } from "vitest";
 import { writeFileSync } from "node:fs";
-import { verifyGroundedAnswer, type GroundingChunk } from "./grounding";
+import { verifyGroundedAnswer, type GroundingChunk, type GroundingResult } from "./grounding";
+import { contextoCaza0197 } from "./caza0197Contexto";
 
 interface CasoCaza {
   id: string;
@@ -576,17 +577,54 @@ const RESULTADOS: ResultadoCaza[] = [];
  * relación la apoya ni a medias, la red de la polisemia para
  * cuando la puerta semántica no está activa. El residuo total
  * baja de 67 a 62 entre las cuatro baterías.
+ *
+ * Reducción medida en la tanda T-21 de la 0.1.99 (núcleo del
+ * juez, puertas semánticas): las 4 polisemias que quedaban
+ * (102, 106, 112 y 118) salieron el 2026-11-14 por la puerta
+ * N8 — relevancia semántica pregunta→chunk (margen 0,02,
+ * apoyo 0,5) con el contexto del fixture (vectores e5 del GGUF
+ * servido). 102 era el punto fino de la familia tras 114:
+ * pasa con +0,0015 sobre la puerta. Esta batería queda sin
+ * residuo con contexto; sin contexto quedan las 4 (la red
+ * léxica V6 solo alcanza a 114). El residuo total baja de 62
+ * a 4 entre las cuatro baterías (081, 126, 186 y 246, en
+ * matriz-a, cada uno con su causa medida en el diseño).
  */
-const RESIDUO_0197 = new Set(["polisemia-102", "polisemia-106", "polisemia-112", "polisemia-118"]);
+const RESIDUO_0197 = new Set<string>([]);
+
+/**
+ * T-21 (0.1.99, núcleo del juez): el residuo del régimen SIN
+ * contexto semántico (perfil no multilingüe o motor ausente), que
+ * es la lista que esta batería traía al abrir la tanda. En ese
+ * régimen las puertas semánticas no actúan y el comportamiento
+ * queda fijado caso a caso dentro de cada test. La cifra del
+ * residuo de la versión es la del otro régimen (RESIDUO_0197,
+ * con e5 activo, el que producción sirve tras la decisión del
+ * dueño de e5 en todas las instalaciones).
+ */
+const RESIDUO_SIN_CONTEXTO_0197 = new Set(["polisemia-102", "polisemia-106", "polisemia-112", "polisemia-118"]);
 
 function caso(c: CasoCaza) {
   (RESIDUO_0197.has(c.id) ? it.fails : it)(`${c.id} [${c.condicion}/${c.mutacion}] ${c.pregunta}`, () => {
-    const r = verifyGroundedAnswer(c.respuesta, c.fuentes, c.idioma, c.pregunta);
+    // T-21: dos regímenes sobre el mismo caso (ver la nota junto a
+    // RESIDUO_SIN_CONTEXTO_0197). Sin contexto, el veredicto debe
+    // ser el de T-19; con el contexto del fixture (vectores e5 del
+    // GGUF servido, segmentados como el juez), el del test.
+    const veredicto = (r: GroundingResult): boolean => {
+      const presente = r.text.includes(c.marcador);
+      if (c.esperado === "corta") return !presente;
+      if (c.esperado === "conserva") return presente;
+      return r.status === "skipped";
+    };
+    const sin = verifyGroundedAnswer(c.respuesta, c.fuentes, c.idioma, c.pregunta);
+    expect(
+      veredicto(sin),
+      `sin contexto: esperado=${c.esperado} status=${sin.status} removed=${sin.removed} texto=${JSON.stringify(sin.text.slice(0, 220))}`,
+    ).toBe(!RESIDUO_SIN_CONTEXTO_0197.has(c.id));
+    const ctx = contextoCaza0197(c.id);
+    const r = ctx ? verifyGroundedAnswer(c.respuesta, c.fuentes, c.idioma, c.pregunta, undefined, ctx) : sin;
     const presente = r.text.includes(c.marcador);
-    let pasa: boolean;
-    if (c.esperado === "corta") pasa = !presente;
-    else if (c.esperado === "conserva") pasa = presente;
-    else pasa = r.status === "skipped";
+    const pasa = veredicto(r);
     RESULTADOS.push({
       ...c,
       obtenido: {
