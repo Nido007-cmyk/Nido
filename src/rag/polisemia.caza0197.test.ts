@@ -568,8 +568,16 @@ const RESULTADOS: ResultadoCaza[] = [];
  * residuo empieza a pasar, la suite cae y hay que sacarlo de la
  * lista a mano, con su medición. Si un caso NUEVO cae, también cae
  * la suite: el residuo no crece en silencio.
+ *
+ * Reducción medida en la tanda T-19 de la 0.1.99 (núcleo del
+ * juez, piernas léxicas): polisemia-114 salió el 2026-11-14 — la
+ * relevancia léxica rebajada (V6: presencia ≥2, margen 1) retira
+ * la frase del sentido competidor cuando ningún chunk de máxima
+ * relación la apoya ni a medias, la red de la polisemia para
+ * cuando la puerta semántica no está activa. El residuo total
+ * baja de 67 a 62 entre las cuatro baterías.
  */
-const RESIDUO_0197 = new Set(["polisemia-102", "polisemia-106", "polisemia-112", "polisemia-114", "polisemia-118"]);
+const RESIDUO_0197 = new Set(["polisemia-102", "polisemia-106", "polisemia-112", "polisemia-118"]);
 
 function caso(c: CasoCaza) {
   (RESIDUO_0197.has(c.id) ? it.fails : it)(`${c.id} [${c.condicion}/${c.mutacion}] ${c.pregunta}`, () => {
