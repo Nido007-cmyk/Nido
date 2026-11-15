@@ -839,7 +839,7 @@ export function NidoScreen({
       // en un modal propio; dismiss = cancel.
       const m = mRef.current;
       const outcome = await runPairingCeremony(text, {
-        t: (key, opts) => t(key, opts),
+        t: (key, opts) => t(key, opts ?? {}),
         listContacts: () => m.contacts(),
         // UNIT B (§10 Q10): nota "la identidad volvió" si la pk escaneada
         // fue retirada antes.

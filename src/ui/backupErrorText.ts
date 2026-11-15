@@ -15,7 +15,13 @@
 
 import { backupErrorCode } from "../security/backupErrors";
 
-export type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+// Forma de dos sobrecargas (sin segundo parámetro opcional): desde i18next 27
+// el TFunction real ya no es asignable a `(key, options?) => string`, porque
+// sus sobrecargas exigen las opciones presentes o ausentes, nunca `undefined`.
+export type TranslateFn = {
+  (key: string): string;
+  (key: string, options: Record<string, unknown>): string;
+};
 
 export function backupErrorText(e: unknown, t: TranslateFn, fallbackKey: string): string {
   const code = backupErrorCode(e);

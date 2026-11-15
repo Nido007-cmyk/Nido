@@ -13,10 +13,10 @@ import { formatBackupDate, restoreConfirmText } from "./restoreNotice";
 
 function tOf(locale: unknown) {
   const backup = (locale as { backup: Record<string, unknown> }).backup;
-  return (key: string, vars: Record<string, string> = {}) => {
+  return (key: string, vars: Record<string, unknown> = {}) => {
     const raw = backup[key.replace(/^backup\./, "")];
     if (typeof raw !== "string") throw new Error(`falta ${key}`);
-    return raw.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? "");
+    return raw.replace(/\{\{(\w+)\}\}/g, (_, k) => String(vars[k] ?? ""));
   };
 }
 

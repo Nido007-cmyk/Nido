@@ -249,7 +249,7 @@ interface Message {
 
 const VERBATIM_MESSAGE_COUNT = 6;
 
-function researchStageLabel(p: ResearchProgress, t: (key: string, opts?: Record<string, unknown>) => string): string {
+function researchStageLabel(p: ResearchProgress, t: { (key: string): string; (key: string, opts: Record<string, unknown>): string }): string {
   if (p.stage === "decomposing") return t("chatScreen.research.decomposing");
   if (p.stage === "researching") {
     return t("chatScreen.research.researching", {
