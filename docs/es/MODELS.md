@@ -252,22 +252,24 @@ es la única ruta de código en la app distribuida que realiza una petición de 
 `android.permission.INTERNET` está presente en el build por esa razón, pero por lo
 demás no se usa (en particular, nunca durante chat/inferencia/recuperación).
 
-Una ruta de build alternativa (`modules/bundled-assets` + `plugins/withBundledModels.js`,
-verificada funcionando pero no usada por defecto) puede embeber los modelos por defecto
-directamente en el APK, para un build que no necesite red jamás — ver
-`ARCHITECTURE.md`.
+Una ruta de build alternativa (`modules/bundled-assets` + `plugins/withBundledModels.js`)
+permitía embeber los modelos por defecto directamente en el APK, para un build
+que no necesitara red jamás. Se retiró en la 0.1.99 — el plugin copiaba los
+pesos sin verificarlos al copiar — ver `ARCHITECTURE.md`.
 
 ### Pre-cargar modelos que ya tienes en local
 
 Dos situaciones distintas, dos mecanismos distintos:
 
-- **Compilando tu propio APK** y ya tienes los archivos GGUF en tu máquina de
-  desarrollo: suéltalos en `assets/models/` con los nombres exactos que
-  `scripts/setup-models.sh` espera (`primary-llm.gguf`,
-  `qwen2.5-1.5b-instruct-q4km.gguf`, `embedding.gguf`) antes de ejecutar el
-  script — verifica por sha256 lo que ya haya y omite re-descargar lo que
-  ya coincida, antes de que `expo prebuild` los embeba en el APK (ver párrafo
-  anterior). No hace nada para una app ya instalada en un dispositivo.
+- **Pesos verificados en tu máquina de desarrollo**: `scripts/setup-models.sh`
+  descarga los archivos GGUF a `assets/models/` (nombres exactos:
+  `primary-llm.gguf`, `qwen2.5-1.5b-instruct-q4km.gguf`, `embedding.gguf`) y
+  verifica por sha256 lo que ya haya, omitiendo re-descargar lo que ya
+  coincida. Hasta la 0.1.98 un plugin de config los embebía después en el
+  APK al hacer `expo prebuild`; ese plugin se retiró en la 0.1.99 (copiaba
+  sin verificar al copiar), así que hoy este paso solo produce archivos
+  locales verificados — la fuente de la ruta `adb` de abajo. No hace nada
+  para una app ya instalada en un dispositivo.
 - **Un build dev-client ya instalado**, saltándose la descarga en la app por
   completo: empuja los archivos directo al almacenamiento privado de la app con
   `adb`. El almacenamiento de la app no es escribible directamente por `adb push`,

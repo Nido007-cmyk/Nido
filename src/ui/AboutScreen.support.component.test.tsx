@@ -4,13 +4,13 @@
  * See LICENSE file for details.
  */
 
-// @ts-nocheck
 // 2026-10-30: la tarjeta «Desarrollo de NIDO» de Acerca de. Se prueban los
 // DOS caminos de copiado (el botón «Copiar» y el toque sobre la propia
 // dirección) para las DOS direcciones, y que el portapapeles recibe el
 // valor exacto, carácter a carácter — los literales de esta prueba son
 // una segunda transcripción independiente de aboutSupport.ts.
 // El mock de i18n devuelve la clave como texto, como en calm-screens.
+import { jest, describe, it, expect, beforeEach } from "@jest/globals";
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as Clipboard from "expo-clipboard";

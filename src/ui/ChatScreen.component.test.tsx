@@ -4,12 +4,12 @@
  * See LICENSE file for details.
  */
 
-// @ts-nocheck
 // ChatScreen component tests: asymmetric message rendering.
 // Tests the professional UI direction: user bubble vs assistant full-width.
 // Uses a test harness that replicates ChatScreen's rendering contract
 // without importing the full ChatScreen dependency graph.
 
+import { describe, it, expect } from "@jest/globals";
 import React from "react";
 import { render, screen } from "@testing-library/react-native";
 

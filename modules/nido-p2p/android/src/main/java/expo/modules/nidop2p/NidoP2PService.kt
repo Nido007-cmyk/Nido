@@ -15,7 +15,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 
@@ -48,6 +50,12 @@ class NidoP2PService : Service() {
     const val ACTION_START = "team.nido.app.p2p.START"
     const val ACTION_STOP = "team.nido.app.p2p.STOP"
 
+    /** Tope de cada adquisición del wake lock: la red contra un servicio zombi. */
+    const val WAKE_LOCK_TIMEOUT_MS = 10 * 60 * 1000L
+
+    /** Cada cuánto se comprueba si el tope venció (antes de que venza). */
+    const val WAKE_LOCK_RENEW_INTERVAL_MS = 8 * 60 * 1000L
+
     /**
      * Inicia el servicio como foreground. Idempotente: si ya corre, no hace nada.
      */
@@ -70,6 +78,30 @@ class NidoP2PService : Service() {
   }
 
   private var wakeLock: PowerManager.WakeLock? = null
+  private val wakeLockHandler = Handler(Looper.getMainLooper())
+
+  /**
+   * Renovación del wake lock (T-15, m-59): cada 8 min, si el tope de
+   * 10 min ya venció y el servicio sigue vivo, se re-adquiere con el
+   * mismo tope. Antes, el comentario de la adquisición prometía esta
+   * renovación y ninguna ruta la hacía: pasados 10 min con la pantalla
+   * apagada, el servicio se quedaba sin wake lock. La renovación se ata
+   * al ciclo de vida del servicio (se cancela en onDestroy y al parar):
+   * un temporizador que sobreviviera al servicio sería el daño
+   * contrario, una fuga de batería.
+   */
+  private val wakeLockRenewal = object : Runnable {
+    override fun run() {
+      val lock = wakeLock ?: return
+      if (!lock.isHeld) {
+        try {
+          lock.acquire(WAKE_LOCK_TIMEOUT_MS)
+        } catch (_: Exception) {
+        }
+      }
+      wakeLockHandler.postDelayed(this, WAKE_LOCK_RENEW_INTERVAL_MS)
+    }
+  }
 
   override fun onBind(intent: Intent?): IBinder? = null
 
@@ -104,13 +136,16 @@ class NidoP2PService : Service() {
   private fun startForegroundService() {
     // Wake lock parcial: permite que el accept() y el handshake sobrevivan
     // a Doze mientras el servicio está activo (patrón wakefulIoExecutor de Briar).
-    // Se libera en onDestroy.
+    // Tope de 10 min por adquisición, con renovación temporizada mientras
+    // el servicio siga vivo (ver wakeLockRenewal). Se libera en onDestroy.
     if (wakeLock == null) {
       val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
       wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "NIDO:P2PServer").apply {
-        acquire(10 * 60 * 1000L) // 10 min; se renueva si el servicio sigue activo
+        acquire(WAKE_LOCK_TIMEOUT_MS)
       }
     }
+    wakeLockHandler.removeCallbacks(wakeLockRenewal)
+    wakeLockHandler.postDelayed(wakeLockRenewal, WAKE_LOCK_RENEW_INTERVAL_MS)
 
     val notification = buildNotification()
 
@@ -143,11 +178,13 @@ class NidoP2PService : Service() {
   }
 
   private fun stopForegroundService() {
+    wakeLockHandler.removeCallbacks(wakeLockRenewal)
     stopForeground(STOP_FOREGROUND_REMOVE)
     stopSelf()
   }
 
   override fun onDestroy() {
+    wakeLockHandler.removeCallbacks(wakeLockRenewal)
     wakeLock?.let {
       if (it.isHeld) it.release()
     }

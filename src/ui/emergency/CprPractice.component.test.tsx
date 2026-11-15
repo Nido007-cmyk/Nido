@@ -4,12 +4,12 @@
  * See LICENSE file for details.
  */
 
-// @ts-nocheck
 // Práctica de RCP (0.1.76): la pantalla. Siempre con el aviso de hacerlo
 // sobre un cojín o un maniquí, nunca sobre una persona; sin botón de
 // llamada (no es una herramienta para emergencias). Empezar arranca el
 // pitido a 110; la cámara solo si se activa; parar lo apaga todo.
 // Testing Library 14: render, fireEvent y act son asíncronos.
+import { jest, describe, it, expect, beforeEach, afterEach } from "@jest/globals";
 import React from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 
@@ -103,7 +103,7 @@ beforeEach(() => {
   cams.length = 0;
   jest.useFakeTimers();
 });
-afterEach(() => jest.useRealTimers());
+afterEach(() => { jest.useRealTimers(); });
 
 describe("práctica de RCP", () => {
   it("aviso de práctica, la guía tal cual y ningún botón de llamada", async () => {
@@ -116,9 +116,9 @@ describe("práctica de RCP", () => {
 
   it("0.1.90: la raíz aplica los márgenes del área segura (arriba y abajo)", async () => {
     const view = await render(<CprPractice visible onClose={() => {}} />);
-    const flatStyle = (s) => Object.assign({}, ...(Array.isArray(s) ? s : [s]).filter(Boolean));
-    const found = [];
-    const walk = (n) => {
+    const flatStyle = (s: any) => Object.assign({}, ...(Array.isArray(s) ? s : [s]).filter(Boolean));
+    const found: any[] = [];
+    const walk = (n: any) => {
       if (!n || typeof n !== "object") return;
       const st = flatStyle(n.props?.style);
       if (st.paddingTop === 24 && st.paddingBottom === 34) found.push(n);

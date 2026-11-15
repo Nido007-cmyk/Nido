@@ -708,7 +708,7 @@ describeEngine("B-01 · convergencia de staging de rotación interrumpida (check
   );
 
   it(
-    "S8a · staging en claro sin oldDekHex, crash antes del rekey: staging eliminado, keystore intacto",
+    "S8a · staging en claro sin oldDekHex, crash antes del rekey: RECHAZADO (formato retirado en 0.1.99, T-16 · P-05), staging intacto y keystore intacto",
     { timeout: 240_000 },
     async () => {
       const dir = freshDir("stg-s8a");
@@ -718,8 +718,12 @@ describeEngine("B-01 · convergencia de staging de rotación interrumpida (check
       await storeDatabaseKeyHex(OLD_DEK);
       const store = makeStoreDek();
       const paths = pathsOf(dir);
-      // Staging en claro (la tolerancia de lectura lo admite), formato
-      // actual dbPaths, sin oldDekHex: la pierna CR3-NEW (probe-open).
+      // Staging en claro, formato actual dbPaths, sin oldDekHex. Hasta
+      // 0.1.98 lo leía la pierna CR3-NEW (probe-open); desde 0.1.99
+      // openStaging lo rechaza: la ventana de compatibilidad con el
+      // formato en claro (≤0.1.62) se retiró. El error recibe el mismo
+      // tratamiento que la llave ausente: el fichero NO se borra y el
+      // próximo arranque lo vuelve a intentar y a decir.
       const stagingPath = path.join(dir, "rekey-staging.json");
       fs.writeFileSync(stagingPath, JSON.stringify({ newDekHex: STG_NEW, dbPaths: [paths[0]] }), "utf8");
 
@@ -730,8 +734,8 @@ describeEngine("B-01 · convergencia de staging de rotación interrumpida (check
         memoryStagingKeys(),
       );
       expect(res.recovered).toBe(false);
-      expect(res.error).toBe("Crash antes del rekey; staging eliminado, keystore intacto");
-      expect(fs.existsSync(stagingPath)).toBe(false);
+      expect(res.error ?? "").toContain("no sellado");
+      expect(fs.existsSync(stagingPath)).toBe(true);
       expect(store.calls).toHaveLength(0);
       expect(await getDatabaseKeyHex()).toBe(OLD_DEK);
       expect(await readSentinel(driver, MANAGED_DB_NAMES[0], OLD_DEK)).toBe(secretFor(MANAGED_DB_NAMES[0]));
@@ -740,7 +744,7 @@ describeEngine("B-01 · convergencia de staging de rotación interrumpida (check
   );
 
   it(
-    "S8b · staging en claro sin oldDekHex, rekey ya hecho: se guarda la nueva y se borra el staging (contrato CR3-NEW)",
+    "S8b · staging en claro sin oldDekHex, rekey ya hecho: RECHAZADO (formato retirado en 0.1.99, T-16 · P-05); la recuperación automática de esa rotación ya no existe",
     { timeout: 240_000 },
     async () => {
       const dir = freshDir("stg-s8b");
@@ -754,15 +758,24 @@ describeEngine("B-01 · convergencia de staging de rotación interrumpida (check
       const stagingPath = path.join(dir, "rekey-staging.json");
       fs.writeFileSync(stagingPath, JSON.stringify({ newDekHex: STG_NEW, dbPaths: [paths[0]] }), "utf8");
 
+      // Hasta 0.1.98 este caso se recuperaba solo (contrato CR3-NEW):
+      // se guardaba la nueva y se borraba el staging. Desde 0.1.99 el
+      // staging en claro se rechaza en openStaging y nada se toca: es
+      // el precio declarado de retirar la ventana (una rotación
+      // interrumpida exactamente en el salto 0.1.62→0.1.99 con el
+      // staging en claro se queda sin ruta automática; el fichero
+      // permanece y cada arranque repite el mismo error sin borrarlo).
       const res = await checkStaleRekeyStaging(
         stagingPath,
         store.fn,
         productionOpenDb(driver),
         memoryStagingKeys(),
       );
-      expect(res.recovered).toBe(true);
-      expect(store.calls).toEqual([STG_NEW]);
-      expect(fs.existsSync(stagingPath)).toBe(false);
+      expect(res.recovered).toBe(false);
+      expect(res.error ?? "").toContain("no sellado");
+      expect(store.calls).toHaveLength(0);
+      expect(fs.existsSync(stagingPath)).toBe(true);
+      expect(await getDatabaseKeyHex()).toBe(OLD_DEK);
       expect(await readSentinel(driver, MANAGED_DB_NAMES[0], STG_NEW)).toBe(secretFor(MANAGED_DB_NAMES[0]));
     },
   );

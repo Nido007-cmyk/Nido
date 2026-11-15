@@ -102,7 +102,7 @@ import {
 } from "../rag/grounding";
 import { buildJudgeSemanticContext } from "../rag/semanticContext";
 import { snapshot as loadMemorySnapshot } from "../agent/memory/memoryStore";
-import type { SentenceProvenance } from "../rag/provenance";
+import { verbatimSpans, type SentenceProvenance } from "../rag/provenance";
 import { guideAnswerProvenance } from "../rag/guideAnswer";
 import { getPersonality, PersonalityId, PERSONALITIES } from "../constants/personalities";
 import {
@@ -1488,6 +1488,11 @@ export function ChatScreen({
     // no retorna: el turno cae al pipeline de chat de abajo, que es
     // quien lo persiste, lo mide y lo cierra (sin duplicar efectos).
     let divertedToChatNet = false;
+    // T-17 (0.1.99, m-94): la parada del turno de agente, capturada
+    // al salir del loop (como el wasStopped de la rama directa). Vive
+    // en el ámbito de la rama porque la lectura en voz alta se decide
+    // tras el finally del try, fuera de su alcance.
+    let agentWasStopped = false;
     if (agentIntent === "recordar" || agentIntent === "actuar") {
       setProcessing({ messageId: assistantId, status: "thinking" });
       // 0.1.33: ¿respondió el modelo o el código? Solo se cuenta, el
@@ -1604,6 +1609,10 @@ export function ChatScreen({
           signal: agentAbort.signal,
         });
         assistantText = agentResult.response;
+        // T-17 (m-94): si la persona detuvo el turno, el cierre lo
+        // dice — aviso de parada, telemetría «cancelled», sin título
+        // automático y sin lectura en voz alta — como en la directa.
+        agentWasStopped = stopRequestedRef.current;
         // 0.1.39: el loop dice por dónde salió el turno (routing). Antes
         // se adivinaba comparando el texto con dos respaldos y se escapaba
         // el tercero («memoryFailed»), que contaba como respuesta del modelo.
@@ -1660,7 +1669,7 @@ export function ChatScreen({
           setMessages((prev) =>
             prev.map((m) => (m.id === assistantId ? { ...m, text: assistantText } : m))
           );
-          notification(NotificationFeedbackType.Success);
+          notification(agentWasStopped ? NotificationFeedbackType.Warning : NotificationFeedbackType.Success);
 
           const agentDurationMs = performance.now() - startTime;
           recordQueryStats({
@@ -1676,7 +1685,7 @@ export function ChatScreen({
             adaptiveRoutingUsed: false,
             retrievalUsed: false,
             ...(turnModelLoadMs > 0 ? { modelLoadMs: Math.round(turnModelLoadMs) } : {}),
-            outcome: "success",
+            outcome: agentWasStopped ? "cancelled" : "success",
           });
           recordExecution({
             modelId: baseModelId,
@@ -1686,7 +1695,7 @@ export function ChatScreen({
             totalLatencyMs: agentDurationMs,
             ...(turnModelLoadMs > 0 ? { modelLoadMs: Math.round(turnModelLoadMs) } : {}),
             tokensGenerated,
-            outcome: "success",
+            outcome: agentWasStopped ? "cancelled" : "success",
           }).catch(() => {});
 
           if (assistantText.trim().length > 0) {
@@ -1696,7 +1705,7 @@ export function ChatScreen({
           }
 
           const agentSettings = memorySettingsRef.current;
-          if (isNewSession && agentSettings.autoGenerateTitles) {
+          if (isNewSession && agentSettings.autoGenerateTitles && !agentWasStopped) {
             // 0.1.61: título sin modelo (sessionTitle.ts): no gasta batería ni
             // borra de la caché el prefijo que reutiliza la siguiente pregunta.
             const title = titleFromQuestion(query);
@@ -1742,7 +1751,10 @@ export function ChatScreen({
       // Lectura en voz alta (Fase C): solo si el usuario la activó.
       // (Con la red, assistantText va vacío y esto no se dispara: la
       // lectura del pipeline de chat lee la respuesta final.)
-      if (assistantText.trim().length > 0) {
+      // T-17 (m-94): y nunca sobre un turno que la persona detuvo —
+      // leer en voz alta el texto parcial de un turno parado es
+      // exactamente lo que la parada existe para evitar.
+      if (assistantText.trim().length > 0 && !agentWasStopped) {
         getReadAloudEnabled()
           .then((enabled) => {
             if (enabled) speakAloud(assistantText);
@@ -2998,6 +3010,17 @@ export function ChatScreen({
                           content={shownText}
                           isStreaming={isStreamingThis}
                           citationColors={item.citations?.map((_, i) => sourceAccent(colors, i).solid)}
+                          verbatimSpans={
+                            // T-17 (0.1.99): las citas literales se marcan
+                            // dentro del párrafo solo con el turno ya
+                            // asentado: a mitad de streaming el texto es
+                            // parcial y la procedencia aún no existe. La
+                            // alineación va contra el texto guardado, con
+                            // sus citas; lo que no alinee, no se marca.
+                            !isStreamingThis && item.provenance
+                              ? verbatimSpans(item.provenance, split?.answer ?? item.text)
+                              : undefined
+                          }
                         />
                       )
                     )}

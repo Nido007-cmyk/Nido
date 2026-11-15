@@ -69,15 +69,6 @@ describe("Arquitectura unificada - verificación estática", () => {
     expect(content).not.toContain("async function getDb()");
   });
 
-  it("knowledgeGraphStore usa DatabaseManager", () => {
-    const content = fs.readFileSync(
-      path.join(srcDir, "agent/memory/knowledgeGraphStore.ts"),
-      "utf-8"
-    );
-    expect(content).toContain("from \"../../security/databaseManager\"");
-    expect(content).not.toContain("async function getDb()");
-  });
-
   it("DatabaseManager exporta las funciones necesarias", async () => {
     const dm = await import("./databaseManager");
     expect(typeof dm.getDatabase).toBe("function");

@@ -4,7 +4,6 @@
  * See LICENSE file for details.
  */
 
-// @ts-nocheck
 /**
  * H-11 + C-06 (tarjeta): los avisos de importación se leen de la base
  * al montar (sobreviven a la pantalla), se agrupan por razón con la
@@ -16,6 +15,7 @@
  * tarjeta no importa nada en estas pruebas salvo la del momento; los
  * avisos llegan sembrados como filas persistidas.
  */
+import { jest, describe, it, expect, beforeEach } from "@jest/globals";
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react-native";
 

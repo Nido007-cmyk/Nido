@@ -29,7 +29,7 @@ import {
   getDatabaseKeyHex,
   readLegacyDatabaseKey,
   readVaultBlob,
-  readVaultSetting,
+  readVaultSettingStrict,
   registerVaultRewrap,
   setUnlockedDatabaseKey,
   writeLegacyDatabaseKey,
@@ -277,12 +277,63 @@ const STRICT_KEY = "nido_vault_strict_lock_seconds";
  *  segundo plano y lo cerraría a mitad. */
 export const STRICT_LOCK_OPTIONS = [30, 60, 300] as const;
 
-/** Segundos de espera del nivel B, o null si está desactivado. */
+/**
+ * Estado del nivel B, con la lectura fallida como estado propio
+ * (T-15, m-02). Antes, `getStrictLockSeconds` leía con `readVaultSetting`,
+ * que devuelve null tanto si no hay nada guardado como si SecureStore
+ * falla al leer: un error transitorio se leía como «nivel B desactivado»
+ * y la DEK quedaba viva en memoria sin cierre. Eso es fallar en abierto
+ * en el modo que el usuario eligió como el más estricto.
+ */
+export type StrictLockState =
+  | { kind: "seconds"; seconds: number }
+  | { kind: "disabled" }
+  | { kind: "unreadable" };
+
+/**
+ * El estado del nivel B leído en estricto (solo esta clave usa la lectura
+ * estricta; ver `readVaultSettingStrict`). Un valor guardado que no es
+ * una de las esperas ofrecidas cuenta como desactivado: es lo que la
+ * lectura de siempre ha hecho con valores ajenos, y se conserva.
+ */
+export async function getStrictLockState(): Promise<StrictLockState> {
+  const r = await readVaultSettingStrict(STRICT_KEY);
+  if (!r.ok) return { kind: "unreadable" };
+  if (r.value === null) return { kind: "disabled" };
+  const n = Number(r.value);
+  return (STRICT_LOCK_OPTIONS as readonly number[]).includes(n)
+    ? { kind: "seconds", seconds: n }
+    : { kind: "disabled" };
+}
+
+/**
+ * Segundos efectivos para cerrar: con el estado «unreadable», la espera
+ * mínima ofrecida (30 s). Fail-closed acotado: es un suelo temporal hasta
+ * que una lectura buena diga lo contrario, no un bloqueo permanente, y
+ * solo lo consume la ruta de AppState del nivel B (que además exige la
+ * bóveda activa). Quien no activó el nivel B no se ve afectado.
+ */
+export function strictLockSecondsOrFailClosed(state: StrictLockState): number | null {
+  switch (state.kind) {
+    case "seconds":
+      return state.seconds;
+    case "unreadable":
+      return STRICT_LOCK_OPTIONS[0];
+    case "disabled":
+      return null;
+  }
+}
+
+/**
+ * Segundos de espera del nivel B, o null si está desactivado. Lectura de
+ * pantalla (la tarjeta de protección por hardware): se apoya en el estado
+ * y conserva su semántica de siempre; ante una lectura fallida devuelve
+ * null en ESTA vía, porque quien decide el cierre no es ella sino la
+ * ruta de AppState, que usa el estado y el ayudante fail-closed.
+ */
 export async function getStrictLockSeconds(): Promise<number | null> {
-  const raw = await readVaultSetting(STRICT_KEY);
-  if (raw === null) return null;
-  const n = Number(raw);
-  return (STRICT_LOCK_OPTIONS as readonly number[]).includes(n) ? n : null;
+  const state = await getStrictLockState();
+  return state.kind === "seconds" ? state.seconds : null;
 }
 
 /** Activa (segundos) o desactiva (null) el nivel B. Exige la bóveda activa. */

@@ -11,9 +11,9 @@
  *
  * `required: true` entries are the default LLM + embedding model. They are
  * NOT bundled inside the app build (that keeps the installable app small
- * and fast to build/ship — see modules/bundled-assets + plugins/withBundledModels.js
- * for an alternate fully-bundled build path, still available but not used
- * by default). Instead, on first launch the app shows a mandatory setup
+ * and fast to build/ship — the config plugin that once baked them in,
+ * plugins/withBundledModels.js, was retired in 0.1.99 because it copied
+ * the weights without verifying them at copy time). Instead, on first launch the app shows a mandatory setup
  * screen (src/ui/ModelSetupScreen.tsx in "required" mode) that downloads
  * them — the ONLY time the app needs network access. Once downloaded, the
  * app works fully offline from then on, matching the bounty's "work
@@ -55,8 +55,9 @@ export interface CatalogModel {
   /** Must be downloaded before the app can be used; the default model for its kind. */
   required: boolean;
   /**
-   * Ships inside the app build itself (see plugins/withBundledModels.js).
-   * Not used by default — see module doc comment — but kept available.
+   * Ships inside the app build itself. The GGUF path that used this flag
+   * (plugins/withBundledModels.js) was retired in 0.1.99; today only the
+   * corpus packs ship bundled, via plugins/withBundledPacks.js.
    */
   bundled?: boolean;
   /**

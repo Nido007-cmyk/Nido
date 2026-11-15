@@ -17,7 +17,10 @@ import { EmergencyScreen } from "./src/ui/EmergencyScreen";
 import { GuideLibraryScreen } from "./src/ui/GuideLibraryScreen";
 // DEV-ONLY: V42 idle character PoC (Phase 1, Option D). Removable: delete
 // src/ui/dev/ + assets/poc/ and the __DEV__ block below.
-import { CharacterPreviewScreen } from "./src/ui/dev/CharacterPreviewScreen";
+// T-17 (0.1.99, P-40): SIN import estático a propósito — con él, el
+// módulo entraba en el grafo de Metro del release aunque su render
+// viviera tras __DEV__. Se carga diferido en DevPreviewHost, que
+// solo se monta dentro de la rama __DEV__.
 import { ModelManager } from "./src/models/ModelManager";
 import {
   verifyCatalogSignature,
@@ -63,6 +66,17 @@ const modelManager = new ModelManager();
 const TRANSIENT_INACTIVE_GRACE_MS = 3_000;
 
 type Screen = "checking" | "wipe-recovering" | "wipe-blocked" | "startup-error" | "key-loss" | "vault-locked" | "locked" | "required-setup" | "chat";
+
+/**
+ * T-17 (P-40): anfitrión de la pantalla dev del PoC V42. El require
+ * vive DENTRO del componente, que solo se monta tras la puerta
+ * __DEV__ del render: así el grafo estático de release no contiene
+ * src/ui/dev ni assets/poc. En desarrollo se monta igual que antes.
+ */
+function DevPreviewHost({ onClose }: { onClose: () => void }) {
+  const { CharacterPreviewScreen } = require("./src/ui/dev/CharacterPreviewScreen");
+  return <CharacterPreviewScreen onClose={onClose} />;
+}
 
 /**
  * Pantalla de bloqueo: gate biométrico/PIN del sistema antes de mostrar
@@ -506,10 +520,12 @@ function AppContent() {
         strictBackgroundAtRef.current = Date.now();
         void (async () => {
           try {
-            const { getStrictLockSeconds, isVaultActive, lockAndTerminate } = await import(
-              "./src/security/keyVault"
-            );
-            const secs = await getStrictLockSeconds();
+            const { getStrictLockState, strictLockSecondsOrFailClosed, isVaultActive, lockAndTerminate } =
+              await import("./src/security/keyVault");
+            // T-15 (m-02): lectura estricta del nivel B. Si el ajuste no
+            // se pudo leer, el ayudante fail-closed da la espera mínima
+            // (30 s) en vez de «desactivado»: no fallar en abierto.
+            const secs = strictLockSecondsOrFailClosed(await getStrictLockState());
             if (secs === null || !(await isVaultActive())) return;
             if (strictTimerRef.current) clearTimeout(strictTimerRef.current);
             strictTimerRef.current = setTimeout(() => {
@@ -535,10 +551,10 @@ function AppContent() {
         if (bgAt) {
           void (async () => {
             try {
-              const { getStrictLockSeconds, isVaultActive, lockAndTerminate } = await import(
-                "./src/security/keyVault"
-              );
-              const secs = await getStrictLockSeconds();
+              const { getStrictLockState, strictLockSecondsOrFailClosed, isVaultActive, lockAndTerminate } =
+                await import("./src/security/keyVault");
+              // T-15 (m-02): misma lectura estricta que en background.
+              const secs = strictLockSecondsOrFailClosed(await getStrictLockState());
               if (secs !== null && (await isVaultActive()) && Date.now() - bgAt >= secs * 1000) {
                 await lockAndTerminate();
               }
@@ -725,7 +741,7 @@ function AppContent() {
         </Pressable>
       )}
       {__DEV__ && devPreview && (
-        <CharacterPreviewScreen onClose={() => setDevPreview(false)} />
+        <DevPreviewHost onClose={() => setDevPreview(false)} />
       )}
     </SafeAreaView>
   );

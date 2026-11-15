@@ -16,10 +16,16 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyPermanentlyInvalidatedException
+import android.security.keystore.KeyProperties
 import android.util.Log
 import org.json.JSONObject
+import java.security.KeyStore
 import java.util.Calendar
 import java.util.UUID
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
 
 /** Un aviso guardado: lo que se muestra y cuándo. */
 data class NotifyRequest(
@@ -39,6 +45,9 @@ data class NotifyRequest(
  * lo mismo que hacía expo para lo que NIDO usa:
  *  - guarda cada aviso programado en SharedPreferences privadas, para
  *    volver a programarlo tras reiniciar el teléfono o actualizar la app;
+ *    desde la 0.1.99 cada entrada va SELLADA (AES-256-GCM con la clave en
+ *    el Android Keystore, ver NotifyStoreSeal): antes el título y el
+ *    cuerpo quedaban en claro en el fichero;
  *  - lo programa con AlarmManager RTC_WAKEUP: exacto si Android lo permite
  *    (menos de Android 12, o SCHEDULE_EXACT_ALARM concedido), si no
  *    inexacto, como expo;
@@ -64,6 +73,95 @@ object NotifyEngine {
   // ---- almacén ----
 
   private fun prefs(ctx: Context) = ctx.getSharedPreferences(STORE, Context.MODE_PRIVATE)
+
+  /** Alias de la clave del almacén en el Android Keystore (T-15, m-58). */
+  private const val STORE_KEY_ALIAS = "nido.notify.store.v1"
+
+  /**
+   * La clave con la que se sella el almacén: AES-256 en el Android
+   * Keystore, fuera de las prefs (el fichero deja de contener texto
+   * legible). Sin autenticación de usuario: el receptor de arranque debe
+   * poder reprogramar los avisos sin que nadie haya desbloqueado nada.
+   * Null si el Keystore no responde: quien llama degrada (no se persiste
+   * en claro jamás), nunca revienta.
+   */
+  private fun storeKey(): SecretKey? = try {
+    val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+    (ks.getKey(STORE_KEY_ALIAS, null) as? SecretKey) ?: createStoreKey()
+  } catch (e: Exception) {
+    Log.w(TAG, "Clave del almacén de avisos no disponible: ${e.message}")
+    null
+  }
+
+  /** Borra la clave actual y crea otra (tras una invalidación permanente). */
+  private fun regenerateStoreKey(): SecretKey? = try {
+    val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+    if (ks.containsAlias(STORE_KEY_ALIAS)) ks.deleteEntry(STORE_KEY_ALIAS)
+    createStoreKey()
+  } catch (e: Exception) {
+    Log.w(TAG, "No se pudo regenerar la clave del almacén de avisos: ${e.message}")
+    null
+  }
+
+  private fun createStoreKey(): SecretKey {
+    val gen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
+    gen.init(
+      KeyGenParameterSpec.Builder(
+        STORE_KEY_ALIAS,
+        KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
+      )
+        .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+        .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+        .setKeySize(256)
+        .build(),
+    )
+    return gen.generateKey()
+  }
+
+  /**
+   * Sella el JSON de un aviso con su identificador como datos asociados.
+   * Si la clave murió de forma permanente (cambió el bloqueo del
+   * teléfono), se regenera y se reintenta una vez: las entradas selladas
+   * con la clave vieja ya no abrirán y stored() las descartará. Null si
+   * no hay manera: el aviso no se persiste, pero NUNCA en claro.
+   */
+  private fun sealFor(identifier: String, json: String): String? {
+    val aad = identifier.toByteArray(Charsets.UTF_8)
+    val plain = json.toByteArray(Charsets.UTF_8)
+    val key = storeKey() ?: return null
+    return try {
+      NotifyStoreSeal.seal(key, aad, plain)
+    } catch (e: KeyPermanentlyInvalidatedException) {
+      val fresh = regenerateStoreKey() ?: return null
+      try {
+        NotifyStoreSeal.seal(fresh, aad, plain)
+      } catch (e2: Exception) {
+        Log.w(TAG, "No se pudo sellar el aviso $identifier: ${e2.message}")
+        null
+      }
+    } catch (e: Exception) {
+      Log.w(TAG, "No se pudo sellar el aviso $identifier: ${e.message}")
+      null
+    }
+  }
+
+  /** Abre una entrada sellada; null si no abre (manipulada o clave ajena). */
+  private fun openFor(identifier: String, sealed: String): ByteArray? {
+    val key = storeKey() ?: return null
+    return NotifyStoreSeal.open(key, identifier.toByteArray(Charsets.UTF_8), sealed)
+  }
+
+  /**
+   * Lee una entrada del almacén: sellada (formato actual) o en claro
+   * (legado de ≤0.1.98, que solo puede venir de una actualización).
+   */
+  private fun decodeEntry(identifier: String, raw: String): NotifyRequest? {
+    if (NotifyStoreSeal.isSealed(raw)) {
+      val plain = openFor(identifier, raw) ?: return null
+      return fromJson(String(plain, Charsets.UTF_8))
+    }
+    return fromJson(raw)
+  }
 
   fun toJson(r: NotifyRequest): String = JSONObject().apply {
     put("identifier", r.identifier)
@@ -109,11 +207,41 @@ object NotifyEngine {
     null
   }
 
-  fun stored(ctx: Context): List<NotifyRequest> =
-    prefs(ctx).all.values.mapNotNull { v -> (v as? String)?.let { fromJson(it) } }
+  fun stored(ctx: Context): List<NotifyRequest> {
+    val snapshot = prefs(ctx).all.toMap()
+    val out = ArrayList<NotifyRequest>()
+    for ((id, v) in snapshot) {
+      val raw = v as? String ?: continue
+      val req = decodeEntry(id, raw)
+      if (req == null) {
+        // Sellada que no abre (clave perdida o entrada manipulada) o
+        // ilegible: se descarta. Un aviso perdido es recuperable
+        // reprogramando desde JS; un formato a medias, no. Y nunca es un
+        // error fatal: stored() corre en rescheduleAll tras el arranque,
+        // así que «clave perdida» se comporta como «almacén vacío».
+        forget(ctx, id)
+        continue
+      }
+      out.add(req)
+      if (!NotifyStoreSeal.isSealed(raw)) {
+        // Migración en la primera lectura: lo legado en claro (≤0.1.98)
+        // se reescribe sellado.
+        save(ctx, req)
+      }
+    }
+    return out
+  }
 
   private fun save(ctx: Context, r: NotifyRequest) {
-    prefs(ctx).edit().putString(r.identifier, toJson(r)).apply()
+    val sealed = sealFor(r.identifier, toJson(r))
+    if (sealed == null) {
+      // Sin clave no se guarda en claro jamás (m-58). La alarma de esta
+      // sesión ya la pone schedule(); lo que se pierde es solo la
+      // persistencia tras reinicio, y queda dicho en el log.
+      Log.w(TAG, "Aviso ${r.identifier} no persistido: almacén sellado no disponible")
+      return
+    }
+    prefs(ctx).edit().putString(r.identifier, sealed).apply()
   }
 
   private fun forget(ctx: Context, identifier: String) {
@@ -185,7 +313,7 @@ object NotifyEngine {
   /** Al dispararse una alarma: mostrar y, si se repite, la siguiente. */
   fun onAlarm(ctx: Context, identifier: String) {
     val raw = prefs(ctx).getString(identifier, null) ?: return
-    val request = fromJson(raw)
+    val request = decodeEntry(identifier, raw)
     if (request == null) {
       forget(ctx, identifier)
       return
