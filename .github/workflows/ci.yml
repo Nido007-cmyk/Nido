@@ -100,3 +100,7 @@ jobs:
       # calculan en Kotlin la próxima hora de cada aviso, como hacía
       # expo-notifications. Casos exactos y propiedades en varias zonas.
       - run: KOTLINC="$RUNNER_TEMP/kotlinc/bin/kotlinc" node --no-warnings scripts/check-notify-triggers.mjs
+      # 0.1.99: el almacén de avisos va sellado (NotifyStoreSeal.kt,
+      # T-15 m-58). Ida y vuelta, IV por entrada y rechazo ante
+      # manipulación, trasplante y otra clave.
+      - run: KOTLINC="$RUNNER_TEMP/kotlinc/bin/kotlinc" node --no-warnings scripts/check-notify-store-seal.mjs

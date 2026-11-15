@@ -22,6 +22,10 @@
         <action android:name="android.intent.action.QUICKBOOT_POWERON" />
         <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
         <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+        <!-- T-15 (P-24): si cambia la hora o la zona, los avisos de
+             calendario (hora/minuto/día) se recalculan contra la nueva. -->
+        <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+        <action android:name="android.intent.action.TIME_SET" />
       </intent-filter>
     </receiver>
   </application>

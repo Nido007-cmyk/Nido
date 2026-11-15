@@ -26,12 +26,12 @@ import java.util.concurrent.Executors
  * Toda la cripto (handshake X25519, secretbox, anti-replay) y el protocolo
  * de mensajes viven en TypeScript (`src/p2p/`); aquí solo viajan bytes.
  *
- * Nota de verificación: este módulo aún no se ha compilado (sin Android SDK
- * en este entorno). `requestPermissions` ya se corrigió contra las fuentes
- * reales de expo-modules-core SDK 57 (`askForPermissions(listener, ...)`
- * con `PermissionsResponseListener`/`PermissionsStatus`). En el primer build
- * real, comprobar sobre todo los hilos de `connect` y el registro de eventos.
- * Ver docs/BLUETOOTH.md.
+ * Nota de verificación: este módulo compila en la build del APK
+ * (prebuild + Gradle) desde hace muchas versiones; vitest no cubre el
+ * lado Kotlin, así que su verificación es la build y el aparato, no la
+ * suite JS. `requestPermissions` se corrigió contra las fuentes reales
+ * de expo-modules-core SDK 57 (`askForPermissions(listener, ...)` con
+ * `PermissionsResponseListener`/`PermissionsStatus`). Ver docs/BLUETOOTH.md.
  */
 class NidoP2PModule : Module() {
 

@@ -506,10 +506,12 @@ function AppContent() {
         strictBackgroundAtRef.current = Date.now();
         void (async () => {
           try {
-            const { getStrictLockSeconds, isVaultActive, lockAndTerminate } = await import(
-              "./src/security/keyVault"
-            );
-            const secs = await getStrictLockSeconds();
+            const { getStrictLockState, strictLockSecondsOrFailClosed, isVaultActive, lockAndTerminate } =
+              await import("./src/security/keyVault");
+            // T-15 (m-02): lectura estricta del nivel B. Si el ajuste no
+            // se pudo leer, el ayudante fail-closed da la espera mínima
+            // (30 s) en vez de «desactivado»: no fallar en abierto.
+            const secs = strictLockSecondsOrFailClosed(await getStrictLockState());
             if (secs === null || !(await isVaultActive())) return;
             if (strictTimerRef.current) clearTimeout(strictTimerRef.current);
             strictTimerRef.current = setTimeout(() => {
@@ -535,10 +537,10 @@ function AppContent() {
         if (bgAt) {
           void (async () => {
             try {
-              const { getStrictLockSeconds, isVaultActive, lockAndTerminate } = await import(
-                "./src/security/keyVault"
-              );
-              const secs = await getStrictLockSeconds();
+              const { getStrictLockState, strictLockSecondsOrFailClosed, isVaultActive, lockAndTerminate } =
+                await import("./src/security/keyVault");
+              // T-15 (m-02): misma lectura estricta que en background.
+              const secs = strictLockSecondsOrFailClosed(await getStrictLockState());
               if (secs !== null && (await isVaultActive()) && Date.now() - bgAt >= secs * 1000) {
                 await lockAndTerminate();
               }

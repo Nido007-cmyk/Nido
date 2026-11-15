@@ -271,23 +271,26 @@ is the only code path in the shipped app that performs a network request;
 `android.permission.INTERNET` is present in the build for that reason, but is
 otherwise unused (in particular, never during chat/inference/retrieval).
 
-An alternate build path (`modules/bundled-assets` + `plugins/withBundledModels.js`,
-verified working but not used by default) can bake the default models directly
-into the APK instead, for a build that needs zero network ever — see
-`ARCHITECTURE.md`.
+An alternate build path (`modules/bundled-assets` +
+`plugins/withBundledModels.js`) used to be able to bake the default models
+directly into the APK instead, for a build that needed zero network ever.
+It was retired in 0.1.99 — the plugin copied the weights without verifying
+them at copy time — see `ARCHITECTURE.md`.
 
 ### Pre-seeding models you already have locally
 
 Two different situations, two different mechanisms:
 
-- **Building your own APK** and you already have the GGUF files on your dev
-  machine: drop them into `assets/models/` with the exact filenames
-  `scripts/setup-models.sh` expects (`primary-llm.gguf`,
-  `qwen2.5-1.5b-instruct-q4km.gguf`, `embedding.gguf`) before running the
-  script — it sha256-verifies whatever's already there and skips
-  re-downloading anything that already matches, before `expo prebuild`
-  bundles them into the APK (see previous paragraph). Does nothing for an
-  app already installed on a device.
+- **Weights verified on your dev machine**: `scripts/setup-models.sh`
+  downloads the GGUF files into `assets/models/` (exact filenames:
+  `primary-llm.gguf`, `qwen2.5-1.5b-instruct-q4km.gguf`,
+  `embedding.gguf`) and sha256-verifies whatever is already there,
+  skipping re-downloads that match. Until 0.1.98 a config plugin then
+  baked them into the APK at `expo prebuild` time; that plugin was
+  retired in 0.1.99 (it copied without verifying at copy time), so
+  today this step only produces verified local files — the source for
+  the `adb` route below. Does nothing for an app already installed on
+  a device.
 - **An already-installed debuggable build**, skipping the in-app download
   entirely: push the files straight into the app's private storage with
   `adb`. The app's storage isn't directly writable by `adb push`, so stage
