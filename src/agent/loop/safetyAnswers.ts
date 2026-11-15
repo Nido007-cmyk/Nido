@@ -763,6 +763,67 @@ const SELF_HARM_VETO_RE =
  *    que es la paridad medida: la locución sin
  *    separador no abre objeto en ninguna de las dos
  *    vías.
+ *
+ * 0.1.99 T-39 (residuos de la ronda 7 de Z-01, ACTA-z01-r7
+ * §5): la forma de T-37 aguantó su centro entero y todo el
+ * freno histórico, y la repetición midió la misma forma
+ * enumerativa un anillo más afuera en las dos listas que
+ * la cura tocó. Las dos se curan dejando de enumerar dos
+ * veces la misma clase: cada conjunto pegado se deriva de
+ * la constante que nombra su clase.
+ *  - R7a: la familia de cuantificadores pegados traía
+ *    solo la de «alguna-» y el cuantificador negativo
+ *    perdía el verdadero («quierocortarmeningunasvenas»):
+ *    su cola es el mismo «unas» cotidiano que veta la
+ *    corrida y la familia escrita no lo pelaba como
+ *    unidad. La clase vive ahora en una constante única,
+ *    CUT_QUANTIFIERS (los indefinidos y los negativos de
+ *    es/pt: alguna-, ninguna-, nenhuma-), y la regex
+ *    pegada se deriva de ella. La vía con espacios no
+ *    tiene conjunto de cuantificadores del que derivar:
+ *    los lee por transparencia (el cuantificador no es
+ *    palabra cotidiana ni cabeza, y el objeto decide),
+ *    así que la clase se nombra una sola vez en esa
+ *    constante y la regex no puede quedarse más estrecha
+ *    que ella. El freno de R5e y de R6b no se mueve:
+ *    «…unasvenas» dispara, «…lasunas» veta por su objeto
+ *    y «lagunas» sigue sin pelarse (no es el
+ *    cuantificador, y su cola conserva el pelado con
+ *    frontera).
+ *  - R7b: la lista de determinantes pegados traía los
+ *    artículos y los cuatro ingleses de R6d donde el
+ *    conjunto con espacios (CUT_DETERMINERS) lee
+ *    posesivos y determinantes en las tres lenguas:
+ *    «and then your veins», «y mis venas», «e minhas
+ *    veias» perdían el verdadero pegado, y el posesivo
+ *    portugués se pelaba por su cola de artículo dejando
+ *    una letra muerta («minh», «tu»). La regex pegada se
+ *    DERIVA de CUT_DETERMINERS, ordenada por longitud:
+ *    las dos vías leen el mismo conjunto por construcción
+ *    y no pueden volver a separarse por enumeración. Del
+ *    conjunto derivado solo sale el par ambiguo
+ *    «unas»/«umas», que conserva su pelado propio con
+ *    frontera (R5e). La rama del adjunto pegado usa la
+ *    misma derivación con el conjunto completo, como su
+ *    lista de R3b (ahí no se pela: se mira la palabra
+ *    anterior a la raíz cotidiana), y con eso el medido
+ *    de la ronda entra en paridad: «with a knife the
+ *    hair» veta pegado como su gemela portuguesa, porque
+ *    «the» ya se lee también en esa rama.
+ *  - El discriminador «whose», declarado: «whose» no
+ *    está en ningún conjunto y su frase pegada sigue
+ *    disparando por el test de frontera de letra (la
+ *    conjunción «y»/«e» de una letra fusionada a la
+ *    palabra anterior, el mecanismo de frontera de esta
+ *    vía desde R1). Queda escrito como lo que es: un
+ *    sobre-disparo sobre una cabeza de daño, la dirección
+ *    segura, medido por la ronda 7. Ningún determinante
+ *    del conjunto compartido depende ya de esa letra,
+ *    porque todos se pelan por lectura; de «some», que
+ *    acaba en «e» y cuyo resultado en gluedHarmHeads no
+ *    distingue letra de lectura, la lectura se prueba en
+ *    la rama del adjunto, donde la letra no opera
+ *    («withaknifesomehair» veta tras esta cura).
  */
 const CUT_ANCHOR_RE =
   /\b(?:cortarme|cortar-me|me\s+(?:quiero\s+|voy\s+a\s+)?cortar|(?:cut|cutting)\s+myself)\b/g;
@@ -776,6 +837,28 @@ const CUT_DETERMINERS = new Set([
 ]);
 
 const CUT_PREPOSITIONS = new Set(["de", "del", "do", "da", "dos", "das", "of"]);
+
+// T-39 (R7a): la clase de los cuantificadores que pueden
+// preceder a un objeto (los indefinidos y los negativos de
+// es/pt), nombrada una sola vez. La vía con espacios no
+// pela cuantificadores ni los trae en ningún conjunto: los
+// lee por transparencia (no son palabra cotidiana ni
+// cabeza, y el objeto decide el veto), así que no hay
+// conjunto con espacios del que la vía pegada pueda
+// derivar el suyo. La clase vive aquí y la regex pegada
+// (CUT_QUANTIFIER_GLUED_RE) se deriva de esta constante:
+// la familia de «alguna-» sola dejaba fuera al
+// cuantificador negativo, cuya cola «unas» es la raíz
+// cotidiana que veta la corrida pegada. Van también las
+// formas apocopadas plegadas («algún» → «algun»,
+// «ningún» → «ningun»), la misma clase ante nombre
+// masculino.
+const CUT_QUANTIFIERS = new Set([
+  "alguno", "alguna", "algunos", "algunas", "algun",
+  "ninguno", "ninguna", "ningunos", "ningunas", "ningun",
+  "algum", "alguma", "alguns", "algumas",
+  "nenhum", "nenhuma", "nenhuns", "nenhumas",
+]);
 
 // Cabezas de sintagma que son un lugar de daño: con una de estas
 // delante, el veto no se aplica nunca (texto ya plegado, sin
@@ -1205,16 +1288,44 @@ const CUT_ADJUNCT_GLUED_STARTERS = ["con", "usando", "com", "with"];
  * de modificador — los dos vetan por su palabra cotidiana,
  * como fijó T-27.
  */
+// La regex de sufijo de una clase nombrada por una
+// constante: las formas ordenadas por longitud (la más
+// larga primero, para pelar «minhas» entero y no su cola
+// «as») como alternativa anclada al final.
+function gluedSuffixRe(words: Iterable<string>): RegExp {
+  const alt = [...words]
+    .sort((a, b) => b.length - a.length || (a < b ? -1 : a > b ? 1 : 0))
+    .map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
+  return new RegExp(`(?:${alt})$`);
+}
+
 // El determinante pegado que puede preceder a la cabeza
-// («lasvenas»): la misma lista que pela la rama del
-// adjunto (la paridad de R3b).
-// T-37 (R6d): entran los determinantes ingleses («the»,
+// («lasvenas»).
+// T-37 (R6d): entraron los determinantes ingleses («the»,
 // «her», «his», «my»): sin ellos, la cabeza inglesa tras
 // su determinante no se reconocía pegada y solo la
 // rescataba el accidente de la letra final del prefijo.
-// Ninguna palabra es/pt acaba en esas formas, así que la
-// lista de las dos lenguas no se contamina.
-const CUT_DET_GLUED_RE = /(?:las|los|la|el|as|os|uma|um|una|un|the|her|his|my|a|o)$/;
+// T-39 (R7b): la lista enumerada volvió a quedarse
+// estrecha un anillo más afuera (los posesivos es/pt y
+// «your»/«their»/«our»/«an»/«some», que la vía con
+// espacios sí lee), así que la regex ya no se enumera:
+// se DERIVA de CUT_DETERMINERS, la constante que lee la
+// vía con espacios, y las dos vías no pueden volver a
+// separarse por enumeración. Del conjunto derivado solo
+// sale el par ambiguo «unas»/«umas», que conserva su
+// pelado propio con frontera en peelGluedDeterminer
+// (R5e): como cola de una palabra que no es el
+// cuantificador sigue sin pelarse como determinante.
+// La rama del adjunto usa la derivación con el conjunto
+// completo (CUT_DET_GLUED_FULL_RE, con el par ambiguo,
+// como su lista de R3b): ahí no se pela nada, solo se
+// mira si la palabra anterior a la raíz cotidiana es un
+// determinante.
+const CUT_DET_GLUED_RE = gluedSuffixRe(
+  [...CUT_DETERMINERS].filter((w) => w !== "unas" && w !== "umas"),
+);
+const CUT_DET_GLUED_FULL_RE = gluedSuffixRe(CUT_DETERMINERS);
 
 // T-32 (R3c): el adverbio de coordinación pegado que puede
 // preceder al determinante de la cabeza («…ytambienlas…»,
@@ -1248,8 +1359,13 @@ const CUT_MEDIATOR_GLUED_RE =
 
 // T-37 (R6b): el cuantificador fundido que puede preceder
 // a la cabeza («algunasvenas»): la familia entera, es/pt.
-const CUT_QUANTIFIER_GLUED_RE =
-  /(?:algunas|algunos|alguna|alguno|algumas|alguns|alguma|algum)$/;
+// T-39 (R7a): la familia escrita era solo la de «alguna-»
+// y el cuantificador negativo perdía el verdadero por su
+// cola cotidiana («…ningunasvenas»). La regex se deriva
+// de CUT_QUANTIFIERS, la constante que nombra la clase
+// entera (indefinidos y negativos), para que la familia
+// no pueda volver a quedarse más estrecha que la clase.
+const CUT_QUANTIFIER_GLUED_RE = gluedSuffixRe(CUT_QUANTIFIERS);
 
 /**
  * El prefijo sin su determinante pegado final. T-35 (R5e):
@@ -1380,7 +1496,15 @@ function cutObjectVetoGlued(glued: string): boolean {
           // no se reconocía en portugués pegado
           // («…tesouraocabelo», «…tesouraaunha» disparaban
           // cuando su gemela con espacios vetaba).
-          if (i > starter.length + 2 && /(?:las|los|la|el|as|os|umas|uma|um|unas|una|un|a|o)$/.test(tail.slice(0, i))) {
+          // T-39 (R7b): la lista es la derivación del
+          // conjunto completo de CUT_DETERMINERS (la misma
+          // constante de la que deriva la de gluedHarmHeads,
+          // aquí con el par ambiguo, como la lista de R3b):
+          // el objeto tras el instrumento se reconoce tras
+          // cualquier determinante que la vía con espacios
+          // lee, también «the» («…knifethehair» vetaba solo
+          // en portugués pegado; en inglés disparaba).
+          if (i > starter.length + 2 && CUT_DET_GLUED_FULL_RE.test(tail.slice(0, i))) {
             everyday = true;
           }
         }
