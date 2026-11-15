@@ -43,6 +43,8 @@ export interface ToolCallEngine {
     samplingPreset?: "structured" | "factual" | "chat";
     responseFormat?: { type: "json_object" | "json_schema"; json_schema?: { schema: object } };
     telemetryContext?: { taskType?: string };
+    /** T-10 (0.1.99, M-20): señal de aborto del turno. */
+    signal?: AbortSignal;
   }): Promise<string>;
 }
 
@@ -74,12 +76,13 @@ export function buildToolCallMessages(userText: string, toolNames: string[]): Ch
 }
 
 function toParsedToolCall(value: { name: string; arguments?: unknown }): ParsedToolCall {
+  // m-22 (T-10, 0.1.99): el validador ya garantiza que `arguments`, si
+  // viene, es un objeto plano; la coerción silenciosa a {} de un
+  // arguments de otro tipo desaparece (era decidir con argumentos
+  // vacíos sin que nadie lo supiera).
   return {
     name: value.name,
-    arguments:
-      value.arguments && typeof value.arguments === "object"
-        ? (value.arguments as Record<string, unknown>)
-        : {},
+    arguments: (value.arguments ?? {}) as Record<string, unknown>,
   };
 }
 
@@ -90,7 +93,7 @@ function toParsedToolCall(value: { name: string; arguments?: unknown }): ParsedT
  */
 export async function generateToolCallJson(
   engine: ToolCallEngine,
-  args: { userText: string; toolNames: string[]; nPredict?: number }
+  args: { userText: string; toolNames: string[]; nPredict?: number; signal?: AbortSignal }
 ): Promise<ParsedToolCall | null> {
   const messages = buildToolCallMessages(args.userText, args.toolNames);
   const nPredict = args.nPredict ?? 256;
@@ -102,11 +105,16 @@ export async function generateToolCallJson(
       samplingPreset: "structured",
       responseFormat: { type: "json_schema", json_schema: { schema: TOOL_CALL_JSON_SCHEMA } },
       telemetryContext: { taskType: "tool-call-json" },
+      signal: args.signal,
     });
 
   const validate = (text: string) => {
+    // m-22 (T-10, 0.1.99): el esquema declara `arguments` como objeto y
+    // cierra las propiedades, igual que el esquema JSON que se le da al
+    // motor (TOOL_CALL_JSON_SCHEMA ya traía additionalProperties: false;
+    // el validador en código no lo imponía).
     const v = validateStructuredOutput<{ name: string; arguments?: unknown }>(
-      { required: ["name"], properties: { name: "string" } },
+      { required: ["name"], properties: { name: "string", arguments: "object" }, additionalProperties: false },
       text.trim()
     );
     if (!v.ok || !v.value || typeof v.value.name !== "string") {
@@ -118,8 +126,12 @@ export async function generateToolCallJson(
   return withBoundedRepair({
     attempt,
     validate,
-    repair: (first, error) =>
-      engine.generate({
+    repair: (first, error) => {
+      // M-20 (T-10, 0.1.99): con la señal abortada no se genera la
+      // reparación: se devuelve la salida mala y la validación cierra
+      // en null, como una segunda salida inválida.
+      if (args.signal?.aborted) return Promise.resolve(first);
+      return engine.generate({
         messages: [
           ...messages,
           { role: "assistant", content: first },
@@ -132,7 +144,9 @@ export async function generateToolCallJson(
         samplingPreset: "structured",
         responseFormat: { type: "json_schema", json_schema: { schema: TOOL_CALL_JSON_SCHEMA } },
         telemetryContext: { taskType: "tool-call-json-repair" },
-      }),
+        signal: args.signal,
+      });
+    },
     fallback: null,
   });
 }
