@@ -136,14 +136,15 @@ app works fully offline.
 
 ### Skipping the in-app download (pre-seeding models)
 
-If you already have the GGUF weight files on the machine running the build,
-you can bake them into the APK itself instead of downloading them at
-first-run — see `docs/MODELS.md`'s "Pre-seeding models you already have
-locally" section for the exact filenames/checksums and the
-`scripts/setup-models.sh` + `assets/models/` + `withBundledModels.js` flow.
-This is a genuinely different build path (bundles ~3.2GB into the APK, no
-runtime network needed at all), not the default — only use it if avoiding
-the in-app download matters for your scenario.
+The build path that used to bake the GGUF weights into the APK itself
+(the `withBundledModels.js` config plugin, fed by
+`scripts/setup-models.sh` + `assets/models/`) was retired in 0.1.99: the
+plugin copied the weights into the build without verifying them at copy
+time. What remains is the route for an already-installed **debuggable**
+build: push the verified files straight into the app's private storage
+with `adb` — see `docs/MODELS.md`'s "Pre-seeding models you already have
+locally" section for the exact filenames/checksums and the commands.
+Release builds always do the in-app download.
 
 ## Verifying the build without a device (what an agent without device access can actually check)
 

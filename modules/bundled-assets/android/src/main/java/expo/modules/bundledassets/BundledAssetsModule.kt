@@ -12,8 +12,10 @@ import java.io.File
 
 /**
  * Copies large model files that were baked into the APK's compiled assets
- * (android/app/src/main/assets/models/, populated at build time by
- * plugins/withBundledModels.js) out to the app's regular document
+ * (android/app/src/main/assets/models/, populated at build time by the
+ * retired plugins/withBundledModels.js — removed in 0.1.99 because it
+ * copied the weights without verifying them; today only the corpus packs
+ * are baked in, by plugins/withBundledPacks.js) out to the app's regular document
  * directory, so the rest of the app can treat bundled and downloaded models
  * identically via plain file paths. This copy is purely local — reading
  * from the APK's own assets, writing to internal storage — and never

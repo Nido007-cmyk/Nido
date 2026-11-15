@@ -86,7 +86,7 @@ class NidoNotifyModule : Module() {
         id,
         options["name"] as? String ?: id,
         (options["importance"] as? Number)?.toInt() ?: 0,
-        (options["vibrationPattern"] as? List<*>)?.map { (it as Number).toLong() }?.toLongArray(),
+        vibrationPatternFrom(options["vibrationPattern"]),
         options["sound"] as? String,
         options.containsKey("sound"),
         (options["lockscreenVisibility"] as? Number)?.toInt(),
@@ -142,6 +142,22 @@ class NidoNotifyModule : Module() {
       val present = NotifyEngine.legacyStorePresent(ctx)
       if (present) NotifyEngine.deleteLegacyStore(ctx)
       present
+    }
+  }
+
+  /**
+   * T-15 (P-25): el patrón de vibración se valida elemento a elemento.
+   * Antes, un elemento no numérico lanzaba ClassCastException desde un
+   * cast duro a mitad de la llamada y la promesa se rechazaba sin
+   * explicación; ahora la lista mala se rechaza con un error claro antes
+   * de crear nada (nunca un canal a medias) y la buena se convierte como
+   * siempre. Solo lo alcanza el propio JS de la app.
+   */
+  private fun vibrationPatternFrom(raw: Any?): LongArray? {
+    val list = raw as? List<*> ?: return null
+    return LongArray(list.size) { i ->
+      (list[i] as? Number)?.toLong()
+        ?: throw IllegalArgumentException("nido-notify: vibrationPattern debe ser una lista de números.")
     }
   }
 

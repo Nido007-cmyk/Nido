@@ -141,14 +141,15 @@ app funciona completamente offline.
 
 ### Omitir la descarga en la app (pre-sembrar modelos)
 
-Si ya tienes los archivos de pesos GGUF en la máquina donde compilas, puedes
-embebirlos en el propio APK en lugar de descargarlos en el primer arranque —
-ver la sección "Pre-seeding models you already have locally" de
-`docs/es/MODELS.md` para los nombres/checksums exactos y el flujo
-`scripts/setup-models.sh` + `assets/models/` + `withBundledModels.js`. Esta es
-una ruta de build genuinamente distinta (embebe ~3.2 GB en el APK, sin necesidad
-de red en tiempo de ejecución), no la predeterminada — úsala solo si evitar la
-descarga en la app importa para tu escenario.
+La ruta de build que embebía los pesos GGUF en el propio APK (el plugin
+de config `withBundledModels.js`, alimentado por `scripts/setup-models.sh`
++ `assets/models/`) se retiró en la 0.1.99: el plugin copiaba los pesos a
+la build sin verificarlos al copiar. Lo que queda es la ruta para un build
+**debuggable** ya instalado: empujar los archivos verificados directo al
+almacenamiento privado de la app con `adb` — ver la sección "Pre-cargar
+modelos que ya tienes en local" de `docs/es/MODELS.md` para los
+nombres/checksums exactos y los comandos. Los builds release siempre
+hacen la descarga en la app.
 
 ## Verificar el build sin dispositivo (lo que un agente sin acceso a un dispositivo puede comprobar realmente)
 

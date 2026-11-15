@@ -5,10 +5,13 @@
 
 # One-time, online setup step: downloads the bundled model weights declared
 # in src/models/manifest.ts into ./assets/models and verifies their sha256.
-# Run this BEFORE `expo prebuild` — the withBundledModels config plugin
-# copies these exact files into the Android build so they ship inside the
-# APK itself (see ARCHITECTURE.md "Bundled models"). The shipped app never
-# runs this script or calls these URLs at runtime.
+# Históricamente se corría ANTES de `expo prebuild` porque el plugin
+# withBundledModels los copiaba dentro del APK; ese plugin se retiró en la
+# 0.1.99 (copiaba los pesos sin verificarlos al copiar), así que hoy el
+# script deja los pesos verificados en disco — la fuente, por ejemplo, de
+# la ruta de pre-siembra por adb de docs/MODELS.md — y ya no mete nada en
+# el APK por sí mismo. The shipped app never runs this script or calls
+# these URLs at runtime.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."

@@ -406,6 +406,15 @@ class NidoLanManager(
       closeQuietly(socket)
       throw IOException("No se pudo conectar por Wi-Fi local ($host:$port): ${e.message}")
     }
+    // T-15 (m-61): el mismo timeout de saludo que pone el aceptador.
+    // Sin él, un par elegido que nunca saluda dejaba esta conexión
+    // colgada sin límite, ocupando un hueco. El lector lo gestiona al
+    // completar el saludo (gracia post-saludo de T-12 y señal de ruta
+    // autenticada), igual que en las entrantes.
+    try {
+      socket.soTimeout = HANDSHAKE_READ_TIMEOUT_MS
+    } catch (_: Exception) {
+    }
     onSocket(socket, address, incoming = false)
     return mapOf("address" to address, "name" to null)
   }
