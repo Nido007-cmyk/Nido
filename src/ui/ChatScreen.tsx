@@ -100,6 +100,7 @@ import {
   noSourcesAnswer,
   type GroundingStatus,
 } from "../rag/grounding";
+import { buildJudgeSemanticContext } from "../rag/semanticContext";
 import { snapshot as loadMemorySnapshot } from "../agent/memory/memoryStore";
 import type { SentenceProvenance } from "../rag/provenance";
 import { guideAnswerProvenance } from "../rag/guideAnswer";
@@ -2228,12 +2229,25 @@ export function ChatScreen({
           // se juzgan contra el día del mensaje, que es lo que el
           // humano quiso decir (una conversación que cruza medianoche
           // no mueve el «ayer» del usuario).
+          // T-20 (0.1.99, núcleo del juez): el contexto semántico del
+          // turno se precomputa aquí, en el mismo bloque (ya
+          // asíncrono), porque el juez es síncrono y puro. Si el
+          // constructor devuelve null (sin motor residente, perfil no
+          // multilingüe) o algo lanza, la llamada va sin contexto:
+          // nunca un turno caído por el contexto. En T-20 el juez lo
+          // valida y ninguna puerta lo lee todavía (eso es T-21).
+          const semanticContext = await buildJudgeSemanticContext({
+            answer: finalText,
+            chunks,
+            query,
+          }).catch(() => null);
           const verified = verifyGroundedAnswer(
             finalText,
             chunks,
             uiLang,
             query,
             new Date(Number(userMsg.id.split("-")[0]) || Date.now()),
+            semanticContext ?? undefined,
           );
           grounding = verified.status;
           if (verified.status !== "skipped") finalText = verified.text;

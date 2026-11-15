@@ -74,6 +74,8 @@
 import type { SentenceProvenance } from "./provenance";
 import { evidenceNumberValues, evidenceQuantities, evidenceRanges, isJudged, numberTokens, parseNumberToken, quantitiesOf, quantityConflict, sentenceNumbersSupported, sentenceWordReadings, wordNumberValue } from "./evidenceNumbers";
 import { dateConflictForSentence, parseSourceDateSentences } from "./dates";
+import type { JudgeSemanticContext } from "./semanticContext";
+import { cosineSimilarity } from "./pure";
 
 export type GroundingLang = "es" | "en" | "pt";
 
@@ -191,7 +193,7 @@ export function stem(w: string): string {
   return s.slice(0, 7);
 }
 
-function contentStems(text: string): string[] {
+export function contentStems(text: string): string[] {
   return words(text)
     .filter((w) => (w.length >= 3 || /^\d+$/.test(w)) && !STOPWORDS.has(w))
     .map((w) => (/^\d/.test(w) ? w : stem(w)));
@@ -777,6 +779,46 @@ const clauseSplitExtCaptureRe = (text: string): RegExp =>
   detectTextLang(text) === "pt" ? CLAUSE_SPLIT_EXT_PT_CAPTURE_RE : CLAUSE_SPLIT_EXT_CAPTURE_RE;
 
 /**
+ * T-20 (0.1.99, núcleo del juez): el troceo de cláusulas CON separador,
+ * el que el diseño del núcleo midió (clausulas_con_sep) y el que el
+ * contexto semántico (semanticContext.ts) usa para alinear vectores
+ * con cláusulas. Corta con la misma regex con captura de esta pierna
+ * (la variante por idioma, como dropFlippedClauses), descarta los
+ * fragmentos de menos de 8 caracteres (ruido sin predicado) y marca
+ * si la cláusula cuelga de un separador subordinante («porque», «si»,
+ * «cuando», «because»…): la subordinada no sostiene sola una puerta
+ * (su gemela puede vivir en la principal). Vive aquí, junto al
+ * troceador, para que constructor y juez troceen con LA MISMA función:
+ * duplicarla en dos módulos es como nace una desalineación.
+ */
+const SUBORDINATE_SEP_WORDS = new Set([
+  "si", "se", "if", "when", "cuando", "quando", "while", "mientras",
+  "enquanto", "porque", "because", "aunque", "although", "que",
+]);
+
+export interface ClauseWithSep {
+  text: string;
+  subordinate: boolean;
+}
+
+export function splitClausesWithSep(text: string): ClauseWithSep[] {
+  const segs = text.split(clauseSplitExtCaptureRe(text));
+  const out: ClauseWithSep[] = [];
+  let sepPrev = "";
+  for (let i = 0; i < segs.length; i++) {
+    if (i % 2 === 1) {
+      sepPrev = segs[i]!;
+      continue;
+    }
+    const t = segs[i]!.trim();
+    if (t.length < 8) continue;
+    const subordinate = sepPrev !== "" && words(sepPrev).some((w) => SUBORDINATE_SEP_WORDS.has(w));
+    out.push({ text: t, subordinate });
+  }
+  return out;
+}
+
+/**
  * El recuento de negaciones de ESTA pierna: sin «sin»/«sem»/
  * «without». La negación de acompañamiento migra fielmente cuando
  * una respuesta funde dos frases de la guía («…para empujar el
@@ -1106,6 +1148,116 @@ function changedNumberCopy(sentence: string, sourceSentences: readonly string[])
       if ([...mine].every((v) => theirs.has(v))) continue;
       const differing = [...mine].filter((v) => !theirs.has(v));
       if (differing.every((v) => qtyVals.has(v))) continue;
+      return true;
+    }
+  }
+  return false;
+}
+
+// ------------------------------------------- cifra↔rol por orden (T-19, V5b)
+
+/**
+ * T-19 (núcleo del juez, V5b): la cifra fiel lavada en un rol ajeno.
+ * La vara de cantidades ata la cifra a su unidad, pero no a su PAPEL:
+ * «3000 mg por toma» pasa cuando la guía dice «500 mg por toma» y
+ * «3000 mg en 24 horas» — la cifra existe, la unidad existe y el rol
+ * existe, pero ese par (cifra, rol) no. La pierna empareja POR ORDEN
+ * dentro de la frase: se recorren las palabras en orden, la cifra
+ * vigente es la última vista y cada palabra de rol se ata a ella.
+ * Dispara cuando un par de la frase no está entre los pares de la
+ * evidencia, con el rol emparejado en la evidencia y la cifra
+ * presente en ella: la invención con cifra ausente no dispara (es
+ * terreno de las demás puertas) y el par fiel no dispara.
+ *
+ * La forma es la medida en el diseño contra la batería completa
+ * (902 casos: caza 012/295/296/297 con 0 fieles rotas y 0 colateral).
+ * La variante cartesiana (V5a: todo valor con todo rol de la frase)
+ * rompía los conserva matriz-b-011 y matriz-b-114 y está muerta: si
+ * esta implementación rompe alguno, es que se coló la forma muerta.
+ *
+ * Las formas de la tabla son las de superficie es/en/pt; la raíz con
+ * la que se casa cada una es la que produce contentStems (el mapa se
+ * construye desde ella), y el test de la pierna fija esa raíz por
+ * entrada: una forma que el stemmer dejara muerta tumba el test, no
+ * pasa en silencio.
+ */
+export const VALUE_ROLE_FORMS: ReadonlyArray<readonly [string, string]> = [
+  ["frente", "front"], ["delantera", "front"], ["delantero", "front"], ["front", "front"],
+  ["dianteira", "front"], ["dianteiro", "front"],
+  ["trasera", "rear"], ["trasero", "rear"], ["detrás", "rear"], ["atrás", "rear"],
+  ["rear", "rear"], ["traseira", "rear"], ["traseiro", "rear"],
+  ["izquierda", "left"], ["izquierdo", "left"], ["left", "left"],
+  ["esquerda", "left"], ["esquerdo", "left"],
+  ["derecha", "right"], ["derecho", "right"], ["right", "right"],
+  ["direita", "right"], ["direito", "right"],
+  ["toma", "perdose"], ["dose", "perdose"],
+  ["día", "perday"], ["dia", "perday"], ["day", "perday"],
+  ["primera", "first"], ["primero", "first"], ["primer", "first"], ["first", "first"],
+  ["primeira", "first"], ["primeiro", "first"],
+  ["última", "last"], ["último", "last"], ["ultima", "last"], ["ultimo", "last"], ["last", "last"],
+];
+
+/** Raíz de producción → rol, construido desde las formas con contentStems. */
+const VALUE_ROLE_BY_STEM: ReadonlyMap<string, string> = (() => {
+  const map = new Map<string, string>();
+  for (const [form, role] of VALUE_ROLE_FORMS) {
+    for (const s of contentStems(form)) map.set(s, role);
+  }
+  return map;
+})();
+
+/**
+ * Los pares (cifra, rol) de un texto, como claves «valor|rol»,
+ * emparejados por la cifra precedente dentro de cada frase. Los
+ * valores son las lecturas de la casa (parseNumberToken): «3.000»
+ * empareja sus dos lecturas, como la evidencia las cuenta todas.
+ */
+export function valueRolePairs(text: string): Set<string> {
+  const pairs = new Set<string>();
+  for (const sentence of splitSentences(text)) {
+    // El mismo plegado que words(): minúsculas, sin acentos, sin citas.
+    const folded = stripAccents(sentence.toLowerCase()).replace(/\[\d+\]/g, " ");
+    let current: number[] = [];
+    for (const m of folded.matchAll(/\d+\/\d+(?![\d/])|\d[\d.,]*\d|\d|[a-zñ]+/g)) {
+      const tok = m[0];
+      if (/^\d/.test(tok)) {
+        const readings = parseNumberToken(tok);
+        if (readings.length > 0) {
+          current = readings;
+        } else if (tok.includes("/")) {
+          // Fracción que no es de cocina (una fecha, una razón):
+          // numberTokens la parte en tokens sueltos, así que la
+          // cifra vigente pasa a ser su última parte, como allí.
+          const parts = tok.match(/\d+/g) ?? [];
+          current = parts.length ? parseNumberToken(parts[parts.length - 1]) : [];
+        }
+        continue;
+      }
+      const role = VALUE_ROLE_BY_STEM.get(stem(tok));
+      if (role !== undefined) {
+        for (const v of current) pairs.add(`${v}|${role}`);
+      }
+    }
+  }
+  return pairs;
+}
+
+/**
+ * ¿Ata la frase alguna cifra a un rol con el que la evidencia nunca
+ * la empareja, estando la cifra en la evidencia y el rol emparejado
+ * en ella con otra cifra? Es el disparo de V5b; su desenlace en el
+ * juez es el de quantityConflict (la frase se retira).
+ */
+export function valueRoleConflict(
+  sentence: string,
+  sourcePairs: ReadonlySet<string>,
+  sourceRoles: ReadonlySet<string>,
+  sourceNumbers: ReadonlySet<number>,
+): boolean {
+  for (const key of valueRolePairs(sentence)) {
+    if (sourcePairs.has(key)) continue;
+    const cut = key.lastIndexOf("|");
+    if (sourceRoles.has(key.slice(cut + 1)) && sourceNumbers.has(Number(key.slice(0, cut)))) {
       return true;
     }
   }
@@ -2562,6 +2714,577 @@ export function applyDatumRule(
   return replaced || removedExtra > 0 ? { removedExtra, replaced } : none;
 }
 
+/**
+ * T-20: la validación del contexto semántico. El contexto solo se
+ * acepta ENTERO y alineado con lo que el juez mismo reconstruye: el
+ * perfil multilingüe medido, un vector de similitud por chunk, y
+ * exactamente los vectores de las cláusulas que salen de aplicar
+ * splitClausesWithSep a las frases de los chunks y de la respuesta,
+ * todos vectores finitos de la misma dimensión. Cualquier desvío —
+ * un chunk de más o de menos, una cláusula desalineada, un NaN — y
+ * el contexto se ignora entero: nunca se juzga con un contexto a
+ * medias (la desalineación cláusula↔vector es el fallo silencioso
+ * que esta validación existe para hacer imposible).
+ */
+function usableSemanticContext(
+  ctx: JudgeSemanticContext | undefined,
+  chunks: GroundingChunk[],
+  sentences: string[],
+  chunkSentences: string[][],
+): JudgeSemanticContext | undefined {
+  if (!ctx) return undefined;
+  if (ctx.profileId !== "multilingual-e5-small") return undefined;
+  if (ctx.chunkClauseVectors.length !== chunks.length) return undefined;
+  if (ctx.questionChunkSims.length !== chunks.length) return undefined;
+  if (ctx.answerClauseVectors.length !== sentences.length) return undefined;
+  for (const sim of ctx.questionChunkSims) {
+    if (!Number.isFinite(sim)) return undefined;
+  }
+  let dim = 0;
+  const vectorOk = (v: Float32Array): boolean => {
+    if (!(v instanceof Float32Array) || v.length === 0) return false;
+    if (dim === 0) dim = v.length;
+    if (v.length !== dim) return false;
+    for (const x of v) if (!Number.isFinite(x)) return false;
+    return true;
+  };
+  for (let i = 0; i < chunks.length; i++) {
+    const expected = chunkSentences[i]!.flatMap((s) => splitClausesWithSep(s)).length;
+    const vectors = ctx.chunkClauseVectors[i]!;
+    if (vectors.length !== expected) return undefined;
+    for (const v of vectors) if (!vectorOk(v)) return undefined;
+  }
+  for (let i = 0; i < sentences.length; i++) {
+    const expected = splitClausesWithSep(sentences[i]!).length;
+    const vectors = ctx.answerClauseVectors[i]!;
+    if (vectors.length !== expected) return undefined;
+    for (const v of vectors) if (!vectorOk(v)) return undefined;
+  }
+  return ctx;
+}
+
+// ------------------------------------------- puertas semánticas (T-21)
+
+/**
+ * T-21 (0.1.99, núcleo del juez): las puertas semánticas medidas por
+ * el diseño del núcleo (DISENO-NUCLEO.md) y re-medidas por T-20
+ * contra el GGUF servido de e5. Son la última vara del juicio: solo
+ * actúan sobre frases que el juicio léxico conservaría (las que
+ * llegan vivas al final de su rama, principal o cruzada), solo con
+ * contexto semántico válido (perfil multilingüe activo) y en el
+ * orden sellado SUELO → TIE2 → N8 → TRAS-tema. Sin contexto, el
+ * juez es byte a byte el de T-19.
+ *
+ * Umbrales (medición oficial de T-20, arnés de la caza sobre el
+ * pipeline real): SUELO 0,87 (a 0,88 cae la fiel 222: no subirlo) ·
+ * TIE2 tau 0,82 eps 0,05 · N8 margen 0,02 apoyo 0,5 · TRAS-tema
+ * 0,88. Unión medida: 61/67 del residuo con 0 fieles rotas en los
+ * tres conjuntos (marcador fiel, no-marcador fiel, no-marcador de
+ * las que ya caían).
+ */
+const SEM_FLOOR = 0.87;
+const SEM_TIE_TAU = 0.82;
+const SEM_TIE_EPS = 0.05;
+const SEM_N8_MARGIN = 0.02;
+const SEM_N8_SUPPORT = 0.5;
+const SEM_TRAS_SIM = 0.88;
+
+/**
+ * El vocabulario de negación gobernante del diseño (GOV_NEG): la
+ * negación que manda sobre el predicado, incluida la de
+ * acompañamiento («sin»/«sem»/«without»), que aquí sí cuenta
+ * porque se lee por gobierno y en simetría, no por conteo.
+ */
+const GOV_NEG_WORDS = new Set(
+  "no not never none without nunca jamas tampoco ningun ninguno ninguna nada nao nenhum nenhuma sem sin".split(" "),
+);
+const NT_RE = /n['’]t(?![a-z])/;
+
+/**
+ * La negación por PRESENCIA gobernante (el neg_gov del diseño):
+ * alguna palabra de GOV_NEG en la cláusula, o la contracción
+ * inglesa. En régimen portugués «no» no niega (es la preposición
+ * de «no tubo»): sale del conjunto, como midió el diseño.
+ */
+function semNegGov(text: string, ptRegime: boolean): boolean {
+  if (NT_RE.test(text.toLowerCase())) return true;
+  const ws = new Set(words(text));
+  for (const w of GOV_NEG_WORDS) {
+    if (w === "no" && ptRegime) continue;
+    if (ws.has(w)) return true;
+  }
+  return false;
+}
+
+/**
+ * La negación por POSICIÓN gobernante (el neg_pos del diseño): la
+ * negación solo niega su cláusula si precede a su primera raíz de
+ * contenido; el adjunto posverbal («sin consultar», «without
+ * turning on») no niega ni en la respuesta ni en la gemela. Esa
+ * simetría es la llave del núcleo: desblinda las cargas que se
+ * escondían tras un adjunto y salva las fieles cuyo adjunto
+ * convertía su gemela en «negada».
+ */
+function semNegPos(text: string, ptRegime: boolean): boolean {
+  if (NT_RE.test(text.toLowerCase())) return true;
+  const toks = words(text);
+  let firstContent = -1;
+  for (let i = 0; i < toks.length; i++) {
+    const w = toks[i]!;
+    if ((w.length >= 3 || /^\d+$/.test(w)) && !STOPWORDS.has(w)) {
+      firstContent = i;
+      break;
+    }
+  }
+  for (let i = 0; i < toks.length; i++) {
+    const w = toks[i]!;
+    if (w === "no" && ptRegime) continue;
+    if (GOV_NEG_WORDS.has(w) && (firstContent === -1 || i <= firstContent)) return true;
+  }
+  return false;
+}
+
+/** Una cláusula fuente con todo lo que las puertas leen de ella. */
+interface SemSourceClause {
+  chunk: number;
+  stems: Set<string>;
+  negPos: boolean;
+  negGov: boolean;
+  poles: Set<string>;
+  vec: Float32Array;
+}
+
+/** Una cláusula de la respuesta con todo lo que las puertas leen. */
+interface SemAnswerClause {
+  text: string;
+  subordinate: boolean;
+  /** Cuelga de la abstención de su frase (ella o una anterior): exenta. */
+  preamble: boolean;
+  stems: Set<string>;
+  negPos: boolean;
+  negGov: boolean;
+  vec: Float32Array;
+}
+
+/** Todo lo que las puertas necesitan, calculado una vez por juicio. */
+interface SemGateData {
+  sources: SemSourceClause[];
+  answerClauses: SemAnswerClause[][];
+  /** El chunk más relevante para la pregunta y su margen sobre el segundo. */
+  topChunk: number;
+  n8Margin: number;
+  chunkStemSets: Set<string>[];
+  /** Raíces que en las fuentes SOLO aparecen bajo negación gobernante (TRAS). */
+  negStems: Set<string>;
+  posStems: Set<string>;
+  /** Ámbito de tema de TRAS: solape pregunta↔chunk de la prohibición. */
+  topicOverlap: number;
+  chunkLangs: (GroundingLang | null)[];
+  /** El idioma detectado de la respuesta (el ámbito cruzado de TIE2). */
+  answerLang: GroundingLang | null;
+}
+
+/**
+ * Prepara los datos de las puertas desde el contexto validado, con
+ * el mismo troceo que el juez valida (splitClausesWithSep sobre las
+ * frases de chunkSentences y de la respuesta): los vectores se
+ * consumen en ese orden exacto. Sin cláusulas fuente no hay
+ * evidencia semántica que leer y no hay puertas (null).
+ */
+function prepareSemGates(
+  ctx: JudgeSemanticContext,
+  chunks: GroundingChunk[],
+  chunkSentences: string[][],
+  sentences: string[],
+  chunkTexts: string[],
+  query: string,
+  answerLang: GroundingLang | null,
+  sourceLang: GroundingLang | null,
+): SemGateData | null {
+  const ptRegime = answerLang === "pt" || sourceLang === "pt";
+  const sources: SemSourceClause[] = [];
+  for (let i = 0; i < chunks.length; i++) {
+    let k = 0;
+    for (const s of chunkSentences[i]!) {
+      for (const cl of splitClausesWithSep(s)) {
+        sources.push({
+          chunk: i,
+          stems: new Set(contentStems(cl.text)),
+          negPos: semNegPos(cl.text, ptRegime),
+          negGov: semNegGov(cl.text, ptRegime),
+          poles: clausePoles(cl.text),
+          vec: ctx.chunkClauseVectors[i]![k++]!,
+        });
+      }
+    }
+  }
+  if (sources.length === 0) return null;
+  const answerClauses: SemAnswerClause[][] = sentences.map((s, si) => {
+    const cls = splitClausesWithSep(s);
+    const idkIdx = cls.findIndex((c) => IDK_RE.test(c.text));
+    return cls.map((c, j) => ({
+      text: c.text,
+      subordinate: c.subordinate,
+      preamble: idkIdx >= 0 && j <= idkIdx,
+      stems: new Set(contentStems(c.text)),
+      negPos: semNegPos(c.text, ptRegime),
+      negGov: semNegGov(c.text, ptRegime),
+      vec: ctx.answerClauseVectors[si]![j]!,
+    }));
+  });
+  // N8: el chunk más relevante para la pregunta y su margen.
+  let topChunk = -1;
+  let topVal = -Infinity;
+  let second = -Infinity;
+  for (let i = 0; i < ctx.questionChunkSims.length; i++) {
+    const v = ctx.questionChunkSims[i]!;
+    if (v > topVal) {
+      second = topVal;
+      topVal = v;
+      topChunk = i;
+    } else if (v > second) {
+      second = v;
+    }
+  }
+  const n8Margin = ctx.questionChunkSims.length >= 2 && topChunk >= 0 ? topVal - second : 0;
+  // TRAS-tema: las raíces bajo negación gobernante y las demás, y el
+  // solape de tema entre la pregunta y los chunks que las contienen.
+  const negStems = new Set<string>();
+  const posStems = new Set<string>();
+  for (const src of sources) {
+    for (const st of src.stems) (src.negGov ? negStems : posStems).add(st);
+  }
+  const questionStems = new Set(contentStems(query ?? ""));
+  let topicOverlap = 0;
+  chunkSentences.forEach((ss, i) => {
+    const bodyStems = new Set<string>();
+    for (const s of ss) for (const st of contentStems(s)) bodyStems.add(st);
+    let toca = false;
+    for (const st of bodyStems) if (negStems.has(st)) { toca = true; break; }
+    if (!toca) return;
+    let n = 0;
+    for (const st of questionStems) if (bodyStems.has(st)) n++;
+    if (n > topicOverlap) topicOverlap = n;
+  });
+  return {
+    sources,
+    answerClauses,
+    topChunk,
+    n8Margin,
+    chunkStemSets: chunkTexts.map((t) => new Set(contentStems(t))),
+    negStems,
+    posStems,
+    topicOverlap,
+    chunkLangs: chunkTexts.map((t) => detectTextLang(t)),
+    answerLang,
+  };
+}
+
+/** La mejor similitud de un vector contra todas las cláusulas fuente. */
+function semMaxSim(vec: Float32Array, data: SemGateData): number {
+  let mx = 0;
+  for (const src of data.sources) {
+    const v = cosineSimilarity(vec, src.vec);
+    if (v > mx) mx = v;
+  }
+  return mx;
+}
+
+type SemGateName = "suelo" | "tie2" | "n8" | "tras";
+
+/**
+ * Las cuatro puertas sobre UNA frase que el juicio léxico
+ * conservaría, en el orden sellado. Devuelve la puerta que dispara
+ * o null. `datumJurisdiction` es la excepción heredada de CL-10/V6
+ * y solo la lee N8: lo que es de la regla del dato se sustituye,
+ * no se retira por relevancia.
+ */
+function semGateFire(
+  data: SemGateData,
+  sentenceIdx: number,
+  sentenceStems: Set<string>,
+  datumJurisdiction: boolean,
+): SemGateName | null {
+  const clauses = data.answerClauses[sentenceIdx]!;
+  // 1 · SUELO de cláusula sustantiva: si TODAS las cláusulas
+  // sustantivas de la frase quedan por debajo del suelo contra las
+  // cláusulas fuente, la frase no tiene respaldo semántico. Las de
+  // preámbulo de abstención no cuentan; la abstención pura (todas
+  // preámbulo) está exenta entera.
+  if (!(clauses.length > 0 && clauses.every((c) => c.preamble))) {
+    let mx = -1;
+    for (const c of clauses) {
+      if (c.stems.size < 3 || c.preamble) continue;
+      const v = semMaxSim(c.vec, data);
+      if (v > mx) mx = v;
+    }
+    if (mx >= 0 && mx < SEM_FLOOR) return "suelo";
+  }
+  // 2 · TIE2: la gemela negada de cláusula con casi-empate. Una
+  // cláusula sin negación gobernante propia cuya mejor gemela
+  // NEGADA (negación por posición, en simetría) alcanza tau y queda
+  // a eps o menos de su mejor gemela positiva dice lo contrario de
+  // la guía. Ámbito cruzado: la gemela que dispara debe vivir en un
+  // chunk de otro idioma que el de la RESPUESTA — la formulación
+  // con la que el arnés oficial de T-20 midió la unión (61/67). La
+  // variante por idioma de cláusula, que el diseño prefería en su
+  // §9, la contradijo la batería de esta tanda con dos pérdidas
+  // atribuibles y medidas: 087 (la cláusula «Aplique manteiga nem
+  // pasta…» no tiene idioma detectable y la variante la saltaba) y
+  // f10-4 (la cláusula que dispara es la fiel en el idioma de la
+  // guía dentro de una respuesta mezclada: por cláusula no hay
+  // cruce y por caso sí, que es como el arnés la cazó). Comparar
+  // contra el chunk de la gemela, y no contra el primero, conserva
+  // la protección de b-099: su gemela vive en el chunk de su mismo
+  // idioma y TIE2 no la toca (la caza TRAS-tema).
+  for (const c of clauses) {
+    if (c.stems.size < 3 || c.subordinate || c.preamble || c.negPos) continue;
+    let mn = -1;
+    let mnChunk = -1;
+    let mp = 0;
+    for (const src of data.sources) {
+      const v = cosineSimilarity(c.vec, src.vec);
+      if (src.negPos) {
+        if (v > mn) { mn = v; mnChunk = src.chunk; }
+      } else if (v > mp) {
+        mp = v;
+      }
+    }
+    if (mn < SEM_TIE_TAU || mn < mp - SEM_TIE_EPS) continue;
+    const ownerLang = data.chunkLangs[mnChunk];
+    if (ownerLang === null || data.answerLang === null || ownerLang === data.answerLang) continue;
+    return "tie2";
+  }
+  // 3 · N8: la relevancia semántica pregunta→chunk. Si un chunk
+  // gana claramente como el del tema y la frase se apoya sobre todo
+  // en otro (y en el del tema, ni a medias), su único respaldo es
+  // el sentido competidor: la polisemia que el léxico no separa.
+  if (data.topChunk >= 0 && data.n8Margin >= SEM_N8_MARGIN && !datumJurisdiction && sentenceStems.size > 0) {
+    let best = -1;
+    let bestSupport = -1;
+    let topSupport = 0;
+    data.chunkStemSets.forEach((set, i) => {
+      let hits = 0;
+      for (const st of sentenceStems) if (set.has(st)) hits++;
+      const apoyo = hits / sentenceStems.size;
+      if (apoyo > bestSupport) { bestSupport = apoyo; best = i; }
+      if (i === data.topChunk) topSupport = apoyo;
+    });
+    if (best >= 0 && best !== data.topChunk && bestSupport >= SEM_N8_SUPPORT && topSupport < SEM_N8_SUPPORT) {
+      return "n8";
+    }
+  }
+  // 4 · TRAS-tema: el trasplante léxico con ámbito de tema. La
+  // frase trae una raíz que en las fuentes SOLO aparece bajo
+  // negación, su mejor cláusula roza a la guía (≥ 0,88), no trae
+  // negación propia, y el chunk de la prohibición no es el del tema
+  // de la pregunta (solape < 2): sin ese ámbito, TRAS rompía 514.
+  if (data.negStems.size > 0 && data.topicOverlap < 2) {
+    let ownNegation = false;
+    let mx = 0;
+    const stemsF = new Set<string>();
+    for (const c of clauses) {
+      if (c.negPos || c.negGov) ownNegation = true;
+      for (const st of c.stems) stemsF.add(st);
+      const v = semMaxSim(c.vec, data);
+      if (v > mx) mx = v;
+    }
+    if (!ownNegation && mx >= SEM_TRAS_SIM) {
+      for (const st of stemsF) {
+        if (data.negStems.has(st) && !data.posStems.has(st)) return "tras";
+      }
+    }
+  }
+  return null;
+}
+
+// ------------------------- cirugía semántica de polos (F-06, T-21)
+
+/**
+ * Los ejes de polos del diseño (EJES): pares de acciones o estados
+ * opuestos, leídos por raíces con el puenteo de matchLevel. V4 los
+ * midió a nivel de FRASE y murió ahí (rompía 346/347/348/511/519):
+ * a nivel de frase, la mitad fiel de una frase compuesta cae con la
+ * inventada. En forma de cirugía de cláusula — la doctrina F-06
+ * que el dueño aceptó — el desenlace es el de dropFlippedClauses:
+ * se corta la cláusula opuesta y la fiel se queda, y es el
+ * marcador de cada gemela de la batería quien decide (511 conserva
+ * porque su marcador vive en la cláusula fiel; 512 corta porque
+ * vive en la opuesta).
+ */
+const POLE_AXES_RAW: ReadonlyArray<readonly [readonly string[], readonly string[]]> = [
+  [["marcha", "encendido", "encendida", "prendido", "running", "ligado", "aceso", "encender"],
+   ["apagar", "apagado", "apagada", "desligar", "desligado", "off", "apague"]],
+  [["abrir", "abierto", "abierta", "open", "aberta", "aberto"],
+   ["cerrar", "cerrado", "cerrada", "fechar", "fechado", "fechada", "close", "closed", "shut"]],
+  [["subir", "levantar", "elevar", "raise", "lift", "levanta"],
+   ["bajar", "descender", "baixar", "lower", "desce"]],
+  [["dentro", "inside"], ["fuera", "fora", "outside"]],
+  [["caliente", "quente", "hot"], ["frío", "frio", "fria", "cold"]],
+  [["seco", "seca", "dry"], ["mojado", "mojada", "molhado", "molhada", "wet"]],
+  [["limpio", "limpia", "clean"], ["sucio", "sucia", "sujo", "suja", "dirty"]],
+  [["seguir", "continuar", "keep", "continue", "sigue"],
+   ["parar", "detener", "stop", "pare"]],
+  [["dar", "give"], ["quitar", "retirar", "remove", "tirar", "quita", "retira"]],
+  [["lleno", "llena", "cheio", "cheia", "full"], ["vacío", "vacía", "vazio", "vazia", "empty"]],
+];
+const POLE_AXES: ReadonlyArray<readonly [ReadonlySet<string>, ReadonlySet<string>]> = POLE_AXES_RAW.map(
+  ([a, b]) =>
+    [
+      new Set(a.map((w) => stem(stripAccents(w.toLowerCase())))),
+      new Set(b.map((w) => stem(stripAccents(w.toLowerCase())))),
+    ] as const,
+);
+
+/** El pliegue de matchLevel (senales del diseño): normaliza grafías. */
+function poleFold(s: string): string {
+  let t = s.replaceAll("ph", "f").replaceAll("qu", "c").replaceAll("ct", "t").replaceAll("pt", "t");
+  t = t.replaceAll("y", "i");
+  t = t.replace(/(.)\1/g, "$1");
+  for (const suf of ["cion", "tion", "sion", "cao", "dad", "dade", "tud", "tude"]) {
+    if (t.length - suf.length >= 3 && t.endsWith(suf)) {
+      t = t.slice(0, t.length - suf.length);
+      break;
+    }
+  }
+  if (t.length >= 5 && "aeo".includes(t[t.length - 1]!)) t = t.slice(0, -1);
+  return t;
+}
+
+/** Levenshtein acotado a k (el edit_le del diseño). */
+function poleEditLe(a: string, b: string, k: number): boolean {
+  if (Math.abs(a.length - b.length) > k) return false;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    let rowMin = k + 1;
+    for (let j = 1; j <= b.length; j++) {
+      const v = Math.min(prev[j]! + 1, cur[j - 1]! + 1, prev[j - 1]! + (a[i - 1] === b[j - 1] ? 0 : 1));
+      cur.push(v);
+      if (j >= Math.max(0, i - k - 1) && j <= Math.min(b.length, i + k) && v < rowMin) rowMin = v;
+    }
+    if (rowMin > k) return false;
+    prev = cur;
+  }
+  return prev[b.length]! <= k;
+}
+
+/** 0 sin match, 1 crudo, 2 por pliegues, 3 suave (el match_level del diseño). */
+function poleMatchLevel(a: string, b: string): number {
+  if (a === b) return 1;
+  const fa = poleFold(a);
+  const fb = poleFold(b);
+  if (fa === fb && fa.length >= 3) return 2;
+  if (
+    Math.min(fa.length, fb.length) >= 4 &&
+    (fa.startsWith(fb.slice(0, 4)) || fb.startsWith(fa.slice(0, 4))) &&
+    poleEditLe(fa, fb, 2)
+  ) {
+    return 3;
+  }
+  return 0;
+}
+
+/** Los polos de un texto, como «eje:lado», con el puenteo medido. */
+function clausePoles(text: string): Set<string> {
+  const stems = new Set(contentStems(text));
+  const out = new Set<string>();
+  POLE_AXES.forEach(([ladoA, ladoB], i) => {
+    for (const s of stems) {
+      for (const e of ladoA) {
+        const m = poleMatchLevel(s, e);
+        if (m > 0 && m <= 3) { out.add(`${i}:0`); break; }
+      }
+      for (const e of ladoB) {
+        const m = poleMatchLevel(s, e);
+        if (m > 0 && m <= 3) { out.add(`${i}:1`); break; }
+      }
+    }
+  });
+  return out;
+}
+
+const SEM_POLE_TAU = 0.82;
+const SEM_POLE_DELTA = 0.06;
+
+/**
+ * La pierna semántica de la cirugía (F-06): corta las cláusulas de
+ * la frase cuyo polo es el opuesto del de su gemela semántica. Una
+ * cláusula cae solo si su mejor cláusula fuente con el polo
+ * OPUESTO (y sin el suyo) es casi-gemela (≥ tau y a delta o menos
+ * de su mejor similitud) Y ninguna cláusula fuente con su MISMO
+ * polo la alcanza: la lectura fiel protege, con el empate a favor
+ * de la fiel, como en dropFlippedClauses — sin esa protección la
+ * pierna rompía las fieles 061/062/063 en el prototipo medido. El
+ * desenlace es el de la cirugía de la casa: cortada la primera
+ * cláusula sin una principal fiel detrás (≥3 raíces y máx-sim
+ * ≥ 0,87 entre las que quedan), cae la frase entera; si la hay,
+ * lo fiel se queda. Medido en prototipo contra la batería entera
+ * con el GGUF: caza 512 y 527 (y 066/180/258/471, que las puertas
+ * también cazan) con 0 rotas A/B.
+ */
+function dropOpposedClauses(
+  sentence: string,
+  semClauses: SemAnswerClause[],
+  data: SemGateData,
+): { text: string; dropped: number } {
+  const segs = sentence.split(clauseSplitExtCaptureRe(sentence));
+  // Los segmentos pares con ≥8 caracteres son, en orden, las
+  // cláusulas de splitClausesWithSep: el mismo troceo que alineó
+  // los vectores del contexto.
+  const segIdx: number[] = [];
+  for (let i = 0; i < segs.length; i += 2) {
+    if (segs[i]!.trim().length >= 8) segIdx.push(i);
+  }
+  if (segIdx.length !== semClauses.length) return { text: sentence, dropped: 0 };
+  const drop = new Set<number>(); // posiciones dentro de segIdx
+  for (let j = 0; j < segIdx.length; j++) {
+    const c = semClauses[j]!;
+    const poles = clausePoles(c.text);
+    if (poles.size === 0) continue;
+    let amax = 0;
+    const sims = data.sources.map((src) => {
+      const v = cosineSimilarity(c.vec, src.vec);
+      if (v > amax) amax = v;
+      return v;
+    });
+    for (const polo of poles) {
+      const [eje, lado] = polo.split(":");
+      const opuesto = `${eje}:${lado === "0" ? "1" : "0"}`;
+      if (poles.has(opuesto)) continue;
+      let opp = 0;
+      let misma = 0;
+      data.sources.forEach((src, si2) => {
+        if (src.poles.has(opuesto) && !src.poles.has(polo) && sims[si2]! > opp) opp = sims[si2]!;
+        if (src.poles.has(polo) && sims[si2]! > misma) misma = sims[si2]!;
+      });
+      if (opp >= SEM_POLE_TAU && opp >= amax - SEM_POLE_DELTA && opp > misma) {
+        drop.add(j);
+        break;
+      }
+    }
+  }
+  if (drop.size === 0) return { text: sentence, dropped: 0 };
+  // ¿Queda una principal fiel? (la vara del prototipo medido)
+  const quedaFiel = semClauses.some(
+    (c, j) => !drop.has(j) && c.stems.size >= 3 && semMaxSim(c.vec, data) >= SEM_FLOOR,
+  );
+  if (drop.has(0) && !quedaFiel) return { text: "", dropped: drop.size };
+  const kill = new Set<number>();
+  for (const j of drop) {
+    const i = segIdx[j]!;
+    kill.add(i);
+    if (i > 0) kill.add(i - 1);
+    else if (segs.length > 1) kill.add(1);
+  }
+  const text = segs
+    .filter((_, i) => !kill.has(i))
+    .join("")
+    .replace(/\s+([,;:.!?])/g, "$1")
+    .trim();
+  return { text, dropped: drop.size };
+}
+
 export function verifyGroundedAnswer(
   answer: string,
   chunks: GroundingChunk[],
@@ -2586,6 +3309,19 @@ export function verifyGroundedAnswer(
    * que el humano quiso decir.
    */
   referenceDate: Date = new Date(),
+  /**
+   * T-20 (0.1.99, núcleo del juez): el contexto semántico precomputado
+   * por la capa de recuperación (semanticContext.ts) — vectores de las
+   * cláusulas de los chunks y de la respuesta y similitudes
+   * pregunta→chunk, del perfil multilingüe activo. El juez lo VALIDA
+   * (usableSemanticContext: perfil, longitudes y alineación de
+   * cláusulas contra su propio troceo); sin contexto, o con un
+   * contexto que no cuadra, el veredicto es byte a byte el de
+   * siempre. Desde T-21 lo leen las puertas semánticas (SUELO,
+   * TIE2, N8, TRAS-tema y la cirugía de polos F-06, junto a
+   * prepareSemGates): solo actúan con un contexto válido.
+   */
+  semanticContext?: JudgeSemanticContext,
 ): GroundingResult {
   const trimmed = (answer ?? "").trim();
   if (!trimmed) return { text: trimmed, status: "skipped", removed: 0, kept: 0 };
@@ -2667,6 +3403,20 @@ export function verifyGroundedAnswer(
   chunkSentences.forEach((ss, i) => {
     for (const text of ss) sourceRecs.push({ text, chunk: i });
   });
+  // T-20: el contexto semántico queda validado contra el troceo
+  // propio del juez en cuanto existen las frases de las fuentes.
+  // Ninguna puerta lo lee en esta tanda (eso es T-21): la validación
+  // vive ya aquí para que la desalineación se descubra en el primer
+  // consumidor, no en la primera puerta.
+  const semanticCtx = usableSemanticContext(semanticContext, chunks, sentences, chunkSentences);
+  // T-21: las puertas semánticas leen el contexto validado. Solo
+  // existen datos con contexto válido (prepareSemGates devuelve
+  // null también sin cláusulas fuente): sin ellos, ninguna puerta
+  // actúa y el juez es byte a byte el de T-19. La nota de T-20
+  // («ninguna puerta lo lee todavía») queda superada por esta tanda.
+  const semData = semanticCtx
+    ? prepareSemGates(semanticCtx, chunks, chunkSentences, sentences, chunkTexts, query, answerLang, sourceLang)
+    : null;
   // C-07: las menciones de fecha de las fuentes, parseadas una sola
   // vez: la pierna de fechas juzga cada frase contra ellas (dates.ts).
   const sourceDateSentences = parseSourceDateSentences(chunkSentences.flat(), referenceDate);
@@ -2697,6 +3447,29 @@ export function verifyGroundedAnswer(
   // pregunta ahora es parámetro obligatorio, el llamador sin
   // pregunta ya no compila; y quien pasa "" a la vista obtiene el
   // juicio de cantidades entero, que es el comportamiento seguro.
+
+  // T-19 (V5b): los pares cifra↔rol de la evidencia, calculados una
+  // sola vez por llamada: la unión de pares de TODAS las frases
+  // fuente (es lo medido; la condición conjuntiva del disparo es lo
+  // que lo hace seguro), los roles que la evidencia empareja y sus
+  // cifras con las lecturas de la casa.
+  const sourceRolePairs = new Set<string>();
+  for (const ss of chunkSentences) {
+    for (const st of ss) {
+      for (const p of valueRolePairs(st)) sourceRolePairs.add(p);
+    }
+  }
+  const sourceRoles = new Set<string>();
+  for (const key of sourceRolePairs) sourceRoles.add(key.slice(key.lastIndexOf("|") + 1));
+  // Las cifras de la evidencia para el disparo son las de los tokens
+  // en dígitos (numberValueSet: las lecturas de parseNumberToken de
+  // numberTokens), NO las lecturas en letra de evidenceNumberValues:
+  // el paseo de pares es de dígitos, y contar el «dos» de «dos veces
+  // al día» como cifra suelta hacía disparar la pierna contra la
+  // prosa fiel que lo trae en dígitos («tome el jarabe 2 veces al
+  // día», controles de A3-03 y T-J1). Es la forma medida en el
+  // diseño, cuyo numeros() es de dígitos.
+  const sourceRoleNumbers = numberValueSet(chunkSentences.flat().join(" "));
 
   if (!sameLanguage && !hasTopicSameLangChunk) {
     // Sin comparación léxica válida: solo cifras (independientes del idioma).
@@ -2735,7 +3508,8 @@ export function verifyGroundedAnswer(
     const weakNums = evidenceNumberValues(weakLocalTexts);
     const weakQty = evidenceQuantities(weakLocalTexts);
     const weakRanges = evidenceRanges(weakLocalTexts);
-    for (const s of sentences) {
+    for (let si = 0; si < sentences.length; si++) {
+      const s = sentences[si]!;
       // C2-H1: solo la abstención pura se conserva sin juicio.
       if (isPureAbstention(s)) {
         kept.push(s);
@@ -2757,6 +3531,14 @@ export function verifyGroundedAnswer(
       // T-05 (V-02) juzgan sin puerta de pregunta: ver la frontera
       // de T-J1 actualizada junto a datumArmedAny.
       if (quantityConflict(s, weakQty, weakNums, weakRanges)) {
+        removed++;
+        continue;
+      }
+      // T-19 (V5b): la cifra↔rol también es independiente del
+      // idioma — la cifra y el rol se atan por orden, sin léxico
+      // que comparar — y juzga en esta rama con los pares globales
+      // de la evidencia (012 y 297 viven aquí).
+      if (valueRoleConflict(s, sourceRolePairs, sourceRoles, sourceRoleNumbers)) {
         removed++;
         continue;
       }
@@ -2810,6 +3592,39 @@ export function verifyGroundedAnswer(
       // «lo ajeno» por raíces mataría traducciones fieles. El
       // residuo sin cifras queda asentado como límite del juez
       // determinista, no como regalo: su estado es unverified.
+      // T-21: las puertas semánticas son la vara que esta rama no
+      // tenía — el residuo sin cifras de CL-2 era el límite del
+      // LÉXICO, no del juez con embeddings. Solo actúan con contexto
+      // válido y sobre la frase que llega viva hasta aquí (la que
+      // esta rama conservaría); la excepción de jurisdicción del
+      // dato de N8 se computa igual que en la rama principal.
+      if (semData) {
+        const datumJurisdiction =
+          (datumArmedAny && assertsDatumIdentity(s)) ||
+          (datumTypeOfText(query ?? "") !== null &&
+            isTypedDatumOffender(s, datumTypeOfText(query ?? "")!, sourceRecs, questionStems)) ||
+          (datumTypeOfText(s) !== null &&
+            isTypedDatumOffender(s, datumTypeOfText(s)!, sourceRecs, questionStems));
+        if (semGateFire(semData, si, new Set(contentStems(s)), datumJurisdiction) !== null) {
+          removed++;
+          continue;
+        }
+        // F-06 también aquí: la gemela cruzada de 512 es 527, y su
+        // cláusula opuesta («keep the engine running») no la caza
+        // ninguna puerta de frase entera — la caza la cirugía, con
+        // su desenlace: si la opuesta cae y queda principal fiel,
+        // se sirve lo fiel como no verificado; si no queda, cae.
+        const pole = dropOpposedClauses(s, semData.answerClauses[si]!, semData);
+        if (pole.dropped > 0) {
+          if (!pole.text) {
+            removed++;
+            continue;
+          }
+          kept.push(pole.text);
+          langProv.push({ text: pole.text, origin: { kind: "model", reason: "unverified-language" } });
+          continue;
+        }
+      }
       kept.push(s);
       langProv.push({ text: s, origin: { kind: "model", reason: "unverified-language" } });
     }
@@ -2843,6 +3658,20 @@ export function verifyGroundedAnswer(
   }
 
   const chunkStemSets = chunkTexts.map((t) => new Set(contentStems(t)));
+  // T-19 (V6): la relevancia de la polisemia se cuenta por PRESENCIA
+  // (raíces de la pregunta presentes en el chunk, sin repetir), no
+  // por ocurrencias como chunkQuestionRel: con ocurrencias, la guía
+  // del sentido competidor empata a la buena a base de repetir la
+  // palabra polisémica (polisemia-114 empata 3 a 3 y la pierna no se
+  // arma) y por presencia es 2 a 1, que es lo medido en el diseño.
+  // Su armado (≥2) y su disparo viven junto a CL-10 en el bucle.
+  const questionRelPresence = chunkStemSets.map((set) => {
+    let n = 0;
+    for (const w of questionStems) if (set.has(w)) n++;
+    return n;
+  });
+  const maxQuestionRelPresence = Math.max(0, ...questionRelPresence);
+  const relevanceArmedLow = maxQuestionRelPresence >= 2 && chunkTexts.length >= 2;
   // CL-3: las cláusulas de todas las frases fuente, para la pierna
   // de polaridad (el vocabulario de una contradicción puede venir
   // repartido entre chunks, así que no se limita al mejor chunk).
@@ -2854,7 +3683,8 @@ export function verifyGroundedAnswer(
   let judgedKept = 0;
   const kept: string[] = [];
   const prov: SentenceProvenance[] = [];
-  for (let s of sentences) {
+  for (let si = 0; si < sentences.length; si++) {
+    let s = sentences[si]!;
     // C2-H1: solo la abstención pura se conserva sin juicio; la que afirma
     // un dato se juzga por ese dato, como cualquier frase del modelo.
     if (isPureAbstention(s)) {
@@ -2863,6 +3693,16 @@ export function verifyGroundedAnswer(
       prov.push({ text: s, origin: { kind: "abstain" } });
       continue;
     }
+    // La jurisdicción del dato de esta frase, calculada al entrar:
+    // la consultan CL-10 y V5b (las dos retiran por su cuenta y las
+    // dos ceden ante la regla del dato, cuyo desenlace sellado es
+    // la sustitución: ver la excepción junto a CL-10).
+    const datumJurisdiction =
+      (datumArmedAny && assertsDatumIdentity(s)) ||
+      (datumTypeOfText(query ?? "") !== null &&
+        isTypedDatumOffender(s, datumTypeOfText(query ?? "")!, sourceRecs, questionStems)) ||
+      (datumTypeOfText(s) !== null &&
+        isTypedDatumOffender(s, datumTypeOfText(s)!, sourceRecs, questionStems));
     const sup = sentenceSupport(s, chunkStemSets);
     // CL-4 paso B (caza 0.1.97): la evidencia de cifras de ESTA
     // frase es la de sus chunks de apoyo (su mejor chunk y los que
@@ -2897,6 +3737,27 @@ export function verifyGroundedAnswer(
     // número en letra fuera de los portillos de dosis. Desde T-05
     // (V-02) juzga sin puerta de pregunta.
     if (quantityConflict(s, localQty, localNums, localRanges)) {
+      removed++;
+      continue;
+    }
+    // T-19 (V5b): la cifra fiel con el rol cambiado no es un
+    // conflicto de cantidad — la cifra y el rol existen en la
+    // evidencia, pero nunca emparejados así. changedNumberCopy cubre
+    // la copia casi idéntica con la cifra cambiada; esta pierna, el
+    // caso sin copia y el mismo idioma (295/296 viven aquí), con los
+    // pares globales de la evidencia. Cede ante la maquinaria del
+    // dato, como measuredDoseConflict cede ante la afirmación con
+    // categoría y cópula: la frase que afirma un dato (la dosis
+    // falsa de T-J2, la rescatada por unión de R2-11) tiene su
+    // desenlace sellado en esa maquinaria — sustitución o rescate —
+    // y retirarla aquí lo convertía en abstención. La jurisdicción
+    // del dato de CL-10 manda por la misma razón.
+    const datumAssertion = DATUM_CATEGORY_RE.test(foldForCues(s)) && hasDatumCopula(s);
+    if (
+      !datumJurisdiction &&
+      !datumAssertion &&
+      valueRoleConflict(s, sourceRolePairs, sourceRoles, sourceRoleNumbers)
+    ) {
       removed++;
       continue;
     }
@@ -2938,18 +3799,53 @@ export function verifyGroundedAnswer(
     // cuyo desenlace sellado es la SUSTITUCIÓN por la frase fuente
     // (R-05, H-02): retirarla aquí por relevancia convertía la
     // sustitución en abstención.
-    const datumJurisdiction =
-      (datumArmedAny && assertsDatumIdentity(s)) ||
-      (datumTypeOfText(query ?? "") !== null &&
-        isTypedDatumOffender(s, datumTypeOfText(query ?? "")!, sourceRecs, questionStems)) ||
-      (datumTypeOfText(s) !== null &&
-        isTypedDatumOffender(s, datumTypeOfText(s)!, sourceRecs, questionStems));
     if (relevanceArmed && !datumJurisdiction) {
       const relSupport = sentenceSupport(s, chunkStemSets.filter((_, i) => relevantIdx.has(i)));
       if (!isSupported(relSupport)) {
         removed++;
         continue;
       }
+    }
+    // T-19 (V6): si la frase se apoya sobre todo (≥ 0,5) en un chunk
+    // que no es de los de máxima relación con la pregunta, y ningún
+    // chunk de máxima relación la apoya ni a medias (< 0,5), su
+    // único respaldo real es la guía del sentido competidor: se
+    // retira como en CL-10, cuya excepción de jurisdicción del dato
+    // se aplica igual (su desenlace sellado es la sustitución). Es
+    // la red léxica de la polisemia para cuando la puerta semántica
+    // (N8 de T-21) no está activa; con margen 1, medido: el margen 2
+    // ya no caza 114 y el listón 3 es el de CL-10, que no la alcanza.
+    if (relevanceArmedLow && !datumJurisdiction) {
+      const chunkSupports = chunkStemSets.map((set) => sentenceSupport(s, [set]).support);
+      let bestSupported = 0;
+      for (let i = 1; i < chunkSupports.length; i++) {
+        if (chunkSupports[i] > chunkSupports[bestSupported]) bestSupported = i;
+      }
+      let relevantSupport = 0;
+      questionRelPresence.forEach((rel, i) => {
+        if (rel === maxQuestionRelPresence && chunkSupports[i] > relevantSupport) {
+          relevantSupport = chunkSupports[i];
+        }
+      });
+      if (
+        chunkSupports[bestSupported] >= 0.5 &&
+        questionRelPresence[bestSupported] <= maxQuestionRelPresence - 1 &&
+        relevantSupport < 0.5
+      ) {
+        removed++;
+        continue;
+      }
+    }
+    // T-21: las puertas semánticas, en su punto de conservación de
+    // esta rama: la frase llegó viva al final del juicio léxico
+    // (pasó apoyo, relevancia, dato, cantidades, fechas y las
+    // piernas V5b/V6) y aún no ha sido sustituida por ninguna copia
+    // — las sustituciones verbatim no se juzgan, porque su texto es
+    // el de la fuente. Solo con contexto válido; la excepción de
+    // jurisdicción del dato (la de CL-10/V6) la hereda N8.
+    if (semData && semGateFire(semData, si, sStems, datumJurisdiction) !== null) {
+      removed++;
+      continue;
     }
     // R-04: una copia literal en el idioma equivocado pasa el apoyo
     // (la frase ESTÁ en el chunk, en su bloque de otro idioma). Antes
@@ -3018,6 +3914,27 @@ export function verifyGroundedAnswer(
       if (changedNumberCopy(s, chunkSentences.flat())) {
         removed++;
         continue;
+      }
+    }
+    // T-21 (F-06): la pierna semántica de la cirugía, antes que la
+    // léxica y sobre la frase intacta: la cláusula que dice el polo
+    // contrario de su gemela («mantén el motor en marcha» contra
+    // «apaga el motor») no trae negación que contar — su falsedad
+    // es de polo, no de polaridad — y solo el embedding la ve. Si
+    // corta, su desenlace es el de la cirugía: la cláusula cae y
+    // la fiel se queda (512), o la frase entera cae si la opuesta
+    // abre la frase y no queda principal fiel detrás. La misma
+    // pierna corre en la rama cruzada, en su punto de conservación
+    // (527 vive allí).
+    if (semData) {
+      const pole = dropOpposedClauses(s, semData.answerClauses[si]!, semData);
+      if (pole.dropped > 0) {
+        if (!pole.text) {
+          removed++;
+          continue;
+        }
+        negationFixed++;
+        s = pole.text;
       }
     }
     // CL-3 (caza 0.1.97): la polaridad por cláusulas. Lo que las vías
