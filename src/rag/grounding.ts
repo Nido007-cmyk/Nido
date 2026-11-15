@@ -3225,6 +3225,20 @@ const SEM_POLE_DELTA = 0.06;
  * 0,0099) y 066 (0,0018; su frase la caza SUELO igualmente); el
  * corte cruzado más cercano fuera de la banda por la condición de
  * casi-gemela es 360 (gap 0,0609 con misma 0,7954 < tau).
+ *
+ * El coste medido de la banda, en su filo exacto (re-auditoría
+ * zona 1, ronda 2, sondas NV-3/3c/3d): la protección no distingue
+ * a la fiel de una cláusula INVENTADA cuya lectura de polo propio
+ * sea casi-gemela cruzada. La inventada peligrosa «add coolant
+ * only when the engine is hot», con su polo apoyado en una
+ * prohibición casi-gemela en otro idioma (misma 0,82, en tau) y la
+ * opuesta fiel ganando por solo 0,02 (opp 0,84, dentro de la
+ * banda), escapa entera; con opp 0,86, fuera de la banda, la
+ * misma configuración se corta (NV-3b): la banda es la causa
+ * aislada del escape. Y el filo está donde esta constante dice,
+ * sin zona gris (NV-6/6b): con misma cruzada 0,8248,
+ * opp = misma + EPS − 0,0002 sobrevive y opp = misma + EPS +
+ * 0,0002 se corta.
  */
 const SEM_POLE_XLANG_EPS = 0.03;
 
