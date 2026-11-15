@@ -43,6 +43,17 @@ export const STORE_LIMITS = {
   maxBytes: 2 * 1024 * 1024,
   maxPerSource: 30,
   /**
+   * T-14 (auditoría m-49): reserva para los sobres PROPIOS dentro de los
+   * topes de arriba. Los ajenos paran en maxEnvelopes − ownReserve y en
+   * maxBytes − ownReserveBytes; los propios usan los topes enteros. Sin
+   * reserva, un almacén lleno de sobres de otros dejaba el mensaje del
+   * dueño sin sellar, y la causa («lleno») ni se veía. 20 sobres: el
+   * sobre propio más grande (cubo de 8192 con su cifrado) ocupa unos
+   * 19 KB en JSON, así que la reserva de bytes cubre 20 en el peor caso.
+   */
+  ownReserve: 20,
+  ownReserveBytes: 384 * 1024,
+  /**
    * Copias: medido con carrySimulation (60 teléfonos en 6 barrios, 72 h):
    * 3/1 entregaba a las 24 h un 22 % más que el envío directo; 8/3, un
    * 65 % más, con unos 10 sobres de unos KB por mensaje en toda la red y
@@ -166,7 +177,17 @@ export class CarryStore {
     if (env.hops < 1) return "no_hops";
     this.sweep(now);
     const bytes = envelopeBytes(env);
-    if (this.held.size >= this.limits.maxEnvelopes || this.bytes() + bytes > this.limits.maxBytes) return "full";
+    // T-14 (m-49): los ajenos topan ANTES, en el tope menos la reserva,
+    // para que un sobre propio siempre encuentre su hueco; los propios
+    // (from === null) usan los topes enteros.
+    if (from === null) {
+      if (this.held.size >= this.limits.maxEnvelopes || this.bytes() + bytes > this.limits.maxBytes) return "full";
+    } else {
+      if (this.held.size >= this.limits.maxEnvelopes - this.limits.ownReserve) return "full";
+      let foreignBytes = 0;
+      for (const h of this.held.values()) if (h.from !== null) foreignBytes += h.bytes;
+      if (foreignBytes + bytes > this.limits.maxBytes - this.limits.ownReserveBytes) return "full";
+    }
     if (from !== null) {
       let fromSame = 0;
       for (const h of this.held.values()) if (h.from === from) fromSame++;
@@ -268,8 +289,9 @@ export class CarryStore {
    * escrito un disco dañado o una importación futura, y ninguna fila
    * restaurada puede repartir más copias que las de su origen, vivir más
    * de 72 h desde su llegada ni saltarse los topes de conjunto (200, 2 MB,
-   * 30 por contacto). Las filas guardadas por versiones sin instante de
-   * llegada se tratan como llegadas en `now`.
+   * 30 por contacto, y la reserva de los propios de m-49). Las filas
+   * guardadas por versiones sin instante de llegada se tratan como
+   * llegadas en `now`.
    */
   restore(
     held: ReadonlyArray<{ env: unknown; from: unknown; copiesLeft: unknown; givenTo: unknown; arrivedAt?: unknown }>,
@@ -282,6 +304,8 @@ export class CarryStore {
     this.heldFp.clear();
     this.seenFp.clear();
     let totalBytes = 0;
+    let foreignCount = 0;
+    let foreignBytes = 0;
     const perSource = new Map<string, number>();
     for (const h of held ?? []) {
       if (!isWellFormedEnvelope(h?.env)) continue;
@@ -302,9 +326,16 @@ export class CarryStore {
       if (this.held.size >= this.limits.maxEnvelopes) break;
       if (totalBytes + bytes > this.limits.maxBytes) continue;
       if (from !== null) {
+        // T-14 (m-49): la restauración reaplica la partición de put():
+        // los ajenos paran en el tope menos la reserva, para que lo
+        // heredado de más no deje a los propios sin su hueco.
+        if (foreignCount >= this.limits.maxEnvelopes - this.limits.ownReserve) continue;
+        if (foreignBytes + bytes > this.limits.maxBytes - this.limits.ownReserveBytes) continue;
         const n = perSource.get(from) ?? 0;
         if (n >= this.limits.maxPerSource) continue;
         perSource.set(from, n + 1);
+        foreignCount++;
+        foreignBytes += bytes;
       }
       totalBytes += bytes;
       this.held.set(env.eid, { env, from, copiesLeft: copies, givenTo: new Set(given), bytes, arrivedAt });

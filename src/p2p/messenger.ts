@@ -2301,6 +2301,16 @@ export class NidoMessenger {
     return isFeatureEnabled("p2p.relay");
   }
 
+  /**
+   * T-14 (m-51): ¿sello sobres con MIS mensajes para que los lleven los
+   * contactos? Interruptor propio en la tarjeta del relevo, distinto del
+   * maestro y del de llevar sobres de otros: apagado, un mensaje que no
+   * sale en directo se queda en este teléfono y no viaja de mano en mano.
+   */
+  private relaySendOn(): boolean {
+    return isFeatureEnabled("p2p.relaySend");
+  }
+
   private async relayMe(): Promise<relay.Me | null> {
     if (!this.myPk) return null;
     const signing = await getSigningKeypair();
@@ -2413,11 +2423,16 @@ export class NidoMessenger {
 
   private async relaySealOwn(to: string, id: string, kind: "chat" | "receipt", text: string): Promise<void> {
     if (!this.relayOn()) return;
+    // T-14 (m-51): con el envío por relevo apagado no se sella nada nuevo.
+    if (!this.relaySendOn()) return;
     try {
       const me = await this.relayMe();
       if (!me) return;
       const res = await relay.sealOwnDetailed(me, to, id, kind, text, Date.now());
       this.relaySealMiss = res === "sealed" ? null : res;
+      // T-14 (m-49): la causa también a nivel de servicio, para que la
+      // tarjeta del relevo la enseñe (este objeto no la alcanza).
+      relay.noteSealMiss(res);
       if (res === "sealed") await this.relaySyncAll();
     } catch {
       /* best-effort */

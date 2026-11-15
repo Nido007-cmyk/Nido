@@ -282,7 +282,9 @@ describe("disco", () => {
       ["relay_flags_v1", "{no es json"],
     ]);
     expect(await isCarryEnabled()).toBe(false);
-    expect(await relayUsage()).toEqual({ envelopes: 0, bytes: 0, enabled: false });
+    // T-14 (m-49): relayUsage expone además la causa del último sobre
+    // propio no sellado (sealMiss); en este mundo dañado, ninguna.
+    expect(await relayUsage()).toEqual({ envelopes: 0, bytes: 0, enabled: false, sealMiss: null });
     expect(await relayFlags(["m"])).toEqual({});
     const h = await helloPayload(beto, NOW);
     expect(h.prekey.owner).toBe(beto.pkHex.toLowerCase());
@@ -397,7 +399,12 @@ describe("la causa de no sellar se distingue (H-5)", () => {
     await helloAnaCaro();
     expect(await sealOwnDetailed(ana, caro.pkHex, "x-3", "chat", "hola", NOW)).toBe("sealed");
   });
-  it("con el almacén lleno de sobres ajenos, la causa es store_full (y sealOwn sigue devolviendo false)", async () => {
+  it("con el almacén y la reserva llenos, la causa es store_full (y sealOwn sigue devolviendo false)", async () => {
+    // T-14 (m-49): esta prueba nació con «lleno de ajenos → store_full».
+    // La reserva de m-49 cambió ese mundo a propósito: con solo ajenos,
+    // el sobre propio entra en la reserva (sonda en t14Relay.test.ts).
+    // La causa store_full sigue existiendo y distinguiéndose: llega
+    // cuando también la reserva de los propios está llena.
     const hc = await helloAnaCaro();
     const base = sealCarry({ recipient: hc.prekey, senderPkHex: beto.pkHex, senderSecretKey: beto.idSecretKey, id: "bulk", kind: "chat", text: "hola", now: NOW });
     const sources = ["a", "b", "c", "d", "e", "f", "g"].map((c) => c.repeat(64));
@@ -413,9 +420,14 @@ describe("la causa de no sellar se distingue (H-5)", () => {
     state.held = held;
     await kvAna.setMany([["relay_state_v1", JSON.stringify(state)]]);
     on(ana);
+    // Los ajenos paran en el tope menos la reserva (m-49).
+    expect((await relayUsage()).envelopes).toBe(200 - 20);
+    for (let i = 0; i < 20; i++) {
+      expect(await sealOwnDetailed(ana, caro.pkHex, `mio-${i}`, "chat", "hola", NOW)).toBe("sealed");
+    }
     expect((await relayUsage()).envelopes).toBe(200);
-    expect(await sealOwnDetailed(ana, caro.pkHex, "mio-1", "chat", "hola", NOW)).toBe("store_full");
-    expect(await sealOwn(ana, caro.pkHex, "mio-1", "chat", "hola", NOW)).toBe(false);
+    expect(await sealOwnDetailed(ana, caro.pkHex, "mio-x", "chat", "hola", NOW)).toBe("store_full");
+    expect(await sealOwn(ana, caro.pkHex, "mio-x", "chat", "hola", NOW)).toBe(false);
   });
 });
 

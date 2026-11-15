@@ -89,6 +89,9 @@ vi.mock("./store", () => {
 vi.mock("../config/featureFlags", () => ({
   isFeatureEnabled: (f: string) =>
     (f === "p2p.sealedHandshake" && keys.state.flag) || (f === "p2p.privateHelloOnly" && keys.state.privateOnly),
+  // T-14 (M-21): el respondedor lee el encendido EXPRESO; en este arnés el
+  // estado privateOnly ES la elección del usuario.
+  isFeatureExplicitlyEnabled: (f: string) => f === "p2p.privateHelloOnly" && keys.state.privateOnly,
 }));
 
 vi.mock("../agent/memory/memoryStore", () => {
