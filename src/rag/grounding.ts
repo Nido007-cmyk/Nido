@@ -3206,6 +3206,27 @@ function clausePoles(text: string): Set<string> {
 
 const SEM_POLE_TAU = 0.82;
 const SEM_POLE_DELTA = 0.06;
+/**
+ * T-26 (H-1 de la re-auditoría 0.1.99): la banda del empate cruzado
+ * de idioma. Cuando la lectura fiel — la mejor fuente del MISMO
+ * polo — es casi-gemela (≥ SEM_POLE_TAU) pero vive en un chunk de
+ * otro idioma que el de la respuesta, su similitud llega descontada
+ * por el hueco de idioma, y la gemela opuesta puede «ganarle» sin
+ * decir nada más verdadero: en matriz-a-348, «…with the engine hot»
+ * (0,8348) le ganaba a la lectura fiel de la propia cláusula,
+ * «Add coolant only when the engine is cold» (0,8248), por 0,0099,
+ * y la cirugía cortaba una cláusula fiel palabra a palabra. Dentro
+ * de esta banda la comparación cruzada no distingue: es el empate
+ * de la doctrina («el empate es de la fiel») medido a través del
+ * idioma, y la fiel protege. Fuera del ámbito — mismo idioma, sin
+ * lectura fiel casi-gemela, o idiomas no detectados — manda la
+ * comparación de siempre, sin tocar. Medido sobre la caza entera
+ * con contexto: los únicos cortes en ámbito son 348 (el fiel,
+ * 0,0099) y 066 (0,0018; su frase la caza SUELO igualmente); el
+ * corte cruzado más cercano fuera de la banda por la condición de
+ * casi-gemela es 360 (gap 0,0609 con misma 0,7954 < tau).
+ */
+const SEM_POLE_XLANG_EPS = 0.03;
 
 /**
  * La pierna semántica de la cirugía (F-06): corta las cláusulas de
@@ -3222,6 +3243,13 @@ const SEM_POLE_DELTA = 0.06;
  * lo fiel se queda. Medido en prototipo contra la batería entera
  * con el GGUF: caza 512 y 527 (y 066/180/258/471, que las puertas
  * también cazan) con 0 rotas A/B.
+ *
+ * T-26 (H-1): la protección de la lectura fiel no puede perder por
+ * el hueco de idioma — si la fiel es casi-gemela (≥ tau) y su chunk
+ * es de otro idioma que la respuesta, la opuesta debe ganarle por
+ * SEM_POLE_XLANG_EPS, no por cualquier margen: la re-auditoría
+ * midió una fiel cortada (matriz-a-348) por 0,0099 de descuento
+ * cruzado ES↔EN, invisible a la vara del marcador.
  */
 function dropOpposedClauses(
   sentence: string,
@@ -3254,11 +3282,30 @@ function dropOpposedClauses(
       if (poles.has(opuesto)) continue;
       let opp = 0;
       let misma = 0;
+      let mismaChunk = -1;
       data.sources.forEach((src, si2) => {
         if (src.poles.has(opuesto) && !src.poles.has(polo) && sims[si2]! > opp) opp = sims[si2]!;
-        if (src.poles.has(polo) && sims[si2]! > misma) misma = sims[si2]!;
+        if (src.poles.has(polo) && sims[si2]! > misma) {
+          misma = sims[si2]!;
+          mismaChunk = src.chunk;
+        }
       });
-      if (opp >= SEM_POLE_TAU && opp >= amax - SEM_POLE_DELTA && opp > misma) {
+      // T-26: si la lectura fiel es casi-gemela y se lee a través
+      // del hueco de idioma (su chunk no es del idioma de la
+      // respuesta), la opuesta tiene que ganarle por la banda
+      // entera, no por el descuento del idioma: ver
+      // SEM_POLE_XLANG_EPS. El ámbito se mide por caso (idioma de
+      // la respuesta contra idioma del chunk de la fiel), como el
+      // de TIE2: la variante por cláusula la contradijo la batería
+      // de T-21 (087 y f10-4, asentado en semGateFire).
+      const fielCruzada =
+        misma >= SEM_POLE_TAU &&
+        mismaChunk >= 0 &&
+        data.answerLang !== null &&
+        data.chunkLangs[mismaChunk] != null &&
+        data.chunkLangs[mismaChunk] !== data.answerLang;
+      const umbralMisma = fielCruzada ? misma + SEM_POLE_XLANG_EPS : misma;
+      if (opp >= SEM_POLE_TAU && opp >= amax - SEM_POLE_DELTA && opp > umbralMisma) {
         drop.add(j);
         break;
       }
