@@ -446,7 +446,29 @@ const PT_CLOCK_FORM_WORDS = new Set([
 // palabra de reloj («nueva» de «nueve», «nova» de «nove»): «a la
 // nueva jefa» es contenido, no un dictado de las nueve — nadie
 // dicta «nueva» queriendo decir la hora.
-const CLOCK_FRAME_ORDINARIES = new Set(["nueva", "nova"]);
+// 0.1.99 (T-36, H-Z4-5-R3): los sustantivos ordinarios que viven
+// a una edición de «una» por inserción de la primera letra
+// («cuna», «duna», «luna», «tuna») son la misma clase: «mirar a
+// la luna» y «llevar al bebé a la cuna» son contenido (un
+// destino), no un dictado de la una.
+const CLOCK_FRAME_ORDINARIES = new Set(["nueva", "nova", "cuna", "duna", "luna", "tuna"]);
+// 0.1.99 (T-36, H-Z4-5-R3): la gemela también puede ser corta.
+// La guarda exigía que la palabra de la tabla midiera ≥4, y las
+// palabras de reloj de 3 letras de cada marco («dez» y «uma» en
+// PT, «una» y «dos» en ES) nunca eran gemelas elegibles: su
+// distorsión a una edición, que ya mide 4 («às dezz», «às
+// umma», «a las unna»), no avisaba y caía a las 09:00 en
+// silencio — la forma de H-Z4-5 un anillo más adentro que «às
+// onse». Ahora la gemela del conjunto del marco es elegible
+// sin suelo de longitud; el suelo que queda es el de la
+// palabra dictada (≥4), que es el borde declarado: la
+// distorsionada que mide 3 («a las dez») sigue fuera de la
+// doctrina. El freno en la otra dirección son las ordinarias
+// a una edición de las cortas, medidas en la rejilla de la
+// tanda: los sustantivos de CLOCK_FRAME_ORDINARIES no avisan,
+// y la plural de la propia palabra de reloj («a las unas»,
+// «às umas») sí: tras el marco no es artículo gramatical, es
+// la palabra de reloj en una forma que el parser no lee.
 function hasNearMissWordClock(text: string): boolean {
   const frames: Array<readonly [RegExp, ReadonlySet<string>]> = [
     [ES_CLOCK_FRAME_RE, ES_CLOCK_FORM_WORDS],
@@ -457,7 +479,7 @@ function hasNearMissWordClock(text: string): boolean {
       const w = m[1]!.toLowerCase();
       if (w.length < 4 || words.has(w) || CLOCK_FRAME_ORDINARIES.has(w)) continue;
       for (const key of words) {
-        if (key.length >= 4 && withinOneEdit(w, key)) return true;
+        if (withinOneEdit(w, key)) return true;
       }
     }
   }
