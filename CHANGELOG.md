@@ -4,6 +4,34 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.100-alpha - 2026-11-15
+
+The fix for the update that never opened. 0.1.99 was published and
+withdrawn on the same day: installed as an update over 0.1.98, it
+stayed on the loading screen for good. This release fixes exactly
+that; everything else is the 0.1.99 release, unchanged.
+
+**What broke.** A hardening change in 0.1.99 made the model trust
+check demand structural facts about the model files that only
+0.1.99 writes down. An install journal written by 0.1.98 has none,
+so on the first start after updating, the startup gate fell back to
+verifying the model files byte by byte, gigabytes of them, in pure
+JavaScript, behind a bare spinner with no progress and no timeout.
+In practice the app never opened.
+
+**The fix.** The trust check now separates its two questions. The
+one that guards loading a model still verifies every byte, exactly
+as 0.1.99 did, and adopts the structural facts from that full
+verification. The one the startup gate asks, is this model
+installed, trusts the journal entry the installer verified at
+install time once the file's size, recorded fingerprint and
+modification time still match, and reads only the file header; a
+header that is not a valid model structure is trusted for neither
+question. The startup gate never hashes a whole model file again.
+
+**If you installed 0.1.99.** Install this release as an update over
+it. Your downloads and data are preserved, and the app opens.
+
 ## 0.1.99-alpha - 2026-11-15
 
 The full-audit release. A professional audit of the whole app found 187
