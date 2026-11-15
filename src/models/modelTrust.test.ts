@@ -158,6 +158,7 @@ import {
   checkModelTrust,
   ModelNotTrustedError,
   resetInstallReconcileForTests,
+  settleBackgroundAdoptionsForTests,
   trustedAssetForFilename,
 } from "./modelTrust";
 import { MODEL_CATALOG } from "./manifest";
@@ -326,10 +327,11 @@ describe("load-time trust gate", () => {
     // "Restart": drop all in-memory state; the journal + file persist.
     const mgr2 = makeManager();
 
-    // M-37: el diario del instalador no trae hechos GGUF — la primera
-    // comprobación DE CARGA los adopta por la vía lenta (verificación
-    // completa, una vez, ya dentro de la app; la puerta de arranque ya
-    // no paga ese coste: ver el test de diario heredado de M-37).
+    // 0.1.101: el instalador anota los hechos GGUF en el mismo asiento
+    // (ver el test «el instalador anota los hechos GGUF al instalar»),
+    // así que la primera comprobación tras el reinicio ya va por la
+    // vía rápida. (En la 0.1.100 el diario del instalador no traía
+    // hechos y esta primera carga pagaba la vía lenta entera.)
     await mgr2.assertTrustedForLoad(asset);
     const { loadInstallState } = await import("./installState");
     expect((await loadInstallState()).records[asset.id]?.gguf).toBeDefined();
@@ -737,7 +739,7 @@ describe("M-37 (auditoría 2026-11-13, F2-M2): estructura GGUF y cabecera en la 
     expect(hoisted.fileExists(badPath)).toBe(true);
   });
 
-  it("diario sin hechos (anterior a la 0.1.99): la PUERTA (statusOf) fía por la base heredada leyendo solo la cabecera y no anota; la adopción es de la primera carga", async () => {
+  it("diario sin hechos (anterior a la 0.1.99): la PUERTA (statusOf) fía por la base heredada leyendo solo la cabecera y no anota; la adopción es de la verificación en segundo plano", async () => {
     const mgr = makeManager();
     await mgr.installBundled(asset);
     // Se borran los hechos del diario, como quedaría un registro viejo.
@@ -758,20 +760,84 @@ describe("M-37 (auditoría 2026-11-13, F2-M2): estructura GGUF y cabecera en la 
     // puerta se quedó en la rueda de carga en el dispositivo del dueño
     // (2026-11-15). La conducta buena lee solo la región de cabecera.
     expect(totalRead()).toBeLessThan(GOOD_BYTES.length);
-    // Y la consulta de estado NO anota hechos: no es notario.
+    // Y la consulta de estado NO anota hechos en el acto: no es notario.
     const { loadInstallState } = await import("./installState");
     expect((await loadInstallState()).records[asset.id]?.gguf).toBeUndefined();
 
-    // La primera CARGA sí paga la verificación completa (una vez) y
-    // adopta los hechos anclados a ella: la garantía de M-37 intacta.
+    // REGRESIÓN DE CARGA 0.1.100: la primera versión de la cura dejaba
+    // la adopción a la primera CARGA, y esa verificación entera en JS
+    // puro (0,6 MB/s medidos sin JIT: 4 min para el embedding de
+    // 132 MB, 27-66 min para un LLM de 1-2,4 GB) dejó la pantalla del
+    // dueño en «Cargando el modelo...» sin terminar (2026-11-15). La
+    // carga tampoco hashea: fía por la base heredada tras recorrer la
+    // cabecera, como la puerta — el comportamiento de la 0.1.98 — y la
+    // verificación completa corre en segundo plano.
     hoisted.base64ReadSizes.clear();
     await mgr2.assertTrustedForLoad(asset);
-    expect(totalRead()).toBeGreaterThanOrEqual(GOOD_BYTES.length);
+    expect(totalRead()).toBeLessThan(GOOD_BYTES.length);
+    expect((await loadInstallState()).records[asset.id]?.gguf).toBeUndefined();
+
+    // La verificación en segundo plano SÍ hashea el fichero entero y,
+    // al casar el SHA, adopta los hechos anclados a él: la garantía de
+    // M-37 se cumple, solo que sin bloquear ni la puerta ni la carga.
+    await settleBackgroundAdoptionsForTests();
     expect((await loadInstallState()).records[asset.id]?.gguf).toBeDefined();
 
     hoisted.base64ReadSizes.clear();
     const mgr3 = makeManager();
     await mgr3.assertTrustedForLoad(asset); // ahora: solo la cabecera anotada
+    expect(totalRead()).toBeGreaterThan(0);
+    expect(totalRead()).toBeLessThan(1024);
+  });
+
+  it("diario sin hechos y pesos manipulados tras la cabecera: la carga fía una vez (0.1.98) y la verificación en segundo plano revoca", async () => {
+    const mgr = makeManager();
+    await mgr.installBundled(asset);
+    // Diario heredado (sin hechos) sobre un fichero sustituido con el
+    // mismo tamaño y el mismo mtime, la cabecera intacta y un byte de
+    // los PESOS cambiado: es el residuo declarado de la rama heredada.
+    const raw = hoisted.td.decode(hoisted.files.get(hoisted.JOURNAL)?.bytes ?? new Uint8Array(0));
+    const parsed = JSON.parse(raw) as { records: Record<string, { gguf?: unknown }> };
+    delete parsed.records[asset.id].gguf;
+    hoisted.writeFile(hoisted.JOURNAL, hoisted.te.encode(JSON.stringify(parsed)), 1000);
+    const forged = GOOD_BYTES.slice();
+    forged[200_000] = forged[200_000] ^ 0xff;
+    hoisted.writeFile(modelPath, forged, 2000);
+
+    // La carga no se bloquea: fía por la base heredada (la postura de
+    // la 0.1.98) leyendo solo la cabecera.
+    hoisted.base64ReadSizes.clear();
+    const mgr2 = makeManager();
+    await mgr2.assertTrustedForLoad(asset);
+    expect(totalRead()).toBeLessThan(GOOD_BYTES.length);
+
+    // Pero la mentira no sobrevive a la verificación en segundo plano:
+    // el SHA no casa, el fichero se borra y el registro se limpia — la
+    // siguiente consulta ya no fía nada.
+    await settleBackgroundAdoptionsForTests();
+    expect(hoisted.fileExists(modelPath)).toBe(false);
+    const verdict = await checkModelTrust(asset);
+    expect(verdict.trusted).toBe(false);
+    expect(verdict.reason).toBe("missing");
+  });
+
+  it("el instalador anota los hechos GGUF al instalar: la primera carga de un modelo recién instalado ya es vía rápida", async () => {
+    // Hasta la 0.1.100 el instalador verificaba el fichero entero al
+    // instalar (verifyChecksum / sha256OfFile) pero NO anotaba los
+    // hechos: la primera carga pagaba otra verificación completa. Los
+    // bytes verificados en la instalación son el ancla; el recorrido
+    // de cabecera sobre ellos deja los hechos en el mismo asiento.
+    const mgr = makeManager();
+    await mgr.installBundled(asset);
+    const { loadInstallState } = await import("./installState");
+    const gguf = (await loadInstallState()).records[asset.id]?.gguf;
+    expect(gguf?.version).toBe(3);
+    expect(gguf?.tensorCount).toBe(1);
+    expect(gguf?.headerSha256).toBe(sha256Of(GOOD_BYTES.subarray(0, gguf?.dataOffset ?? 0)));
+
+    hoisted.base64ReadSizes.clear();
+    const mgr2 = makeManager();
+    await mgr2.assertTrustedForLoad(asset); // solo la cabecera anotada
     expect(totalRead()).toBeGreaterThan(0);
     expect(totalRead()).toBeLessThan(1024);
   });

@@ -318,27 +318,40 @@ export async function currentMtimeMs(path: string): Promise<number | null> {
 //    (KB–MB) no es re-hashear el fichero (cientos de MB), y un fichero
 //    sustituido con el mismo tamaño y el mismo mtime ya no cuela si su
 //    cabecera difiere. Si el diario aún no trae hechos (lo escribió una
-//    versión anterior a la 0.1.99, o el instalador de esta), las dos
-//    consultas se separan (propósito de checkModelTrust): la de CARGA
-//    (assertTrustedForLoad, la que alimenta al parser nativo) sigue
-//    mandando el caso a la vía lenta, que adopta los hechos anclados al
-//    SHA completo — la garantía de arriba no se toca —; la de ESTADO
-//    (statusOf, la puerta de arranque) fía sobre la base heredada
-//    (tamaño + SHA del diario + mtime ya casados: la verificación
-//    completa que el diario atestigua se hizo al instalar) tras
-//    recorrer la cabecera, y NUNCA anota hechos desde esa consulta. La
-//    primera versión de esta regla no separaba las consultas y la
-//    puerta de arranque pagaba el re-hash entero en JS puro sobre los
-//    GB de quien actualizaba: la app se quedó en la rueda de carga
-//    (regresión de arranque de la 0.1.99, cazada en el dispositivo del
-//    dueño el 2026-11-15). Una cabecera que el recorrido declara
-//    inválida no se fía ni para estado. Residuo declarado: una
-//    sustitución que conserve cabecera, tamaño y mtime byte a byte y
-//    solo cambie los PESOS pasa la vía rápida — cerrarla del todo
-//    exigiría re-hashear cada carga, el coste que la vía rápida existe
-//    para evitar; y una sustitución con cabecera válida pero pesos
-//    cambiados se enseña «instalada» por estado hasta que la primera
-//    carga la juzga con el SHA completo y la rechaza sin usarla.
+//    versión anterior a la 0.1.99, o el instalador de la 0.1.99/0.1.100,
+//    que verificaba al instalar pero no anotaba), la consulta — de
+//    ESTADO (statusOf, la puerta de arranque) o de CARGA
+//    (assertTrustedForLoad, la que alimenta al parser nativo) — fía
+//    sobre la base heredada (tamaño + SHA del diario + mtime ya
+//    casados: la verificación completa que el diario atestigua se hizo
+//    al instalar) tras recorrer la cabecera, y la verificación
+//    completa corre EN SEGUNDO PLANO (adoptFactsInBackground): si el
+//    SHA casa, los hechos quedan adoptados anclados a él; si no casa,
+//    el fichero se borra y el registro se limpia, y ninguna consulta
+//    posterior fía. La consulta nunca anota hechos en el acto: no es
+//    notario de lo que haya en el disco. Historia de esta regla, en
+//    dos regresiones del dispositivo del dueño (2026-11-15): la
+//    primera versión de M-37 mandaba el diario heredado a la vía lenta
+//    TAMBIÉN en la puerta, y el re-hash entero en JS puro sobre los
+//    0,4–2,4 GB de quien actualizaba dejó la app en la rueda de carga;
+//    la cura de la 0.1.100 separó los propósitos pero dejó la adopción
+//    a la primera carga, y esa misma verificación (medida: 0,6 MB/s
+//    sin JIT, el régimen de Hermes — 4 min el embedding de 132 MB,
+//    27–66 min un LLM de 1–2,4 GB, sin progreso ni cancelación, y
+//    desde cero si el proceso muere a mitad) dejó la pantalla en
+//    «Cargando el modelo...» sin terminar. Una cabecera que el
+//    recorrido declara inválida no se fía en ningún caso. Residuo
+//    declarado de la rama heredada: una sustitución que conserve
+//    cabecera, tamaño y mtime y solo cambie los PESOS se fía hasta que
+//    la verificación en segundo plano la juzga (minutos en el peor
+//    caso) y la revoca borrando el fichero; si el motor ya la había
+//    cargado, la copia en memoria vive hasta la descarga del modelo o
+//    el reinicio — el adversario que puede reescribir el
+//    almacenamiento privado de la app conservando tamaño y mtime es
+//    el privilegiado que el encabezado de este módulo ya declara
+//    fuera de alcance. Con hechos anotados (instalador de la 0.1.101
+//    en adelante, o adopción ya asentada) no hay ventana: la cabecera
+//    distinta manda a la vía lenta ANTES de cargar, como siempre.
 // ---------------------------------------------------------------------------
 
 /** Primera lectura de cabecera; se multiplica hasta el tope si hace falta. */
@@ -428,6 +441,112 @@ async function fastPathHeaderMatches(
 }
 
 // ---------------------------------------------------------------------------
+// Adopción de hechos en segundo plano (0.1.101).
+//
+// Un diario sin hechos GGUF (anterior a la 0.1.99, o del instalador de
+// la 0.1.99/0.1.100) atestigua una verificación completa hecha al
+// instalar: checkModelTrust fía sobre esa base tras recorrer la
+// cabecera, sin bloquear ni la puerta ni la carga con un re-hash de
+// gigabytes en JS puro. Pero la fianza no es el final: esta verificación
+// corre una sola vez por asset y proceso, fuera del camino de nadie, y
+// asienta el caso al estándar de M-37 — si el SHA-256 completo casa,
+// los hechos quedan adoptados anclados a él; si no casa, los bytes no
+// son los del catálogo y lo fiado queda revocado (fichero borrado,
+// registro limpio: ninguna consulta posterior fía). Si el fichero
+// cambia durante la verificación (tamaño o mtime distintos de los de
+// la decisión), no se adopta ni se borra nada: la próxima consulta
+// juzga el fichero nuevo.
+// ---------------------------------------------------------------------------
+
+const backgroundAdoptions = new Map<string, Promise<void>>();
+
+async function adoptFactsInBackground(
+  asset: CatalogModel,
+  path: string,
+  sizeOnDisk: number,
+  mtime: number | null
+): Promise<void> {
+  let digest: string;
+  try {
+    digest = await sha256OfFile(path, { assetId: asset.id, filename: asset.filename });
+  } catch {
+    return; // ilegible ahora; una consulta posterior juzgará
+  }
+  // El fichero de la decisión tiene que seguir siendo el fichero: si
+  // algo lo reescribió mientras se hasheaba, este veredicto no es suyo.
+  const info = await FileSystem.getInfoAsync(path).catch(() => null);
+  if (!info?.exists || info.isDirectory || (info.size ?? 0) !== sizeOnDisk) return;
+  const nowMtime = mtimeMsOf(info);
+  if (mtime != null && nowMtime != null && nowMtime !== mtime) return;
+  if (!sameSha(digest, asset.sha256)) {
+    dlog(
+      asset.id,
+      "checkModelTrust: la verificación en segundo plano NO casa con el catálogo — revocando lo fiado por la base heredada (fichero borrado, registro limpio)"
+    );
+    await FileSystem.deleteAsync(path, { idempotent: true }).catch(() => {});
+    await clearInstallRecord(asset.id);
+    return;
+  }
+  const walk = await walkGgufHeader(path, sizeOnDisk);
+  if (walk.kind !== "ok") return; // bytes del catálogo sin hechos anotables: la rama heredada se repetirá
+  await recordInstall(asset.id, {
+    status: "installed",
+    sizeBytes: asset.sizeBytes,
+    sha256: asset.sha256,
+    ...(mtime != null ? { mtimeMs: mtime } : {}),
+    gguf: walk.facts,
+  });
+  dlog(asset.id, "checkModelTrust: hechos GGUF adoptados por la verificación en segundo plano");
+}
+
+function scheduleBackgroundAdoption(
+  asset: CatalogModel,
+  path: string,
+  sizeOnDisk: number,
+  mtime: number | null
+): void {
+  if (backgroundAdoptions.has(asset.id)) return;
+  const p = (async () => {
+    // Un respiro de un tick de temporizador: la decisión que fía ya
+    // volvió y la pantalla ya pintó; la verificación es fondo de
+    // verdad, no el siguiente await de nadie.
+    await new Promise((r) => setTimeout(r, 0));
+    await adoptFactsInBackground(asset, path, sizeOnDisk, mtime);
+  })()
+    .catch(() => {})
+    .finally(() => {
+      backgroundAdoptions.delete(asset.id);
+    });
+  backgroundAdoptions.set(asset.id, p);
+}
+
+/** Test hook: espera a que las adopciones en segundo plano en curso terminen. */
+export async function settleBackgroundAdoptionsForTests(): Promise<void> {
+  while (backgroundAdoptions.size > 0) {
+    await Promise.all([...backgroundAdoptions.values()]);
+  }
+}
+
+/**
+ * Los hechos GGUF del fichero instalado, para que el INSTALADOR los
+ * anote en el mismo asiento en que registra la instalación: el
+ * instalador acaba de verificar el fichero entero (verifyChecksum en
+ * la descarga, sha256OfFile en el bundled), así que recorrer la
+ * cabecera de esos bytes verificados y guardar sus hechos es anclar,
+ * no notarizar — la primera carga de un modelo recién instalado nace
+ * ya en la vía rápida. undefined si el asset no es GGUF o la cabecera
+ * no se puede recorrer (el asiento queda sin hechos y manda la rama
+ * heredada con su verificación en segundo plano).
+ */
+export async function ggufFactsForInstalledFile(
+  asset: CatalogModel
+): Promise<GgufJournalFacts | undefined> {
+  if (!isGgufAsset(asset)) return undefined;
+  const walk = await walkGgufHeader(assetPath(asset), asset.sizeBytes);
+  return walk.kind === "ok" ? walk.facts : undefined;
+}
+
+// ---------------------------------------------------------------------------
 // The trust gate.
 // ---------------------------------------------------------------------------
 
@@ -483,46 +602,44 @@ export async function checkModelTrust(
     // not been rewritten since. No re-hash.
     // M-37: para un GGUF eso ya no basta — la cabecera actual debe ser
     // la verificada (hechos del diario). Sin hechos anotados (diario
-    // anterior a la 0.1.99) manda el propósito: estado fía sobre la
-    // base heredada sin anotar (rama de abajo); carga va a la vía
-    // lenta, que adopta anclada al SHA completo. Con hechos que no
-    // casan, vía lenta siempre.
+    // anterior a la 0.1.99, o del instalador que aún no los anota) fía
+    // la base heredada tras el recorrido de cabecera, para ESTADO y
+    // para CARGA (rama de abajo), y la verificación completa corre en
+    // segundo plano. Con hechos que no casan, vía lenta siempre.
     if (!isGgufAsset(asset)) {
       return { trusted: true, reason: "ok", deleteFile: false, sizeOnDiskBytes: sizeOnDisk };
     }
     if (rec.gguf && (await fastPathHeaderMatches(path, sizeOnDisk, rec.gguf))) {
       return { trusted: true, reason: "ok", deleteFile: false, sizeOnDiskBytes: sizeOnDisk };
     }
-    if (!rec.gguf && opts?.purpose === "status") {
-      // Diario sin hechos (anterior a la 0.1.99, o del instalador que
-      // aún no los anota) en una consulta de ESTADO (statusOf, la
-      // puerta de arranque): el registro atestigua la verificación
-      // completa hecha al instalar (tamaño + SHA del catálogo + mtime
-      // idéntico, comprobados arriba) y eso basta para decir
-      // «instalado»: es la postura que la 0.1.98 tuvo sin incidente.
-      // La primera versión de M-37 mandaba también esta consulta a la
-      // vía lenta «para adoptar», y ese re-hash entero en JS puro
-      // sobre los 0,4-2,4 GB de quien actualizaba dejó la app en la
-      // rueda de carga tras actualizar (regresión de arranque de la
-      // 0.1.99, 2026-11-15). Aquí solo se recorre la cabecera (KB-MB):
-      // si el recorrido la declara inválida no se fía ni para estado;
-      // si es «ok» o «unknown» se fía SIN anotar hechos, porque anotar
-      // la cabecera actual sin la verificación completa convertiría
-      // esta consulta en notario de lo que haya en el disco (el hueco
-      // que M-37 cerraba). La adopción anclada al SHA completo sigue
-      // siendo de la vía de CARGA (assertTrustedForLoad), la que
-      // alimenta al parser nativo: paga la verificación una sola vez,
-      // ya dentro de la app, antes de entregar el fichero al motor.
-      // Residuo declarado de esta rama: una sustitución con el mismo
-      // tamaño y el mismo mtime y una cabecera que recorra bien se
-      // enseña «instalada» hasta que la primera carga la juzga y la
-      // rechaza sin usarla; nunca llega al motor.
+    if (!rec.gguf) {
+      // Diario sin hechos (anterior a la 0.1.99, o del instalador de la
+      // 0.1.99/0.1.100 que verificaba al instalar pero no anotaba): el
+      // registro atestigua la verificación completa hecha al instalar
+      // (tamaño + SHA del catálogo + mtime idéntico, comprobados
+      // arriba) y eso basta para fiar — es la postura que la 0.1.98
+      // tuvo sin incidente, para la puerta y para la carga. Aquí solo
+      // se recorre la cabecera (KB-MB): si el recorrido la declara
+      // inválida no se fía en ningún caso; si es «ok» o «unknown» se
+      // fía SIN anotar hechos en el acto, porque anotar la cabecera
+      // actual sin la verificación completa convertiría esta consulta
+      // en notario de lo que haya en el disco (el hueco que M-37
+      // cerraba). La adopción anclada al SHA completo la hace la
+      // verificación en segundo plano (adoptFactsInBackground), que
+      // también revoca: si el SHA no casa, borra el fichero y limpia
+      // el registro. Historia: la primera versión de M-37 mandaba esta
+      // consulta a la vía lenta y el re-hash entero en JS puro sobre
+      // los 0,4-2,4 GB de quien actualizaba dejó la 0.1.99 en la rueda
+      // de carga; la 0.1.100 lo sacó de la puerta pero lo dejó en la
+      // primera carga, y la pantalla se quedó en «Cargando el
+      // modelo...» (dispositivo del dueño, 2026-11-15, ambas).
       const walk = await walkGgufHeader(path, sizeOnDisk);
       if (walk.kind === "invalid") {
-        dlog(asset.id, `checkModelTrust: diario sin hechos y estructura GGUF inválida (${walk.reason}) — no se fía ni para estado`);
+        dlog(asset.id, `checkModelTrust: diario sin hechos y estructura GGUF inválida (${walk.reason}) — no se fía`);
         return { trusted: false, reason: "invalid-structure", deleteFile: false, sizeOnDiskBytes: sizeOnDisk };
       }
-      dlog(asset.id, "checkModelTrust: diario sin hechos — estado fiado por la base heredada (la adopción es de la vía de carga)");
+      scheduleBackgroundAdoption(asset, path, sizeOnDisk, mtime);
+      dlog(asset.id, "checkModelTrust: diario sin hechos — fiado por la base heredada (verificación completa en segundo plano)");
       return { trusted: true, reason: "ok", deleteFile: false, sizeOnDiskBytes: sizeOnDisk };
     }
     dlog(asset.id, "checkModelTrust: vía rápida denegada (cabecera GGUF sin hechos o distinta) — verificando bytes");
