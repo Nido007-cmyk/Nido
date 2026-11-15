@@ -54,7 +54,7 @@ const HALLUCINATED =
   "In conclusion, photosynthesis is just a small part of the broader process of photosynthesis.";
 
 describe("verifyGroundedAnswer — evidencia de la fotosíntesis", () => {
-  const r = verifyGroundedAnswer(HALLUCINATED, SOURCES, "en");
+  const r = verifyGroundedAnswer(HALLUCINATED, SOURCES, "en", "");
 
   it("quita las 4 afirmaciones inventadas y conserva la respaldada", () => {
     expect(r.status).toBe("partial");
@@ -81,7 +81,7 @@ describe("verifyGroundedAnswer — evidencia de la fotosíntesis", () => {
       "The light is transported to the roots.",
       "Water is absorbed by the leaves.",
     ]) {
-      expect(verifyGroundedAnswer(s, SOURCES, "en").status).toBe("abstained");
+      expect(verifyGroundedAnswer(s, SOURCES, "en", "").status).toBe("abstained");
     }
   });
 });
@@ -124,7 +124,7 @@ describe("verifyGroundedAnswer — paráfrasis fieles NO se castigan", () => {
     "Chloroplasts contain chlorophyll pigments that capture energy from sunlight.",
     "The stored energy is used later through cellular respiration.",
   ])("%p → grounded", (sentence) => {
-    const r = verifyGroundedAnswer(sentence, SOURCES, "en");
+    const r = verifyGroundedAnswer(sentence, SOURCES, "en", "");
     expect(r.status).toBe("grounded");
     expect(r.removed).toBe(0);
   });
@@ -133,15 +133,14 @@ describe("verifyGroundedAnswer — paráfrasis fieles NO se castigan", () => {
     const r = verifyGroundedAnswer(
       "Photosynthesis releases oxygen as a byproduct. Chloroplasts have a high concentration of chlorophyll pigments.",
       SOURCES,
-      "en",
-    );
+      "en", "");
     expect(r.text).toBe(
       "Photosynthesis releases oxygen as a byproduct [1]. Chloroplasts have a high concentration of chlorophyll pigments [2].",
     );
   });
 
   it("frases cortas sin contenido juzgable se dejan tal cual", () => {
-    const r = verifyGroundedAnswer("Sure! Photosynthesis converts light energy into chemical energy [1].", SOURCES, "en");
+    const r = verifyGroundedAnswer("Sure! Photosynthesis converts light energy into chemical energy [1].", SOURCES, "en", "");
     expect(r.status).toBe("grounded");
     expect(r.text.startsWith("Sure!")).toBe(true);
   });
@@ -149,7 +148,7 @@ describe("verifyGroundedAnswer — paráfrasis fieles NO se castigan", () => {
 
 describe("verifyGroundedAnswer — adversarial: las fuentes NO tienen la respuesta", () => {
   it("respuesta de memoria sobre otro tema → 'no lo sé' + extracto literal citado", () => {
-    const r = verifyGroundedAnswer("France won the 2018 World Cup in Russia.", [PHOTOSYNTHESIS], "es");
+    const r = verifyGroundedAnswer("France won the 2018 World Cup in Russia.", [PHOTOSYNTHESIS], "es", "");
     expect(r.status).toBe("abstained");
     expect(r.text).toContain("No lo sé con certeza");
     expect(r.text).not.toContain("France");
@@ -159,16 +158,16 @@ describe("verifyGroundedAnswer — adversarial: las fuentes NO tienen la respues
   });
 
   it("el modelo dice no saber → abstención honesta (en / pt)", () => {
-    const en = verifyGroundedAnswer("The sources don't mention who won the World Cup.", [PHOTOSYNTHESIS], "en");
+    const en = verifyGroundedAnswer("The sources don't mention who won the World Cup.", [PHOTOSYNTHESIS], "en", "");
     expect(en.status).toBe("abstained");
     expect(en.text.startsWith("I don't know for sure")).toBe(true);
-    const pt = verifyGroundedAnswer("Não sei.", [PHOTOSYNTHESIS], "pt");
+    const pt = verifyGroundedAnswer("Não sei.", [PHOTOSYNTHESIS], "pt", "");
     expect(pt.status).toBe("abstained");
     expect(pt.text.startsWith("Não sei com certeza")).toBe(true);
   });
 
   it("'no lo sé' + invento detrás → se descarta el invento", () => {
-    const r = verifyGroundedAnswer("I don't know. But France won the 2018 World Cup in Russia.", [PHOTOSYNTHESIS], "en");
+    const r = verifyGroundedAnswer("I don't know. But France won the 2018 World Cup in Russia.", [PHOTOSYNTHESIS], "en", "");
     expect(r.status).toBe("abstained");
     expect(r.text).not.toContain("France");
   });
@@ -177,8 +176,7 @@ describe("verifyGroundedAnswer — adversarial: las fuentes NO tienen la respues
     const r = verifyGroundedAnswer(
       "The light is transported to the roots. Water is absorbed by the leaves.",
       SOURCES,
-      "en",
-    );
+      "en", "");
     expect(r.status).toBe("abstained");
     expect(r.text.length).toBeGreaterThan(0);
   });
@@ -189,8 +187,7 @@ describe("verifyGroundedAnswer — idioma distinto al de las fuentes", () => {
     const r = verifyGroundedAnswer(
       "La fotosíntesis convierte la energía de la luz en energía química y libera oxígeno [1].",
       SOURCES,
-      "es",
-    );
+      "es", "");
     expect(r.status).toBe("unverified");
     expect(r.text).toContain("libera oxígeno [1]");
   });
@@ -199,8 +196,7 @@ describe("verifyGroundedAnswer — idioma distinto al de las fuentes", () => {
     const r = verifyGroundedAnswer(
       "La fotosíntesis convierte la luz en energía química [1]. Apareció hace 3500 millones de años en los océanos.",
       SOURCES,
-      "es",
-    );
+      "es", "");
     expect(r.status).toBe("unverified");
     expect(r.removed).toBe(1);
     expect(r.text).not.toContain("3500");
@@ -210,12 +206,12 @@ describe("verifyGroundedAnswer — idioma distinto al de las fuentes", () => {
 
 describe("verifyGroundedAnswer — casos límite", () => {
   it("sin fuentes o respuesta vacía → skipped", () => {
-    expect(verifyGroundedAnswer("Hola", [], "es").status).toBe("skipped");
-    expect(verifyGroundedAnswer("   ", SOURCES, "es").status).toBe("skipped");
+    expect(verifyGroundedAnswer("Hola", [], "es", "").status).toBe("skipped");
+    expect(verifyGroundedAnswer("   ", SOURCES, "es", "").status).toBe("skipped");
   });
   it("modelos razonadores (<think>) no se tocan", () => {
     const text = "<think>hmm</think>Photosynthesis is magic.";
-    expect(verifyGroundedAnswer(text, SOURCES, "en")).toMatchObject({ status: "skipped", text });
+    expect(verifyGroundedAnswer(text, SOURCES, "en", "")).toMatchObject({ status: "skipped", text });
   });
   it("quita citas a fuentes que no existen", () => {
     expect(stripInvalidCitations("A [1]. B [7]. C [0]. D [2].", 2)).toBe("A [1]. B. C. D [2].");
@@ -353,7 +349,7 @@ const ES_JARABE = "Tome el jarabe de 5 ml dos veces al día, después de comer."
 
 describe("R-04 — idioma por frase (el documento trilingüe de la ronda)", () => {
   it("copia literal portuguesa, pregunta en español ⇒ sale la gemela española, verbatim y citada", () => {
-    const r = verifyGroundedAnswer(PT_JARABE, [DOC_TRILINGUE], "es");
+    const r = verifyGroundedAnswer(PT_JARABE, [DOC_TRILINGUE], "es", "");
     expect(r.status).toBe("grounded");
     expect(r.removed).toBe(0);
     expect(r.text).toBe("Tome el jarabe de 5 ml dos veces al día, después de comer [1].");
@@ -363,14 +359,14 @@ describe("R-04 — idioma por frase (el documento trilingüe de la ronda)", () =
   it("el híbrido REAL del aparato («dos veces» en español dentro de la frase portuguesa) también se sustituye", () => {
     // La respuesta exacta de la tablet: «Tome 5 ml dos veces ao dia,
     // depois das refeições» — ni siquiera es la frase portuguesa pura.
-    const r = verifyGroundedAnswer("Tome 5 ml dos veces ao dia, depois das refeições.", [DOC_TRILINGUE], "es");
+    const r = verifyGroundedAnswer("Tome 5 ml dos veces ao dia, depois das refeições.", [DOC_TRILINGUE], "es", "");
     expect(r.status).toBe("grounded");
     expect(r.text).toContain("Tome el jarabe de 5 ml dos veces al día, después de comer [1].");
     expect(r.text).not.toContain("refeições");
   });
 
   it("simétrico: copia española con pregunta en portugués ⇒ sale la gemela portuguesa (no se «corrige» hacia el español)", () => {
-    const r = verifyGroundedAnswer(ES_JARABE, [DOC_TRILINGUE], "pt");
+    const r = verifyGroundedAnswer(ES_JARABE, [DOC_TRILINGUE], "pt", "");
     expect(r.status).toBe("grounded");
     expect(r.text).toBe("Tome 5 ml do xarope duas vezes ao dia, depois das refeições [1].");
   });
@@ -380,14 +376,14 @@ describe("R-04 — idioma por frase (el documento trilingüe de la ronda)", () =
       title: "documento-prueba-ocr",
       body: `ENGLISH — Appointment reminder. ${DOC_EN} PORTUGUÊS — Lembrete de consulta. ${DOC_PT}`,
     };
-    const r = verifyGroundedAnswer(PT_JARABE, [sinEs], "es");
+    const r = verifyGroundedAnswer(PT_JARABE, [sinEs], "es", "");
     expect(r.status).toBe("abstained");
     expect(r.text).not.toContain("xarope");
     expect(r.text).toContain("No lo sé con certeza");
   });
 
   it("la respuesta española correcta sobre el chunk mixto queda intacta (sin regresión)", () => {
-    const r = verifyGroundedAnswer(ES_JARABE, [DOC_TRILINGUE], "es");
+    const r = verifyGroundedAnswer(ES_JARABE, [DOC_TRILINGUE], "es", "");
     expect(r.status).toBe("grounded");
     expect(r.removed).toBe(0);
     expect(r.text).toBe("Tome el jarabe de 5 ml dos veces al día, después de comer [1].");
@@ -398,12 +394,12 @@ describe("R-04 — idioma por frase (el documento trilingüe de la ronda)", () =
     // portuguesa como chunk propio: la respuesta en portugués cae en la
     // rama cruzada y la copia SÍ se puede juzgar ahí.
     const ptChunk: GroundingChunk = { title: "documento-prueba-ocr", body: PT_JARABE };
-    const sinGemela = verifyGroundedAnswer(PT_JARABE, [PHOTOSYNTHESIS, ptChunk], "es");
+    const sinGemela = verifyGroundedAnswer(PT_JARABE, [PHOTOSYNTHESIS, ptChunk], "es", "");
     expect(sinGemela.status).toBe("abstained");
     expect(sinGemela.text).not.toContain("xarope");
 
     const esChunk: GroundingChunk = { title: "documento-prueba-ocr", body: ES_JARABE };
-    const conGemela = verifyGroundedAnswer(PT_JARABE, [PHOTOSYNTHESIS, ptChunk, esChunk], "es");
+    const conGemela = verifyGroundedAnswer(PT_JARABE, [PHOTOSYNTHESIS, ptChunk, esChunk], "es", "");
     expect(conGemela.status).toBe("grounded");
     expect(conGemela.text).toBe("Tome el jarabe de 5 ml dos veces al día, después de comer [3].");
   });
@@ -497,6 +493,11 @@ describe("A3-03 — la dosis de un dígito sí se juzga en la pierna tipada", ()
 // La pierna de identidad sin cifras conserva la doble condición de
 // R-05, y sin pregunta la regla sigue sin actuar: ambas fronteras
 // quedan fijadas aquí como decisión, no como olvido.
+// T-05 (V-02 de la auditoría 0.1.99): la segunda frontera se movió
+// SOLO para la pierna de cifras — sin pregunta, quantityConflict ya
+// actúa (la dosis falsa de 9 ml se retira también con «»); la de
+// identidad conserva la doble condición intacta. Las dos fijaciones
+// viven abajo, una por pierna.
 
 describe("T-J1 — la afirmación tipada abre la regla del dato sin señal en la pregunta", () => {
   const NOTA: GroundingChunk = {
@@ -568,10 +569,17 @@ describe("T-J1 — la afirmación tipada abre la regla del dato sin señal en la
     expect(r.text).toContain("número de emergencia");
   });
 
-  it("sin pregunta (llamadas antiguas de 3 argumentos), la regla sigue sin actuar", () => {
-    const r = verifyGroundedAnswer(FALSA, [NOTA], "es");
-    expect(r.status).toBe("grounded");
-    expect(r.text).toContain("9 ml");
+  it("sin pregunta, la pierna de cifras ya actúa (V-02 de la auditoría 0.1.99); la de identidad sigue sin actuar", () => {
+    // T-05 (V-02): la frontera de T-J1 se movió para las CIFRAS.
+    // Sin pregunta, la dosis falsa de 9 ml salía sellada porque la
+    // puerta hasQuery apagaba también quantityConflict; esa puerta
+    // ya no existe y la cifra juzgada contradicha se retira sin
+    // pregunta. La frontera que T-J1 fijó se conserva donde era
+    // suya: la pierna de IDENTIDAD sin cifras (su gemela de R-05,
+    // «sin pregunta... tampoco actúa», sigue verde tal cual).
+    const r = verifyGroundedAnswer(FALSA, [NOTA], "es", "");
+    expect(r.status).toBe("abstained");
+    expect(r.text).not.toContain("9 ml");
   });
 });
 
@@ -1134,7 +1142,7 @@ describe("R-05 — la regla del dato pedido (el teléfono de la ronda)", () => {
   });
 
   it("sin pregunta (llamadas antiguas de 3 argumentos), la regla tampoco actúa", () => {
-    const r = verifyGroundedAnswer(FALSE_TELEFONO, [DOC_TRILINGUE, CRISIS], "es");
+    const r = verifyGroundedAnswer(FALSE_TELEFONO, [DOC_TRILINGUE, CRISIS], "es", "");
     expect(r.text).toContain("número de emergencia");
   });
 
@@ -1591,7 +1599,7 @@ describe("Grok ADV-G1/G2 — la afirmación CON cifras ha de casar con un dato d
 
 describe("verifyGroundedAnswer — post-chequeo de cifras (bounty, tanda 1)", () => {
   it("un año inventado tumba la frase aunque el apoyo léxico la pasaba", () => {
-    const r = verifyGroundedAnswer("San Aurelio se fundó en 1904 junto al río Claro.", [CITY_ES], "es");
+    const r = verifyGroundedAnswer("San Aurelio se fundó en 1904 junto al río Claro.", [CITY_ES], "es", "");
     expect(r.text).not.toContain("1904");
     expect(r.removed).toBe(1);
     // Era la única frase juzgable: queda la abstención honesta.
@@ -1602,8 +1610,7 @@ describe("verifyGroundedAnswer — post-chequeo de cifras (bounty, tanda 1)", ()
     const r = verifyGroundedAnswer(
       "San Aurelio se fundó en 1804 junto al río Claro. El censo contó 20 millones de habitantes en el área metropolitana.",
       [CITY_ES],
-      "es",
-    );
+      "es", "");
     expect(r.status).toBe("partial");
     expect(r.removed).toBe(1);
     expect(r.text).toContain("1804");
@@ -1614,8 +1621,7 @@ describe("verifyGroundedAnswer — post-chequeo de cifras (bounty, tanda 1)", ()
     const r = verifyGroundedAnswer(
       "La dosis habitual del jarabe es 26,5 miligramos por toma. El censo contó 16,4 millones de habitantes en el área metropolitana.",
       [CITY_ES],
-      "es",
-    );
+      "es", "");
     expect(r.status).toBe("grounded");
     expect(r.removed).toBe(0);
     expect(r.text).toContain("26,5");
@@ -1626,8 +1632,7 @@ describe("verifyGroundedAnswer — post-chequeo de cifras (bounty, tanda 1)", ()
     const r = verifyGroundedAnswer(
       "San Aurelio se fundó en 1804 junto al río Claro. El censo contó 16,4 millones de habitantes en el área metropolitana.",
       [CITY_EN],
-      "es",
-    );
+      "es", "");
     expect(r.status).toBe("unverified");
     expect(r.removed).toBe(0);
     expect(r.text).toContain("16,4 millones");
@@ -1637,8 +1642,7 @@ describe("verifyGroundedAnswer — post-chequeo de cifras (bounty, tanda 1)", ()
     const r = verifyGroundedAnswer(
       "San Aurelio se fundó en 1804 junto al río Claro. El censo contó 20 millones de habitantes en el área metropolitana.",
       [CITY_EN],
-      "es",
-    );
+      "es", "");
     expect(r.status).toBe("unverified");
     expect(r.removed).toBe(1);
     expect(r.text).not.toContain("20 millones");
@@ -1656,8 +1660,7 @@ describe("C-08: el rango de la guía ya no hace abstenerse a su propia respuesta
     const r = verifyGroundedAnswer(
       "Para las quemaduras, sumerge la zona en agua tibia a 39 °C durante 25 minutos.",
       [GUIA19],
-      "es",
-    );
+      "es", "");
     expect(r.status).toBe("grounded");
     expect(r.removed).toBe(0);
     expect(r.text).toContain("39 °C");
@@ -1665,8 +1668,8 @@ describe("C-08: el rango de la guía ya no hace abstenerse a su propia respuesta
     // Y cada valor interior basta por sí solo, en la frase desnuda:
     // es la red de cifras la que ha cambiado (antes: 39 no era ni 37
     // ni 40, y 25 no era ni 20 ni 30; ambas frases abstenían).
-    expect(verifyGroundedAnswer("Sumerge la zona en agua a 39 °C.", [GUIA19], "es").status).toBe("grounded");
-    expect(verifyGroundedAnswer("Sumerge la zona en agua durante 25 minutos.", [GUIA19], "es").status).toBe(
+    expect(verifyGroundedAnswer("Sumerge la zona en agua a 39 °C.", [GUIA19], "es", "").status).toBe("grounded");
+    expect(verifyGroundedAnswer("Sumerge la zona en agua durante 25 minutos.", [GUIA19], "es", "").status).toBe(
       "grounded",
     );
   });
@@ -1676,6 +1679,7 @@ describe("C-08: el rango de la guía ya no hace abstenerse a su propia respuesta
       "Para las quemaduras, sumerge la zona en agua tibia a 45 °C durante 25 minutos.",
       [GUIA19],
       "es",
+      "",
     );
     expect(r.removed).toBe(1);
     expect(r.text).not.toContain("45 °C");

@@ -55,12 +55,12 @@ const INVENTADA =
 
 describe("verifyGroundedAnswer — caso llanta: ruido en otro idioma tras la guía", () => {
   it("con la guía limpia, la instrucción inventada no pasa", () => {
-    const r = verifyGroundedAnswer(INVENTADA, [GUIA], "es");
+    const r = verifyGroundedAnswer(INVENTADA, [GUIA], "es", "");
     expect(r.text).not.toContain("motor esté en marcha");
   });
 
   it("el ruido en inglés detrás de la guía NO degrada el juicio", () => {
-    const r = verifyGroundedAnswer(INVENTADA, [GUIA, CAMBODIA, SEVERN], "es");
+    const r = verifyGroundedAnswer(INVENTADA, [GUIA, CAMBODIA, SEVERN], "es", "");
     expect(r.text).not.toContain("motor esté en marcha");
   });
 
@@ -68,8 +68,7 @@ describe("verifyGroundedAnswer — caso llanta: ruido en otro idioma tras la gu�
     const r = verifyGroundedAnswer(
       "Para cambiar la llanta, aprieta cada tuerca a 220 newtons y sigue.",
       [GUIA, CAMBODIA, SEVERN],
-      "es",
-    );
+      "es", "");
     expect(r.text).not.toContain("220");
   });
 });

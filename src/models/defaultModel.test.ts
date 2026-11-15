@@ -161,9 +161,13 @@ describe("defaultLlmForRam", () => {
     expect(defaultLlmForRam(Math.ceil(threshold) - 1).id).toBe(LIGHT_LLM_ID);
   });
 
-  it("falls back to the historic default when blind (total <= 0)", () => {
-    expect(defaultLlmForRam(0).id).toBe(PREFERRED_LLM_ID);
-    expect(defaultLlmForRam(-1).id).toBe(PREFERRED_LLM_ID);
+  it("a ciegas (total <= 0) preselecciona el LIGERO, no el grande (F3-05)", () => {
+    // Hasta la 0.1.98 la ceguera conservaba el «histórico»: el modelo
+    // pesado ofrecido sin una sola medición detrás. El ligero es el
+    // que cabe en todas partes, y el asistente sigue ofreciendo los
+    // dos; el usuario puede subir con los ojos abiertos.
+    expect(defaultLlmForRam(0).id).toBe(LIGHT_LLM_ID);
+    expect(defaultLlmForRam(-1).id).toBe(LIGHT_LLM_ID);
   });
 });
 
@@ -175,8 +179,8 @@ describe("defaultLlmForDevice", () => {
     expect(defaultLlmForDevice().id).toBe(PREFERRED_LLM_ID);
   });
 
-  it("falls back to the historic default when the native module fails", () => {
+  it("sin lectura nativa también manda el ligero (F3-05)", () => {
     mockShouldThrow = true;
-    expect(defaultLlmForDevice().id).toBe(PREFERRED_LLM_ID);
+    expect(defaultLlmForDevice().id).toBe(LIGHT_LLM_ID);
   });
 });

@@ -38,12 +38,15 @@ describe("aceptar", () => {
     const s = new CarryStore();
     for (let i = 0; i < STORE_LIMITS.maxPerSource; i++) expect(s.accept(env({ id: `a${i}` }), B, NOW)).toBe("stored");
     expect(s.accept(env({ id: "extra" }), B, NOW)).toBe("source_full");
-    const t = new CarryStore({ ...STORE_LIMITS, maxEnvelopes: 3, maxPerSource: 99 });
+    const t = new CarryStore({ ...STORE_LIMITS, maxEnvelopes: 3, maxPerSource: 99, ownReserve: 0, ownReserveBytes: 0 });
+    // T-14 (m-49): ownReserve a 0 a propósito: esta prueba mide el tope
+    // total, no la reserva (la reserva tiene sus propias sondas).
     for (let i = 0; i < 3; i++) t.accept(env({ id: `x${i}` }), B, NOW);
     expect(t.accept(env({ id: "x3" }), D, NOW)).toBe("full");
   });
   it("lo caducado se tira y deja sitio", () => {
-    const s = new CarryStore({ ...STORE_LIMITS, maxEnvelopes: 1 });
+    // T-14 (m-49): ownReserve a 0 a propósito: el tema es la caducidad.
+    const s = new CarryStore({ ...STORE_LIMITS, maxEnvelopes: 1, ownReserve: 0, ownReserveBytes: 0 });
     s.accept(env({ ttlMs: 1000 }), B, NOW);
     expect(s.accept(env({ id: "2" }), B, NOW + 500)).toBe("full");
     expect(s.accept(env({ id: "3" }), B, NOW + 1500)).toBe("stored");
@@ -151,7 +154,9 @@ describe("restaurar reaplica los topes (H-1)", () => {
     expect(s.size()).toBe(STORE_LIMITS.maxPerSource);
   });
   it("el tope de bytes también manda al restaurar", () => {
-    const lim = { ...STORE_LIMITS, maxBytes: 5000 };
+    // T-14 (m-49): ownReserveBytes a 0 a propósito: el tema es el tope de
+    // bytes al restaurar, no la partición de la reserva.
+    const lim = { ...STORE_LIMITS, maxBytes: 5000, ownReserve: 0, ownReserveBytes: 0 };
     const s = new CarryStore(lim);
     const rows = Array.from({ length: 10 }, (_, i) => ({ env: env({ id: `r-big-${i}` }), from: B, copiesLeft: 3, givenTo: [], arrivedAt: NOW }));
     s.restore(rows, [], NOW);

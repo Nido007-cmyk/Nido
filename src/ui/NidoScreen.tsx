@@ -327,6 +327,40 @@ export function NidoScreen({
     }
   }, []);
 
+  /**
+   * T-13 (M-23): el cotejo de huella, compartido entre la pestaña de
+   * contactos y el aviso de la conversación. Antes el flujo vivía solo
+   * inline en la lista de contactos; la conversación lo necesita para
+   * que el aviso «aún no comparados» lleve al paso exacto que falta.
+   */
+  const handleVerifyContact = useCallback(
+    async (c: P2PContact) => {
+      let theirs = "";
+      try {
+        theirs = mRef.current.contactFingerprint(c);
+      } catch {
+        setNotice(t("nido.verifyFailed"));
+        return;
+      }
+      const ok = await showSecureAlert({
+        title: t("nido.verifyTitle", { name: c.name }),
+        message: t("nido.verifyBody", { name: c.name, theirs, mine: fingerprint }),
+        cancelLabel: t("common.cancel"),
+        confirmLabel: t("nido.verifyConfirm"),
+        cancelable: true,
+      });
+      if (!ok) return;
+      try {
+        await mRef.current.setContactVerified(c.pkHex, true);
+        await loadContacts();
+        setNotice(t("nido.verifiedNotice", { name: c.name }));
+      } catch (e) {
+        setNotice(e instanceof Error ? p2pErr(e) : t("nido.verifyFailed"));
+      }
+    },
+    [fingerprint, loadContacts, t],
+  );
+
   const loadConversation = useCallback(async (pkHex: string) => {
     try {
       // 0.1.46: mostrar la conversación arranca la cuenta atrás de los
@@ -1371,6 +1405,31 @@ export function NidoScreen({
             {notice}
           </Text>
         ) : null}
+        {/* T-13 (M-23): si la huella de este contacto aún no se ha
+            comparado, la conversación lo dice y lleva al cotejo. El
+            estado se lee del contacto VIVO de la lista, no de la foto
+            con la que se abrió la conversación: al verificar, el aviso
+            desaparece solo. El texto del aviso es a la vez la
+            explicación de la fricción (sin modal aparte). */}
+        {(() => {
+          const live = contacts.find((c) => c.pkHex.toLowerCase() === peer.pkHex.toLowerCase());
+          if (!live || live.verified) return null;
+          return (
+            <View style={styles.unverifiedBanner}>
+              <Text style={styles.unverifiedBannerText}>
+                {t("nido.unverifiedBanner", { name: live.name })}
+              </Text>
+              <Pressable
+                onPress={() => void handleVerifyContact(live)}
+                style={styles.smallBtn}
+                accessibilityRole="button"
+                accessibilityLabel={t("nido.verifyContact", { name: live.name })}
+              >
+                <Text style={styles.smallBtnText}>{t("nido.verify")}</Text>
+              </Pressable>
+            </View>
+          );
+        })()}
         <FlatList
           ref={listRef}
           data={messages}
@@ -1698,30 +1757,7 @@ export function NidoScreen({
                   {/* Lecciones de Signal/Briar (2026-10-29): comparar la huella. */}
                   {!c.verified && (
                     <Pressable
-                      onPress={async () => {
-                        let theirs = "";
-                        try {
-                          theirs = mRef.current.contactFingerprint(c);
-                        } catch {
-                          setNotice(t("nido.verifyFailed"));
-                          return;
-                        }
-                        const ok = await showSecureAlert({
-                          title: t("nido.verifyTitle", { name: c.name }),
-                          message: t("nido.verifyBody", { name: c.name, theirs, mine: fingerprint }),
-                          cancelLabel: t("common.cancel"),
-                          confirmLabel: t("nido.verifyConfirm"),
-                          cancelable: true,
-                        });
-                        if (!ok) return;
-                        try {
-                          await mRef.current.setContactVerified(c.pkHex, true);
-                          await loadContacts();
-                          setNotice(t("nido.verifiedNotice", { name: c.name }));
-                        } catch (e) {
-                          setNotice(e instanceof Error ? p2pErr(e) : t("nido.verifyFailed"));
-                        }
-                      }}
+                      onPress={() => void handleVerifyContact(c)}
                       style={styles.smallBtn}
                       accessibilityRole="button"
                       accessibilityLabel={t("nido.verifyContact", { name: c.name })}
@@ -2039,6 +2075,16 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     backgroundColor: colors.bg.card,
     paddingHorizontal: calmSpacing.comfortable,
     paddingVertical: calmSpacing.cozy,
+  },
+  unverifiedBanner: {
+    backgroundColor: colors.bg.card,
+    paddingHorizontal: calmSpacing.comfortable,
+    paddingVertical: calmSpacing.cozy,
+    gap: calmSpacing.cozy,
+  },
+  unverifiedBannerText: {
+    ...typography.ui.caption,
+    color: colors.text.primary,
   },
   // FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): banner de alerta para
   // almacenamiento de revocaciones corrupto.

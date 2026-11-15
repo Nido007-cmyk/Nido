@@ -331,32 +331,77 @@ async function stripDisappearingMessages(copyUri: string): Promise<void> {
  * guardaba para siempre: una copia completa más de la base, con mensajes que
  * quizá ya debían haber desaparecido. Ahora se borra en cuanto la base
  * restaurada abre bien en el siguiente arranque. Best-effort, nunca lanza.
+ *
+ * T-03 de la 0.1.99 (M-31): la verificación de salud era solo de la
+ * base de memoria, pero el borrado alcanzaba también las copias de
+ * la de conocimiento: con la memoria sana y el conocimiento corrupto
+ * se perdía la única copia buena de conocimiento. La pareja de
+ * copias es la red de UNA restauración: no se borra nada mientras
+ * cualquiera de las dos bases no verifique íntegra (la de memoria
+ * como en F3-16; la de conocimiento, por su propia conexión de
+ * rag/db, como en el checkpoint de createBackup).
  */
+async function restoredDatabaseIsHealthy(
+  open: () => Promise<{ getFirstAsync: Function; getAllAsync: Function }>,
+): Promise<boolean> {
+  try {
+    const db = await open();
+    await db.getFirstAsync("SELECT count(*) AS n FROM sqlite_master;");
+    const integrity = await db.getAllAsync("PRAGMA integrity_check;");
+    return !!integrity && integrity.length === 1 && integrity[0].integrity_check === "ok";
+  } catch {
+    return false;
+  }
+}
+
 export async function cleanupAfterSuccessfulRestore(): Promise<number> {
   try {
     const dir = FileSystem.documentDirectory;
     if (!dir) return 0;
     const sqliteDir = `${dir}SQLite/`;
     const names = await FileSystem.readDirectoryAsync(sqliteDir).catch(() => [] as string[]);
-    const copies = names.filter(
-      (n) => n.startsWith(`${DB_NAME}.pre-restore-`) || n.startsWith(`${KNOWLEDGE_DB_NAME}.pre-restore-`),
-    );
-    const leftovers = (await FileSystem.readDirectoryAsync(dir).catch(() => [] as string[])).filter(
-      (n) => n.startsWith("restored.db") || n.startsWith("restored.knowledge.db"),
-    );
-    if (copies.length === 0 && leftovers.length === 0) return 0;
-    // Solo si la base actual abre y se puede leer.
-    const db = await getDatabase();
-    await db.getFirstAsync("SELECT count(*) AS n FROM sqlite_master;");
-    // Auditoría completa 2026-10-31 (F3-16): contar tablas no prueba
-    // que la base restaurada esté sana: una base corrupta puede
-    // responder al conteo y aun así la limpieza borraba la única
-    // copia previa buena. Se exige además PRAGMA integrity_check.
-    const integrity = await db.getAllAsync<{ integrity_check: string }>("PRAGMA integrity_check;");
-    if (!integrity || integrity.length !== 1 || integrity[0].integrity_check !== "ok") return 0;
-    for (const n of copies) await FileSystem.deleteAsync(`${sqliteDir}${n}`, { idempotent: true });
-    for (const n of leftovers) await FileSystem.deleteAsync(`${dir}${n}`, { idempotent: true });
-    return copies.length + leftovers.length;
+    const memoryCopies = names.filter((n) => n.startsWith(`${DB_NAME}.pre-restore-`));
+    const knowledgeCopies = names.filter((n) => n.startsWith(`${KNOWLEDGE_DB_NAME}.pre-restore-`));
+    const rootNames = await FileSystem.readDirectoryAsync(dir).catch(() => [] as string[]);
+    const memoryLeftovers = rootNames.filter((n) => n.startsWith("restored.db"));
+    const knowledgeLeftovers = rootNames.filter((n) => n.startsWith("restored.knowledge.db"));
+    const needMemory = memoryCopies.length > 0 || memoryLeftovers.length > 0;
+    const needKnowledge = knowledgeCopies.length > 0 || knowledgeLeftovers.length > 0;
+    if (!needMemory && !needKnowledge) return 0;
+    // Solo si CADA base con copias pendientes abre y se puede leer
+    // íntegra. Auditoría completa 2026-10-31 (F3-16): contar tablas
+    // no prueba que la base restaurada esté sana: una base corrupta
+    // puede responder al conteo y aun así la limpieza borraba la
+    // única copia previa buena. Se exige además PRAGMA
+    // integrity_check — desde T-03, de las dos bases.
+    if (needMemory && !(await restoredDatabaseIsHealthy(() => getDatabase()))) return 0;
+    if (
+      needKnowledge &&
+      !(await restoredDatabaseIsHealthy(async () => {
+        const { getDb } = await import("../rag/db");
+        return getDb();
+      }))
+    ) {
+      return 0;
+    }
+    let deleted = 0;
+    for (const n of memoryCopies) {
+      await FileSystem.deleteAsync(`${sqliteDir}${n}`, { idempotent: true });
+      deleted++;
+    }
+    for (const n of knowledgeCopies) {
+      await FileSystem.deleteAsync(`${sqliteDir}${n}`, { idempotent: true });
+      deleted++;
+    }
+    for (const n of memoryLeftovers) {
+      await FileSystem.deleteAsync(`${dir}${n}`, { idempotent: true });
+      deleted++;
+    }
+    for (const n of knowledgeLeftovers) {
+      await FileSystem.deleteAsync(`${dir}${n}`, { idempotent: true });
+      deleted++;
+    }
+    return deleted;
   } catch {
     return 0;
   }

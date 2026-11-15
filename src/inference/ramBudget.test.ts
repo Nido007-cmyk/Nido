@@ -342,8 +342,31 @@ describe("readRamSnapshot", () => {
     mockTotalRam = 8 * GiB;
     mockRss = 1 * GiB;
     mockAvail = { availBytes: 3 * GiB, thresholdBytes: 0.25 * GiB, lowMemory: false };
-    expect(readRamSnapshot()).toEqual({ totalRamBytes: 8 * GiB, rssBytes: 1 * GiB, availBytes: 3 * GiB, lowMemThresholdBytes: 0.25 * GiB });
+    expect(readRamSnapshot()).toEqual({ totalRamBytes: 8 * GiB, rssBytes: 1 * GiB, availBytes: 3 * GiB, lowMemThresholdBytes: 0.25 * GiB, lowMemory: false });
     mockAvail = null;
+  });
+
+  it("la señal lowMemory del sistema viaja en la foto (F3-12): la vía de emergencia la consume", () => {
+    mockTotalRam = 8 * GiB;
+    mockRss = 1 * GiB;
+    mockAvail = { availBytes: 3 * GiB, thresholdBytes: 0.25 * GiB, lowMemory: true };
+    expect(readRamSnapshot()!.lowMemory).toBe(true);
+    mockAvail = null;
+  });
+
+  it("RSS 0 deja de inflar en silencio: entra la estimación base marcada (F3-12)", () => {
+    // getMemoryInfo puede devolver rssBytes 0 (lectura vacía): la
+    // cuenta por total restaba entonces SOLO el colchón del sistema
+    // y trataba el proceso como si no pesara. Ahora la foto sustituye
+    // la estimación base de la casa (512 MiB, la del snapshot
+    // canónico) y lo declara con la marca rssFallback.
+    mockTotalRam = 8 * GiB;
+    mockRss = 0;
+    mockAvail = null;
+    const snap = readRamSnapshot()!;
+    expect(snap.rssBytes).toBe(512 * MiB);
+    expect(snap.rssFallback).toBe(true);
+    mockRss = 1 * GiB;
   });
 
   it("un build nativo sin la lectura en vivo no deja el pre-flight ciego", () => {
@@ -446,7 +469,7 @@ describe("defecto 2026-11-08, tercera vuelta (0.1.85): la foto exacta de las 19:
     expect(q8Direct.fits).toBe(false); // 431,4 MiB > 370 disponibles
   });
 
-  it("con la vía de emergencia la foto CABE a 1024 con el freno 0,65 puesto (547,3 ≥ 437,4)", () => {
+  it("con la vía de emergencia la foto CABE a 1024 con el freno 0,65 puesto (492,6 ≥ 437,4 ya con la reserva del 10 %)", () => {
     const plan = planContext(Q05_REAL, PHOTO, { ceiling: 4096, safety: 0.65 })!;
     expect(plan.nCtx).toBe(EMERGENCY_CONTEXT);
     expect(plan.verdict.fits).toBe(true);
@@ -473,14 +496,37 @@ describe("defecto 2026-11-08, tercera vuelta (0.1.85): la foto exacta de las 19:
     expect(plan.verdict.availableBytes).toBe(1001 * MiB);
   });
 
-  it("checkRamBudget con emergencyLive usa el availMem crudo SOLO con la opción puesta", () => {
+  it("checkRamBudget con emergencyLive deja de usar el availMem crudo: entra la reserva del 10 % (F3-02)", () => {
+    // Hasta la 0.1.98 la vía cruzaba el watermark del sistema con
+    // margen exactamente cero frente a una FOTO que envejece durante
+    // los segundos de la carga. Ahora la vía rinde el 90 % de la
+    // lectura — y la foto del dueño sigue cabiendo holgada, porque lo
+    // que la salvaba era el hueco entre las dos cuentas (842 frente a
+    // 370), no el último 10 %.
     const raw = checkRamBudget({ ...Q05_REAL, nCtx: 1024 }, PHOTO, { emergencyLive: true })!;
-    expect(raw.availableBytes).toBe(842 * MiB);
+    expect(raw.availableBytes).toBe(842 * MiB * 0.9);
     const normal = checkRamBudget({ ...Q05_REAL, nCtx: 1024 }, PHOTO)!;
     expect(normal.availableBytes).toBe(370 * MiB);
-    // El crédito liberable también cuenta en la vía (cambio de modelo).
+    // El crédito liberable se suma entero: la reserva cae sobre la
+    // lectura, no sobre lo que la propia carga libera al bajar de
+    // contexto (cambio de modelo).
     const swap = checkRamBudget({ ...Q05_REAL, nCtx: 1024 }, { ...PHOTO, releasableBytes: 100 * MiB }, { emergencyLive: true })!;
-    expect(swap.availableBytes).toBe(942 * MiB);
+    expect(swap.availableBytes).toBe(842 * MiB * 0.9 + 100 * MiB);
+  });
+
+  it("checkRamBudget con emergencyLive y el sistema YA en lowMemory resta además el threshold (F3-12)", () => {
+    // lowMemory = Android ya está cerrando aplicaciones: juzgar ese
+    // estado con la cuenta amable de la vía fue una de las puertas
+    // por las que el proceso moría a mitad de la carga de emergencia.
+    const hot = { ...PHOTO, lowMemory: true };
+    const via = checkRamBudget({ ...Q05_REAL, nCtx: 1024 }, hot, { emergencyLive: true })!;
+    expect(via.availableBytes).toBe(842 * MiB * 0.9 - 216 * MiB);
+    // La vía normal no cambia: allí la señal ya va codificada en la
+    // propia cuenta (el sumidero threshold solo suma cuando el
+    // disponible cae por debajo).
+    expect(checkRamBudget({ ...Q05_REAL, nCtx: 1024 }, hot)!.availableBytes).toBe(370 * MiB);
+    // Y sin la bandera, la vía resta solo la reserva.
+    expect(checkRamBudget({ ...Q05_REAL, nCtx: 1024 }, PHOTO, { emergencyLive: true })!.availableBytes).toBe(842 * MiB * 0.9);
   });
 });
 

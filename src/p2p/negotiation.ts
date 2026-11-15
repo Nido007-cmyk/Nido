@@ -44,35 +44,13 @@ export type NegotiationMessageType =
   | "DECLINE";
 
 /**
- * Capability grant: autorización limitada y firmada.
- *
- * Un grant autoriza a un peer a realizar acciones específicas,
- * limitado por múltiples dimensiones.
+ * T-12 (0.1.99, m-45): aquí vivía `CapabilityGrant` con `issueGrant` y
+ * `verifyGrant`. La superficie de grants quedó sin ningún llamador de
+ * producción cuando la negociación pasó a decidirse en la tarjeta del
+ * usuario (NEG-1, 2026-10-11): solo la ejercían tests. Retirada con sus
+ * tests exclusivos, con el mismo criterio que m-92 en T-17: lo que no
+ * está cableado no se mantiene como si protegiera algo.
  */
-export interface CapabilityGrant {
-  /** ID único del grant. */
-  grantId: string;
-  /** Clave pública del emisor (quien otorga). */
-  issuerPkHex: string;
-  /** Clave pública del receptor (quien recibe). */
-  granteePkHex: string;
-  /** Alcances autorizados (ej: ["read:notes", "write:reminder"]). */
-  scopes: string[];
-  /** ID de la tarea específica (opcional, para grants de tarea única). */
-  taskId?: string;
-  /** Timestamp de emisión (epoch ms). */
-  issuedAt: number;
-  /** Timestamp de expiración (epoch ms). */
-  expiresAt: number;
-  /** Número máximo de usos (0 = ilimitado dentro del tiempo). */
-  maxUses: number;
-  /** Usos consumidos. */
-  usesConsumed: number;
-  /** Nonce anti-replay. */
-  nonce: string;
-  /** Firma Ed25519 del emisor sobre la serialización canónica. */
-  signatureHex: string;
-}
 
 /**
  * Propuesta de tarea.
@@ -214,76 +192,6 @@ export function createCounter(
     counterSecretKey
   );
   return { ...counter, signatureHex: bytesToHex(signature) };
-}
-
-/**
- * Emite un capability grant firmado al aceptar.
- */
-export function issueGrant(
-  issuerSecretKey: Uint8Array,
-  issuerPkHex: string,
-  granteePkHex: string,
-  scopes: string[],
-  taskId: string | undefined,
-  ttlMs: number,
-  maxUses: number
-): CapabilityGrant {
-  const now = Date.now();
-  const grant: Omit<CapabilityGrant, "signatureHex"> = {
-    grantId: bytesToHex(nacl.randomBytes(16)),
-    issuerPkHex,
-    granteePkHex,
-    scopes: [...scopes].sort(),
-    taskId,
-    issuedAt: now,
-    expiresAt: now + ttlMs,
-    maxUses,
-    usesConsumed: 0, // Inicial, no parte de la firma
-    nonce: bytesToHex(nacl.randomBytes(16)),
-  };
-  // La firma cubre todo EXCEPTO usesConsumed (que cambia con el uso)
-  const { usesConsumed: _, ...toSign } = grant;
-  const message = canonicalSerialize(toSign);
-  const signature = nacl.sign.detached(
-    new TextEncoder().encode(message),
-    issuerSecretKey
-  );
-  return { ...grant, signatureHex: bytesToHex(signature) };
-}
-
-/**
- * Verifica un grant: firma válida, no expirado, usos disponibles.
- *
- * Nota: usesConsumed se pasa por separado (no está en el payload firmado).
- * El firmante firma los límites (maxUses), el verificador rastrea el consumo.
- */
-export function verifyGrant(
-  grant: CapabilityGrant,
-  issuerPkBytes: Uint8Array,
-  usesConsumed: number = 0,
-  now: number = Date.now()
-): { valid: boolean; reason?: string } {
-  // Verificar firma (sobre los límites, no el consumo actual)
-  const { signatureHex, usesConsumed: _, ...unsigned } = grant;
-  const message = canonicalSerialize(unsigned);
-  const signature = hexToBytes(signatureHex);
-  const sigValid = nacl.sign.detached.verify(
-    new TextEncoder().encode(message),
-    signature,
-    issuerPkBytes
-  );
-  if (!sigValid) {
-    return { valid: false, reason: "invalid_signature" };
-  }
-  // Verificar expiración
-  if (now > grant.expiresAt) {
-    return { valid: false, reason: "expired" };
-  }
-  // Verificar usos (contra el contador externo)
-  if (grant.maxUses > 0 && usesConsumed >= grant.maxUses) {
-    return { valid: false, reason: "uses_exhausted" };
-  }
-  return { valid: true };
 }
 
 /**

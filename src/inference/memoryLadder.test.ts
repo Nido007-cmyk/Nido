@@ -138,39 +138,117 @@ describe("CrashGuard", () => {
     expect(safetyForCrashes(9)).toBe(0.5);
   });
 
-  it("un pendiente sin modelo vivo cuenta como choque", () => {
-    const rec: CrashGuardRecord = { crashes: 0, pending: { model: "a.gguf", nCtx: 4096, at: 1 } };
+  it("un pendiente sin modelo vivo cuenta como choque y deja su marca de tiempo", () => {
+    const rec: CrashGuardRecord = { crashes: 0, pending: { model: "a.gguf", nCtx: 4096, at: 1 }, lastCrashAt: null };
     const { record, safety, countedCrash } = settleCrashGuardRecord(rec, { modelAlive: false });
     expect(countedCrash).toBe(true);
-    expect(record).toEqual({ crashes: 1, pending: null });
+    expect(record).toEqual({ crashes: 1, pending: null, lastCrashAt: 1 });
     expect(safety).toBe(0.8);
   });
 
   it("un pendiente con el modelo vivo se confirma, no se castiga", () => {
-    const rec: CrashGuardRecord = { crashes: 2, pending: { model: "a.gguf", nCtx: 2048, at: 1 } };
+    const rec: CrashGuardRecord = { crashes: 2, pending: { model: "a.gguf", nCtx: 2048, at: 1 }, lastCrashAt: 1 };
     const { record, safety, countedCrash } = settleCrashGuardRecord(rec, { modelAlive: true });
     expect(countedCrash).toBe(false);
-    expect(record).toEqual({ crashes: 0, pending: null });
+    expect(record).toEqual({ crashes: 0, pending: null, lastCrashAt: null });
     expect(safety).toBe(1);
   });
 
   it("sin pendiente no pasa nada; la confirmación deja el contador a cero", () => {
-    const rec: CrashGuardRecord = { crashes: 1, pending: null };
+    const rec: CrashGuardRecord = { crashes: 1, pending: null, lastCrashAt: 7 };
     expect(settleCrashGuardRecord(rec, { modelAlive: false }).record).toEqual(rec);
-    expect(confirmCrashGuardRecord({ crashes: 3, pending: { model: "a", nCtx: 1, at: 1 } })).toEqual({
+    expect(confirmCrashGuardRecord({ crashes: 3, pending: { model: "a", nCtx: 1, at: 1 }, lastCrashAt: 7 })).toEqual({
       crashes: 0,
       pending: null,
+      lastCrashAt: null,
     });
   });
 
   it("el registro persistido se lee con tolerancia", () => {
-    expect(parseCrashGuardRecord(null)).toEqual({ crashes: 0, pending: null });
-    expect(parseCrashGuardRecord("no es json")).toEqual({ crashes: 0, pending: null });
-    expect(parseCrashGuardRecord('{"crashes":2,"pending":{"model":"a.gguf","nCtx":2048,"at":5}}')).toEqual({
+    expect(parseCrashGuardRecord(null)).toEqual({ crashes: 0, pending: null, lastCrashAt: null });
+    expect(parseCrashGuardRecord("no es json")).toEqual({ crashes: 0, pending: null, lastCrashAt: null });
+    expect(parseCrashGuardRecord('{"crashes":2,"pending":{"model":"a.gguf","nCtx":2048,"at":5},"lastCrashAt":9}')).toEqual({
       crashes: 2,
       pending: { model: "a.gguf", nCtx: 2048, at: 5 },
+      lastCrashAt: 9,
     });
-    expect(parseCrashGuardRecord('{"crashes":-4,"pending":{"model":7}}')).toEqual({ crashes: 0, pending: null });
+    expect(parseCrashGuardRecord('{"crashes":-4,"pending":{"model":7}}')).toEqual({ crashes: 0, pending: null, lastCrashAt: null });
+    // Un registro de la 0.1.98 (sin la marca) la lee como ausente.
+    expect(parseCrashGuardRecord('{"crashes":2,"pending":null}')).toEqual({ crashes: 2, pending: null, lastCrashAt: null });
+  });
+});
+
+describe("CrashGuard: la caducidad del contador (F3-07 — el factor 0,5 ya no es una trampa eterna)", () => {
+  const DAY = 24 * 3600_000;
+  const T = 1_700_000_000_000;
+
+  it("sin `now` no hay caducidad: la conducta de siempre, byte a byte", () => {
+    const rec: CrashGuardRecord = { crashes: 3, pending: null, lastCrashAt: T };
+    const { record, safety } = settleCrashGuardRecord(rec, { modelAlive: false });
+    expect(record).toEqual(rec);
+    expect(safety).toBe(0.5);
+  });
+
+  it("un choque se perdona por cada 24 h sin choques nuevos; la marca avanza solo lo consumido", () => {
+    const rec: CrashGuardRecord = { crashes: 3, pending: null, lastCrashAt: T };
+    const one = settleCrashGuardRecord(rec, { modelAlive: false, now: T + DAY + 3600_000 });
+    expect(one.record).toEqual({ crashes: 2, pending: null, lastCrashAt: T + DAY });
+    expect(one.safety).toBe(0.65);
+    const three = settleCrashGuardRecord(rec, { modelAlive: false, now: T + 3 * DAY });
+    expect(three.record).toEqual({ crashes: 0, pending: null, lastCrashAt: null });
+    expect(three.safety).toBe(1);
+  });
+
+  it("dentro de la ventana no se perdona nada", () => {
+    const rec: CrashGuardRecord = { crashes: 2, pending: null, lastCrashAt: T };
+    const { record, safety } = settleCrashGuardRecord(rec, { modelAlive: false, now: T + DAY - 1 });
+    expect(record).toEqual(rec);
+    expect(safety).toBe(0.65);
+  });
+
+  it("un registro heredado sin marca empieza su cuenta atrás en el primer asentamiento con hora", () => {
+    const rec: CrashGuardRecord = { crashes: 2, pending: null, lastCrashAt: null };
+    const first = settleCrashGuardRecord(rec, { modelAlive: false, now: T });
+    expect(first.record).toEqual({ crashes: 2, pending: null, lastCrashAt: T });
+    expect(first.safety).toBe(0.65);
+    const later = settleCrashGuardRecord(first.record, { modelAlive: false, now: T + 2 * DAY });
+    expect(later.record).toEqual({ crashes: 0, pending: null, lastCrashAt: null });
+    expect(later.safety).toBe(1);
+  });
+
+  it("un choque nuevo tras una temporada tranquila cuenta sobre lo ya perdonado, no sobre el histórico", () => {
+    const rec: CrashGuardRecord = { crashes: 3, pending: { model: "a.gguf", nCtx: 4096, at: T + 3 * DAY }, lastCrashAt: T };
+    const { record, safety, countedCrash } = settleCrashGuardRecord(rec, { modelAlive: false, now: T + 3 * DAY });
+    expect(countedCrash).toBe(true);
+    expect(record).toEqual({ crashes: 1, pending: null, lastCrashAt: T + 3 * DAY });
+    expect(safety).toBe(0.8);
+  });
+
+  it("los factores sellados no se mueven: la caducidad perdona choques, no toca la tabla", () => {
+    expect(safetyForCrashes(3)).toBe(0.5);
+    expect(safetyForCrashes(2)).toBe(0.65);
+  });
+});
+
+describe("planContext: el presupuesto que decidió viaja en el plan (F3-10)", () => {
+  it("con freno del CrashGuard, budgetBytes es el disponible reducido, no el crudo", () => {
+    // Disponible ≈ 1.410 GB (como el caso del peldaño 3072 de arriba).
+    const plan = planContext(SPEC, snap(3_897_483_648), { ceiling: 4096, safety: 0.8 })!;
+    const base = checkRamBudget({ ...SPEC, nCtx: 4096 }, snap(3_897_483_648))!;
+    expect(plan.budgetBytes).toBe(Math.floor(base.availableBytes * 0.8));
+    // El disponible reportado del veredicto sigue siendo la foto normal.
+    expect(plan.verdict.availableBytes).toBe(base.availableBytes);
+  });
+
+  it("en el peldaño de emergencia, budgetBytes es el presupuesto de la vía (con su reserva), no el normal", () => {
+    const GiB = 1024 ** 3;
+    const Q05 = { fileSizeBytes: 397_808_192, nLayer: 24, nKvHeads: 2, headDim: 64, nUbatch: 192 };
+    const TIGHT = { totalRamBytes: 3.54 * GiB, rssBytes: 0.95 * GiB, availBytes: 1.07 * GiB, lowMemThresholdBytes: 0.35 * GiB };
+    const plan = planContext(Q05, TIGHT, { ceiling: 4096 })!;
+    expect(plan.nCtx).toBe(EMERGENCY_CONTEXT);
+    const emergencyBase = checkRamBudget({ ...Q05, nCtx: 4096 }, TIGHT, { emergencyLive: true })!;
+    expect(plan.budgetBytes).toBe(Math.floor(emergencyBase.availableBytes));
+    expect(plan.verdict.availableBytes).not.toBe(plan.budgetBytes);
   });
 });
 

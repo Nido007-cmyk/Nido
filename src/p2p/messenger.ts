@@ -94,6 +94,7 @@ import {
 import { normalizeContactName } from "./contactName";
 import { LoopbackTransport, type P2PTransport, type P2PTransportEvents, type P2PPeerInfo } from "./transport";
 import { createPlatformTransport } from "./nativeTransport";
+import { inboundQuota } from "./inboundQuota";
 import nacl from "tweetnacl";
 
 /**
@@ -116,6 +117,14 @@ import nacl from "tweetnacl";
 export const ACK_TIMEOUT_MS = 30_000;
 export const ACK_MAX_ATTEMPTS = 3;
 export const DEDUP_RETENTION_DAYS = 90;
+
+/** T-13 (m-55): ventana de la cuota de avisos entrantes (un aviso por par). */
+let incomingSignalWindowMs = 30_000;
+
+/** Solo para tests: ajusta la ventana de la cuota de avisos entrantes. */
+export function setIncomingSignalWindowForTests(ms: number): void {
+  incomingSignalWindowMs = ms;
+}
 
 /**
  * N6 §3.2 — tipos de envelope con semántica ACK: el receptor solo emite
@@ -243,6 +252,12 @@ async function applyPairingCapabilities(payload: { pk: string; caps?: string[] }
     const store = await import("./store");
     if (caps.includes("c4")) await store.setContactV4Capable(payload.pk, true);
     if (caps.includes("cf2")) await store.setContactConfirmV2(payload.pk);
+    // T-12 (M-26): el QR también acredita v5 desde el nacimiento del
+    // contacto. sessionV5Warning funciona desde la primera conexión: si
+    // el contacto consta v5-capable y la sesión sigue en clásico pasado
+    // el margen, el aviso de posible degradación puede saltar ya.
+    // Cobertura honesta: solo cuando un 0.1.99 escanea el QR de un 0.1.99.
+    if (caps.includes("r5")) await store.setContactV5Capable(payload.pk, true);
   } catch {
     /* best-effort */
   }
@@ -1675,7 +1690,21 @@ export class NidoMessenger {
     // procesamiento (el guard de epoch de la base lo rechazaría tras un
     // wipe, pero la instancia muerta no debe ni intentarlo).
     this.assertLive();
+    // T-12 (M-24 capas 2 y 3): la misma disciplina de cuotas que en la
+    // ruta N6 — texto por encima del tope del propio envío se descarta, y
+    // el volumen persistido por par tiene cuota. Se descarta entero y se
+    // cuenta; nunca se guarda un mensaje recortado.
+    if (env.type === "chat") {
+      if (text.length > inboundQuota.chatTextLimit) {
+        inboundQuota.noteOversizedText();
+        return null;
+      }
+      if (!inboundQuota.tryPersist(key, new TextEncoder().encode(text).length)) return null;
+    }
     const legacyTimer = env.type === "chat" ? incomingTimer(env.payload) : null;
+    // T-12 (m-47): el temporizador de la conversación manda también aquí.
+    const legacyTtlSec =
+      env.type === "chat" ? await this.clampInboundTtlSec(key, legacyTimer) : legacyTimer?.sec;
     const isNew = await saveMessage({
       id: env.id,
       dir: "in",
@@ -1684,11 +1713,11 @@ export class NidoMessenger {
       text,
       status: env.type === "agent_task" ? "queued" : "delivered",
       ts: env.ts,
-      ttlSec: legacyTimer?.sec,
+      ttlSec: legacyTtlSec,
       ttlV: legacyTimer?.v,
     });
     if (!isNew) return null; // duplicado persistente (p. ej. tras reinicio): no reprocesar
-    if (legacyTimer) await this.adoptIncomingTimer(key, legacyTimer);
+    if (legacyTimer) await this.adoptIncomingTimerFromChat(key, legacyTimer);
     if (env.type === "chat" || env.type === "agent_task") this.signalIncoming(key, env.type);
     // Cualquier frame válido confirma la sesión: es seguro vaciar la cola.
     this.assertLive();
@@ -1719,9 +1748,27 @@ export class NidoMessenger {
           ? `[Tarea de su NIDO · ${kind}] ${taskText}${argsJson ? ` (datos: ${argsJson})` : ""}`
           : "";
     this.assertLive();
+    // T-12 (M-24 capa 2): un texto de chat por encima del tope que el
+    // propio envío aplica (4.000) se descarta ENTERO y se cuenta. No se
+    // trunca (un mensaje recortado sería un mensaje falso) y no hay ACK:
+    // el descarte ocurre antes de persistir, así que no se atestigua nada.
+    if (env.type === "chat" && text.length > inboundQuota.chatTextLimit) {
+      inboundQuota.noteOversizedText();
+      return null;
+    }
+    // T-12 (M-24 capa 3): cuota de volumen persistido por par y ventana.
+    if (
+      env.type === "chat" &&
+      !inboundQuota.tryPersist(key, new TextEncoder().encode(text).length)
+    ) {
+      return null;
+    }
     const tag = session.sessionTag;
     // 0.1.46: temporizador del mensaje, guardado en el mismo insert.
     const timer = env.type === "chat" ? incomingTimer(env.payload) : null;
+    // T-12 (m-47): si la conversación tiene temporizador activo, el del
+    // payload solo puede ACORTAR la vida de este mensaje.
+    const ttlSec = env.type === "chat" ? await this.clampInboundTtlSec(key, timer) : timer?.sec;
     let isNew: boolean;
     if (tag) {
       // D4: mensaje + entrada del ack log EN LA MISMA TRANSACCIÓN; el ACK
@@ -1735,7 +1782,7 @@ export class NidoMessenger {
         ts: env.ts,
         sessionTag: tag,
         persistedAt: Date.now(),
-        ttlSec: timer?.sec,
+        ttlSec,
         ttlV: timer?.v,
       });
     } else {
@@ -1751,7 +1798,7 @@ export class NidoMessenger {
         text,
         status: env.type === "agent_task" ? "queued" : "delivered",
         ts: env.ts,
-        ttlSec: timer?.sec,
+        ttlSec,
         ttlV: timer?.v,
       });
     }
@@ -1760,7 +1807,7 @@ export class NidoMessenger {
       await this.emitDeliveryAck(key, session, messageId, env.type);
       return null;
     }
-    if (timer) await this.adoptIncomingTimer(key, timer);
+    if (timer) await this.adoptIncomingTimerFromChat(key, timer);
     if (env.type === "chat" || env.type === "agent_task") this.signalIncoming(key, env.type);
     if (tag) {
       await this.emitDeliveryAck(key, session, messageId, env.type);
@@ -1876,6 +1923,52 @@ export class NidoMessenger {
    * cambió el de la conversación, lo adopta (como Signal). Un valor fuera de
    * la lista permitida se ignora; un peer viejo no manda `ttl` y no cambia nada.
    */
+  /**
+   * T-12 (m-47): vida efectiva de un mensaje de chat entrante. Si la
+   * conversación tiene un temporizador activo, ese manda: el payload del
+   * emisor solo puede ACORTAR la vida del mensaje (un ttl menor se
+   * respeta), nunca alargarla (se recorta al de la conversación) ni
+   * quitarla (ttl 0 o ausente → se aplica el de la conversación). Sin
+   * temporizador de conversación, el payload manda como hasta ahora.
+   * Devuelve undefined cuando el mensaje no lleva caducidad alguna.
+   */
+  private async clampInboundTtlSec(
+    peerKey: string,
+    timer: { sec: number; v: number } | null,
+  ): Promise<number | undefined> {
+    try {
+      const conv = await getContactDisappear(peerKey);
+      if (conv.sec > 0) {
+        if (timer === null || timer.sec === 0) return conv.sec;
+        return Math.min(timer.sec, conv.sec);
+      }
+    } catch {
+      /* best-effort: sin lectura, manda el payload como antes */
+    }
+    return timer?.sec;
+  }
+
+  /**
+   * T-12 (m-47): adopción del temporizador desde el PAYLOAD de un chat.
+   * A diferencia del frame `settings` (el canal deliberado de cambio,
+   * que llama a adoptIncomingTimer directamente), un payload de chat no
+   * puede APAGAR ni ALARGAR un temporizador de conversación activo: esos
+   * cambios llegan por el canal deliberado o no llegan. Acortar o
+   * encender vía chat sigue el camino de siempre.
+   */
+  private async adoptIncomingTimerFromChat(
+    peerKey: string,
+    timer: { sec: number; v: number },
+  ): Promise<void> {
+    try {
+      const current = await getContactDisappear(peerKey);
+      if (current.sec > 0 && (timer.sec === 0 || timer.sec > current.sec)) return;
+    } catch {
+      /* best-effort: sin lectura, se adopta como antes */
+    }
+    await this.adoptIncomingTimer(peerKey, timer);
+  }
+
   /**
    * Adopta el temporizador de la conversación que trae un mensaje o un aviso
    * del contacto, si es más nuevo (UPDATE condicional y atómico en el store).
@@ -2131,7 +2224,25 @@ export class NidoMessenger {
    * El servicio compartido lo usa para el aviso genérico de mensaje nuevo.
    */
   onIncomingMessage: ((peerPkHex: string, type: string) => void) | null = null;
+  /**
+   * T-13 (m-55): cuota del aviso entrante. La pantalla reproduce un sonido
+   * y vibra con CADA aviso: una ráfaga de 20 mensajes del mismo par eran
+   * 20 avisos. Un aviso por par y ventana (30 s); el mensaje se guarda
+   * igual y el contador de no leídos no se toca. Solo se calla la señal.
+   */
+  private incomingSignalLastAt = new Map<string, number>();
+
   private signalIncoming(peerKey: string, type: string): void {
+    const now = Date.now();
+    const last = this.incomingSignalLastAt.get(peerKey);
+    if (last !== undefined && now - last < incomingSignalWindowMs) return;
+    this.incomingSignalLastAt.set(peerKey, now);
+    if (this.incomingSignalLastAt.size > 512) {
+      // Higiene simple: fuera las entradas ya fuera de ventana.
+      for (const [k, t] of this.incomingSignalLastAt) {
+        if (now - t >= incomingSignalWindowMs) this.incomingSignalLastAt.delete(k);
+      }
+    }
     try {
       this.onIncomingMessage?.(peerKey, type);
     } catch {
@@ -2188,6 +2299,16 @@ export class NidoMessenger {
 
   private relayOn(): boolean {
     return isFeatureEnabled("p2p.relay");
+  }
+
+  /**
+   * T-14 (m-51): ¿sello sobres con MIS mensajes para que los lleven los
+   * contactos? Interruptor propio en la tarjeta del relevo, distinto del
+   * maestro y del de llevar sobres de otros: apagado, un mensaje que no
+   * sale en directo se queda en este teléfono y no viaja de mano en mano.
+   */
+  private relaySendOn(): boolean {
+    return isFeatureEnabled("p2p.relaySend");
   }
 
   private async relayMe(): Promise<relay.Me | null> {
@@ -2302,11 +2423,16 @@ export class NidoMessenger {
 
   private async relaySealOwn(to: string, id: string, kind: "chat" | "receipt", text: string): Promise<void> {
     if (!this.relayOn()) return;
+    // T-14 (m-51): con el envío por relevo apagado no se sella nada nuevo.
+    if (!this.relaySendOn()) return;
     try {
       const me = await this.relayMe();
       if (!me) return;
       const res = await relay.sealOwnDetailed(me, to, id, kind, text, Date.now());
       this.relaySealMiss = res === "sealed" ? null : res;
+      // T-14 (m-49): la causa también a nivel de servicio, para que la
+      // tarjeta del relevo la enseñe (este objeto no la alcanza).
+      relay.noteSealMiss(res);
       if (res === "sealed") await this.relaySyncAll();
     } catch {
       /* best-effort */
@@ -2326,6 +2452,16 @@ export class NidoMessenger {
     this.assertLive();
     for (const c of res.chats) {
       const from = c.from.toLowerCase();
+      // T-12 (M-24 capas 2 y 3): lo traído por relay también es texto que
+      // un par me hace persistir: mismo tope de texto y misma cuota de
+      // volumen (clave: el autor, que es quien llena mi almacenamiento).
+      // Si se descarta, no hay acuse: quien lo escribió lo seguirá
+      // intentando, igual que cuando el guardado falla.
+      if (c.text.length > inboundQuota.chatTextLimit) {
+        inboundQuota.noteOversizedText();
+        continue;
+      }
+      if (!inboundQuota.tryPersist(from, new TextEncoder().encode(c.text).length)) continue;
       try {
         // El mismo message_id que usaría el envío directo: si luego llega
         // también directo, se reconoce como repetido y solo se re-confirma.

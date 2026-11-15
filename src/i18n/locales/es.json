@@ -33,7 +33,7 @@
   },
   "installNotice": {
     "pausedTooHeavy": "Hay una parte descargada ({{done}}) de un modelo que no cabe en este dispositivo. Puedes borrarla para liberar espacio.",
-    "integrity": "El archivo descargado no coincidió con su huella y se borró. Si descargas otra vez, llegará una copia nueva.",
+    "integrity": "El archivo descargado no coincide con su huella, así que no cuenta como descargado. Si descargas otra vez, la copia nueva lo reemplaza.",
     "interrupted": "La última descarga se interrumpió antes de terminar. Si descargas otra vez, empezará desde el principio.",
     "sizeMismatch": "La última descarga llegó incompleta y se borró. Si descargas otra vez, llegará una copia nueva.",
     "storage": "No hubo espacio libre suficiente para terminar la descarga. Libera espacio y vuelve a intentarlo.",
@@ -431,6 +431,7 @@
     "emptyDescription": "Cuando otro NIDO te proponga colaborar, aparecerá aquí.",
     "selectContactAndDescribe": "Selecciona un contacto y escribe la propuesta.",
     "sendFailed": "No se pudo enviar.",
+    "contactNotVerified": "Todavía no habéis comparado la huella con este contacto. Hazlo en su conversación o en la pestaña Contactos y vuelve a intentarlo.",
     "peerOffline": "El contacto no está en línea. Intenta cuando esté cerca con NIDO abierto.",
     "proposeButton": "+ Proponer colaboración",
     "outgoingTitle": "Propuesta enviada a {{peer}}",
@@ -816,6 +817,7 @@
     "verifyConfirm": "Coinciden",
     "verifiedNotice": "✓ {{name}} verificado.",
     "verifyFailed": "No se pudo verificar este contacto.",
+    "unverifiedBanner": "Todavía no habéis comparado la huella con {{name}}. Hasta que lo hagáis, las negociaciones, las tareas delegadas y los packs con este contacto quedan en pausa.",
     "linkActive": "🟢 Enlace activo",
     "linkStopped": "⚪ Enlace detenido",
     "tabChats": "Chats",
@@ -937,7 +939,10 @@
       "usage": "Encendido · llevas {{count}} sobres ({{kb}} KB)",
       "privacy": "Solo de contactos, como mucho 200 sobres y 2 MB, y cada sobre se borra a las 72 horas o al entregarlo. Los mensajes temporales nunca viajan así.",
       "viaFriends": "vía amigos",
-      "travelling": "viajando por amigos"
+      "travelling": "viajando por amigos",
+      "sendToggle": "Enviar mis mensajes por amigos cuando no llego",
+      "sendDesc": "Si un mensaje tuyo no sale en directo, se sella en un sobre para que lo lleve un contacto. Apagado, tus mensajes solo viajan en directo: si no llegan, se quedan en tu teléfono.",
+      "storeFull": "Un mensaje tuyo no pudo sellarse: el espacio para sobres está lleno. Se intentará de nuevo con el siguiente."
     },
     "disappearShort": "Temporal: {{value}}",
     "v5Active": "clave por mensaje",
@@ -959,6 +964,10 @@
     "createEventMessageWithEnd": "¿Crear en tu calendario «{{title}}» el {{start}} hasta {{end}}?",
     "sendMessageTitle": "Enviar mensaje NIDO",
     "sendMessageMessage": "¿Enviar a «{{to}}» por NIDO (cifrado)?\n\n«{{text}}»",
+    "placeCallTitle": "Llamada telefónica",
+    "placeCallMessage": "¿Abrir el marcador con {{phone}}? Un toque más inicia la llamada.",
+    "sendSmsTitle": "Mensaje de texto (SMS)",
+    "sendSmsMessage": "¿Abrir Mensajes para {{phone}} con este texto listo para enviar?\n\n«{{text}}»",
     "pairTitle": "Emparejar contacto NIDO",
     "pairMessage": "¿Emparejar con «{{name}}»?\nHuella: {{fingerprint}}\n\nConfirma solo si escaneaste este código en persona.",
     "pairInvalidCode": "Este código no parece un código de emparejamiento NIDO válido.",
@@ -1143,7 +1152,9 @@
     "unavailableMessage": "NIDO aún está cargando tu identidad. Espera unos segundos y vuelve a intentarlo.",
     "tooLargeTitle": "Pack demasiado grande",
     "tooLargeMessage": "Este pack ocupa {{size}} MB y el máximo para compartir es {{max}} MB.",
-    "choosePeerTitle": "¿A quién se lo envías?"
+    "choosePeerTitle": "¿A quién se lo envías?",
+    "offerHeldUnverified": "La oferta de {{name}} queda en pausa: todavía no habéis comparado la huella. Cuando la comparéis, pídele que la envíe otra vez.",
+    "offerHeldUnverifiedGeneric": "Una oferta quedó en pausa: todavía no habéis comparado la huella con ese contacto. Cuando la comparéis, pídele que la envíe otra vez."
   },
   "voiceInputAlert": {
     "unavailableTitle": "Entrada de voz no disponible",
@@ -1154,6 +1165,7 @@
   },
   "tasks": {
     "approvalTitle": "Solicitud de tarea",
+    "contactNotVerified": "Todavía no habéis comparado la huella con este contacto. Hazlo en su conversación o en la pestaña Contactos y vuelve a intentarlo.",
     "fromPeer": "De {{name}} ({{pk}})",
     "untrustedLabel": "Su mensaje (no confiable):",
     "scopesLabel": "Se le permitirá:",
@@ -1187,7 +1199,7 @@
     "ratchetV5Title": "Clave nueva por mensaje + resistencia cuántica",
     "ratchetV5Desc": "Cada mensaje usa su propia clave, como el Double Ratchet de Signal: una clave robada hoy no abre los mensajes anteriores. Además la sesión mezcla ML-KEM-768, para que el tráfico grabado hoy siga cerrado ante ordenadores cuánticos futuros. Activado por defecto; se usa cuando los dos teléfonos lo tienen. Vale desde la siguiente conexión.",
     "privateHelloOnlyTitle": "Solo saludo privado",
-    "privateHelloOnlyDesc": "Tu teléfono nunca dice en claro quién eres: no llama a contactos con un NIDO antiguo (anterior a la 0.1.49) ni a dispositivos que no son tus contactos, y no contesta saludos en claro. Apagado por defecto porque deja sin conexión a quien no haya actualizado.",
+    "privateHelloOnlyDesc": "Al llamar, tu teléfono nunca dice en claro quién eres: no llama a contactos con un NIDO antiguo (anterior a la 0.1.49) ni a dispositivos que no son tus contactos. Viene encendido; si lo apagas, podrás llamar también a quien no haya actualizado. Si lo enciendes tú mismo aquí, tampoco contesta los saludos en claro que le lleguen.",
     "recoveredTitle": "Ajustes restablecidos",
     "recoveredNotice": "Tus ajustes estaban dañados y volvieron a los valores de fábrica. Revisa tus ajustes, incluidas las herramientas que hubieras apagado: pudieron volver a encenderse."
   },
@@ -1233,8 +1245,8 @@
       "staging": "No se pudo preparar el cambio de clave. No se cambió nada.",
       "storeFailed": "No se pudo guardar la nueva clave; se dejó la anterior."
     },
-    "noLockTitle": "Tu teléfono no tiene PIN",
-    "noLockBody": "Sin PIN ni huella, NIDO no puede proteger tu clave: cualquiera con el teléfono podría verla. Te la mostramos igual para que puedas guardarla. Te recomendamos poner un PIN en los ajustes de Android.",
+    "keyNeedsLockTitle": "Para ver tu clave necesitas un bloqueo de pantalla",
+    "keyNeedsLockBody": "Tu teléfono no tiene PIN, patrón ni huella, así que cualquiera que lo tenga en la mano podría leer la clave. Pon un bloqueo de pantalla en los ajustes de Android y vuelve aquí para verla. Crear respaldos sigue funcionando como siempre. Lo único que queda oculto es la clave.",
     "errors": {
       "storage": "No se pudo acceder al almacenamiento del teléfono.",
       "dbMissing": "No se encontró la base de datos.",
@@ -1297,7 +1309,9 @@
       "download_start": "Descarga iniciada",
       "download_complete": "Descarga completada",
       "download_failed": "Descarga fallida",
-      "lan_connect": "Conexión por Wi-Fi local"
+      "lan_connect": "Conexión por Wi-Fi local",
+      "bt_connect": "Conexión por Bluetooth",
+      "discovery": "Descubrimiento iniciado"
     }
   },
   "skillsCard": {

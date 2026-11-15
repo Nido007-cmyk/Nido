@@ -59,7 +59,25 @@ vi.mock("expo-sqlite", () => ({
   openDatabaseAsync: async (name: string, _o: unknown, dir: string) => {
     const meta = h.metas.get(`file://${dir}/${name}`);
     if (!meta) throw new Error("file is not a database");
-    return { getAllAsync: async () => Object.entries(meta).map(([key, value]) => ({ key, value })), closeAsync: async () => {} };
+    return {
+      getAllAsync: async (sql: string) => {
+        if (/FROM meta/.test(sql)) return Object.entries(meta).map(([key, value]) => ({ key, value }));
+        // M-35/m-91: the door also reads the internal schema (step 5).
+        // This world's packs are format v1: meta + chunks, nothing else.
+        const pragma = /PRAGMA table_info\((\w+)\)/.exec(sql);
+        if (pragma) {
+          const cols: Record<string, string[]> = {
+            meta: ["key", "value"],
+            chunks: ["id", "title", "body", "source", "scale", "vec"],
+          };
+          return (cols[pragma[1]] ?? []).map((n) => ({ name: n }));
+        }
+        const count = /SELECT COUNT\(\*\) AS n FROM (\w+)/.exec(sql);
+        if (count) return [{ n: count[1] === "chunks" ? 4 : 0 }];
+        return Object.entries(meta).map(([key, value]) => ({ key, value }));
+      },
+      closeAsync: async () => {},
+    };
   },
 }));
 vi.mock("expo-document-picker", () => ({ getDocumentAsync: async () => h.state.picker }));

@@ -10,6 +10,7 @@ import { impact, ImpactFeedbackStyle } from "../services/haptics";
 import { useTranslation } from "react-i18next";
 import { CatalogModel } from "../models/manifest";
 import { computeCompatibility } from "../models/compatibility";
+import { readRamSnapshot, type RamSnapshot } from "../inference/ramBudget";
 import { getDeviceTotalRamBytes } from "ram-monitor";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
@@ -104,15 +105,21 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
   const packIndex = indexStatus?.[item.id];
 
   const [deviceRam, setDeviceRam] = useState(0);
+  // F3-14: la foto en vivo del montaje de la tarjeta. La insignia es
+  // la peor de la canónica (por aparato) y la de este momento: un
+  // «cabe» calculado en vacío dejaba de ser verdad con el teléfono
+  // ocupado, que es cuando el usuario va a intentarlo.
+  const [liveSnapshot, setLiveSnapshot] = useState<RamSnapshot | null>(null);
   useEffect(() => {
     try {
       setDeviceRam(getDeviceTotalRamBytes());
+      setLiveSnapshot(readRamSnapshot());
     } catch {
       // native module fallback
     }
   }, []);
 
-  const compatibility = item.kind === "llm" ? computeCompatibility(item, deviceRam) : "unknown";
+  const compatibility = item.kind === "llm" ? computeCompatibility(item, deviceRam, liveSnapshot) : "unknown";
   const calculating = t("catalogItemCard.calculating");
 
   // Models added from the Hugging Face browser can be dropped from the list even if never downloaded.

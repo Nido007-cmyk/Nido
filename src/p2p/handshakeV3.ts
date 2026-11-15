@@ -79,7 +79,9 @@ export function parseConfirm(body: Uint8Array): ConfirmPayload {
   if (body.length > MAX_HANDSHAKE_BODY_BYTES) throw new Error("CONFIRM demasiado grande.");
   let obj: Record<string, unknown>;
   try {
-    obj = JSON.parse(new TextDecoder().decode(body)) as Record<string, unknown>;
+    // T-12 (m-40): decodificación ESTRICTA, como en parseHello — el
+    // CONFIRM tampoco está autenticado todavía cuando se parsea.
+    obj = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body)) as Record<string, unknown>;
   } catch {
     throw new Error("CONFIRM no es JSON.");
   }

@@ -80,7 +80,28 @@ export interface InstallRecord {
    * Absent on "installed" records: there the record itself is the proof.
    */
   verifiedFile?: VerifiedFileProof;
+  /**
+   * M-37 (0.1.99): hechos estructurales GGUF de los bytes verificados y
+   * el SHA-256 de su región de cabecera (ver ggufHeader.ts y la vía
+   * rápida de modelTrust.ts). La puerta los compara contra la cabecera
+   * actual antes de fiarse sin re-hashear: un fichero sustituido con el
+   * mismo tamaño y el mismo mtime ya no cuela si su cabecera no es la
+   * que se verificó. Ausente en registros anteriores a la 0.1.99 (la vía
+   * lenta los adopta en la primera verificación) y en los packs.
+   */
+  gguf?: GgufJournalFacts;
   updatedAt: number;
+}
+
+/** Los hechos GGUF que el diario guarda de los bytes verificados (M-37). */
+export interface GgufJournalFacts {
+  version: number;
+  tensorCount: number;
+  metadataCount: number;
+  /** Offset donde empiezan los datos de tensores = fin de la cabecera. */
+  dataOffset: number;
+  /** SHA-256 (hex) de los bytes [0, dataOffset) del fichero verificado. */
+  headerSha256: string;
 }
 
 export interface VerifiedFileProof {

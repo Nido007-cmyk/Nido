@@ -104,9 +104,17 @@ export interface EnforceBudgetResult {
  *
  * Returns details of what was evicted. If nothing was over budget,
  * returns { evicted: false, ... } with no side effects.
+ *
+ * T-03 de la 0.1.99 (M-32): `protectIds` deja fuera de la expulsión
+ * las colecciones nombradas (el importador protege la que acaba de
+ * crear: si ella sola pasara del tope, la expulsión la haría la
+ * siguiente pasada, ya como colección asentada, no en el mismo gesto
+ * en que el usuario la importó). Si lo protegido solo ya excede el
+ * presupuesto, totalBytesAfter lo refleja tal cual.
  */
 export async function enforceStorageBudget(
-  budgetBytes: number = DEFAULT_DOC_STORAGE_BUDGET_BYTES
+  budgetBytes: number = DEFAULT_DOC_STORAGE_BUDGET_BYTES,
+  opts?: { protectIds?: readonly string[] }
 ): Promise<EnforceBudgetResult> {
   const stats = await getDocStoreStats();
 
@@ -120,9 +128,10 @@ export async function enforceStorageBudget(
   }
 
   // Sort by lastAccessed ascending (LRU first), then evict until under budget.
-  const sorted = [...stats.byCollection].sort(
-    (a, b) => a.lastAccessed - b.lastAccessed
-  );
+  const protectedIds = new Set(opts?.protectIds ?? []);
+  const sorted = [...stats.byCollection]
+    .filter((c) => !protectedIds.has(c.id))
+    .sort((a, b) => a.lastAccessed - b.lastAccessed);
 
   const evictedIds: string[] = [];
   let bytesFreed = 0;

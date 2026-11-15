@@ -95,6 +95,9 @@ vi.mock("./store", () => {
 vi.mock("../config/featureFlags", () => ({
   isFeatureEnabled: (f: string) =>
     (f === "p2p.sealedHandshake" && keys.state.flag) || (f === "p2p.privateHelloOnly" && keys.state.privateOnly),
+  // T-14 (M-21): el respondedor lee el encendido EXPRESO; en este arnés el
+  // estado privateOnly ES la elección del usuario.
+  isFeatureExplicitlyEnabled: (f: string) => f === "p2p.privateHelloOnly" && keys.state.privateOnly,
 }));
 
 vi.mock("../agent/memory/memoryStore", () => {
@@ -180,7 +183,13 @@ function peerHelloPlain(signer = keys.peerSign, pk = PEER): { bytes: Uint8Array;
   const eph = toHex(generateEphemeral().publicKey);
   const ts = nowSec();
   const sig = toHex(signDetached(buildHelloSignMessageV3(pk, eph, nonceHex, ts), signer.secretKey));
-  return { bytes: buildHello(pk, eph, nonceHex, ts, sig), nonceHex };
+  // T-13 (M-22): «en claro» también quiere decir anterior a `rs` (0.1.98):
+  // se quita del JSON que produce nuestro buildHello (0.1.99). Sin esto,
+  // el respondedor sellaría su respuesta y ya no sería el cable en claro
+  // que estas pruebas miden (la respuesta sellada es t13Handshake.test.ts).
+  const obj = JSON.parse(new TextDecoder().decode(buildHello(pk, eph, nonceHex, ts, sig))) as Record<string, unknown>;
+  delete obj.rs;
+  return { bytes: new TextEncoder().encode(JSON.stringify(obj)), nonceHex };
 }
 
 function peerConfirmPlain(peerNonceHex: string, myNonceHex: string): Uint8Array {

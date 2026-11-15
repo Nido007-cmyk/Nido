@@ -33,9 +33,50 @@ import { createHash } from "crypto";
  */
 
 // ---------- deterministic "server" content ----------
+// M-37 (0.1.99): el contenido servido lleva una cabecera GGUF válida —
+// la puerta de confianza ahora valida la estructura además del SHA, y
+// en el mundo real los bytes de un modelo SÍ son un GGUF. La semilla
+// sigue cambiando la huella (rellena tras la cabecera).
+function ggufHeaderPrefix(): number[] {
+  const bytes: number[] = [];
+  const push = (...bs: number[]) => {
+    bytes.push(...bs);
+  };
+  const u32 = (v: number) => {
+    for (let i = 0; i < 4; i++) push((v >>> (8 * i)) & 0xff);
+  };
+  const u64 = (v: number) => {
+    let x = BigInt(v);
+    for (let i = 0; i < 8; i++) {
+      push(Number(x & 0xffn));
+      x >>= 8n;
+    }
+  };
+  const str = (s: string) => {
+    const e = new TextEncoder().encode(s);
+    u64(e.length);
+    push(...e);
+  };
+  push(0x47, 0x47, 0x55, 0x46); // "GGUF"
+  u32(3);
+  u64(1); // tensores
+  u64(1); // metadatos
+  str("general.name");
+  u32(8); // STRING
+  str("modelo de prueba");
+  str("token_embd.weight");
+  u32(2);
+  u64(4);
+  u64(8);
+  u32(0);
+  u64(0);
+  return bytes;
+}
 function serverBytes(size: number, seed: number): Uint8Array {
   const b = new Uint8Array(size);
-  for (let i = 0; i < size; i++) b[i] = (i * 31 + seed) % 251;
+  const header = ggufHeaderPrefix();
+  b.set(header.slice(0, size));
+  for (let i = Math.min(header.length, size); i < size; i++) b[i] = (i * 31 + seed) % 251;
   return b;
 }
 const shaOf = (b: Uint8Array) => createHash("sha256").update(b).digest("hex");
@@ -252,7 +293,9 @@ function makeAsset(id: string, size: number, seed = 7): CatalogModel {
     filename: `models/${id}.gguf`,
     sizeBytes: size,
     sha256: shaOf(serverBytes(size, seed)),
-    sourceUrl: "https://huggingface.co/test-org/test-model/resolve/main/test.gguf",
+    // T-09 (M-34): la puerta exige un origen fijado en PINNED_SOURCE_REPOS;
+    // el fixture usa un repo real fijado (el resto sigue siendo sintético).
+    sourceUrl: "https://huggingface.co/bartowski/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/test.gguf",
     // C/F2: test assets are pinned by default so the downloader gate passes;
     // the unpinned-source test builds its asset without this field.
     // R1 (2026-09-28): the default URL must be a recognized source contract
@@ -537,14 +580,18 @@ describe("revision pinning (C/F2)", () => {
   });
 
   it("GitHub release-asset URL without revision passes the pre-network gate (R1): download reaches the network", async () => {
-    // R1: wiki-vital5's contract — a published release asset is immutable
-    // by host contract, so no revision is applicable. The gate must NOT
-    // throw pre-network; the failure below is the mocked HTTP 404, proving
-    // the downloader was genuinely reached.
+    // R1: wiki-vital5's contract — a published release asset needs no
+    // revision: its integrity rests on the catalog's signed sha256,
+    // verified after download (a release asset is replaceable by whoever
+    // controls the account; the hash pin is the control — T-09/F-09).
+    // T-09 (M-34): the fixture uses NIDO's own repo, the pinned origin
+    // for release assets. The gate must NOT throw pre-network; the
+    // failure below is the mocked HTTP 404, proving the downloader was
+    // genuinely reached.
     const asset = makeAsset("dl-release-asset", 1024);
     asset.revision = undefined;
     asset.sourceUrl =
-      "https://github.com/rferrari/boar-app/releases/download/knowledge-pack-v1/wiki-vital5.sqlite";
+      "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-pack-v1/wiki-vital5.sqlite";
     serverSize = 1024;
     behavior = { kind: "http", status: 404 };
     const mgr = newManager([asset]);
@@ -618,7 +665,7 @@ describe("app terminated mid-download (restart honesty)", () => {
     expect((await getInstallRecord(asset.id))?.status).toBe("installed");
   });
 
-  it("crash leaving a corrupt same-size file at final path → detected and deleted, not trusted", async () => {
+  it("crash leaving a corrupt same-size file at final path → detected, not trusted; the query leaves it and a fresh download replaces it", async () => {
     const asset = makeAsset("dl-crash-corrupt", 2048);
     serverSize = 2048;
     // Torn/corrupt file with the "right" size at the final path.
@@ -628,7 +675,15 @@ describe("app terminated mid-download (restart honesty)", () => {
     const mgr = newManager([asset]);
     const st = await mgr.statusOf(asset);
     expect(st.present).toBe(false);
-    expect(files.has(finalPath("dl-crash-corrupt"))).toBe(false);
+    expect(st.checksumOk).toBe(false);
+    // T-09 (F-10): statusOf is a query — it no longer deletes. The
+    // corrupt bytes stay on disk, unused, until an action path acts.
+    expect(files.has(finalPath("dl-crash-corrupt"))).toBe(true);
+    // The action path replaces them: a fresh download verifies staging
+    // and clears the corrupt destination only at promotion time.
+    await mgr.downloadCatalogModel(asset);
+    expect(shaOf(files.get(finalPath("dl-crash-corrupt"))!)).toBe(asset.sha256);
+    expect((await mgr.statusOf(asset)).present).toBe(true);
   });
 });
 
@@ -690,13 +745,17 @@ describe("integrity enforcement", () => {
     expect(st2.present).toBe(true);
   });
 
-  it("legacy file with wrong bytes is deleted, not trusted", async () => {
+  it("legacy file with wrong bytes is not trusted (and the status query does not delete it)", async () => {
     const asset = makeAsset("dl-legacy-bad", 2048);
     files.set(finalPath("dl-legacy-bad"), serverBytes(2048, serverSeed + 1));
     const mgr = newManager([asset]);
     const st = await mgr.statusOf(asset);
     expect(st.present).toBe(false);
-    expect(files.has(finalPath("dl-legacy-bad"))).toBe(false);
+    expect(st.checksumOk).toBe(false);
+    // T-09 (F-10): not trusted, but not destroyed by a query either —
+    // deletion belongs to the action paths (load gate, delete, or a
+    // verified re-download replacing it at promotion).
+    expect(files.has(finalPath("dl-legacy-bad"))).toBe(true);
   });
 });
 

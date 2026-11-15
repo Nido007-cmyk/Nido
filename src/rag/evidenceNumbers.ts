@@ -257,6 +257,17 @@ export function sentenceWordReadings(sentence: string): Array<{ value: number; d
     out.push({ value, decimals: Number.isInteger(value) ? 0 : 1 });
     consumed.push([at, at + len]);
   };
+  // T-05 (m-08 de la auditoría): «once»/«twice» ingleses en su marco
+  // diario. No pasan por WORD_NUMBERS: «once» ya es el once español
+  // en esa tabla, y su valor inglés (1) solo vale dentro de este
+  // marco cerrado («twice a day», «once daily»); fuera de él, nada.
+  // Sin esta lectura, la evidencia «twice a day» no sostenía la
+  // paráfrasis fiel «two times a day» y la frase caía en falso.
+  const EN_ONCE_TWICE_RE = /\b(once|twice)\s+(?:a day|per day|daily)\b/g;
+  for (const m of folded.matchAll(EN_ONCE_TWICE_RE)) {
+    out.push({ value: m[1] === "twice" ? 2 : 1, decimals: 0 });
+    consumed.push([m.index ?? 0, (m.index ?? 0) + m[0].length]);
+  }
   for (const m of folded.matchAll(WORD_FREQ_FRAME_RE)) push(m[1], m.index ?? 0, m[0].length);
   for (const m of folded.matchAll(WORD_NUMBER_SCAN_RE)) {
     const at = m.index ?? 0;
@@ -326,9 +337,18 @@ function withinEvidenceRanges(value: number, decimals: number, ranges: readonly 
 }
 
 /** Una cifra se juzga si tiene 2+ dígitos o trae parte decimal (ver cabecera). */
-function isJudged(token: string): boolean {
+export function isJudged(token: string): boolean {
   // T-J4: una fracción siempre se juzga — es el dato entero.
   if (token.includes("/")) return true;
+  // m-07 de la auditoría, MEDIDO en la tanda T-05 (2026-11-14):
+  // juzgar también el entero de un dígito suelto se probó contra
+  // la caza completa y la suite entera. En la caza: ningún caso
+  // del residuo voltea y ningún control fiel cae. En la suite:
+  // corta respuestas fieles — la prosa con paso numerado («repite
+  // el paso 3», barrido0196), el control de la fecha delante del
+  // evento (auditoria0197) y la dosis sin unidad en la evidencia
+  // (measuredDose). Por el freno del dueño (ninguna estrechez
+  // puede cortar una fiel), la exención SE QUEDA como está.
   const digits = token.replace(/[.,]/g, "");
   return digits.length >= 2 || /[.,]\d/.test(token);
 }
@@ -404,7 +424,12 @@ export interface Quantity {
 const WN_SMALL: Record<string, number> = {
   cero: 0, zero: 0,
   un: 1, una: 1, uno: 1, um: 1, uma: 1, one: 1,
-  dos: 2, dois: 2, duas: 2, two: 2,
+  // T-05 (m-08): «twice» vale 2 como número en letra pleno (la
+  // simetría de apoyo de grounding lo necesita para casar «two»
+  // con el «twice» de la guía); «once» NO entra: ya es el 11
+  // español y su valor inglés solo vale en el marco cerrado de
+  // sentenceWordReadings.
+  dos: 2, dois: 2, duas: 2, two: 2, twice: 2,
   tres: 3, three: 3,
   cuatro: 4, quatro: 4, four: 4,
   cinco: 5, five: 5,
@@ -507,9 +532,9 @@ function parseWordNumber(tokens: readonly string[], i: number): { value: number;
 /** Unidades: palabra plegada (singular) → dimensión y factor a la canónica. */
 const UNIT_TABLE: Record<string, { dim: string; f: number }> = {
   // masa → mg
-  miligramo: { dim: "masa", f: 1 }, milligram: { dim: "masa", f: 1 }, mg: { dim: "masa", f: 1 },
+  miligramo: { dim: "masa", f: 1 }, milligram: { dim: "masa", f: 1 }, miligrama: { dim: "masa", f: 1 }, mg: { dim: "masa", f: 1 },
   microgramo: { dim: "masa", f: 0.001 }, mcg: { dim: "masa", f: 0.001 },
-  gramo: { dim: "masa", f: 1e3 }, gram: { dim: "masa", f: 1e3 }, g: { dim: "masa", f: 1e3 },
+  gramo: { dim: "masa", f: 1e3 }, gram: { dim: "masa", f: 1e3 }, grama: { dim: "masa", f: 1e3 }, g: { dim: "masa", f: 1e3 },
   kilogramo: { dim: "masa", f: 1e6 }, kilogram: { dim: "masa", f: 1e6 }, kilo: { dim: "masa", f: 1e6 }, kg: { dim: "masa", f: 1e6 },
   // volumen → ml
   mililitro: { dim: "volumen", f: 1 }, milliliter: { dim: "volumen", f: 1 }, ml: { dim: "volumen", f: 1 },
@@ -521,6 +546,12 @@ const UNIT_TABLE: Record<string, { dim: string; f: number }> = {
   hora: { dim: "tiempo", f: 3600 }, hour: { dim: "tiempo", f: 3600 }, h: { dim: "tiempo", f: 3600 },
   dia: { dim: "tiempo", f: 86400 }, day: { dim: "tiempo", f: 86400 },
   semana: { dim: "tiempo", f: 604800 }, week: { dim: "tiempo", f: 604800 },
+  // T-05 (m-06 de la auditoría): mes y año SÍ son duraciones. Sin
+  // ellos «dura 3 años» contra «3 meses» se sellaba: la cifra casaba
+  // y la palabra no la comparaba ninguna pierna. Mes canónico de 30
+  // días y año de 365, las cuentas de las guías.
+  mes: { dim: "tiempo", f: 2592000 }, month: { dim: "tiempo", f: 2592000 },
+  ano: { dim: "tiempo", f: 31536000 }, year: { dim: "tiempo", f: 31536000 },
   // electricidad (sin conversión entre dimensiones: ese es el punto)
   voltio: { dim: "voltaje", f: 1 }, volt: { dim: "voltaje", f: 1 }, v: { dim: "voltaje", f: 1 },
   vatio: { dim: "potencia", f: 1 }, watt: { dim: "potencia", f: 1 }, w: { dim: "potencia", f: 1 },
@@ -582,7 +613,14 @@ function lookupUnit(tokens: readonly string[], i: number, fromDigit: boolean): U
   if (t === "fahrenheit") return { dim: "temperatura", f: 5 / 9, len: 1, affine: (v) => ((v - 32) * 5) / 9 };
   if (t === "celsius" || t === "centigrado" || t === "centigrade") return { dim: "temperatura", f: 1, len: 1, affine: (v) => v };
   if (t === "kelvin") return { dim: "temperatura", f: 1, len: 1, affine: (v) => v - 273.15 };
-  const cand = UNIT_TABLE[t] ?? (t.endsWith("s") ? UNIT_TABLE[t.slice(0, -1)] : undefined);
+  // T-05 (M-03b de la auditoría): el plural en -es también se prueba
+  // («dólares»→«dólar», «reales»→«real», «meses»→«mes»): la búsqueda
+  // vieja solo recortaba la «s» y esas formas — las corrientes de
+  // escribir precios en es/pt — no parseaban como cantidad.
+  const cand =
+    UNIT_TABLE[t] ??
+    (t.endsWith("s") ? UNIT_TABLE[t.slice(0, -1)] : undefined) ??
+    (t.endsWith("es") ? UNIT_TABLE[t.slice(0, -2)] : undefined);
   if (!cand) return null;
   // Las unidades de una letra solo se pegan a cifras en dígitos
   // («30 g» sí; «cinco g» no es prosa real, y «m»/«h» sueltas en
@@ -597,6 +635,12 @@ function quantityTokens(text: string): string[] {
   const folded = foldForWords(text).replace(/\[\d+\]/g, " ");
   return folded.match(/[a-zñ]+|\d+(?:[.,]\d+)?|°|%|€|\$/g) ?? [];
 }
+
+/** Los periodos del marco de frecuencia (M-05), en días. */
+const FREQ_PERIOD_DAYS: Record<string, number> = {
+  dia: 1, day: 1, semana: 7, week: 7, mes: 30, month: 30,
+};
+const FREQ_COUNT_WORDS = new Set(["vez", "veces", "vezes", "times"]);
 
 /** Todas las cantidades con unidad de un texto, normalizadas. */
 export function quantitiesOf(text: string): Quantity[] {
@@ -625,6 +669,53 @@ export function quantitiesOf(text: string): Quantity[] {
       if (!unit) continue;
       push(lo, decimalsOf(m[1]!, lo), unit, true);
       push(hi, decimalsOf(m[2]!, hi), unit, true);
+    }
+  }
+  // T-05 (M-05 de la auditoría): la frecuencia como cantidad. «Dos
+  // veces por semana» contra «dos veces al día» se sellaba: el marco
+  // de sentenceWordReadings es solo diario y ninguna otra pierna
+  // comparaba el periodo. Aquí el marco entero (veces × periodo,
+  // es/en/pt, en dígitos o en letra) produce una cantidad de
+  // dimensión «frecuencia» cuyo canónico son las veces por día; la
+  // comparación de quantityConflict hace el resto, y solo juzga si
+  // la evidencia trae frecuencia (mundo cerrado, ver allí). El
+  // «once» español (11) llega por parseWordNumber como en el resto
+  // del fichero; el «once» inglés solo vale en su marco sin «times».
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i]!;
+    let count: number | null = null;
+    let span = 0;
+    if (/^\d/.test(t)) {
+      const readings = parseNumberToken(t);
+      if (readings.length === 0) continue;
+      count = readings[0]!;
+      span = 1;
+    } else {
+      const wn = parseWordNumber(tokens, i);
+      if (!wn) continue;
+      count = wn.value;
+      span = wn.len;
+    }
+    const w = tokens[i + span];
+    if (w === undefined || !FREQ_COUNT_WORDS.has(w)) continue;
+    let j = i + span + 1;
+    const intro = tokens[j];
+    if (intro === "a" && tokens[j + 1] === "la") j++;
+    if (intro !== "al" && intro !== "por" && intro !== "a" && intro !== "per" && intro !== "ao") continue;
+    const days = FREQ_PERIOD_DAYS[tokens[j + 1] ?? ""];
+    if (days === undefined) continue;
+    out.push({ dim: "frecuencia", canon: count / days, raw: count, decimals: 0, tolF: 0.01 });
+  }
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i]!;
+    if (t !== "once" && t !== "twice") continue;
+    const count = t === "twice" ? 2 : 1;
+    const n1 = tokens[i + 1];
+    if (n1 === "daily") {
+      out.push({ dim: "frecuencia", canon: count, raw: count, decimals: 0, tolF: 0.01 });
+    } else if (n1 === "a" || n1 === "per") {
+      const days = FREQ_PERIOD_DAYS[tokens[i + 2] ?? ""];
+      if (days !== undefined) out.push({ dim: "frecuencia", canon: count / days, raw: count, decimals: 0, tolF: 0.01 });
     }
   }
   for (let i = 0; i < tokens.length; i++) {
@@ -700,6 +791,13 @@ export function quantityConflict(
     excusedValues.set(dim, mine.filter((o) => o.ranged && o.dim === dim).map((o) => o.canon));
   }
   for (const q of mine) {
+    // T-05 (M-05): la frecuencia se juzga en mundo cerrado — solo si
+    // la evidencia trae alguna cantidad de frecuencia. La guía que
+    // pauta sin este marco («cada 12 horas», «por la mañana y por la
+    // noche») no declara frecuencia en esta dimensión, y condenar la
+    // de la respuesta contra un conjunto vacío castigaría la
+    // paráfrasis que el resto del juez sostiene.
+    if (q.dim === "frecuencia" && !evidence.some((e) => e.dim === "frecuencia")) continue;
     if (withinEvidenceRanges(q.raw, q.decimals, ranges)) continue;
     if (q.ranged && excusedDims.has(q.dim)) continue;
     if (excusedValues.get(q.dim)?.some((v) => Math.abs(v - q.canon) <= 1e-9)) continue;
@@ -707,6 +805,22 @@ export function quantityConflict(
     if (sameDim.length > 0) {
       const tol = 0.5 * Math.pow(10, -q.decimals) * q.tolF + 1e-9;
       if (!sameDim.some((e) => Math.abs(e.canon - q.canon) <= tol)) return true;
+    } else if (
+      // T-05 (M-03a de la auditoría): el valor que aparece en la
+      // evidencia bajo OTRA dimensión no rescata: es un trasplante
+      // («230 vatios» por «230 voltios», «25 minutos» por «25
+      // metres»). El rescate por valor suelto de antes lo sellaba:
+      // bastaba que la cifra existiera en cualquier dimensión. El
+      // valor suelto SIN cantidad en la evidencia (un conteo, una
+      // cifra de un dato) sigue rescatando como siempre.
+      evidence.some(
+        (e) =>
+          e.dim !== q.dim &&
+          (roundsFromEvidence(q.raw, q.decimals, new Set([e.raw])) ||
+            Math.abs(e.canon - q.canon) <= 0.5 * Math.pow(10, -q.decimals) * q.tolF + 1e-9),
+      )
+    ) {
+      return true;
     } else if (
       !roundsFromEvidence(q.raw, q.decimals, evidenceValues) &&
       !roundsFromEvidence(q.canon, q.decimals, evidenceValues)

@@ -34,8 +34,38 @@ describe("trimToCompleteSentences (nunca una frase cortada)", () => {
     expect(trimToCompleteSentences(text, true)).toBe(text);
   });
 
-  it("una lista cortada a mitad de punto se deja como lista", () => {
+  it("una lista cortada a mitad de punto deja los puntos completos, no la media frase (F2-m6)", () => {
+    // Hasta la 0.1.98 la exención de listas dejaba el texto entero con el
+    // último punto a medias («leche fres»): la ficha F2-m6 lo nombra como
+    // defecto — el punto cortado se cae, los completos se quedan.
     const text = "Necesitas tres cosas:\n- harina\n- huevos\n- leche fres";
+    expect(trimToCompleteSentences(text, true)).toBe("Necesitas tres cosas:\n- harina\n- huevos");
+  });
+
+  it("una lista con un solo punto, cortado, no se vacía", () => {
+    const text = "Necesitas:\n- leche fres";
+    expect(trimToCompleteSentences(text, true)).toBe(text);
+  });
+
+  it("los pasos numerados cortados conservan hasta el último paso completo", () => {
+    const text = "1. Llama al 112.\n2. Comprime el pecho con fuerza y no par";
+    expect(trimToCompleteSentences(text, true)).toBe("1. Llama al 112.");
+  });
+
+  it("una abreviatura no cuenta como cierre de frase (F2-m6: pasos amputados)", () => {
+    // Con la regla vieja, «Dr.» cerraba la «frase» y el recorte amputaba
+    // el paso justo ahí, a media instrucción.
+    const text = "Primera frase completa. El Dr. García vino y después se fue sin decir";
+    expect(trimToCompleteSentences(text, true)).toBe("Primera frase completa.");
+  });
+
+  it("si el único «cierre» es una abreviatura, no se amputa nada", () => {
+    const text = "Avisa al Dr. García si empeora el dolor y luego acude a";
+    expect(trimToCompleteSentences(text, true)).toBe(text);
+  });
+
+  it("las iniciales tampoco cuentan como cierre", () => {
+    const text = "Lo escribió J. R. R. Tolkien en su casa y nunca lo pu";
     expect(trimToCompleteSentences(text, true)).toBe(text);
   });
 

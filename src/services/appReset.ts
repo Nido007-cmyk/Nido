@@ -92,6 +92,11 @@ export const DOC_LEFTOVER_FILES = new Set([
   //   olvida en el paso 3 (resetCrashGuardMemory), como la de los
   //   interruptores.
   "nido-crash-guard.json",
+  // - El registro del CrashGuard del motor de embeddings (F3-08,
+  //   0.1.99): el mismo ciclo de vida que el del LLM, con su fichero.
+  //   Su copia en memoria se olvida en el paso 3
+  //   (embeddingEngine.resetCrashGuardMemory).
+  "nido-crash-guard-embedding.json",
   // - El registro de sesión nativa del motor (M2 del diagnóstico del
   //   crash nativo): metadatos de la última generación y el veredicto
   //   del cruce. Sin datos del usuario, pero es estado del mundo
@@ -412,6 +417,9 @@ async function resetAllAppDataInner(): Promise<void> {
     // mismo singleton y con la misma copia en memoria; su olvido va
     // con el del CrashGuard, junto a la degradación de la sesión.
     llamaEngine.resetNativeSessionMemory();
+    // F3-08: el CrashGuard de los embeddings, igual — su singleton
+    // conserva la copia y la siguiente carga la reescribiría.
+    embeddingEngine.resetCrashGuardMemory();
   } catch {
     /* motor sin CrashGuard (tests): nada en memoria */
   }

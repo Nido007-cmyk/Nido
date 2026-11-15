@@ -36,8 +36,9 @@ import {
   createCounter,
   isValidTransition,
 } from "./negotiation";
-import { globalReplayProtection } from "./replayProtection";
+import { globalNegotiationReplayProtection } from "./replayProtection";
 import { processIncomingProposal, type ProposalOutcome } from "./p2pApprovalBridge";
+import { evaluateProposalScopes } from "./p2pAuthorization";
 import { fromHex, toHex } from "./crypto";
 import { getSigningKeypair, findContactByPk } from "./store";
 
@@ -151,6 +152,15 @@ class NegotiationService {
    */
   private deletedIds = new Set<string>();
   private static readonly MAX_DELETED_IDS = 1000;
+  /**
+   * T-12 (m-43): cota dura del mapa de sesiones. Sin ella, un par podía
+   * crear sesiones sin fin (cada PROPOSE válido guarda una) y el mapa
+   * crecía hasta agotar la memoria. Al llenarse se desaloja la sesión
+   * PROPOSED más vieja sin envíos en vuelo; si no hay ninguna desalojable
+   * (todo sesiones vivas en otro estado), la nueva entra igual: perder
+   * una negociación viva sería peor que exceder la cota puntualmente.
+   */
+  private static readonly MAX_SESSIONS = 512;
   private handlers = new Set<NegotiationEventHandler>();
   private myPkHex: string | null = null;
   /**
@@ -321,6 +331,15 @@ class NegotiationService {
     if (!desc) {
       return { sent: false, reason: "empty_description" };
     }
+    // T-13 (M-23, fricción aprobada por el dueño): proponer a un contacto
+    // cuya huella AÚN no se ha comparado exige haberla comparado antes.
+    // La puerta lee el `false` explícito del contrato (P2PContact.verified
+    // es boolean): un destinatario que no es contacto sigue su camino de
+    // siempre, porque el cotejo es un paso entre contactos emparejados.
+    const contact = await findContactByPk(recipientPkHex).catch(() => null);
+    if (contact && contact.verified === false) {
+      return { sent: false, reason: "contact_not_verified" };
+    }
     try {
       const kp = await getSigningKeypair();
       const myPkHex = toHex(kp.publicKey);
@@ -353,6 +372,7 @@ class NegotiationService {
         updatedAt: Date.now(),
         sending: true,
       };
+      this.enforceSessionCap();
       this.sessions.set(proposal.proposalId, session);
       // Enviar vía el transporte.
       let sent = false;
@@ -585,6 +605,14 @@ class NegotiationService {
     const payload = env.payload as unknown as NegotiationPayload;
     if (!payload || typeof payload.action !== "string") return;
 
+    // T-12 (m-43): pasada de poda en cada despacho. pruneTerminal existía
+    // desde el diseño pero NADA la llamaba en producción: las sesiones
+    // terminales y las PROPOSED cuya propuesta ya venció se quedaban en el
+    // mapa para siempre. Aquí, cada sobre entrante caduca las PROPOSED
+    // vencidas (el mismo criterio determinista que aplica handleExpire) y
+    // retira las terminales que ya cumplieron su hora de UI.
+    this.pruneStaleSessions();
+
     const { action, negotiationId, signed } = payload;
     if (!negotiationId || !signed) return;
 
@@ -643,7 +671,10 @@ class NegotiationService {
     if (!verifyProposal(proposal, proposerBytes)) return;
 
     // 4. Anti-replay (nonce del mensaje)
-    if (!globalReplayProtection.checkAndRecord(signed.nonce)) return;
+    // T-12 (M-25): cubeta por par, no la cache global única — un par que
+    // inunda quema SU cubeta, no la de todos. La clave es la identidad de
+    // transporte del emisor (env.from), la misma que ancla la sesión.
+    if (!globalNegotiationReplayProtection.checkAndRecord(env.from, signed.nonce)) return;
 
     // R10 FIX 2026-10-08: reserva SINCRÓNICA del negotiationId ANTES del
     // primer await (reemplaza el chequeo-then-set de R2). El chequeo anterior
@@ -682,6 +713,7 @@ class NegotiationService {
           proposal,
           updatedAt: Date.now(),
         };
+        this.enforceSessionCap();
         this.sessions.set(negotiationId, session);
         this.emit({ type: "expired", session });
         return;
@@ -712,6 +744,7 @@ class NegotiationService {
         proposal,
         updatedAt: Date.now(),
       };
+      this.enforceSessionCap();
       this.sessions.set(negotiationId, session);
 
       if (outcome.action === "auto_accept") {
@@ -760,13 +793,48 @@ class NegotiationService {
       return; // M3: hex malformado → descartar fail-closed
     }
     if (!verifyNegotiationMessage(signed, signerBytes)) return;
-    if (!globalReplayProtection.checkAndRecord(signed.nonce)) return;
+    if (!globalNegotiationReplayProtection.checkAndRecord(session.peerPkHex, signed.nonce)) return;
     // R3: anclar la firma a la identidad verificada por QR.
     if (!(await this.isPinnedSigner(session.peerPkHex, signed.signerPkHex)))
       return;
 
     const counterProposal = signed.payload as TaskProposal;
     if (!counterProposal || typeof counterProposal !== "object") return;
+
+    // T-12 (m-41): la contraoferta queda LIGADA a la propuesta guardada.
+    // Antes el payload entrante sustituía la propuesta sin ninguna
+    // comprobación: un COUNTER podía cambiar el destinatario, el
+    // proponente, la propia propuesta o extender su caducidad, y la
+    // sesión lo absorbía todo. Medición que manda en la forma de la cura:
+    // la contraoferta HONESTA del camino de producción (counterSession →
+    // respond) es un spread de la propuesta original con los scopes
+    // cambiados — la firma interior no cubre los scopes nuevos y
+    // counterRound no se incrementa — así que verifyProposal sobre el
+    // payload interior rechazaría toda contraoferta honesta. Lo que sí
+    // se puede exigir sin romper ese camino es la ligadura de identidad
+    // (misma propuesta, mismas partes, caducidad no posterior, ronda
+    // igual o +1) y la política de scopes sobre lo nuevo que se pide.
+    const original = session.proposal;
+    if (
+      counterProposal.proposalId !== original.proposalId ||
+      typeof counterProposal.proposerPkHex !== "string" ||
+      counterProposal.proposerPkHex.toLowerCase() !== original.proposerPkHex.toLowerCase() ||
+      typeof counterProposal.recipientPkHex !== "string" ||
+      counterProposal.recipientPkHex.toLowerCase() !== original.recipientPkHex.toLowerCase() ||
+      typeof counterProposal.expiresAt !== "number" ||
+      counterProposal.expiresAt > original.expiresAt ||
+      (counterProposal.counterRound !== original.counterRound &&
+        counterProposal.counterRound !== original.counterRound + 1) ||
+      !Array.isArray(counterProposal.requestedScopes)
+    ) {
+      return;
+    }
+    // Los scopes nuevos pasan por la misma política que una propuesta:
+    // si la política local deniega lo pedido, la contraoferta se ignora
+    // (la sesión conserva la propuesta original).
+    if (evaluateProposalScopes(counterProposal.requestedScopes, session.peerPkHex).decision === "DENY") {
+      return;
+    }
 
     session.proposal = counterProposal;
     session.state = "COUNTERED";
@@ -795,7 +863,7 @@ class NegotiationService {
       return; // M3: hex malformado → descartar fail-closed
     }
     if (!verifyNegotiationMessage(signed, signerBytes)) return;
-    if (!globalReplayProtection.checkAndRecord(signed.nonce)) return;
+    if (!globalNegotiationReplayProtection.checkAndRecord(session.peerPkHex, signed.nonce)) return;
     // R3: anclar la firma a la identidad verificada por QR.
     if (!(await this.isPinnedSigner(session.peerPkHex, signed.signerPkHex)))
       return;
@@ -813,6 +881,11 @@ class NegotiationService {
   ): Promise<void> {
     const session = this.sessions.get(negotiationId);
     if (!session) return;
+    // T-12 (m-42): DECLINE exige el mismo estado que ACCEPT/COUNTER.
+    // Antes no lo comprobaba: un DECLINE tardío o cruzado tumbaba una
+    // sesión ya ACCEPTED (la negociación «aceptada» pasaba a rechazada
+    // sin que nadie la hubiera rechazado).
+    if (session.state !== "PROPOSED" && session.state !== "COUNTERED") return;
     // DECLINE tardío sobre propuesta expirada: EXPIRED es el estado honesto.
     if (isExpired(session.proposal)) {
       this.expireSession(session);
@@ -826,7 +899,7 @@ class NegotiationService {
       return; // M3: hex malformado → descartar fail-closed
     }
     if (!verifyNegotiationMessage(signed, signerBytes)) return;
-    if (!globalReplayProtection.checkAndRecord(signed.nonce)) return;
+    if (!globalNegotiationReplayProtection.checkAndRecord(session.peerPkHex, signed.nonce)) return;
     // R3: anclar la firma a la identidad verificada por QR.
     if (!(await this.isPinnedSigner(session.peerPkHex, signed.signerPkHex)))
       return;
@@ -872,6 +945,39 @@ class NegotiationService {
     }
     this.emit({ type: "deleted", session });
     return true;
+  }
+
+  /**
+   * T-12 (m-43): pasada de mantenimiento del mapa en cada despacho:
+   * caduca sesiones PROPOSED/COUNTERED cuya propuesta ya venció (quedan
+   * EXPIRED, el estado honesto, en vez de PROPOSED eternas) y aplica la
+   * poda de terminales que la UI ya esperaba.
+   */
+  private pruneStaleSessions(): void {
+    for (const s of this.sessions.values()) {
+      if ((s.state === "PROPOSED" || s.state === "COUNTERED") && isExpired(s.proposal)) {
+        this.expireSession(s);
+      }
+    }
+    this.pruneTerminal();
+  }
+
+  /**
+   * T-12 (m-43): hace sitio en el mapa ANTES de guardar una sesión nueva,
+   * desalojando la PROPOSED más vieja sin envío en vuelo ni respuesta
+   * pendiente (una negociación que nadie ha tocado es lo único que se
+   * puede perder sin engañar a nadie: el par puede re-proponer).
+   */
+  private enforceSessionCap(): void {
+    while (this.sessions.size >= NegotiationService.MAX_SESSIONS) {
+      let oldest: NegotiationSession | null = null;
+      for (const s of this.sessions.values()) {
+        if (s.state !== "PROPOSED" || s.sending || s.pendingSend) continue;
+        if (!oldest || s.updatedAt < oldest.updatedAt) oldest = s;
+      }
+      if (!oldest) return; // nada desalojable: la nueva entra igual
+      this.sessions.delete(oldest.negotiationId);
+    }
   }
 
   /** Limpia sesiones en estado terminal (para la UI). */

@@ -17,7 +17,11 @@ import {
 } from "./p2pApprovalBridge";
 import { createProposal } from "./negotiation";
 import { toHex } from "./crypto";
-import { globalRevocationRegistry, globalReplayProtection } from "./replayProtection";
+import {
+  globalRevocationRegistry,
+  globalReplayProtection,
+  globalNegotiationReplayProtection,
+} from "./replayProtection";
 
 describe("p2pApprovalBridge", () => {
   let aliceKeys: nacl.SignKeyPair;
@@ -32,6 +36,8 @@ describe("p2pApprovalBridge", () => {
     bobPkHex = toHex(bobKeys.publicKey);
     globalRevocationRegistry.clear();
     globalReplayProtection.clear();
+    // T-12 (M-25): el puente ahora consume la cubeta por par.
+    globalNegotiationReplayProtection.clear();
   });
 
   it("Propuesta con scopes AUTO → auto_accept", async () => {

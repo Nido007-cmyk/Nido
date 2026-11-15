@@ -5,6 +5,7 @@
  */
 
 import { getDb, writeTransaction } from "../rag/db";
+import { WAL_CHECKPOINT_SQL } from "../security/secureDatabase";
 import { randomNonce, toHex } from "../p2p/crypto";
 
 export interface ChatSession {
@@ -215,6 +216,22 @@ export async function setSessionSummary(sessionId: string, summary: string): Pro
   });
 }
 
+/**
+ * T-03 de la 0.1.99 (P-29): tras borrar, vuelca el WAL a la base y lo
+ * trunca — la simetría que la vía de expiración P2P ya tenía
+ * (store.ts, checkpointAfterDelete) y a esta le faltaba: sin el
+ * checkpoint, el contenido borrado podía permanecer en el `-wal`
+ * hasta el próximo cierre limpio. Best-effort.
+ */
+async function checkpointAfterChatDelete(): Promise<void> {
+  try {
+    const db = await getDb();
+    await db.execAsync(WAL_CHECKPOINT_SQL);
+  } catch {
+    /* best-effort */
+  }
+}
+
 export async function deleteSession(sessionId: string): Promise<void> {
   await writeTransaction(async (txn) => {
     await txn.runAsync(
@@ -224,6 +241,7 @@ export async function deleteSession(sessionId: string): Promise<void> {
     await txn.runAsync(`DELETE FROM chat_messages WHERE session_id = ?`, [sessionId]);
     await txn.runAsync(`DELETE FROM chat_sessions WHERE id = ?`, [sessionId]);
   });
+  await checkpointAfterChatDelete();
 }
 
 export async function clearAllHistory(): Promise<void> {
@@ -232,6 +250,7 @@ export async function clearAllHistory(): Promise<void> {
     await txn.runAsync(`DELETE FROM chat_messages`);
     await txn.runAsync(`DELETE FROM chat_sessions`);
   });
+  await checkpointAfterChatDelete();
 }
 
 /** Deletes the oldest sessions beyond `maxSessions` (0 = unlimited). */

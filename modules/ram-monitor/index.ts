@@ -86,7 +86,17 @@ interface RamMonitorNativeModule {
 const RamMonitor = requireNativeModule<RamMonitorNativeModule>("RamMonitor");
 
 export function getMemoryInfo(): MemoryInfo {
-  return RamMonitor.getMemoryInfo();
+  const info = RamMonitor.getMemoryInfo();
+  // F3-12 (auditoría 2026-11-13): un RSS de 0 no es «el proceso no
+  // pesa» — es una lectura vacía, y el pre-flight la trataba como
+  // peso cero, inflando el disponible justo en los aparatos donde
+  // la lectura cojea. Si el RSS llega vacío, manda el PSS del mismo
+  // proceso (la otra cifra que el nativo ya lee); si tampoco hay,
+  // readRamSnapshot sustituye su estimación base y marca la foto.
+  if (info.rssBytes <= 0 && info.totalPssBytes > 0) {
+    return { ...info, rssBytes: info.totalPssBytes };
+  }
+  return info;
 }
 
 /** Total physical RAM on this device (not this app's usage) — 0 if unavailable. */

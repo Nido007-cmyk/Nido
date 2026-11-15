@@ -8,8 +8,10 @@
  * Lector de documentos de las guías (pieza 2026-11-08): listPackGuides y
  * readPackGuide leen las guías de un pack instalado SIN cargar ningún
  * motor. El mundo falso sigue el patrón de packs.multilingual.test.ts:
- * expo-sqlite y expo-file-system mockeados, y el estado del fichero del
- * pack se cobra de su tamaño contra el catálogo (packFileState real).
+ * expo-sqlite y expo-file-system mockeados, y el pack pasa la puerta de
+ * confianza real (packFileState) con la instalación verificada que una
+ * descarga deja: asiento en el diario y mtime del fichero atado a él
+ * (M-35: la presencia sola ya no abre ningún pack).
  */
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -17,6 +19,8 @@ type GuideRow = { id: number; key: string; lang: string; title: string; category
 type ChunkRow = { id: number; title: string; body: string; source: string; guide: number | null };
 type World = {
   installed: { filename: string; size: number };
+  /** M-35: the install journal's JSON, as a verified install leaves it. */
+  journal: string;
   meta: Record<string, string>;
   guides: GuideRow[];
   chunks: ChunkRow[];
@@ -31,9 +35,17 @@ vi.mock("./embed", () => ({ embeddingEngine: { load: embeddingLoad } }));
 
 vi.mock("expo-file-system/legacy", () => ({
   documentDirectory: "file:///docs/",
+  EncodingType: { Base64: "base64", UTF8: "utf8" },
   getInfoAsync: async (uri: string) => {
-    const i = W().installed;
-    return uri.endsWith(i.filename) ? { exists: true, size: i.size } : { exists: false };
+    const w = W();
+    if (uri.endsWith("nido-install-state.json")) return { exists: true, size: w.journal.length, modificationTime: 1 };
+    return uri.endsWith(w.installed.filename)
+      ? { exists: true, size: w.installed.size, modificationTime: 4242 }
+      : { exists: false };
+  },
+  readAsStringAsync: async (uri: string) => {
+    if (uri.endsWith("nido-install-state.json")) return W().journal;
+    throw new Error(`ENOENT ${uri}`);
   },
   readDirectoryAsync: async () => [],
 }));
@@ -56,6 +68,10 @@ vi.mock("expo-sqlite", () => ({
     getFirstAsync: async (sql: string, params: unknown[] = []) => {
       const w = W();
       if (/FROM guides WHERE id = \?/.test(sql)) return w.guides.find((g) => g.id === params[0]) ?? null;
+      // P-39: openPack counts rows before opening.
+      if (/COUNT\(\*\) AS n FROM chunks/.test(sql)) return { n: w.chunks.length };
+      if (/COUNT\(\*\) AS n FROM guides/.test(sql)) return { n: w.guides.length };
+      if (/COUNT\(\*\) AS n FROM (regions|facts)/.test(sql)) return { n: 0 };
       throw new Error(`unexpected SQL ${sql}`);
     },
     closeAsync: async () => {},
@@ -87,6 +103,19 @@ beforeEach(async () => {
   const vital = catalog.CORPUS_CATALOG.find((c) => c.id === "wiki-vital5")!;
   Object.assign(W(), {
     installed: { filename: vital.filename, size: vital.sizeBytes },
+    journal: JSON.stringify({
+      version: 1,
+      records: {
+        [vital.id]: {
+          assetId: vital.id,
+          status: "installed",
+          sizeBytes: vital.sizeBytes,
+          sha256: vital.sha256,
+          mtimeMs: 4242 * 1000,
+          updatedAt: 1,
+        },
+      },
+    }),
     meta: { format: "nido-knowledge-pack", formatVersion: "2", dims: "2", embeddingModelSha256: "802c868f" },
     guides: [GUIDE_2, GUIDE_1],
     chunks: [

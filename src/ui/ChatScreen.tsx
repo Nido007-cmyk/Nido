@@ -87,7 +87,7 @@ import { showSecureAlert } from "nido-secure-dialog";
 import { classifyIntent } from "../agent/loop/intent";
 import { isGenericMemoryQuestionShape, memoryFullCoverageHit, memoryGateHit, memoryProbeWitness } from "../agent/loop/memoryQuery";
 import { beginUserTurn, choiceTurnKind, resetConversationState, type ChoiceStore } from "../agent/loop/toolRouter";
-import { applyEdit, type InputSource, type Segment } from "../agent/input/provenance";
+import { applyEdit, createBurstState, type BurstState, type InputSource, type Segment } from "../agent/input/provenance";
 import { planSend } from "../agent/input/sendPlan";
 import { runAgentLoop, assertPromptBudget, estimatePromptTokens, agentExitNeedsGroundingNet } from "../agent/loop/agentLoop";
 import { buildToolHandlers, searchPhoneContacts } from "../agent/tools/handlers";
@@ -100,6 +100,7 @@ import {
   noSourcesAnswer,
   type GroundingStatus,
 } from "../rag/grounding";
+import { buildJudgeSemanticContext } from "../rag/semanticContext";
 import { snapshot as loadMemorySnapshot } from "../agent/memory/memoryStore";
 import type { SentenceProvenance } from "../rag/provenance";
 import { guideAnswerProvenance } from "../rag/guideAnswer";
@@ -317,6 +318,21 @@ export function ChatScreen({
   const [loadStatus, setLoadStatus] = useState<string | null>(t("chatScreen.initializingCore"));
   const [loadError, setLoadError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  // F3-16 (auditoría 2026-11-13): el espejo en ref de `generating`
+  // vive AQUÍ y se actualiza de forma SÍNCRONA en el mismo gesto que
+  // el estado, vía setGeneratingNow. Hasta la 0.1.98 lo sincronizaba
+  // un efecto tras el render: entre el setState y el efecto, el
+  // listener de presión de memoria (y los pulsos de inactividad)
+  // podían leer el valor anterior — una generación recién nacida se
+  // leía como «sin generar» y la presión descargaba los motores bajo
+  // la respuesta en vuelo, o al revés, una ya asentada se leía como
+  // viva y la presión no actuaba. La declaración estaba además muy
+  // por debajo de sus lectores; aquí queda junto a su estado.
+  const generatingRef = useRef(false);
+  const setGeneratingNow = (value: boolean) => {
+    generatingRef.current = value;
+    setGenerating(value);
+  };
   const [showPromptIdeas, setShowPromptIdeas] = useState(false);
   // 0.1.14: guía de usuario y onboarding de primera vez.
   const [showGuide, setShowGuide] = useState(false);
@@ -469,6 +485,9 @@ export function ChatScreen({
   // al texto, al idioma y al modo: si cambia cualquiera, cae en silencio y
   // el siguiente envío vuelve a analizar el texto actual.
   const segmentsRef = useRef<Segment[]>([]);
+  // T-11 (m-13b): estado del rastreador de ráfaga de la cerca de pegado;
+  // la pantalla solo lo alimenta, la lógica vive en provenance.ts.
+  const burstRef = useRef<BurstState>(createBurstState());
   const inputValueRef = useRef("");
   const [staged, setStaged] = useState<null | {
     text: string;
@@ -492,7 +511,7 @@ export function ChatScreen({
     recordRouterSample(0, "stageDropped", { route: reason, modelTools: [], retry: null });
   }, []);
   const updateInput = useCallback((next: string, source?: InputSource) => {
-    segmentsRef.current = applyEdit(segmentsRef.current, inputValueRef.current, next, source);
+    segmentsRef.current = applyEdit(segmentsRef.current, inputValueRef.current, next, source, burstRef.current);
     inputValueRef.current = next;
     setInput(next);
     // 0.1.43: si el texto deja de ser el del chip, el chip cae.
@@ -718,6 +737,17 @@ export function ChatScreen({
       // presión del aparato antes de cargar — batería y temperatura
       // de ahora, no las de un arranque anterior.
       refreshDevicePressure();
+      // F3-13 (auditoría 2026-11-13): el cruce de la sesión nativa
+      // corre AQUÍ, al abrir el arranque — antes de cargar el
+      // embedding, sembrar e indexar. Hasta la 0.1.98 esperaba a la
+      // primera carga del LLM (que desde las fases 1/4 es bajo
+      // demanda y puede tardar minutos), así que el apagado del
+      // indexado de fondo tras una muerte generando llegaba tarde a
+      // su propia sesión: el fondo arrancaba a plena residencia
+      // justo en el aparato que acababa de morir por memoria. El
+      // método es a prueba de fallos; la primera carga lo encuentra
+      // ya hecho y no lo repite.
+      await llamaEngine.crossNativeSessionAtStartup();
       const llm = await resolveActiveModel("llm");
       const emb = await resolveActiveModel("embedding");
       setActiveModel(llm);
@@ -842,7 +872,9 @@ export function ChatScreen({
   // de 30 s decide con la política pura; el paso a segundo plano se
   // anota y al volver, si duró más que el umbral y no hay generación,
   // se descarga el LLM; la presión de memoria del sistema descarga
-  // los dos motores salvo que se esté generando.
+  // los dos motores sin generación en vuelo, y generando pide la
+  // parada limpia de la respuesta (F3-04: el parcial se asienta y la
+  // residencia se cede en el siguiente evento).
   useEffect(() => {
     const LLM_IDLE_MS = 180_000;
     const EMBED_IDLE_MS = 600_000;
@@ -877,8 +909,14 @@ export function ChatScreen({
         }
       }
     });
-    const pressureSub = addMemoryPressureListener(() => {
-      void handleMemoryPressure({ generating: generatingRef.current }, { llm: llamaEngine, embedding: embeddingEngine });
+    const pressureSub = addMemoryPressureListener((event) => {
+      // P-36: el nivel del evento viaja al manejador — los niveles de
+      // fondo/UI oculta no paran la generación ni descargan motores.
+      void handleMemoryPressure(
+        { generating: generatingRef.current },
+        { llm: llamaEngine, embedding: embeddingEngine },
+        event?.level,
+      );
     });
     return () => {
       clearInterval(id);
@@ -888,10 +926,8 @@ export function ChatScreen({
   }, []);
 
 
-  const generatingRef = useRef(false);
-  useEffect(() => {
-    generatingRef.current = generating;
-  }, [generating]);
+  // (El espejo generatingRef vive junto al estado `generating`,
+  // arriba: se actualiza síncrono vía setGeneratingNow — F3-16.)
 
   // Development builds only: pick up an evaluation request written over adb
   // by scripts/eval-device.mjs (see src/eval/deviceEvalRequest.ts). Waits
@@ -931,7 +967,7 @@ export function ChatScreen({
         const { getDueTasks } = await import("../agent/scheduled/taskStore");
         if ((await getDueTasks()).length === 0) return;
         if (!llamaEngine.isLoaded) return;
-        setGenerating(true);
+        setGeneratingNow(true);
         const { runScheduledTasksNow } = await import("../agent/scheduled/runScheduled");
         await runScheduledTasksNow({
           engine: llamaEngine,
@@ -951,7 +987,7 @@ export function ChatScreen({
       } catch {
         // Una pasada fallida se reintenta en la siguiente revisión.
       } finally {
-        setGenerating(false);
+        setGeneratingNow(false);
         sendGuardRef.current.release();
       }
     };
@@ -969,12 +1005,19 @@ export function ChatScreen({
   }, [ready]);
 
   const stopRequestedRef = useRef(false);
+  // T-10 (0.1.99, M-20): controlador de aborto del turno del agente.
+  // La ref de arriba sigue siendo la fuente de verdad del cierre del
+  // turno; esta señal es la que viaja al bucle, al despacho y al motor
+  // para parar también lo que está en vuelo entre tokens (las
+  // generaciones que faltan y el despacho en curso).
+  const agentAbortRef = useRef<AbortController | null>(null);
 
   // Stop only takes effect between generated tokens, so while the prompt is
   // still being processed it can take a while; show that the tap registered.
   const [stopping, setStopping] = useState(false);
   const stopGeneration = useCallback(async () => {
     stopRequestedRef.current = true;
+    agentAbortRef.current?.abort();
     setStopping(true);
     setProcessing((prev) => (prev ? { ...prev, label: t("chatScreen.stopping") } : prev));
     impact(ImpactFeedbackStyle.Heavy);
@@ -1005,6 +1048,7 @@ export function ChatScreen({
   const stopAndAwaitGeneration = useCallback(async () => {
     if (!sendTaskRef.current) return;
     stopRequestedRef.current = true;
+    agentAbortRef.current?.abort();
     await llamaEngine.stop();
     await sendTaskRef.current.catch(() => {});
   }, []);
@@ -1143,7 +1187,7 @@ export function ChatScreen({
     // lo que causaba cierre inmediato del app al enviar la sugerencia
     // de recordatorio recién abierto el chat.
     if (!query || generating || !ready) return;
-    // N3 (2026-09-28): synchronous in-flight guard. `setGenerating(true)` is
+    // N3 (2026-09-28): synchronous in-flight guard. `setGeneratingNow(true)` is
     // batched, so two taps in the same tick both see stale `generating ===
     // false` through the closure. The ref is set synchronously here, before
     // any await, so the second tap observes the first and bails out. Release
@@ -1209,7 +1253,7 @@ export function ChatScreen({
     if (override) stagedRef.current = null;
     updateInput(override?.draft ?? "", "typed");
     setStaged(null);
-    setGenerating(true);
+    setGeneratingNow(true);
     stopRequestedRef.current = false;
 
     let sessionId = activeSessionId;
@@ -1358,7 +1402,7 @@ export function ChatScreen({
         await refreshSessions();
       }
       await pruneSessions(kbSettings.maxSavedSessions);
-      setGenerating(false);
+      setGeneratingNow(false);
       setStopping(false);
       setProcessing(null);
       setLiveTokPerSec(null);
@@ -1485,6 +1529,12 @@ export function ChatScreen({
             confirmLabel: t("common.confirm"),
           });
         };
+        // T-10 (0.1.99, M-20): un AbortController por turno del
+        // agente; el gesto de parada lo aborta (stopGeneration y
+        // stopAndAwaitGeneration) y el bucle cierra con lo último
+        // limpio en vez de seguir generando.
+        const agentAbort = new AbortController();
+        agentAbortRef.current = agentAbort;
         const agentResult = await runAgentLoop(query, {
           engine: {
             generate: (args) => {
@@ -1519,9 +1569,15 @@ export function ChatScreen({
             return (await listNotes(50)).map((n) => ({ id: n.id, title: n.title, body: n.body }));
           },
           // «olvida …»: hechos y personas con su id (el borrado se confirma).
+          // T-11 (0.1.99, m-14): SOLO hechos del dueño. getFacts incluía
+          // los hechos escritos por pares (source 'peer', aislados de la
+          // memoria del dueño por R1) y esta lista alimenta la selección
+          // de borrado del flujo de olvido: un hecho de un par podía ser
+          // elegido y borrado desde una frase del dueño. getOwnerFacts
+          // es la misma lectura que usa el snapshot del sistema.
           listMemories: async () => {
-            const { getFacts, getPeople } = await import("../agent/memory/memoryStore");
-            const [facts, people] = await Promise.all([getFacts(500), getPeople()]);
+            const { getOwnerFacts, getPeople } = await import("../agent/memory/memoryStore");
+            const [facts, people] = await Promise.all([getOwnerFacts(500), getPeople()]);
             return [
               ...facts.map((f) => ({ id: f.id, kind: "fact" as const, label: f.content })),
               ...people.map((p) => ({ id: p.id, kind: "person" as const, label: p.relationship ? `${p.name} (${p.relationship})` : p.name })),
@@ -1543,6 +1599,9 @@ export function ChatScreen({
             await requireChatModel();
             return llamaEngine.getModelInfo()?.nCtx;
           },
+          // T-10 (0.1.99, M-20): la señal del turno (ver agentAbortRef);
+          // el adaptador de arriba la reenvía al motor tal cual.
+          signal: agentAbort.signal,
         });
         assistantText = agentResult.response;
         // 0.1.39: el loop dice por dónde salió el turno (routing). Antes
@@ -1674,7 +1733,7 @@ export function ChatScreen({
         // aquí: el pipeline de chat sigue con el turno vivo y su propio
         // finally es quien lo cierra.
         if (!divertedToChatNet) {
-          setGenerating(false);
+          setGeneratingNow(false);
           setStopping(false);
           setProcessing(null);
           setLiveTokPerSec(null);
@@ -2144,7 +2203,16 @@ export function ChatScreen({
         // se agotó el presupuesto) no enseña una frase a medias.
         let finalText = guideAnswered
           ? assistantText
-          : trimToCompleteSentences(trimRepetitionLoop(assistantText), wasStopped || llamaEngine.lastGenerationWasCut);
+          : trimToCompleteSentences(
+              // m-78 (F2-m7): el recorte de bucle sobre lo transmitido
+              // solo si la guarda marcó bucle en ESTA generación (el
+              // motor lo deja en lastGenerationLoopCut) — la misma
+              // regla que el motor aplica a su texto asentado. Sin la
+              // marca, lo transmitido es la respuesta íntegra aunque
+              // su cola se repita.
+              llamaEngine.lastGenerationLoopCut ? trimRepetitionLoop(assistantText) : assistantText,
+              wasStopped || llamaEngine.lastGenerationWasCut,
+            );
         if (guideAnswered) {
           // Verbatim guide text: nothing to verify or trim. Every sentence is the guide's (R1).
           provenance = guideAnswerProvenance(finalText);
@@ -2170,12 +2238,25 @@ export function ChatScreen({
           // se juzgan contra el día del mensaje, que es lo que el
           // humano quiso decir (una conversación que cruza medianoche
           // no mueve el «ayer» del usuario).
+          // T-20 (0.1.99, núcleo del juez): el contexto semántico del
+          // turno se precomputa aquí, en el mismo bloque (ya
+          // asíncrono), porque el juez es síncrono y puro. Si el
+          // constructor devuelve null (sin motor residente, perfil no
+          // multilingüe) o algo lanza, la llamada va sin contexto:
+          // nunca un turno caído por el contexto. En T-20 el juez lo
+          // valida y ninguna puerta lo lee todavía (eso es T-21).
+          const semanticContext = await buildJudgeSemanticContext({
+            answer: finalText,
+            chunks,
+            query,
+          }).catch(() => null);
           const verified = verifyGroundedAnswer(
             finalText,
             chunks,
             uiLang,
             query,
             new Date(Number(userMsg.id.split("-")[0]) || Date.now()),
+            semanticContext ?? undefined,
           );
           grounding = verified.status;
           if (verified.status !== "skipped") finalText = verified.text;
@@ -2450,7 +2531,7 @@ export function ChatScreen({
         errorMessage: e?.message ?? String(e),
       }).catch(() => {});
     } finally {
-      setGenerating(false);
+      setGeneratingNow(false);
       setStopping(false);
       setProcessing(null);
       setLiveTokPerSec(null);

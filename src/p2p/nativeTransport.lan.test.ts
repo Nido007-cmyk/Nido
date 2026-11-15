@@ -44,6 +44,18 @@ import { buildConfirmV1, parseConfirm } from "./handshakeV3";
 import { makeMemoryHelloNonceCache } from "./nonceCache";
 import { networkAudit } from "../privacy/networkAudit";
 import type { P2PPeerInfo, P2PTransportEvents } from "./transport";
+import { resetFeatureFlagsForTests, setFeatureOverrideForTests } from "../config/featureFlags";
+
+// T-14 (M-21): este fichero ejercita la mecánica del handshake llamando
+// a direcciones Wi-Fi descubiertas, sin contacto conocido. Desde la
+// 0.1.99 ese mundo es el de la elección del usuario con «Solo saludo
+// privado» APAGADO: con el defecto nuevo, llamar a un desconocido se
+// rechaza antes de abrir el socket (eso lo cubre
+// t14PrivateHello.test.ts). Aquí se fija esa elección.
+beforeEach(() => {
+  resetFeatureFlagsForTests();
+  setFeatureOverrideForTests("p2p.privateHelloOnly", false);
+});
 
 const MY_PK = new Uint8Array(32).fill(1);
 const MY_PK_HEX = toHex(MY_PK);
@@ -167,7 +179,13 @@ function peerHello(): { b64: string; nonceHex: string } {
   const nonceHex = toHex(randomNonce(HANDSHAKE_NONCE_BYTES));
   const ts = nowSec();
   const sig = toHex(signDetached(buildHelloSignMessageV3(PEER_PK_HEX, eph, nonceHex, ts), PEER_SIGN.secretKey));
-  return { b64: encodeBase64(buildHello(PEER_PK_HEX, eph, nonceHex, ts, sig)), nonceHex };
+  // T-13 (M-22): el par simulado es anterior a `rs` (0.1.98): se quita del
+  // JSON para que su cable sea el de entonces y la respuesta le llegue en
+  // claro, que es lo que estas pruebas miden (la respuesta sellada a un
+  // HELLO con `rs` es el sujeto de t13Handshake.test.ts).
+  const obj = JSON.parse(new TextDecoder().decode(buildHello(PEER_PK_HEX, eph, nonceHex, ts, sig))) as Record<string, unknown>;
+  delete obj.rs;
+  return { b64: encodeBase64(new TextEncoder().encode(JSON.stringify(obj))), nonceHex };
 }
 
 function peerConfirm(peerNonceHex: string, myNonceHex: string, signer = PEER_SIGN): string {

@@ -65,7 +65,9 @@ describe("CapabilityRegistry (F6-06)", () => {
     const ann = r.createAnnouncement(kp.secretKey, announcer, peer);
     expect(ann.capabilities.map((c) => c.scope)).toEqual(["read:notes"]);
     expect(ann.announcerPkHex).toBe(announcer);
-    expect(CapabilityRegistry.verifyAnnouncement(ann, kp.publicKey)).toBe(true);
+    // T-13 (m-36): verifyAnnouncement es de instancia y exige el
+    // destinatario esperado (el registro guarda los nonces ya vistos).
+    expect(r.verifyAnnouncement(ann, kp.publicKey, peer)).toBe(true);
   });
 
   it("un anuncio manipulado o de otra clave no verifica", () => {
@@ -76,9 +78,9 @@ describe("CapabilityRegistry (F6-06)", () => {
       ...ann,
       capabilities: [...ann.capabilities, { ...CONTACTS, scope: "write:everything" }],
     };
-    expect(CapabilityRegistry.verifyAnnouncement(tampered, kp.publicKey)).toBe(false);
+    expect(r.verifyAnnouncement(tampered, kp.publicKey, "ef".repeat(32))).toBe(false);
     const other = nacl.sign.keyPair();
-    expect(CapabilityRegistry.verifyAnnouncement(ann, other.publicKey)).toBe(false);
+    expect(r.verifyAnnouncement(ann, other.publicKey, "ef".repeat(32))).toBe(false);
   });
 
   it("clear vacía registro y denegaciones", () => {

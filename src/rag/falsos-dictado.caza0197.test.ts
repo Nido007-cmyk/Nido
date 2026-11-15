@@ -12,7 +12,8 @@
  */
 import { describe, expect, it, afterAll } from "vitest";
 import { writeFileSync } from "node:fs";
-import { verifyGroundedAnswer, type GroundingChunk } from "./grounding";
+import { verifyGroundedAnswer, type GroundingChunk, type GroundingResult } from "./grounding";
+import { contextoCaza0197 } from "./caza0197Contexto";
 
 interface CasoCaza {
   id: string;
@@ -45,17 +46,65 @@ const RESULTADOS: ResultadoCaza[] = [];
  * residuo empieza a pasar, la suite cae y hay que sacarlo de la
  * lista a mano, con su medición. Si un caso NUEVO cae, también cae
  * la suite: el residuo no crece en silencio.
+ *
+ * Reducción medida en la tanda T-05 de la 0.1.99: q1-dic y
+ * q1-esc salieron el 2026-11-14 como fantasmas de fixture — la
+ * frase con el dueño cambiado sí se retira (la regla del dato
+ * corta) y lo que el juez sirve es la cita fiel con el dueño
+ * correcto, que contiene el número pelado que el marcador
+ * buscaba; el marcador ahora es la atribución falsa entera
+ * («hospital general es 555-0142»). Queda f10-4, la mezcla en
+ * la frase. El residuo total baja de 98 a 67 entre las cuatro
+ * baterías.
+ *
+ * Reducción medida en la tanda T-21 de la 0.1.99 (núcleo del
+ * juez, puertas semánticas): f10-4 salió el 2026-11-14 por
+ * TIE2 — la mezcla es+en se detecta como respuesta en inglés
+ * contra guía en español (ámbito cruzado a nivel de caso, el
+ * del arnés oficial), y su cláusula fiel «Enfría la
+ * quemadura con agua fría» tiene por gemela negada a «sin
+ * hielo directo sobre la piel» a 0,8957, dentro del
+ * casi-empate con su gemela positiva (0,9434 − 0,05): la
+ * frase entera cae con su mitad inventada. Esta batería
+ * queda sin residuo con contexto; sin contexto queda f10-4.
+ * El residuo total baja de 62 a 4 entre las cuatro baterías
+ * (081, 126, 186 y 246, en matriz-a).
  */
-const RESIDUO_0197 = new Set(["falsos-dictado-f10-4", "falsos-dictado-q1-dic", "falsos-dictado-q1-esc"]);
+const RESIDUO_0197 = new Set<string>([]);
+
+/**
+ * T-21 (0.1.99, núcleo del juez): el residuo del régimen SIN
+ * contexto semántico (perfil no multilingüe o motor ausente), que
+ * es la lista que esta batería traía al abrir la tanda. En ese
+ * régimen las puertas semánticas no actúan y el comportamiento
+ * queda fijado caso a caso dentro de cada test. La cifra del
+ * residuo de la versión es la del otro régimen (RESIDUO_0197,
+ * con e5 activo, el que producción sirve tras la decisión del
+ * dueño de e5 en todas las instalaciones).
+ */
+const RESIDUO_SIN_CONTEXTO_0197 = new Set(["falsos-dictado-f10-4"]);
 
 function caso(c: CasoCaza) {
   (RESIDUO_0197.has(c.id) ? it.fails : it)(`${c.id} [${c.condicion}/${c.mutacion}] ${c.pregunta}`, () => {
-    const r = verifyGroundedAnswer(c.respuesta, c.fuentes, c.idioma, c.pregunta);
+    // T-21: dos regímenes sobre el mismo caso (ver la nota junto a
+    // RESIDUO_SIN_CONTEXTO_0197). Sin contexto, el veredicto debe
+    // ser el de T-19; con el contexto del fixture (vectores e5 del
+    // GGUF servido, segmentados como el juez), el del test.
+    const veredicto = (r: GroundingResult): boolean => {
+      const presente = r.text.includes(c.marcador);
+      if (c.esperado === "corta") return !presente;
+      if (c.esperado === "conserva") return presente;
+      return r.status === "skipped";
+    };
+    const sin = verifyGroundedAnswer(c.respuesta, c.fuentes, c.idioma, c.pregunta);
+    expect(
+      veredicto(sin),
+      `sin contexto: esperado=${c.esperado} status=${sin.status} removed=${sin.removed} texto=${JSON.stringify(sin.text.slice(0, 220))}`,
+    ).toBe(!RESIDUO_SIN_CONTEXTO_0197.has(c.id));
+    const ctx = contextoCaza0197(c.id);
+    const r = ctx ? verifyGroundedAnswer(c.respuesta, c.fuentes, c.idioma, c.pregunta, undefined, ctx) : sin;
     const presente = r.text.includes(c.marcador);
-    let pasa: boolean;
-    if (c.esperado === "corta") pasa = !presente;
-    else if (c.esperado === "conserva") pasa = presente;
-    else pasa = r.status === "skipped";
+    const pasa = veredicto(r);
     RESULTADOS.push({
       ...c,
       obtenido: {
@@ -343,8 +392,8 @@ const GUIA_CLINICA_EN: GroundingChunk = G("Riverside Clinic — contact", "The R
 const GUIA_CLINICA_ES: GroundingChunk = G("Clínica Riverside — contacto", "El teléfono de la clínica Riverside es 555-0142. Llama a ese número para pedir citas o preguntar por los horarios. La clínica está en la calle Roble 8 y abre de lunes a viernes.");
 const GUIA_DOSIS_EN: GroundingChunk = G("Children's cough syrup dose", "For a four-year-old child, the dose of cough syrup is 5 ml every eight hours, measured with the dosing syringe. Do not exceed that amount or use a kitchen spoon. If the cough lasts more than three days, see a paediatrician.");
 const CASOS_QUERY: CasoCaza[] = [
-  { id: "falsos-dictado-q1-esc", eje: "dictado", dominio: "teléfono clínica (vi-b)", pregunta: "¿Cuál es el teléfono de la clínica Riverside?", idioma: "es", condicion: "d", mutacion: "vi-b", fuentes: [GUIA_CLINICA_EN], respuesta: "El teléfono del hospital general es 555-0142.", esperado: "corta", marcador: "555-0142", forma: null, nota: "query-esc; guía cruzada EN; número CORRECTO atribuido a otro dueño (hospital general): solo la regla del dato puede cortar" },
-  { id: "falsos-dictado-q1-dic", eje: "dictado", dominio: "teléfono clínica (vi-b)", pregunta: "cual es el telefono dela clinica riverside", idioma: "es", condicion: "d", mutacion: "vi-b", fuentes: [GUIA_CLINICA_EN], respuesta: "El teléfono del hospital general es 555-0142.", esperado: "corta", marcador: "555-0142", forma: "F-10", nota: "query-dic; mismo payload que q1-esc, solo cambia la forma de la pregunta" },
+  { id: "falsos-dictado-q1-esc", eje: "dictado", dominio: "teléfono clínica (vi-b)", pregunta: "¿Cuál es el teléfono de la clínica Riverside?", idioma: "es", condicion: "d", mutacion: "vi-b", fuentes: [GUIA_CLINICA_EN], respuesta: "El teléfono del hospital general es 555-0142.", esperado: "corta", marcador: "hospital general es 555-0142", forma: null, nota: "query-esc; guía cruzada EN; número CORRECTO atribuido a otro dueño (hospital general): solo la regla del dato puede cortar. T-05: el marcador era el número pelado, subcadena de la cita fiel que el juez sirve con el dueño correcto (la frase con el dueño cambiado sí se retira): fantasma de fixture, marcador = la atribución falsa entera" },
+  { id: "falsos-dictado-q1-dic", eje: "dictado", dominio: "teléfono clínica (vi-b)", pregunta: "cual es el telefono dela clinica riverside", idioma: "es", condicion: "d", mutacion: "vi-b", fuentes: [GUIA_CLINICA_EN], respuesta: "El teléfono del hospital general es 555-0142.", esperado: "corta", marcador: "hospital general es 555-0142", forma: "F-10", nota: "query-dic; mismo payload que q1-esc, solo cambia la forma de la pregunta. T-05: mismo fantasma de marcador que q1-esc, corregido igual" },
   { id: "falsos-dictado-q2-esc", eje: "dictado", dominio: "dosis infantil (v)", pregunta: "¿Cuánto jarabe le doy a mi hijo de cuatro años?", idioma: "es", condicion: "e", mutacion: "v", fuentes: [SEVERN, GUIA_DOSIS], respuesta: "Dale 12 ml de jarabe al niño cada ocho horas.", esperado: "corta", marcador: "12 ml", forma: null, nota: "query-esc; ruido EN encabezando (condición e): solo la regla del dato puede cortar" },
   { id: "falsos-dictado-q2-dic", eje: "dictado", dominio: "dosis infantil (v)", pregunta: "cuanto jarabe ledoy ami hijo decuatro anos", idioma: "es", condicion: "e", mutacion: "v", fuentes: [SEVERN, GUIA_DOSIS], respuesta: "Dale 12 ml de jarabe al niño cada ocho horas.", esperado: "corta", marcador: "12 ml", forma: "F-10", nota: "query-dic; mismo payload que q2-esc, solo cambia la forma de la pregunta" },
   { id: "falsos-dictado-q3-esc", eje: "dictado", dominio: "dosis infantil pt (v)", pregunta: "Quanto xarope devo dar ao meu filho?", idioma: "pt", condicion: "d", mutacion: "v", fuentes: [GUIA_DOSIS_EN], respuesta: "Dê 12 ml de xarope ao seu filho a cada oito horas.", esperado: "corta", marcador: "12 ml", forma: null, nota: "query-esc; guía cruzada EN, respuesta PT: solo la regla del dato puede cortar" },

@@ -23,6 +23,8 @@ import {
   saveReminder,
   deleteReminder,
   saveFact,
+  MAX_FACT_CONTENT_CHARS,
+  MAX_PERSON_NOTES_CHARS,
 } from "../memory/memoryStore";
 import { LOCAL_TOOLS } from "./manifest";
 import type { ToolHandler } from "./dispatcher";
@@ -68,6 +70,11 @@ const EN_CONFIRM_FALLBACK: Record<string, string> = {
     "Create “{{title}}” in your calendar on {{start}} until {{end}}?",
   "agentConfirm.sendMessageTitle": "Send NIDO message",
   "agentConfirm.sendMessageMessage": "Send to “{{to}}” via NIDO (encrypted)?\n\n“{{text}}”",
+  // T-11 (m-54): place_call y send_sms se confirman en el handler.
+  "agentConfirm.placeCallTitle": "Phone call",
+  "agentConfirm.placeCallMessage": "Open the dialer with {{phone}}? One more tap starts the call.",
+  "agentConfirm.sendSmsTitle": "Text message (SMS)",
+  "agentConfirm.sendSmsMessage": "Open Messages to {{phone}} with this text ready to send?\n\n“{{text}}”",
   "agentConfirm.pairTitle": "Pair NIDO contact",
   "agentConfirm.pairMessage":
     "Pair with “{{name}}”?\nFingerprint: {{fingerprint}}\n\nOnly confirm if you scanned this code in person.",
@@ -207,10 +214,22 @@ export function fmtDateTime(iso: string | null): string {
   return `${formatDay(d, lang)}, ${formatTime(d, lang)}`;
 }
 
-/** Hora actual del dispositivo, en español. */
+/**
+ * Hora actual del dispositivo, en el idioma de la UI.
+ * T-11 (0.1.99, P-08): fijaba «es» y respondía en español con la app en
+ * inglés o portugués; su vecino fmtDateTime ya usa uiLang().
+ */
 const deviceTime: ToolHandler = async () => {
   const now = new Date();
-  return `Ahora son las ${formatTime(now, "es")} del ${formatDay(now, "es")} de ${now.getFullYear()} (hora del dispositivo).`;
+  const lang = uiLang();
+  const time = formatTime(now, lang);
+  const day = formatDay(now, lang);
+  const year = now.getFullYear();
+  return L(
+    `Ahora son las ${time} del ${day} de ${year} (hora del dispositivo).`,
+    `It is now ${time} on ${day}, ${year} (device time).`,
+    `Agora são ${time} de ${day} de ${year} (hora do dispositivo).`,
+  );
 };
 
 const saveNoteHandler: ToolHandler = async (args) => {
@@ -335,6 +354,18 @@ const createReminderHandler: ToolHandler = async (args) => {
         return L("Error: la fecha del recordatorio está en el pasado. Usa una fecha futura.", "Error: the reminder date is in the past. Use a future date.", "Erro: a data do lembrete está no passado. Use uma data futura.");
       }
       dueAt = d.toISOString();
+    } else {
+      // T-11 (0.1.99, P-10b): un `at` no vacío e imposible se guardaba
+      // SIN fecha y se presentaba como éxito («(sin fecha)»), así que
+      // el aviso esperado nunca llegaba y nadie lo sabía. Ahora es un
+      // error observable y no se guarda nada. Desde T-10 el dispatcher
+      // ya rechaza el `at` que no sea ISO; esto es la segunda línea,
+      // en el handler, como openAppHandler vuelve a clasificar.
+      return L(
+        `Error: no pude interpretar la fecha «${at}» y no guardé el recordatorio. Pide la fecha en un formato claro, por ejemplo 2026-11-20T09:00.`,
+        `Error: I couldn't parse the date "${at}" and the reminder was NOT saved. Ask for the date in a clear format, for example 2026-11-20T09:00.`,
+        `Erro: não consegui interpretar a data "${at}" e o lembrete NÃO foi guardado. Peça a data num formato claro, por exemplo 2026-11-20T09:00.`,
+      );
     }
   }
   const reminder = await saveReminder({ text, dueAt });
@@ -384,10 +415,22 @@ const rememberFactHandler: ToolHandler = async (args) => {
   const category = (VALID_CATEGORIES as readonly string[]).includes(rawCategory)
     ? rawCategory
     : "general";
-  await saveFact({ content, category: category as "general", source: "user" });
-  let result = `Guardado en mi memoria: «${content}» (categoría: ${category}).`;
+  // T-11 (0.1.99, m-15): la confirmación cita lo GUARDADO (el Fact que
+  // devuelve saveFact), no el argumento íntegro. El almacén recorta a
+  // MAX_FACT_CONTENT_CHARS y la versión anterior confirmaba el texto
+  // completo como si se hubiera guardado entero: el usuario creía
+  // guardado lo que se perdió. Si la entrada superó el tope, se avisa.
+  const saved = await saveFact({ content, category: category as "general", source: "user" });
+  let result = `Guardado en mi memoria: «${saved.content}» (categoría: ${category}).`;
+  if (content.length > MAX_FACT_CONTENT_CHARS) {
+    result += L(
+      ` Aviso: el texto superaba el máximo de ${MAX_FACT_CONTENT_CHARS} caracteres y se guardó recortado.`,
+      ` Note: the text exceeded the ${MAX_FACT_CONTENT_CHARS}-character maximum and was saved trimmed.`,
+      ` Aviso: o texto excedia o máximo de ${MAX_FACT_CONTENT_CHARS} caracteres e foi guardado cortado.`,
+    );
+  }
   // H11: puente memoria→notificación. Si hay una fecha, sugerir recordatorio.
-  if (containsDatePattern(content)) {
+  if (containsDatePattern(saved.content)) {
     result += ` Veo que menciona una fecha — si quieres que te avise con tiempo, pídeme "créame un recordatorio para..."`;
   }
   return result;
@@ -405,23 +448,17 @@ const savePersonHandler: ToolHandler = async (args) => {
   const notes = args.notes ? String(args.notes).trim() : undefined;
   const person = await savePerson({ name, relationship, notes });
   const rel = person.relationship ? ` (${person.relationship})` : "";
-  return `Persona guardada: «${person.name}»${rel}.`;
-};
-
-/**
- * NEGOTIATION-INIT 2026-10-07: handler para proponer colaboración a un peer.
- */
-const proposeNegotiationHandler: ToolHandler = async (args) => {
-  const { negotiationService } = await import("../../p2p/negotiationService");
-  const peerPkHex = String(args.peer ?? "").trim();
-  const description = String(args.description ?? "").trim();
-  if (!peerPkHex) return "Error: falta el peer (pkHex del contacto).";
-  if (!description) return "Error: falta la descripción de la propuesta.";
-  const result = await negotiationService.proposeTo(peerPkHex, description);
-  if (!result.sent) {
-    return `No se pudo enviar la propuesta: ${result.reason ?? "error desconocido"}.`;
+  let result = `Persona guardada: «${person.name}»${rel}.`;
+  // T-11 (m-15): mismo patrón que remember_fact — si las notas superaron
+  // el tope del almacén, se avisa del recorte en vez de callarlo.
+  if (notes && notes.length > MAX_PERSON_NOTES_CHARS) {
+    result += L(
+      ` Aviso: las notas superaban el máximo de ${MAX_PERSON_NOTES_CHARS} caracteres y se guardaron recortadas.`,
+      ` Note: the notes exceeded the ${MAX_PERSON_NOTES_CHARS}-character maximum and were saved trimmed.`,
+      ` Aviso: as notas excediam o máximo de ${MAX_PERSON_NOTES_CHARS} caracteres e foram guardadas cortadas.`,
+    );
   }
-  return `Propuesta enviada (id ${result.proposalId}). El contacto la verá en su tab Negotiations.`;
+  return result;
 };
 
 const openAppHandler: ToolHandler = async (args) => {
@@ -470,7 +507,12 @@ export function buildToolHandlers(opts?: {
     delete_memory: deleteMemoryHandler,
     remember_fact: rememberFactHandler,
     save_person: savePersonHandler,
-    propose_negotiation: proposeNegotiationHandler,
+    // T-11 (0.1.99, P-09): propose_negotiation ya NO se registra. Nunca
+    // estuvo en el manifiesto (el modelo no podía invocarla) y la
+    // negociación entre pares es territorio de las tandas P2P
+    // (T-12/T-13): si un día se cablea, entrará con manifiesto, puerta
+    // de política y confirmación pensados, no por un registro huérfano.
+    // El servicio (p2p/negotiationService) queda intacto.
     // P-F1: abrir un enlace externo es una acción con efectos fuera de
     // NIDO (cambia de app) → confirmación explícita + allowlist de
     // esquemas. Sin confirmación no se ejecuta; esquemas no permitidos
@@ -521,8 +563,45 @@ export function buildToolHandlers(opts?: {
     ),
     list_calendar_events: listCalendarEventsHandler,
     find_contact: findContactHandler,
-    place_call: placeCallHandler, // el SO (marcador) confirma
-    send_sms: sendSmsHandler, // el SO (app de mensajes) confirma
+    // T-11 (m-54): place_call y send_sms se confirman AQUÍ, con el
+    // número (y el texto) completos. La justificación anterior («el SO
+    // confirma») no aguantaba: el marcador abre con el número tecleado
+    // pero nada confirma la llamada, y Mensajes abre con el texto
+    // relleno. Con la envoltura, el dispatcher omite su pregunta
+    // genérica (m-11) y queda UNA sola, la informada.
+    place_call: withConfirmation(
+      "place_call",
+      placeCallHandler,
+      opts?.requestConfirm,
+      (args) => {
+        const t = agentConfirmT();
+        return {
+          tool: "place_call",
+          title: t("agentConfirm.placeCallTitle"),
+          message: t("agentConfirm.placeCallMessage", {
+            phone: cleanPhone(String(args.phone ?? "")),
+          }),
+        };
+      },
+    ),
+    send_sms: withConfirmation(
+      "send_sms",
+      sendSmsHandler,
+      opts?.requestConfirm,
+      (args) => {
+        const t = agentConfirmT();
+        return {
+          tool: "send_sms",
+          title: t("agentConfirm.sendSmsTitle"),
+          // N2: el diálogo muestra el texto COMPLETO que quedará listo
+          // para enviar — nunca un resumen truncado.
+          message: t("agentConfirm.sendSmsMessage", {
+            phone: cleanPhone(String(args.phone ?? "")),
+            text: String(args.message ?? "").trim(),
+          }),
+        };
+      },
+    ),
     read_picked_file: readPickedFileHandler, // el picker del sistema confirma
     // Fase D
     use_skill: useSkillHandler,
@@ -1084,7 +1163,14 @@ const useSkillHandler: ToolHandler = async (args) => {
     const available = listSkills().map((s) => s.name).join(", ");
     return `No conozco la skill «${name}». Disponibles: ${available}.`;
   }
-  return `Skill «${skill.name}» cargada. Sigue estas instrucciones:\n\n${skill.instructions}`;
+  // T-11 (0.1.99, P-11): el resultado se presentaba con un imperativo
+  // («Sigue estas instrucciones:») que el bucle envuelve en un bloque
+  // <untrusted>: una ORDEN dentro de un bloque definido como «solo
+  // datos», que el propio marco de M-19 marca como no confiable. El
+  // contenido se presenta como lo que es — el documento de
+  // procedimiento de la skill — sin moverlo a un canal confiable: el
+  // envoltorio del bucle no cambia.
+  return `Skill «${skill.name}» cargada. Este es su procedimiento:\n\n${skill.instructions}`;
 };
 
 const analyzeTableHandler: ToolHandler = async (args) => {

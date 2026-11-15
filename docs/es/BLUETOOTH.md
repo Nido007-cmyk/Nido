@@ -69,6 +69,22 @@ Timeout de handshake: 15 s. Sin HELLO válido no hay sesión y
   Un MITM activo *durante* el handshake podría sustituir efímeros. Los
   mensajes, aun así, llevan verificación de remitente, de destinatario e
   ID anti-replay.
+- **La presencia es visible; la identidad no.** El nombre de servicio y el
+  UUID Bluetooth de NIDO y su tipo de servicio Wi-Fi son fijos y públicos,
+  así que un escáner cercano puede saber que un teléfono lleva NIDO y ver
+  su MAC de Bluetooth. No puede saber de quién es: los anuncios no llevan
+  nombre, ni clave de identidad, ni capabilities. Hacer los identificadores
+  por usuario impediría que los contactos se encontraran.
+- **El servidor Bluetooth escucha mientras la app vive; el de Wi-Fi local
+  se apaga al salir de la pantalla de NIDO.** La asimetría es deliberada:
+  es lo que permite que un contacto te alcance sin que abras nada antes.
+  El respondedor permanente es silencioso hasta que valida un HELLO
+  firmado de un contacto emparejado, las cuotas pre-autenticación acotan
+  lo que un desconocido puede hacerle hacer, y toda conexión (Bluetooth y
+  Wi-Fi local) queda en el registro de red. Se consideró un ajuste para
+  aceptar conexiones solo con la pantalla de NIDO abierta y no se añadió:
+  nadie lo ha pedido, y el respondedor silencioso más el registro son la
+  respuesta actual.
 
 ## Permisos (Android)
 

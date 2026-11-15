@@ -32,7 +32,8 @@ describe("parseHello — malformed/adversarial inputs", () => {
   it("round-trips a locally built HELLO", () => {
     const parsed = parseHello(buildHello(PK, EPH, NONCE, TS, SIG));
     // P2P v4: el HELLO propio anuncia que entiende el saludo sellado.
-    expect(parsed).toEqual({ pk: PK, eph: EPH, nonce: NONCE, ts: TS, sig: SIG, c4: true });
+    // T-13 (M-22): buildHello anuncia también `rs` y parseHello lo expone.
+    expect(parsed).toEqual({ pk: PK, eph: EPH, nonce: NONCE, ts: TS, sig: SIG, c4: true, rs: true });
   });
 
   it("rejects non-JSON without throwing a raw SyntaxError", () => {

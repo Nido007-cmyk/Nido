@@ -117,6 +117,7 @@ vi.mock("../rag/db", () => ({
   insertChunkWithoutEmbedding: async () => {},
   deleteOrphanCollectionChunks: async () => 0,
   createCustomCollection: async () => {},
+  measureCollectionStoredBytes: async () => 0,
   deleteCustomCollection: async () => {},
   setCustomCollectionActive: async () => {},
   listCustomCollections: async () => [],

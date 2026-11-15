@@ -25,7 +25,7 @@ import type { TaskProposal } from "./negotiation";
 import { verifyProposal } from "./negotiation";
 import { fromHex } from "./crypto";
 import { evaluateProposalScopes } from "./p2pAuthorization";
-import { globalReplayProtection } from "./replayProtection";
+import { globalNegotiationReplayProtection } from "./replayProtection";
 import { formatDateTime } from "../utils/safeFormat";
 
 /**
@@ -55,7 +55,8 @@ export async function processIncomingProposal(
   }
 
   // 2. Anti-replay
-  if (!globalReplayProtection.checkAndRecord(proposal.nonce)) {
+  // T-12 (M-25): cubeta del proponente, no la cache global única.
+  if (!globalNegotiationReplayProtection.checkAndRecord(proposal.proposerPkHex, proposal.nonce)) {
     return { action: "auto_reject", reason: "replay_detected" };
   }
 

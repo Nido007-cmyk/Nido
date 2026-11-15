@@ -78,6 +78,27 @@ class NidoLanManager(
      * callada mucho rato.
      */
     const val HANDSHAKE_READ_TIMEOUT_MS = 20_000
+    /**
+     * T-12 (0.1.99, m-37): gracia POST-saludo. Antes, al llegar el segundo
+     * frame el lector retiraba el timeout PARA SIEMPRE, por conteo y no
+     * por autenticación: cualquier aparato de la red local que mandara
+     * dos frames cualesquiera se quedaba con un socket abierto sin
+     * límite. Ahora el segundo frame solo abre esta gracia; el timeout
+     * se retira cuando el transporte JS confirma que la ruta quedó
+     * establecida y autenticada (markLanAuthenticated, tras verificar el
+     * CONFIRM firmado). Sin esa señal, la conexión muere al vencer.
+     */
+    const val AUTH_GRACE_TIMEOUT_MS = 30_000
+    /**
+     * T-12 (0.1.99, m-39): tarifa de accepts. Los topes de conexiones
+     * simultáneas (8 y 2 por IP) no frenaban el ciclo abrir/cerrar: cada
+     * accept crea un hilo lector y eventos hacia JS. Por encima de la
+     * tarifa, el socket se acepta y se cierra al instante (el backlog no
+     * se atasca y el cliente legítimo puede reintentar tras la ventana).
+     */
+    const val ACCEPT_WINDOW_MS = 10_000
+    const val MAX_ACCEPTS_PER_IP_WINDOW = 12
+    const val MAX_ACCEPTS_GLOBAL_WINDOW = 48
     const val TAG = "NidoLan"
 
     private val ADDRESS_RE = Regex("^LAN:(\\d{1,3}(?:\\.\\d{1,3}){3}):(\\d{1,5})$")
@@ -106,19 +127,23 @@ class NidoLanManager(
      * móviles mientras se buscaban contactos. Las redes móviles asignan
      * prefijos muy cortos (/30, /32), así que otro cliente nunca queda en la
      * misma subred; en Wi-Fi o punto de acceso (/24) el contacto sí.
-     * Si no se puede determinar la subred, se conserva el comportamiento
-     * anterior (solo IP privada) para no romper conexiones que funcionaban.
+     * T-13 (m-38): si NO se puede determinar la subred, la respuesta es NO
+     * (fail-closed). Antes era SÍ «para no romper conexiones que
+     * funcionaban», y eso dejaba el filtro sin efecto justo en los casos
+     * que no se podían razonar. Coste declarado: redes legítimas raras
+     * (punto de acceso con prefijo corto, /30-/32 de operadora en Wi-Fi)
+     * pierden la ruta LAN; la ruta Bluetooth no se toca.
      */
     fun isSameLocalSubnet(local: InetAddress?, remote: InetAddress): Boolean {
-      if (local !is Inet4Address || remote !is Inet4Address) return true
+      if (local !is Inet4Address || remote !is Inet4Address) return false
       val iface = try {
         NetworkInterface.getByInetAddress(local)
       } catch (_: Exception) {
         null
-      } ?: return true
-      val ia = iface.interfaceAddresses.firstOrNull { it.address == local } ?: return true
+      } ?: return false
+      val ia = iface.interfaceAddresses.firstOrNull { it.address == local } ?: return false
       val prefix = ia.networkPrefixLength.toInt()
-      if (prefix !in 1..32) return true
+      if (prefix !in 1..32) return false
       val mask = if (prefix == 32) -1 else (-1 shl (32 - prefix))
       return (ipv4ToInt(local) and mask) == (ipv4ToInt(remote) and mask)
     }
@@ -243,16 +268,23 @@ class NidoLanManager(
     s.reuseAddress = true
     // 0.1.55 (P-06): escuchar SOLO en la interfaz Wi-Fi (o en el punto de
     // acceso propio), no en todas: así el servidor ni siquiera existe en la
-    // interfaz de datos móviles. Si no se encuentra (fabricante con nombres
-    // raros), se mantiene lo de antes: todas las interfaces, con el filtro
-    // de IP privada y misma subred de acceptLoop.
+    // interfaz de datos móviles.
+    // T-13 (m-38): si no se identifica ninguna interfaz, NO se escucha.
+    // Antes se escuchaba en todas (0.0.0.0) y el filtro de acceptLoop era
+    // la única defensa: un solo filtro entre la red de la operadora y el
+    // saludo. Sin servidor, el resto sigue: el descubrimiento NSD y las
+    // conexiones salientes no dependen de este socket, y quien llama a
+    // start() reintenta en el siguiente arranque.
     val bindTo = preferredBindAddress()
-    if (bindTo != null) {
-      s.bind(InetSocketAddress(bindTo, 0)) // puerto efímero
-    } else {
-      Log.w(TAG, "sin interfaz Wi-Fi ni punto de acceso identificados: se escucha en todas (con filtro de red local)")
-      s.bind(InetSocketAddress(0))
+    if (bindTo == null) {
+      try {
+        s.close()
+      } catch (_: Exception) {
+      }
+      Log.w(TAG, "sin interfaz Wi-Fi ni punto de acceso identificados: el servidor LAN no arranca")
+      return
     }
+    s.bind(InetSocketAddress(bindTo, 0)) // puerto efímero
     server = s
     val t = Thread({ acceptLoop(s) }, "nido-lan-accept")
     t.isDaemon = true
@@ -290,6 +322,13 @@ class NidoLanManager(
         closeQuietly(socket)
         continue
       }
+      if (!acceptRateAllows(remote.hostAddress)) {
+        // T-12 (m-39): tarifa de accepts excedida: se acepta y se cierra
+        // al instante, sin crear hilo lector ni eventos hacia JS.
+        Log.w(TAG, "conexión cerrada al instante: tarifa de accepts excedida")
+        closeQuietly(socket)
+        continue
+      }
       if (connections.size >= MAX_CONNECTIONS) {
         Log.w(TAG, "conexión rechazada: tope de $MAX_CONNECTIONS conexiones")
         closeQuietly(socket)
@@ -307,6 +346,39 @@ class NidoLanManager(
       }
       onSocket(socket, formatAddress(remote, socket.port), incoming = true)
     }
+  }
+
+  // T-12 (m-39): ventana de tarifa de accepts (ver constantes).
+  private val acceptRateLock = Any()
+  private var acceptWindowStartMs = 0L
+  private var acceptWindowTotal = 0
+  private val acceptWindowPerIp = HashMap<String, Int>()
+
+  private fun acceptRateAllows(ip: String): Boolean {
+    val now = System.currentTimeMillis()
+    synchronized(acceptRateLock) {
+      if (now - acceptWindowStartMs >= ACCEPT_WINDOW_MS) {
+        acceptWindowStartMs = now
+        acceptWindowTotal = 0
+        acceptWindowPerIp.clear()
+      }
+      val perIp = acceptWindowPerIp[ip] ?: 0
+      if (perIp >= MAX_ACCEPTS_PER_IP_WINDOW || acceptWindowTotal >= MAX_ACCEPTS_GLOBAL_WINDOW) {
+        return false
+      }
+      acceptWindowPerIp[ip] = perIp + 1
+      acceptWindowTotal += 1
+      return true
+    }
+  }
+
+  /**
+   * T-12 (m-37): el transporte JS confirma que la ruta con esta
+   * dirección quedó establecida y autenticada (CONFIRM verificado).
+   * Solo entonces el lector de esa conexión retira su timeout.
+   */
+  fun markAuthenticated(address: String) {
+    connections[address]?.markAuthenticated()
   }
 
   // ------------------------------------------------------------ cliente
@@ -576,7 +648,20 @@ class NidoLanManager(
   ) {
     private val readerThread = Thread({ readLoop() }, "nido-lan-read")
     @Volatile private var closed = false
+    /**
+     * T-12 (m-37): true solo cuando JS confirmó la ruta autenticada
+     * (markAuthenticated). El conteo de frames ya NO retira el timeout.
+     */
+    @Volatile private var authenticated = false
     private var framesRead = 0
+
+    fun markAuthenticated() {
+      authenticated = true
+      try {
+        socket.soTimeout = 0
+      } catch (_: Exception) {
+      }
+    }
 
     fun start() {
       readerThread.isDaemon = true
@@ -626,9 +711,12 @@ class NidoLanManager(
           val body = ByteArray(bodyLen)
           readFully(input, body, bodyLen)
           if (framesRead == HANDSHAKE_FRAMES) {
-            // Saludo completo: sin tope de silencio a partir de aquí.
+            // Saludo completo en frames, pero aún NO autenticado: corre
+            // la gracia post-saludo (T-12, m-37). El timeout solo se
+            // retira del todo con la señal de ruta autenticada; si la
+            // conexión ya la traía, queda sin tope desde aquí.
             try {
-              socket.soTimeout = 0
+              socket.soTimeout = if (authenticated) 0 else AUTH_GRACE_TIMEOUT_MS
             } catch (_: Exception) {
             }
           }
