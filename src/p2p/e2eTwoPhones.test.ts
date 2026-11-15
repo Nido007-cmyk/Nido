@@ -230,6 +230,12 @@ describe("dos teléfonos NIDO de punta a punta", () => {
   }, 30000);
 
   it("con el saludo privado apagado por el usuario: sigue conectando", async () => {
+    // Nota T-14 (M-21): «apagado» aquí es el interruptor del saludo
+    // SELLADO. Desde la 0.1.99, «Solo saludo privado» viene encendido por
+    // defecto y lo implica, así que esta conexión sale sellada igualmente
+    // (y el mundo de los dos interruptores apagados lo cubre
+    // t14PrivateHello.test.ts). Lo que esta prueba garantiza no cambia:
+    // con el interruptor del sellado apagado, conectar y chatear funciona.
     setFeatureOverrideForTests("p2p.sealedHandshake", false);
     const { ana, beto } = await pairAndConnect();
     await ana.run(() => ana.m.sendChat("Beto", "sin sellar"));

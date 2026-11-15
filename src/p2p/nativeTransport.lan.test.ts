@@ -44,6 +44,18 @@ import { buildConfirmV1, parseConfirm } from "./handshakeV3";
 import { makeMemoryHelloNonceCache } from "./nonceCache";
 import { networkAudit } from "../privacy/networkAudit";
 import type { P2PPeerInfo, P2PTransportEvents } from "./transport";
+import { resetFeatureFlagsForTests, setFeatureOverrideForTests } from "../config/featureFlags";
+
+// T-14 (M-21): este fichero ejercita la mecánica del handshake llamando
+// a direcciones Wi-Fi descubiertas, sin contacto conocido. Desde la
+// 0.1.99 ese mundo es el de la elección del usuario con «Solo saludo
+// privado» APAGADO: con el defecto nuevo, llamar a un desconocido se
+// rechaza antes de abrir el socket (eso lo cubre
+// t14PrivateHello.test.ts). Aquí se fija esa elección.
+beforeEach(() => {
+  resetFeatureFlagsForTests();
+  setFeatureOverrideForTests("p2p.privateHelloOnly", false);
+});
 
 const MY_PK = new Uint8Array(32).fill(1);
 const MY_PK_HEX = toHex(MY_PK);

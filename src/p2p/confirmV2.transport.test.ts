@@ -93,6 +93,9 @@ vi.mock("./store", () => {
 
 vi.mock("../config/featureFlags", () => ({
   isFeatureEnabled: (f: string) => f === "p2p.sealedHandshake" && keys.state.flag,
+  // T-14 (M-21): el respondedor lee el encendido EXPRESO; en este arnés
+  // nadie lo enciende, así que los saludos en claro se contestan.
+  isFeatureExplicitlyEnabled: () => false,
 }));
 
 vi.mock("../agent/memory/memoryStore", () => {

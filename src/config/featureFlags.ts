@@ -28,6 +28,7 @@ export type FeatureFlag =
   | "p2p.ratchetV5"
   | "p2p.privateHelloOnly"
   | "p2p.relay"
+  | "p2p.relaySend"
   | "security.panicButton";
 
 const DEFAULTS: Record<FeatureFlag, boolean> = {
@@ -49,13 +50,20 @@ const DEFAULTS: Record<FeatureFlag, boolean> = {
   "p2p.ratchetV5": true,
   /**
    * 0.1.55: «Solo saludo privado». Con él encendido este teléfono NUNCA dice
-   * en claro quién es: no llama a contactos que no admiten el saludo sellado
-   * (NIDO anteriores a la 0.1.49), no llama a dispositivos sin contacto
-   * conocido (la lista de cercanos) y rechaza los saludos en claro que le
-   * lleguen. Default OFF: encendido deja sin conexión a quien tenga un NIDO
-   * viejo, y eso lo decide el usuario.
+   * en claro quién es al LLAMAR: no llama a contactos que no admiten el
+   * saludo sellado (NIDO anteriores a la 0.1.49) ni a dispositivos sin
+   * contacto conocido (la lista de cercanos).
+   *
+   * 0.1.99 (auditoría M-21): ON por defecto, como las demás protecciones
+   * del P2P desde la 0.1.49 (nada débil por defecto). El volteo solo
+   * endurece la INICIACIÓN: el lado respondedor sigue contestando los
+   * saludos en claro que le lleguen, y solo los rechaza si el usuario
+   * encendió el ajuste EXPRESAMENTE (ver `isFeatureExplicitlyEnabled`,
+   * que es lo que lee el respondedor). Quien ya tocó el ajuste conserva
+   * su elección: su valor guardado manda sobre este defecto, y apagarlo
+   * en Ajustes restaura el comportamiento anterior entero.
    */
-  "p2p.privateHelloOnly": false,
+  "p2p.privateHelloOnly": true,
   /**
    * Mensajes de amigo en amigo (docs/RELAY.md): dar mi clave de buzón a los
    * contactos, sellar en sobre los mensajes que no salen directos y abrir
@@ -64,6 +72,17 @@ const DEFAULTS: Record<FeatureFlag, boolean> = {
    * nada de esto (interruptor de emergencia).
    */
   "p2p.relay": true,
+  /**
+   * 0.1.99 (auditoría m-51): sellar en sobre los mensajes PROPIOS que no
+   * salen directos, para que los lleven los contactos. Es una cara del
+   * relevo distinta de llevar sobres de otros (ajuste aparte, en la
+   * tarjeta del relevo): quien no quiere que sus mensajes viajen de
+   * teléfono en teléfono lo apaga aquí sin tocar lo demás. ON por
+   * defecto: sellar es el comportamiento del relevo desde que existe.
+   * Apagado, no se sella nada nuevo; los sobres ya en viaje terminan su
+   * vida de 72 horas como siempre.
+   */
+  "p2p.relaySend": true,
   /**
    * Botón de pánico (0.1.46, como Briar): muestra en la pantalla principal un
    * botón que, mantenido 3 segundos, borra todos los datos de NIDO sin más
@@ -79,6 +98,17 @@ export function isFeatureEnabled(flag: FeatureFlag): boolean {
   const o = overrides.get(flag);
   if (o !== undefined) return o;
   return DEFAULTS[flag] === true;
+}
+
+/**
+ * 0.1.99 (auditoría M-21): ¿el usuario encendió este interruptor
+ * EXPRESAMENTE? Solo cuenta su elección (el valor guardado en disco o
+ * fijado en memoria), nunca el defecto del código. Lo lee quien no debe
+ * endurecerse por un volteo de defecto: el respondedor del saludo, que
+ * solo rechaza saludos en claro si el usuario lo pidió él mismo.
+ */
+export function isFeatureExplicitlyEnabled(flag: FeatureFlag): boolean {
+  return overrides.get(flag) === true;
 }
 
 /** Test/introspection helper: clear in-memory overrides (does not touch disk). */

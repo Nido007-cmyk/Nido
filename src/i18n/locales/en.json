@@ -939,7 +939,10 @@
       "usage": "On · carrying {{count}} envelopes ({{kb}} KB)",
       "privacy": "Only from contacts, at most 200 envelopes and 2 MB, and each envelope is deleted after 72 hours or once delivered. Disappearing messages never travel this way.",
       "viaFriends": "via friends",
-      "travelling": "travelling via friends"
+      "travelling": "travelling via friends",
+      "sendToggle": "Send my messages through friends when they can't get through",
+      "sendDesc": "If a message of yours can't go out directly, it is sealed in an envelope for a contact to carry. Off, your messages only travel directly: if they can't get through, they stay on your phone.",
+      "storeFull": "One of your messages couldn't be sealed: the envelope space is full. It will be tried again with the next one."
     },
     "disappearShort": "Timer: {{value}}",
     "v5Active": "new key per message",
@@ -1192,7 +1195,7 @@
     "ratchetV5Title": "New key per message + quantum-resistant",
     "ratchetV5Desc": "Every message gets its own key, like Signal's Double Ratchet: a key stolen today does not open earlier messages. The session also mixes in ML-KEM-768, so traffic recorded today stays closed to future quantum computers. On by default; used when both phones have it. Applies from the next connection.",
     "privateHelloOnlyTitle": "Private hello only",
-    "privateHelloOnlyDesc": "Your phone never reveals who you are in the clear: it doesn't call contacts with an old NIDO (before 0.1.49) or devices that aren't your contacts, and it doesn't answer plain hellos. Off by default because it cuts off anyone who hasn't updated.",
+    "privateHelloOnlyDesc": "When calling, your phone never reveals who you are in the clear: it doesn't call contacts with an old NIDO (before 0.1.49) or devices that aren't your contacts. It comes turned on; if you turn it off, you can also call people who haven't updated. If you turn it on yourself here, it also stops answering plain hellos that reach you.",
     "recoveredTitle": "Settings reset",
     "recoveredNotice": "Your settings were damaged and went back to the factory defaults. Please review your settings, including any tools you had turned off: they may be on again."
   },
