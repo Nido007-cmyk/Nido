@@ -67,7 +67,20 @@ describe("P-24 · cambio de hora y de zona horaria reprograman los avisos", () =
 
   it("el receptor manda las dos a rescheduleAll", () => {
     expect(receiver).toContain("Intent.ACTION_TIMEZONE_CHANGED");
-    expect(receiver).toContain("Intent.ACTION_TIME_SET");
+    expect(receiver).toContain("Intent.ACTION_TIME_CHANGED");
+  });
+
+  it("la constante de Intent es ACTION_TIME_CHANGED: ACTION_TIME_SET no existe (T-44)", () => {
+    // En android.content.Intent no hay ningún campo ACTION_TIME_SET:
+    // TIME_SET es solo el valor de la cadena de la acción (la que va en
+    // el manifiesto, fijada arriba) y el campo se llama
+    // ACTION_TIME_CHANGED. La guarda original exigía el nombre malo en
+    // el fuente del receptor, y el error solo saltó al compilar el
+    // release: «Unresolved reference 'ACTION_TIME_SET'» en
+    // :nido-notify:compileReleaseKotlin (run android-apk 43737371704).
+    // vitest no compila Kotlin, así que la ausencia de la referencia
+    // mala también se fija aquí.
+    expect(receiver).not.toContain("Intent.ACTION_TIME_SET");
   });
 });
 
