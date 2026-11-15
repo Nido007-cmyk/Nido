@@ -49,7 +49,7 @@ const secureStore: BackupDateStore = {
   },
 };
 
-/** Lo llama createBackup al terminar bien. Nunca lanza. */
+/** Lo llama saveBackupToFolder (src/ui/backupShare.ts) cuando el respaldo queda guardado en la carpeta elegida por el usuario, la única salida con confirmación real. Nunca lanza. */
 export async function recordBackupMade(now = Date.now(), store: BackupDateStore = secureStore): Promise<void> {
   try {
     await store.set(String(now));
