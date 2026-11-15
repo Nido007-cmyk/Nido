@@ -53,7 +53,12 @@ export interface SimResult {
 
 /** Un sobre de forma válida, con eid y etiqueta propios (el contenido da igual aquí). */
 function fakeEnvelope(template: CarryEnvelope, eid: string, tag: string, exp: number): CarryEnvelope {
-  return { ...template, eid, tag, exp };
+  // T-13 (M-27): el núcleo también varía por mensaje, como en un sobre de
+  // verdad (sealCarry sella cada uno con efímera y nonce frescos). Antes
+  // todos compartían el núcleo de la plantilla, y la deduplicación por
+  // huella de M-27 los veía como el mismo sobre físico: ningún sobre real
+  // comparte núcleo con otro.
+  return { ...template, eid, tag, exp, eph: eid + eid, nonce: (eid + eid).slice(0, 48) };
 }
 
 export function simulate(cfg: SimConfig, template: CarryEnvelope): SimResult {

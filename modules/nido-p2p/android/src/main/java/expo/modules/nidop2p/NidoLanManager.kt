@@ -127,19 +127,23 @@ class NidoLanManager(
      * móviles mientras se buscaban contactos. Las redes móviles asignan
      * prefijos muy cortos (/30, /32), así que otro cliente nunca queda en la
      * misma subred; en Wi-Fi o punto de acceso (/24) el contacto sí.
-     * Si no se puede determinar la subred, se conserva el comportamiento
-     * anterior (solo IP privada) para no romper conexiones que funcionaban.
+     * T-13 (m-38): si NO se puede determinar la subred, la respuesta es NO
+     * (fail-closed). Antes era SÍ «para no romper conexiones que
+     * funcionaban», y eso dejaba el filtro sin efecto justo en los casos
+     * que no se podían razonar. Coste declarado: redes legítimas raras
+     * (punto de acceso con prefijo corto, /30-/32 de operadora en Wi-Fi)
+     * pierden la ruta LAN; la ruta Bluetooth no se toca.
      */
     fun isSameLocalSubnet(local: InetAddress?, remote: InetAddress): Boolean {
-      if (local !is Inet4Address || remote !is Inet4Address) return true
+      if (local !is Inet4Address || remote !is Inet4Address) return false
       val iface = try {
         NetworkInterface.getByInetAddress(local)
       } catch (_: Exception) {
         null
-      } ?: return true
-      val ia = iface.interfaceAddresses.firstOrNull { it.address == local } ?: return true
+      } ?: return false
+      val ia = iface.interfaceAddresses.firstOrNull { it.address == local } ?: return false
       val prefix = ia.networkPrefixLength.toInt()
-      if (prefix !in 1..32) return true
+      if (prefix !in 1..32) return false
       val mask = if (prefix == 32) -1 else (-1 shl (32 - prefix))
       return (ipv4ToInt(local) and mask) == (ipv4ToInt(remote) and mask)
     }
@@ -264,16 +268,23 @@ class NidoLanManager(
     s.reuseAddress = true
     // 0.1.55 (P-06): escuchar SOLO en la interfaz Wi-Fi (o en el punto de
     // acceso propio), no en todas: así el servidor ni siquiera existe en la
-    // interfaz de datos móviles. Si no se encuentra (fabricante con nombres
-    // raros), se mantiene lo de antes: todas las interfaces, con el filtro
-    // de IP privada y misma subred de acceptLoop.
+    // interfaz de datos móviles.
+    // T-13 (m-38): si no se identifica ninguna interfaz, NO se escucha.
+    // Antes se escuchaba en todas (0.0.0.0) y el filtro de acceptLoop era
+    // la única defensa: un solo filtro entre la red de la operadora y el
+    // saludo. Sin servidor, el resto sigue: el descubrimiento NSD y las
+    // conexiones salientes no dependen de este socket, y quien llama a
+    // start() reintenta en el siguiente arranque.
     val bindTo = preferredBindAddress()
-    if (bindTo != null) {
-      s.bind(InetSocketAddress(bindTo, 0)) // puerto efímero
-    } else {
-      Log.w(TAG, "sin interfaz Wi-Fi ni punto de acceso identificados: se escucha en todas (con filtro de red local)")
-      s.bind(InetSocketAddress(0))
+    if (bindTo == null) {
+      try {
+        s.close()
+      } catch (_: Exception) {
+      }
+      Log.w(TAG, "sin interfaz Wi-Fi ni punto de acceso identificados: el servidor LAN no arranca")
+      return
     }
+    s.bind(InetSocketAddress(bindTo, 0)) // puerto efímero
     server = s
     val t = Thread({ acceptLoop(s) }, "nido-lan-accept")
     t.isDaemon = true

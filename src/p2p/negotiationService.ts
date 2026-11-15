@@ -331,6 +331,15 @@ class NegotiationService {
     if (!desc) {
       return { sent: false, reason: "empty_description" };
     }
+    // T-13 (M-23, fricción aprobada por el dueño): proponer a un contacto
+    // cuya huella AÚN no se ha comparado exige haberla comparado antes.
+    // La puerta lee el `false` explícito del contrato (P2PContact.verified
+    // es boolean): un destinatario que no es contacto sigue su camino de
+    // siempre, porque el cotejo es un paso entre contactos emparejados.
+    const contact = await findContactByPk(recipientPkHex).catch(() => null);
+    if (contact && contact.verified === false) {
+      return { sent: false, reason: "contact_not_verified" };
+    }
     try {
       const kp = await getSigningKeypair();
       const myPkHex = toHex(kp.publicKey);

@@ -211,6 +211,13 @@ export class DelegationService {
     // Peer's signing key (token audience) from the paired contact.
     const { findContactByPk, getSigningKeypair } = await import("../../p2p/store");
     const contact = await findContactByPk(params.peerPkHex);
+    // T-13 (M-23, fricción aprobada por el dueño): delegar una tarea a un
+    // contacto cuya huella AÚN no se ha comparado exige haberla comparado
+    // antes. La puerta lee el `false` explícito del contrato; un contacto
+    // sin el campo (arneses parciales) no la dispara.
+    if ((contact as { verified?: boolean } | null)?.verified === false) {
+      return { ok: false, reason: "contact_not_verified" };
+    }
     const audienceHex = (contact as { sigPkHex?: string } | null)?.sigPkHex;
     if (!audienceHex) {
       return { ok: false, reason: "no_peer_signing_key" };

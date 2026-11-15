@@ -19,7 +19,24 @@
  * - Nunca se devuelve un sobre a quien lo trajo.
  */
 
-import { envelopeBytes, isWellFormedEnvelope, MAX_ENVELOPE_TTL_MS, MAX_HOPS, type CarryEnvelope } from "./carryCrypto";
+import {
+  envelopeBytes,
+  envelopeFingerprint,
+  isWellFormedEnvelope,
+  MAX_ENVELOPE_TTL_MS,
+  MAX_HOPS,
+  type CarryEnvelope,
+} from "./carryCrypto";
+
+/**
+ * T-13 (M-27): cuánto se recuerda la huella de un sobre que ya no está
+ * en el almacén (entregado, abierto o tirado), contando desde que llegó.
+ * 14 días, como la vida de una clave de buzón: pasado ese plazo el sobre
+ * ya no puede abrirse en destino y recordarlo no protege nada.
+ */
+export const FP_MEMORY_MS = 14 * 24 * 3600 * 1000;
+/** Tope de huellas recordadas; si se supera, se olvidan las más viejas. */
+const FP_MEMORY_MAX = 4096;
 
 export const STORE_LIMITS = {
   maxEnvelopes: 200,
@@ -52,6 +69,14 @@ export class CarryStore {
   private held = new Map<string, Held>();
   /** eid → caducidad: sobres ya vistos (entregados o tirados). */
   private seen = new Map<string, number>();
+  /**
+   * T-13 (M-27): huella del núcleo inmutable → eid, de los sobres que
+   * están dentro. El `eid` viaja sin autenticar y un portador puede
+   * reetiquetar el sobre; la huella no puede cambiarla sin romperlo.
+   */
+  private heldFp = new Map<string, string>();
+  /** huella → hasta cuándo se recuerda (llegada + FP_MEMORY_MS). */
+  private seenFp = new Map<string, number>();
 
   constructor(private readonly limits = STORE_LIMITS) {}
 
@@ -74,16 +99,48 @@ export class CarryStore {
     return this.held.has(eid) || this.seen.has(eid);
   }
 
+  /**
+   * T-13 (M-27): ¿este sobre FÍSICO ya pasó por aquí, traiga el `eid`
+   * que traiga? Lo usa quien recibe tandas para saltarlo sin abrirlo.
+   */
+  knownFingerprint(env: unknown, now: number): boolean {
+    if (!isWellFormedEnvelope(env)) return false;
+    const fp = envelopeFingerprint(env);
+    if (this.heldFp.has(fp)) return true;
+    return (this.seenFp.get(fp) ?? 0) > now;
+  }
+
+  /** Apunta una huella en la memoria acotada (tope y olvido de las viejas). */
+  private rememberFp(fp: string, until: number): void {
+    this.seenFp.set(fp, Math.max(this.seenFp.get(fp) ?? 0, until));
+    if (this.seenFp.size > FP_MEMORY_MAX) {
+      // Map itera en orden de inserción: fuera las más viejas. Si se
+      // llega aquí, la protección degrada a la de antes de M-27 para
+      // esas huellas; el resto sigue reconocido.
+      const excess = this.seenFp.size - FP_MEMORY_MAX;
+      let i = 0;
+      for (const k of this.seenFp.keys()) {
+        if (i++ >= excess) break;
+        this.seenFp.delete(k);
+      }
+    }
+  }
+
   /** Quita lo caducado. Devuelve cuántos sobres se tiraron. */
   sweep(now: number): number {
     let n = 0;
     for (const [eid, h] of this.held) {
       if (h.env.exp <= now) {
         this.held.delete(eid);
+        // T-13 (M-27): su huella se recuerda lo que queda de ventana.
+        const fp = envelopeFingerprint(h.env);
+        this.heldFp.delete(fp);
+        this.rememberFp(fp, h.arrivedAt + FP_MEMORY_MS);
         n++;
       }
     }
     for (const [eid, exp] of this.seen) if (exp <= now) this.seen.delete(eid);
+    for (const [fp, until] of this.seenFp) if (until <= now) this.seenFp.delete(fp);
     return n;
   }
 
@@ -100,6 +157,11 @@ export class CarryStore {
   private put(env: unknown, from: string | null, now: number, copies: number): AcceptResult {
     if (!isWellFormedEnvelope(env)) return "malformed";
     if (this.held.has(env.eid) || this.seen.has(env.eid)) return "duplicate";
+    // T-13 (M-27): el mismo sobre físico con otro `eid` también es
+    // duplicado, aunque traiga caducidad de fuera fresca y los saltos
+    // repuestos: la huella del núcleo no se puede reetiquetar.
+    const fp = envelopeFingerprint(env);
+    if (this.heldFp.has(fp) || (this.seenFp.get(fp) ?? 0) > now) return "duplicate";
     if (env.exp <= now) return "expired";
     if (env.hops < 1) return "no_hops";
     this.sweep(now);
@@ -116,6 +178,7 @@ export class CarryStore {
     // desde que llega, y los saltos nunca pasan del máximo.
     const stored: CarryEnvelope = { ...env, exp: Math.min(env.exp, now + MAX_ENVELOPE_TTL_MS), hops: Math.min(env.hops, MAX_HOPS) };
     this.held.set(env.eid, { env: stored, from, copiesLeft: copies, givenTo: new Set(), bytes, arrivedAt: now });
+    this.heldFp.set(fp, env.eid);
     return "stored";
   }
 
@@ -158,6 +221,11 @@ export class CarryStore {
       if (!h) continue;
       this.held.delete(eid);
       this.seen.set(eid, h.env.exp);
+      // T-13 (M-27): entregado no es olvidado: su huella se recuerda la
+      // ventana entera, para que no resucite reetiquetado.
+      const fp = envelopeFingerprint(h.env);
+      this.heldFp.delete(fp);
+      this.rememberFp(fp, h.arrivedAt + FP_MEMORY_MS);
     }
     for (const eid of carried) {
       const h = this.held.get(eid);
@@ -184,10 +252,13 @@ export class CarryStore {
   snapshot(): {
     held: Array<{ env: CarryEnvelope; from: string | null; copiesLeft: number; givenTo: string[]; arrivedAt: number }>;
     seen: Array<[string, number]>;
+    /** T-13 (M-27): huellas recordadas, para que un reinicio no las olvide. */
+    seenFp: Array<[string, number]>;
   } {
     return {
       held: [...this.held.values()].map((h) => ({ env: { ...h.env }, from: h.from, copiesLeft: h.copiesLeft, givenTo: [...h.givenTo], arrivedAt: h.arrivedAt })),
       seen: [...this.seen.entries()],
+      seenFp: [...this.seenFp.entries()],
     };
   }
 
@@ -204,9 +275,12 @@ export class CarryStore {
     held: ReadonlyArray<{ env: unknown; from: unknown; copiesLeft: unknown; givenTo: unknown; arrivedAt?: unknown }>,
     seen: ReadonlyArray<[unknown, unknown]>,
     now: number = Date.now(),
+    seenFp: ReadonlyArray<[unknown, unknown]> = [],
   ): void {
     this.held.clear();
     this.seen.clear();
+    this.heldFp.clear();
+    this.seenFp.clear();
     let totalBytes = 0;
     const perSource = new Map<string, number>();
     for (const h of held ?? []) {
@@ -234,17 +308,40 @@ export class CarryStore {
       }
       totalBytes += bytes;
       this.held.set(env.eid, { env, from, copiesLeft: copies, givenTo: new Set(given), bytes, arrivedAt });
+      // T-13 (M-27): el índice de huellas se reconstruye de los tenidos.
+      this.heldFp.set(envelopeFingerprint(env), env.eid);
     }
     for (const s of seen ?? []) {
       // Solo caducidades finitas: NaN o Infinity no cumplen nunca `exp <= now`
       // en sweep() y dejarían ese eid bloqueado para siempre.
       if (Array.isArray(s) && typeof s[0] === "string" && typeof s[1] === "number" && Number.isFinite(s[1])) this.seen.set(s[0], s[1]);
     }
+    // T-13 (M-27): la memoria de huellas guardada, con la misma higiene.
+    for (const s of seenFp ?? []) {
+      if (Array.isArray(s) && typeof s[0] === "string" && typeof s[1] === "number" && Number.isFinite(s[1])) {
+        this.rememberFp(s[0], s[1]);
+      }
+    }
   }
 
-  /** El sobre llegó a su destino por otro camino (acuse): ya no hace falta llevarlo. */
-  forget(eid: string, exp: number): void {
+  /**
+   * El sobre llegó a su destino por otro camino (acuse): ya no hace falta
+   * llevarlo. T-13 (M-27): si quien llama pasa el sobre, su huella también
+   * se aprende (anclada a su llegada si estaba dentro; si nunca estuvo
+   * dentro, a su caducidad de fuera, que es cota segura).
+   */
+  forget(eid: string, exp: number, env?: CarryEnvelope): void {
+    const heldEntry = this.held.get(eid);
     this.held.delete(eid);
     this.seen.set(eid, exp);
+    if (env && isWellFormedEnvelope(env)) {
+      const fp = envelopeFingerprint(env);
+      this.heldFp.delete(fp);
+      this.rememberFp(fp, heldEntry ? heldEntry.arrivedAt + FP_MEMORY_MS : exp + FP_MEMORY_MS);
+    } else if (heldEntry) {
+      const fp = envelopeFingerprint(heldEntry.env);
+      this.heldFp.delete(fp);
+      this.rememberFp(fp, heldEntry.arrivedAt + FP_MEMORY_MS);
+    }
   }
 }

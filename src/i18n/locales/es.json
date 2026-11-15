@@ -431,6 +431,7 @@
     "emptyDescription": "Cuando otro NIDO te proponga colaborar, aparecerá aquí.",
     "selectContactAndDescribe": "Selecciona un contacto y escribe la propuesta.",
     "sendFailed": "No se pudo enviar.",
+    "contactNotVerified": "Todavía no habéis comparado la huella con este contacto. Hazlo en su conversación o en la pestaña Contactos y vuelve a intentarlo.",
     "peerOffline": "El contacto no está en línea. Intenta cuando esté cerca con NIDO abierto.",
     "proposeButton": "+ Proponer colaboración",
     "outgoingTitle": "Propuesta enviada a {{peer}}",
@@ -816,6 +817,7 @@
     "verifyConfirm": "Coinciden",
     "verifiedNotice": "✓ {{name}} verificado.",
     "verifyFailed": "No se pudo verificar este contacto.",
+    "unverifiedBanner": "Todavía no habéis comparado la huella con {{name}}. Hasta que lo hagáis, las negociaciones, las tareas delegadas y los packs con este contacto quedan en pausa.",
     "linkActive": "🟢 Enlace activo",
     "linkStopped": "⚪ Enlace detenido",
     "tabChats": "Chats",
@@ -1147,7 +1149,9 @@
     "unavailableMessage": "NIDO aún está cargando tu identidad. Espera unos segundos y vuelve a intentarlo.",
     "tooLargeTitle": "Pack demasiado grande",
     "tooLargeMessage": "Este pack ocupa {{size}} MB y el máximo para compartir es {{max}} MB.",
-    "choosePeerTitle": "¿A quién se lo envías?"
+    "choosePeerTitle": "¿A quién se lo envías?",
+    "offerHeldUnverified": "La oferta de {{name}} queda en pausa: todavía no habéis comparado la huella. Cuando la comparéis, pídele que la envíe otra vez.",
+    "offerHeldUnverifiedGeneric": "Una oferta quedó en pausa: todavía no habéis comparado la huella con ese contacto. Cuando la comparéis, pídele que la envíe otra vez."
   },
   "voiceInputAlert": {
     "unavailableTitle": "Entrada de voz no disponible",
@@ -1158,6 +1162,7 @@
   },
   "tasks": {
     "approvalTitle": "Solicitud de tarea",
+    "contactNotVerified": "Todavía no habéis comparado la huella con este contacto. Hazlo en su conversación o en la pestaña Contactos y vuelve a intentarlo.",
     "fromPeer": "De {{name}} ({{pk}})",
     "untrustedLabel": "Su mensaje (no confiable):",
     "scopesLabel": "Se le permitirá:",
@@ -1301,7 +1306,9 @@
       "download_start": "Descarga iniciada",
       "download_complete": "Descarga completada",
       "download_failed": "Descarga fallida",
-      "lan_connect": "Conexión por Wi-Fi local"
+      "lan_connect": "Conexión por Wi-Fi local",
+      "bt_connect": "Conexión por Bluetooth",
+      "discovery": "Descubrimiento iniciado"
     }
   },
   "skillsCard": {

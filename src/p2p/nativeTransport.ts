@@ -273,6 +273,15 @@ export interface HelloPayload {
    * atacante activo solo puede quitarla (el peer sigue en v3, como hoy).
    */
   c4?: boolean;
+  /**
+   * T-13 (M-22): el remitente sabe ABRIR una respuesta sellada aunque su
+   * HELLO salga en claro. Pista NO firmada, misma doctrina que `c4`:
+   * quitarla degrada a la respuesta en claro de siempre. Sin ella (un
+   * iniciador 0.1.98) la respuesta NUNCA se sella: ese iniciador pone su
+   * clave de pareja solo cuando él selló, y una respuesta sellada que no
+   * espera le mataría la conexión en vez de protegerla.
+   */
+  rs?: boolean;
 }
 
 /**
@@ -332,6 +341,7 @@ export function parseHello(body: Uint8Array): HelloPayload {
     // Solo presente si el remitente lo anunció (los HELLO de versiones
     // anteriores quedan exactamente como antes).
     ...(obj.c4 === 1 ? { c4: true } : {}),
+    ...(obj.rs === 1 ? { rs: true } : {}),
   };
 }
 
@@ -355,6 +365,11 @@ export function buildHello(
       // P2P v4: «entiendo el saludo sellado». Las versiones anteriores
       // ignoran campos desconocidos del HELLO.
       c4: 1,
+      // T-13 (M-22): «y sé abrir tu respuesta aunque la selles». Con la
+      // misma doctrina: campo aditivo que las versiones anteriores
+      // ignoran; quien no lo anuncia (0.1.98) recibe la respuesta en
+      // claro de siempre, porque no sabría abrir otra cosa.
+      rs: 1,
     }),
   );
 }
@@ -879,7 +894,10 @@ export class NidoBluetoothTransport implements P2PTransport {
     // stopDiscovery) separados de los de DESCUBRIMIENTO.
     this.linkUnsubs = [
       b.addListener("onConnected", (e) => {
+        // T-13 (M-30): TODA conexión queda registrada, también Bluetooth
+        // (antes solo la de Wi-Fi local, y el registro mentía por omisión).
         if (isLanAddress(e.address)) this.auditLan(e.address, e.incoming);
+        else this.auditBt(e.address, e.incoming);
         // AUDIT-2026-10-11 (LAN-1) + P3 Bluetooth (2026-10-21): quien
         // RECIBE una conexión no revela su identidad hasta que el otro
         // demuestre ser un contacto, por Wi-Fi Y por Bluetooth. El servidor
@@ -957,17 +975,21 @@ export class NidoBluetoothTransport implements P2PTransport {
     if (!this.lanCapable()) {
       // Módulo nativo sin Wi-Fi local: comportamiento original.
       await b.startDiscovery();
+      this.auditDiscovery("bluetooth");
       return;
     }
     // Con respaldo Wi-Fi: Bluetooth y Wi-Fi local en paralelo. Basta con
     // que uno arranque; el fallo del otro se informa sin cortar el enlace.
     await this.ensureBluetoothReady().catch(() => {});
     let started = false;
+    let btStarted = false;
+    let lanStarted = false;
     let btError: unknown = null;
     if (this.btReady && b.isBluetoothEnabled()) {
       try {
         await b.startDiscovery();
         started = true;
+        btStarted = true;
       } catch (e) {
         btError = e;
       }
@@ -975,6 +997,7 @@ export class NidoBluetoothTransport implements P2PTransport {
     try {
       await b.startLan!();
       started = true;
+      lanStarted = true;
     } catch (e) {
       this.events?.onError?.(
         `Wi-Fi local no disponible: ${e instanceof Error ? e.message : String(e)}`,
@@ -985,6 +1008,12 @@ export class NidoBluetoothTransport implements P2PTransport {
         ? btError
         : new Error("Ni Bluetooth ni Wi-Fi local están disponibles.");
     }
+    // T-13 (M-30): el arranque del descubrimiento/anuncio también queda
+    // registrado, una entrada por activación (los reinicios programados
+    // llaman al nativo directamente y no pasan por aquí: sin inundar).
+    this.auditDiscovery(
+      btStarted && lanStarted ? "bluetooth + wifi-local" : btStarted ? "bluetooth" : "wifi-local",
+    );
     if (btError) {
       this.info(
         `Bluetooth no disponible (${btError instanceof Error ? btError.message : String(btError)}): se usa Wi-Fi local.`,
@@ -1001,6 +1030,42 @@ export class NidoBluetoothTransport implements P2PTransport {
       networkAudit.log({
         kind: "lan_connect",
         endpoint: `${address.replace(/^LAN:/i, "")} (${incoming ? "entrante" : "saliente"})`,
+        assetId: "",
+        bytesExpected: 0,
+        bytesReceived: 0,
+      });
+    } catch {
+      /* el registro nunca rompe el transporte */
+    }
+  }
+
+  /**
+   * T-13 (M-30): la conexión Bluetooth también queda en el registro, con
+   * el mismo criterio de datos que la de Wi-Fi local (dirección del
+   * aparato y dirección de la conexión; el registro vive en la base
+   * cifrada del propio aparato). Cubre también la reconexión automática
+   * al abrir la pantalla (m-89): pasa por este mismo listener.
+   */
+  private auditBt(address: string, incoming: boolean): void {
+    try {
+      networkAudit.log({
+        kind: "bt_connect",
+        endpoint: `${address} (${incoming ? "entrante" : "saliente"})`,
+        assetId: "",
+        bytesExpected: 0,
+        bytesReceived: 0,
+      });
+    } catch {
+      /* el registro nunca rompe el transporte */
+    }
+  }
+
+  /** T-13 (M-30): una entrada por activación del descubrimiento/anuncio. */
+  private auditDiscovery(transports: string): void {
+    try {
+      networkAudit.log({
+        kind: "discovery",
+        endpoint: transports,
         assetId: "",
         bytesExpected: 0,
         bytesReceived: 0,
@@ -1034,6 +1099,14 @@ export class NidoBluetoothTransport implements P2PTransport {
   async requestDiscoverable(): Promise<void> {
     const b = this.bindings;
     if (b?.requestDiscoverable) {
+      // T-13 (m-35): aviso ANTES de activar: durante la ventana el sistema
+      // enseña el nombre real del aparato a cualquier Bluetooth cercano.
+      // Hoy ningún flujo de la UI llama a esto (la exposición es latente);
+      // el aviso viaja por el canal de información del transporte para
+      // que cualquier llamador futuro lo enseñe sin cablear nada más.
+      this.info(
+        "Ojo: durante 2 minutos tu teléfono será visible por Bluetooth con su nombre real para cualquier aparato cercano.",
+      );
       await b.requestDiscoverable().catch(() => {});
     }
   }
@@ -1656,6 +1729,10 @@ export class NidoBluetoothTransport implements P2PTransport {
    *  - El HELLO no nombra al destinatario: un HELLO de un contacto nuestro
    *    capturado así puede reenviarse a nosotros dentro de la ventana de
    *    ±10 min (si su nonce no lo vimos) y obtener nuestro HELLO.
+   *    T-13 (M-22): si el HELLO capturado anuncia `rs`, ese HELLO nuestro
+   *    sale SELLADO y quien replaya no lo puede abrir; la fuga queda solo
+   *    para iniciadores anteriores a `rs` (0.1.98), que no sabrían abrir
+   *    una respuesta sellada.
    * La solución completa es un protocolo v4 sin identidad en claro (como
    * las etiquetas pseudoaleatorias por contacto de Briar/BTP).
    */
@@ -1684,6 +1761,18 @@ export class NidoBluetoothTransport implements P2PTransport {
       const { hello, contact, myPkHex, pkLower } = await this.validatePeerHello(inner);
       if (sealedFromPk !== undefined && pkLower !== sealedFromPk) {
         throw new Error("Saludo privado con identidad ajena: conexión rechazada.");
+      }
+      // T-13 (M-22): el HELLO vino en claro pero anuncia `rs`: el
+      // iniciador sabe abrir una respuesta sellada, así que la nuestra
+      // sale sellada con la clave de pareja de ESTE contacto. Un HELLO
+      // capturado y replayado ante otro aparato del mismo contacto
+      // obtiene así una respuesta que quien replaya no puede abrir: la
+      // fuga de presencia queda cerrada para iniciadores que anuncian
+      // `rs`. Sin `rs` (0.1.98) la respuesta sigue en claro a propósito:
+      // ese iniciador solo pone su clave de pareja cuando él selló, y
+      // una respuesta sellada inesperada le mataría la conexión.
+      if (pend.sealKey === undefined && hello.rs === true) {
+        pend.sealKey = await this.pairKeyFor(pkLower);
       }
       pend.peerAdvertisesV4 = hello.c4 === true || pend.sealKey !== undefined;
       const eph = generateEphemeral();
@@ -1815,6 +1904,30 @@ export class NidoBluetoothTransport implements P2PTransport {
         return; // beginHello falló (ej. sin identidad); se ignora el frame
       }
       pend = this.pending.get(mac);
+    }
+    if (pend && !pend.sealKey && pend.stage === "hello-sent" && isSealedFrame(body)) {
+      // T-13 (M-22): llamamos en claro (nuestra ficha del contacto no
+      // tiene la marca v4) pero nuestro HELLO anuncia `rs`, y el
+      // respondedor contestó sellado con la clave de pareja. Se abre
+      // identificando al contacto por la etiqueta; solo se adopta la
+      // clave si la pk de dentro ES ese contacto. Si no abre o no
+      // coincide, no se adopta nada y el frame sigue el camino de
+      // siempre (fallará cerrado en handleHello, como hasta hoy).
+      let adopted = false;
+      try {
+        const opened = await this.openSealedHello(body);
+        if (parseHello(opened.inner).pk === opened.pk) {
+          pend.sealKey = opened.pairKey;
+          body = opened.inner;
+          adopted = true;
+        }
+      } catch {
+        /* no es de un contacto: sin adopción */
+      }
+      if (adopted) {
+        await this.handleHello(mac, pend, body);
+        return;
+      }
     }
     if (pend && pend.sealKey && (pend.stage === "hello-sent" || pend.stage === "confirm-sent")) {
       // P2P v4: en un saludo sellado, cada frame del otro también debe venir

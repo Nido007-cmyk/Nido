@@ -444,6 +444,7 @@
     "proposeButton": "+ Propor colaboração",
     "selectContactAndDescribe": "Selecione um contato e escreva a proposta.",
     "sendFailed": "Não foi possível enviar.",
+    "contactNotVerified": "Vocês ainda não compararam a impressão digital com este contato. Façam isso na conversa dele ou na aba Contatos e tentem de novo.",
     "proposePlaceholder": "O que você quer propor?",
     "contactLabel": "Contato:",
     "proposalLabel": "Proposta:",
@@ -816,6 +817,7 @@
     "verifyConfirm": "Coincidem",
     "verifiedNotice": "✓ {{name}} verificado.",
     "verifyFailed": "Não foi possível verificar este contato.",
+    "unverifiedBanner": "Vocês ainda não compararam a impressão digital com {{name}}. Até que o façam, as negociações, as tarefas delegadas e os pacotes com este contato ficam em pausa.",
     "linkActive": "🟢 Enlace ativo",
     "linkStopped": "⚪ Enlace parado",
     "tabChats": "Conversas",
@@ -1147,7 +1149,9 @@
     "unavailableMessage": "O NIDO ainda está carregando sua identidade. Espere alguns segundos e tente de novo.",
     "tooLargeTitle": "Pacote grande demais",
     "tooLargeMessage": "Este pacote tem {{size}} MB e o limite para compartilhar é {{max}} MB.",
-    "choosePeerTitle": "Para quem você quer enviar?"
+    "choosePeerTitle": "Para quem você quer enviar?",
+    "offerHeldUnverified": "A oferta de {{name}} ficou em pausa: vocês ainda não compararam a impressão digital. Quando compararem, peçam para enviar de novo.",
+    "offerHeldUnverifiedGeneric": "Uma oferta ficou em pausa: vocês ainda não compararam a impressão digital com esse contato. Quando compararem, peçam para enviar de novo."
   },
   "voiceInputAlert": {
     "unavailableTitle": "Entrada de voz indisponível",
@@ -1158,6 +1162,7 @@
   },
   "tasks": {
     "approvalTitle": "Solicitação de tarefa",
+    "contactNotVerified": "Vocês ainda não compararam a impressão digital com este contato. Façam isso na conversa dele ou na aba Contatos e tentem de novo.",
     "fromPeer": "De {{name}} ({{pk}})",
     "untrustedLabel": "Mensagem deles (não confiável):",
     "scopesLabel": "Será permitido:",
@@ -1301,7 +1306,9 @@
       "download_start": "Download iniciado",
       "download_complete": "Download concluído",
       "download_failed": "Download com falha",
-      "lan_connect": "Conexão por Wi-Fi local"
+      "lan_connect": "Conexão por Wi-Fi local",
+      "bt_connect": "Conexão por Bluetooth",
+      "discovery": "Descoberta iniciada"
     }
   },
   "skillsCard": {

@@ -437,6 +437,7 @@
     "emptyDescription": "When another NIDO proposes collaboration, it will appear here.",
     "selectContactAndDescribe": "Select a contact and write the proposal.",
     "sendFailed": "Could not send.",
+    "contactNotVerified": "You and this contact have not compared fingerprints yet. Do it from their conversation or the Contacts tab, then try again.",
     "peerOffline": "The contact is not online. Try when they're nearby with NIDO open.",
     "proposeButton": "+ Propose collaboration",
     "outgoingTitle": "Proposal sent to {{peer}}",
@@ -816,6 +817,7 @@
     "verifyConfirm": "They match",
     "verifiedNotice": "✓ {{name}} verified.",
     "verifyFailed": "Couldn’t verify this contact.",
+    "unverifiedBanner": "You and {{name}} have not compared fingerprints yet. Until you do, negotiations, delegated tasks and packs with this contact stay paused.",
     "linkActive": "🟢 Link active",
     "linkStopped": "⚪ Link stopped",
     "tabChats": "Chats",
@@ -1147,7 +1149,9 @@
     "unavailableMessage": "NIDO is still loading your identity. Wait a few seconds and try again.",
     "tooLargeTitle": "Pack too large",
     "tooLargeMessage": "This pack is {{size}} MB and the sharing limit is {{max}} MB.",
-    "choosePeerTitle": "Who do you want to send it to?"
+    "choosePeerTitle": "Who do you want to send it to?",
+    "offerHeldUnverified": "{{name}}'s offer is paused: you have not compared fingerprints yet. Once you have, ask them to send it again.",
+    "offerHeldUnverifiedGeneric": "An offer is paused: you have not compared fingerprints with that contact yet. Once you have, ask them to send it again."
   },
   "voiceInputAlert": {
     "unavailableTitle": "Voice input unavailable",
@@ -1158,6 +1162,7 @@
   },
   "tasks": {
     "approvalTitle": "Task request",
+    "contactNotVerified": "You and this contact have not compared fingerprints yet. Do it from their conversation or the Contacts tab, then try again.",
     "fromPeer": "From {{name}} ({{pk}})",
     "untrustedLabel": "Their message (untrusted):",
     "scopesLabel": "It will be allowed to:",
@@ -1301,7 +1306,9 @@
       "download_start": "Download started",
       "download_complete": "Download completed",
       "download_failed": "Download failed",
-      "lan_connect": "Local Wi-Fi connection"
+      "lan_connect": "Local Wi-Fi connection",
+      "bt_connect": "Bluetooth connection",
+      "discovery": "Discovery started"
     }
   },
   "skillsCard": {

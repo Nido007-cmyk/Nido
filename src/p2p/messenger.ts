@@ -118,6 +118,14 @@ export const ACK_TIMEOUT_MS = 30_000;
 export const ACK_MAX_ATTEMPTS = 3;
 export const DEDUP_RETENTION_DAYS = 90;
 
+/** T-13 (m-55): ventana de la cuota de avisos entrantes (un aviso por par). */
+let incomingSignalWindowMs = 30_000;
+
+/** Solo para tests: ajusta la ventana de la cuota de avisos entrantes. */
+export function setIncomingSignalWindowForTests(ms: number): void {
+  incomingSignalWindowMs = ms;
+}
+
 /**
  * N6 §3.2 — tipos de envelope con semántica ACK: el receptor solo emite
  * ACK después del commit de persistencia, y el emisor solo alcanza
@@ -2216,7 +2224,25 @@ export class NidoMessenger {
    * El servicio compartido lo usa para el aviso genérico de mensaje nuevo.
    */
   onIncomingMessage: ((peerPkHex: string, type: string) => void) | null = null;
+  /**
+   * T-13 (m-55): cuota del aviso entrante. La pantalla reproduce un sonido
+   * y vibra con CADA aviso: una ráfaga de 20 mensajes del mismo par eran
+   * 20 avisos. Un aviso por par y ventana (30 s); el mensaje se guarda
+   * igual y el contador de no leídos no se toca. Solo se calla la señal.
+   */
+  private incomingSignalLastAt = new Map<string, number>();
+
   private signalIncoming(peerKey: string, type: string): void {
+    const now = Date.now();
+    const last = this.incomingSignalLastAt.get(peerKey);
+    if (last !== undefined && now - last < incomingSignalWindowMs) return;
+    this.incomingSignalLastAt.set(peerKey, now);
+    if (this.incomingSignalLastAt.size > 512) {
+      // Higiene simple: fuera las entradas ya fuera de ventana.
+      for (const [k, t] of this.incomingSignalLastAt) {
+        if (now - t >= incomingSignalWindowMs) this.incomingSignalLastAt.delete(k);
+      }
+    }
     try {
       this.onIncomingMessage?.(peerKey, type);
     } catch {

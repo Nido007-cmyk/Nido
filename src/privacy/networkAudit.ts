@@ -33,8 +33,23 @@
  * `lan_connect`: conexión P2P por Wi-Fi local (misma red o hotspot). Nunca
  * sale de la red local, pero se registra igual: el usuario ve TODO lo que
  * usa la red. `endpoint` es la IP local y la dirección (entrante/saliente).
+ *
+ * `bt_connect` (T-13, M-30): conexión P2P por Bluetooth, con el mismo
+ * criterio: `endpoint` es la dirección del aparato y la dirección de la
+ * conexión. Antes escapaba al registro y el resumen «toda conexión queda
+ * registrada» no era verdad.
+ *
+ * `discovery` (T-13, M-30): arranque del descubrimiento/anuncio P2P, una
+ * entrada por activación (no por aparato encontrado, para no inundar el
+ * tope de 500). `endpoint` nombra los transportes arrancados.
  */
-export type NetworkEventKind = "download_start" | "download_complete" | "download_failed" | "lan_connect";
+export type NetworkEventKind =
+  | "download_start"
+  | "download_complete"
+  | "download_failed"
+  | "lan_connect"
+  | "bt_connect"
+  | "discovery";
 
 export interface NetworkAuditEntry {
   /** ISO timestamp of the event. */
@@ -80,7 +95,14 @@ CREATE TABLE IF NOT EXISTS network_audit (
   entry TEXT NOT NULL
 );`;
 
-const KINDS: ReadonlySet<string> = new Set(["download_start", "download_complete", "download_failed", "lan_connect"]);
+const KINDS: ReadonlySet<string> = new Set([
+  "download_start",
+  "download_complete",
+  "download_failed",
+  "lan_connect",
+  "bt_connect",
+  "discovery",
+]);
 
 /** A stored row is shown only if it still has the shape of an entry. */
 export function parseStoredEntry(raw: string): NetworkAuditEntry | null {

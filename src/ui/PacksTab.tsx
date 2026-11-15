@@ -54,6 +54,12 @@ export function PacksTab({ peers, getPeerName }: Props) {
   );
   const [packs, setPacks] = useState<CatalogModel[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  /**
+   * T-13 (M-23): remitentes con una oferta retenida por la huella sin
+   * comparar. La oferta no creó sesión (no aparece en transferencias);
+   * este aviso es su única superficie, y dice el paso que falta.
+   */
+  const [heldSenders, setHeldSenders] = useState<string[]>([]);
 
   const refresh = useCallback(() => {
     setTransfers(packShareService.listTransfers());
@@ -71,6 +77,11 @@ export function PacksTab({ peers, getPeerName }: Props) {
   useEffect(() => {
     loadPacks();
     const unsubscribe = packShareService.subscribe((event: PackShareEvent) => {
+      if (event.type === "offer_held_unverified") {
+        setHeldSenders((prev) =>
+          prev.includes(event.senderPkHex) ? prev : [...prev, event.senderPkHex],
+        );
+      }
       refresh();
     });
     const interval = setInterval(() => {
@@ -196,6 +207,17 @@ export function PacksTab({ peers, getPeerName }: Props) {
 
   return (
     <ScrollView style={styles.container} testID="packs-tab">
+      {/* T-13 (M-23): ofertas retenidas por la huella sin comparar. */}
+      {heldSenders.map((senderPkHex) => {
+        const name = getPeerName(senderPkHex);
+        return (
+          <Text key={senderPkHex} style={[typo.ui.body, styles.emptyText]}>
+            {name && name !== senderPkHex
+              ? t("packshare.offerHeldUnverified", { name })
+              : t("packshare.offerHeldUnverifiedGeneric")}
+          </Text>
+        );
+      })}
       <Text style={[typo.ui.title, styles.sectionTitle]}>{t("packshare.availablePacks")}</Text>
       {packs.length === 0 ? (
         <Text style={[typo.ui.body, styles.emptyText]}>{t("packshare.noPacks")}</Text>

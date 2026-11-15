@@ -263,9 +263,13 @@ export function NegotiationsTab() {
       const result = await negotiationService.proposeTo(selectedPk, description.trim());
       if (!result.sent) {
         // M-U3 FIX: mensaje claro si el peer está offline, no "send_failed" críptico.
-        const msg = result.reason === "send_failed" || result.reason === "peer_offline"
-          ? t("negotiations.peerOffline")
-          : `${t("negotiations.sendFailed")} ${result.reason ?? ""}`.trim();
+        // T-13 (M-23): si la causa es la huella sin comparar, se dice eso,
+        // con el paso que falta, no un fallo genérico.
+        const msg = result.reason === "contact_not_verified"
+          ? t("negotiations.contactNotVerified")
+          : result.reason === "send_failed" || result.reason === "peer_offline"
+            ? t("negotiations.peerOffline")
+            : `${t("negotiations.sendFailed")} ${result.reason ?? ""}`.trim();
         setProposeError(msg);
         return;
       }
@@ -304,9 +308,11 @@ export function NegotiationsTab() {
       });
       if (!result.ok) {
         setTaskError(
-          result.reason === "disabled"
-            ? t("tasks.taskDisabled")
-            : t("tasks.taskSendFailed", { reason: result.reason })
+          result.reason === "contact_not_verified"
+            ? t("tasks.contactNotVerified")
+            : result.reason === "disabled"
+              ? t("tasks.taskDisabled")
+              : t("tasks.taskSendFailed", { reason: result.reason })
         );
         return;
       }
