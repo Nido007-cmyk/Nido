@@ -216,8 +216,19 @@ export const EMERGENCY_NUMBERS: readonly EmergencyEntry[] = [
 // P-17a). La «a» es opcional. Y la gemela portuguesa pedía el
 // infinitivo «ligar» donde la gente escribe el conjugado «ligo»
 // («que número ligo no Brasil» tampoco disparaba).
+// 0.1.99 T-27 (H-Z4-2, re-auditoría zona 4): la rama portuguesa
+// seguía exigiendo la adyacencia desnuda, sin el artículo «o» ni
+// el relativo «que», que es la forma corriente de preguntarlo en
+// portugués («qual o número que ligo em Portugal?» devolvía
+// null). La rama admite el artículo y el relativo con su «eu»
+// opcional; la puerta no se abre: sigue exigiendo «número» y el
+// verbo de marcar pegados a la pregunta. La hermana española
+// tenía el mismo hueco con el relativo («¿cuál es el número que
+// llamo en España?» también devolvía null, medido en la tanda):
+// admite la misma estructura («es el» y el relativo), misma
+// clase m-09, misma regex.
 const EMERGENCY_Q_RE =
-  /\b(numero|telefono|tel)s? (de |del |para )?(las? )?(emergencias?|urgencias?|emergency|policia|ambulancia|bomberos)\b|\b(?:a )?(que|cual) numero (llamo|llamar|marco|marcar)\b|\bemergency (number|phone|line)s?\b|\bwhat number (do i|should i|to) (call|dial)\b|\bnumber (for|to call) (the )?(police|ambulance|fire)\b|\bnumeros? de (emergencia|urgencia)\b|\b(qual|que) numero (ligar|ligo|eu ligo|discar)\b|\btelefone (de |da )?(emergencia|emergency)\b/;
+  /\b(numero|telefono|tel)s? (de |del |para )?(las? )?(emergencias?|urgencias?|emergency|policia|ambulancia|bomberos)\b|\b(?:a )?(que|cual) (?:es el )?numero (?:que )?(llamo|llamar|marco|marcar)\b|\bemergency (number|phone|line)s?\b|\bwhat number (do i|should i|to) (call|dial)\b|\bnumber (for|to call) (the )?(police|ambulance|fire)\b|\bnumeros? de (emergencia|urgencia)\b|\b(?:qual|que) (?:o |a )?numero (?:que )?(?:eu )?(?:ligar|ligo|discar)\b|\btelefone (de |da )?(emergencia|emergency)\b/;
 
 function findCountry(folded: string): EmergencyEntry | null {
   for (const e of EMERGENCY_NUMBERS) {
@@ -421,12 +432,155 @@ const SELF_HARM_GLUED_RE = new RegExp(
 );
 
 // Frases hechas y ficción: no son una persona contando que quiere morir.
-// 0.1.99 T-01 (M-07): los objetos cotidianos de la familia nueva de
-// «cortar» — quien se corta el pelo o las uñas lleva el mismo
-// reflexivo que la forma de autolesión, y «cut myself a slice» es
-// servirse comida, no hacerse daño.
+// (El veto de la familia de «cortar» vive aparte, en cutObjectVeto:
+// es por clase de objeto, no una lista dentro de esta regex.)
 const SELF_HARM_VETO_RE =
-  /\b(?:morir(?:me)? de (?:la )?(?:risa|verguenza|pena|hambre|sueno|calor|frio|amor|ganas|envidia|aburrimiento|cansancio|nervios)|die of (?:embarrassment|laughter|boredom|shame|hunger|thirst)|morrer de (?:rir|vergonha|fome|sono|calor|frio|amor|vontade|tedio|saudade)|(?:cuento|novela|historia|guion|cancion|poema|personaje|pelicula|serie|story|novel|script|song|lyrics|poem|character|movie|conto|romance|roteiro|musica|personagem|filme)\b|cortarme (?:el |la |las |los )?(?:pelo|cabello|flequillo|unas|barba|bigote)|cortar (?:el |la |las |los |o |a |as |os )?(?:pelo|cabello|cabelo|flequillo|unas|unhas|barba|bigote|bigode)|cortar-me (?:o |a |as |os )?(?:cabelo|unhas|barba|bigode)|cut(?:ting)? myself a )/;
+  /\b(?:morir(?:me)? de (?:la )?(?:risa|verguenza|pena|hambre|sueno|calor|frio|amor|ganas|envidia|aburrimiento|cansancio|nervios)|die of (?:embarrassment|laughter|boredom|shame|hunger|thirst)|morrer de (?:rir|vergonha|fome|sono|calor|frio|amor|vontade|tedio|saudade)|(?:cuento|novela|historia|guion|cancion|poema|personaje|pelicula|serie|story|novel|script|song|lyrics|poem|character|movie|conto|romance|roteiro|musica|personagem|filme)\b)/;
+
+/**
+ * 0.1.99 T-27 (H-Z4-1, re-auditoría zona 4): el veto de la familia
+ * de «cortar» ya no es una lista cerrada de objetos. La de T-01
+ * (pelo, cabello, flequillo, uñas, barba, bigote…) vetaba solo lo
+ * enumerado, y el conjunto cotidiano es abierto: la re-auditoría
+ * disparó el texto fijo con «las cutículas», «las puntas del
+ * pelo», «las patillas», «la perilla», «el vello de las piernas»,
+ * «un trozo de pastel», PT «as pontas» y EN «some slack». Ahora el
+ * veto lee el sintagma que sigue a la forma reflexiva y decide
+ * por CLASE:
+ *  - si la cabeza del sintagma es un lugar de daño (las venas,
+ *    las muñecas, la garganta, os pulsos…), NUNCA veta: la frase
+ *    dispara, como disparaba «quiero cortarme las venas»;
+ *  - si alguna palabra del sintagma es de una clase cotidiana
+ *    (raíces de aseo y pelo, porciones y comida, modismos en
+ *    inglés), veta: «las puntas DEL PELO» y «um pedaço DE BOLO»
+ *    entran por su palabra cotidiana, no por enumerar la frase;
+ *  - si no hay objeto reconocido («quiero cortarme», «cortarme
+ *    un poco», «cortarme otra vez», «cortarme a mí mismo»), no
+ *    veta: el disparo queda exactamente como estaba.
+ * Las raíces son de clase (cabel- vale cabello y cabelo, punt-
+ * vale puntas y pontas), no la frase entera; el freno es el de
+ * siempre en las dos direcciones y lo fijan las sondas de T-01 y
+ * de esta tanda.
+ */
+const CUT_ANCHOR_RE =
+  /\b(?:cortarme|cortar-me|me\s+(?:quiero\s+|voy\s+a\s+)?cortar|(?:cut|cutting)\s+myself)\b/g;
+
+const CUT_DETERMINERS = new Set([
+  "el", "la", "los", "las", "un", "una", "unos", "unas",
+  "o", "a", "os", "as", "um", "uma", "uns", "umas",
+  "mi", "mis", "meu", "minha", "meus", "minhas", "tu", "tus", "teu", "tua", "su", "sus", "seu", "sua",
+  "este", "esta", "estos", "estas", "esse", "essa", "estes", "estas",
+  "the", "an", "some", "my", "your", "his", "her", "their", "our",
+]);
+
+const CUT_PREPOSITIONS = new Set(["de", "del", "do", "da", "dos", "das", "of"]);
+
+// Cabezas de sintagma que son un lugar de daño: con una de estas
+// delante, el veto no se aplica nunca (texto ya plegado, sin
+// acentos: «muñecas» llega como «munecas», «pés» como «pes»).
+const CUT_HARM_HEADS = new Set([
+  "vena", "venas", "veia", "veias", "muneca", "munecas", "pulso", "pulsos",
+  "garganta", "gargantas", "cuello", "cuellos", "pescoco", "pescocos",
+  "brazo", "brazos", "braco", "bracos", "antebrazo", "antebrazos", "antebraco", "antebracos",
+  "muslo", "muslos", "coxa", "coxas", "pierna", "piernas", "perna", "pernas",
+  "dedo", "dedos", "mano", "manos", "mao", "maos", "piel", "pele",
+  "cara", "rostro", "rosto", "cabeza", "cabeca", "pecho", "peito",
+  "tobillo", "tobillos", "tornozelo", "tornozelos",
+  "yugular", "jugular", "arteria", "arterias", "tendon", "tendones", "tendao", "tendoes",
+  "pie", "pies", "pe", "pes", "ojo", "ojos", "olho", "olhos",
+  "lengua", "lingua", "oreja", "orejas", "orelha", "orelhas", "nariz",
+  "vein", "veins", "wrist", "wrists", "throat", "neck", "arm", "arms",
+  "forearm", "forearms", "thigh", "thighs", "leg", "legs",
+  "finger", "fingers", "hand", "hands", "skin", "face", "head",
+  "foot", "feet", "ankle", "ankles", "artery", "arteries",
+  "chest", "eye", "eyes", "tongue", "ear", "ears",
+]);
+
+// Raíces de clase cotidiana (prefijos sobre el texto plegado):
+// aseo y pelo en es/pt, porciones, y el vocabulario inglés de
+// servirse comida y de los modismos («some slack», «a break»).
+const CUT_EVERYDAY_STEMS = [
+  "cabel", "pel", "flequill", "franj", "unh", "barb", "bigot", "bigod",
+  "cuticul", "punt", "pont", "patill", "perill", "vell", "cej",
+  "sobrancelh", "pestan", "melen", "trenz", "colet",
+  "troz", "pedaz", "pedac", "rebanad", "tajad", "fati", "rodaj",
+  "porc", "racion", "pastel", "tarta", "torta", "bolo", "pizza",
+  "hair", "nail", "beard", "mustach", "moustach", "bang",
+  "slice", "piece", "chunk", "cake", "bread",
+];
+
+// Palabras cotidianas que no pueden ir por raíz sin colisionar
+// («pie» es el pie, un lugar de daño, y queda fuera a propósito;
+// «pan» por raíz valdría también «pantalón»).
+const CUT_EVERYDAY_WORDS = new Set(["unas", "pan", "pao", "queso", "quesos", "queijo", "queijos", "slack", "break"]);
+
+/** Las palabras del sintagma tras la forma de «cortar», sin determinantes del frente ni preposiciones. */
+function cutObjectWords(folded: string, from: number): string[] {
+  const words: string[] = [];
+  for (const raw of folded.slice(from).split(" ")) {
+    if (raw === "") continue;
+    const word = raw.replace(/^[¿?¡!.,;:()"'«»]+/g, "").replace(/[.,;:!?)"'»]+$/g, "");
+    if (word === "que" || word === "y" || word === "e" || word === "and" || word === "pero" || word === "mas") break;
+    if (word !== "") words.push(word);
+    if (/[.,;:!?]/.test(raw) || words.length >= 5) break;
+  }
+  let start = 0;
+  // Nunca se pela la última palabra: «las uñas» plegado es «las
+  // unas», y «unas» es a la vez determinante y el objeto mismo.
+  while (start < words.length - 1 && start < 2 && CUT_DETERMINERS.has(words[start]!)) start++;
+  return words.slice(start).filter((w) => !CUT_PREPOSITIONS.has(w));
+}
+
+function isEverydayCutObject(word: string): boolean {
+  return CUT_EVERYDAY_WORDS.has(word) || CUT_EVERYDAY_STEMS.some((s) => word.startsWith(s));
+}
+
+/** ¿Alguna forma de «cortar» del mensaje lleva un objeto cotidiano (y ninguna un lugar de daño)? */
+function cutObjectVeto(folded: string): boolean {
+  let everyday = false;
+  for (const m of folded.matchAll(CUT_ANCHOR_RE)) {
+    const words = cutObjectWords(folded, m.index + m[0].length);
+    if (words.length === 0) continue;
+    if (CUT_HARM_HEADS.has(words[0]!)) return false;
+    if (words.some(isEverydayCutObject)) everyday = true;
+  }
+  return everyday;
+}
+
+// La gemela pegada (dictado sin espacios): las mismas clases como
+// raíces dentro de la corrida que sigue al ancla pegada.
+const CUT_ANCHOR_GLUED_RE = /(?:cortarme|cortar-me|mecortar|mequierocortar|mevoyacortar|cutmyself|cuttingmyself)/g;
+const CUT_HARM_GLUED_STEMS = [
+  "vena", "veia", "munec", "gargant", "cuell", "pescoc", "braz", "brac",
+  "musl", "cox", "piern", "pern", "ded", "piel", "pele", "cara", "rost",
+  "tobill", "tornozel", "jugular", "yugular", "arteri", "puls",
+  "cabec", "cabez", "ojo", "pie", "wrist", "vein", "throat", "neck",
+  "arm", "thigh", "finger", "skin", "ankle",
+];
+const CUT_EVERYDAY_GLUED_STEMS = [
+  "cabel", "pel", "flequill", "franj", "unh", "unas", "barb", "bigot", "bigod",
+  "cuticul", "punt", "pont", "patill", "perill", "vell", "cej",
+  "sobrancelh", "pestan", "melen", "trenz", "colet",
+  "troz", "pedaz", "pedac", "rebanad", "tajad", "fati", "rodaj",
+  "porc", "racion", "pastel", "tarta", "torta", "bolo", "pizza",
+  "ques", "queij", "pan", "pao", "slack", "break", "slice", "piece", "chunk",
+  "cake", "bread", "hair", "nail", "beard", "mustach", "moustach", "bang",
+];
+
+function cutObjectVetoGlued(glued: string): boolean {
+  let everyday = false;
+  for (const m of glued.matchAll(CUT_ANCHOR_GLUED_RE)) {
+    const tail = glued.slice(m.index + m[0].length, m.index + m[0].length + 30);
+    if (tail === "") continue;
+    // Sin espacios no hay sintagma que leer: el lugar de daño solo
+    // manda si abre la corrida (determinante pegado + cabeza,
+    // «lasvenas», «ospulsos»); «elvellodelaspiernas» lleva su
+    // «piernas» de modificador, no de cabeza, y veta por «vell».
+    if (CUT_HARM_GLUED_STEMS.some((s) => tail.indexOf(s) >= 0 && tail.indexOf(s) <= 8)) return false;
+    if (CUT_EVERYDAY_GLUED_STEMS.some((s) => tail.includes(s))) everyday = true;
+  }
+  return everyday;
+}
 
 const SELF_HARM_VETO_GLUED_RE = new RegExp(SELF_HARM_VETO_RE.source.replace(/\\b/g, "").replace(/\s+/g, ""));
 
@@ -467,11 +621,11 @@ const SELF_HARM_TEXT: Record<SafetyLang, string> = {
 export function isSelfHarmMessage(userText: string): boolean {
   const folded = fold(userText).replace(/\s+/g, " ").trim();
   if (folded.length === 0 || folded.length > 4000) return false;
-  if (SELF_HARM_RE.test(folded) && !SELF_HARM_VETO_RE.test(folded)) return true;
+  if (SELF_HARM_RE.test(folded) && !SELF_HARM_VETO_RE.test(folded) && !cutObjectVeto(folded)) return true;
   // CL-11b: la forma dictada con las palabras pegadas, contra la
   // misma lista sin espacios y con el mismo veto sin espacios.
   const glued = folded.replace(/ /g, "");
-  return SELF_HARM_GLUED_RE.test(glued) && !SELF_HARM_VETO_GLUED_RE.test(glued);
+  return SELF_HARM_GLUED_RE.test(glued) && !SELF_HARM_VETO_GLUED_RE.test(glued) && !cutObjectVetoGlued(glued);
 }
 
 export function matchSafetyAnswer(userText: string, lang: SafetyLang): SafetyHit | null {
