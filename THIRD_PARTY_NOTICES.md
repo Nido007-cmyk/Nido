@@ -9,7 +9,7 @@ The list covers every package that `package-lock.json` does not mark as developm
 
 AI models are not part of the app: they are downloaded separately and keep their own licenses. Two of NIDO's own knowledge packs ship inside the APK since 0.1.95 (NIDO Essentials and NIDO Local, CC BY 4.0); the other packs are downloaded separately. All of them keep their own licenses (see [ATTRIBUTION.md](ATTRIBUTION.md) and `docs/release/MODEL_LICENSE_AUDIT.md`). Android libraries resolved by Gradle at build time (AndroidX, Kotlin, SQLCipher and their dependencies) do not come from npm: since 0.1.55 the exact list for each build is attached to its GitHub release as `android-runtime-dependencies.txt` (see below).
 
-Source: `package-lock.json sha256:f1af0217fb39` · 594 packages.
+Source: `package-lock.json sha256:3377d623a755` · 594 packages.
 
 ## License elections
 
@@ -298,7 +298,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | exact-alarm | local | MIT (NIDO's own module) |
 | expo | 57.0.32 | MIT |
 | expo-asset | 57.0.21 | MIT |
-| expo-build-properties | 57.0.22 | MIT |
+| expo-build-properties | 57.0.23 | MIT |
 | expo-calendar | 57.0.6 | MIT |
 | expo-clipboard | 57.0.2 | MIT |
 | expo-constants | 57.0.23 | MIT |
@@ -312,14 +312,13 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | expo-linear-gradient | 57.0.2 | MIT |
 | expo-local-authentication | 57.0.3 | MIT |
 | expo-modules-autolinking | 57.0.17 | MIT |
-| expo-modules-core | 57.0.24 | MIT |
 | expo-modules-core | 57.0.25 | MIT |
 | expo-modules-jsi | 57.1.3 | MIT |
 | expo-secure-store | 57.0.4 | MIT |
 | expo-server | 57.0.3 | MIT |
-| expo-sharing | 57.0.24 | MIT |
+| expo-sharing | 57.0.25 | MIT |
 | expo-speech | 57.0.3 | MIT |
-| expo-splash-screen | 57.0.10 | MIT |
+| expo-splash-screen | 57.0.11 | MIT |
 | expo-sqlite | 57.0.4 | MIT |
 | expo-status-bar | 57.0.1 | MIT |
 | exponential-backoff | 3.1.3 | Apache-2.0 |
@@ -335,6 +334,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | fontfaceobserver | 2.3.0 | BSD-2-Clause |
 | fresh | 0.5.2 | MIT |
 | fs.realpath | 1.0.0 | ISC |
+| fsevents | 2.3.3 | MIT |
 | function-bind | 1.1.2 | MIT |
 | gensync | 1.0.0-beta.2 | MIT |
 | get-caller-file | 2.0.5 | ISC |
@@ -8346,7 +8346,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### expo-build-properties@57.0.22 — LICENSE
+### expo-build-properties@57.0.23 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -8710,32 +8710,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### expo-modules-core@57.0.24 — LICENSE
-
-```text
-The MIT License (MIT)
-
-Copyright (c) 2015-present 650 Industries, Inc. (aka Expo)
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
 ### expo-modules-core@57.0.25 — LICENSE
 
 ```text
@@ -8840,7 +8814,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### expo-sharing@57.0.24 — LICENSE
+### expo-sharing@57.0.25 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -8892,7 +8866,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### expo-splash-screen@57.0.10 — LICENSE
+### expo-splash-screen@57.0.11 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -17900,6 +17874,7 @@ These packages declare a license in their `package.json` but ship no license fil
 - bser@2.1.1
 - fb-dotslash@0.5.8
 - fb-watchman@2.0.2
+- fsevents@2.3.3
 - imurmurhash@0.1.4
 - jimp-compact@0.16.1
 - stream-buffers@2.2.0
