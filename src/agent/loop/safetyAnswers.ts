@@ -1232,12 +1232,67 @@ const CUT_ANCHOR_GLUED_RE = /(?:cortarme|cortar-me|mecortar|mequierocortar|mevoy
 const CUT_HARM_GLUED_STEMS = [
   "vena", "veia", "munec", "gargant", "cuell", "pescoc", "braz", "brac",
   "musl", "cox", "piern", "pern", "ded", "piel", "pele", "cara", "rost",
-  "tobill", "tornozel", "jugular", "yugular", "arteri", "puls",
+  "tobill", "tornozel", "jugular", "yugular", "arter", "puls",
   "cabec", "cabez", "ojo", "pie", "wrist", "vein", "throat", "neck",
   "arm", "thigh", "finger", "skin", "ankle",
   // T-31: la barbilla, como en la vía con espacios.
   "barbill",
+  // T-40 (R8a y R8b): la lista quedó completada con decisión
+  // escrita por cabeza, medida sobre las listas reales: ninguna
+  // de estas raíces es prefijo de ninguna palabra ni raíz
+  // cotidiana (la colisión que rompería el veto), y cada una
+  // cubre solo las cabezas de su familia. «arter» sustituye a
+  // «arteri» como raíz de la familia: cubre las mismas
+  // (arteria, arterias, arteries) y además «artery», el caso
+  // que T-39 dejó medido. Las de R8b («antebraz», «antebrac»,
+  // «forearm») leen su cabeza por la raíz AL INICIO de la
+  // palabra, no por el accidente de letra: antes su única
+  // aparición dejaba delante «ante»/«fore», acabados en «e», y
+  // el test de frontera los aceptaba como si fueran la
+  // conjunción fundida, sin que el código lo declarara (el
+  // discriminador de la ronda 8, «desarmado», trae su «arm» a
+  // mitad de palabra tras consonante y sigue sin rescatar).
+  // Las colisiones de raíz al inicio de una palabra que no
+  // veta («lenguado» por «lengu», «pechuga» por «pech», como
+  // «venado» por «vena») son la frontera declarada desde R1,
+  // en la dirección de sobre-disparo. Y una cobertura por
+  // letra que sí queda, declarada como la de «whose»: la raíz
+  // «head» aparece también a mitad de «forehead», tras un
+  // prefijo acabado en «e», así que esa palabra —que no es
+  // cabeza de la clase— queda rescatada por la frontera de
+  // letra cuando un objeto cotidiano veta en la misma corrida
+  // (medido por T-40: la lectura con espacios veta por su
+  // primer objeto, pero la gemela pegada la rescata y el
+  // mensaje dispara en las dos grafías, como «venado»; la
+  // cabeza «head» misma se lee por su raíz en frontera
+  // limpia). Las tres cabezas que ninguna raíz puede abrir
+  // sin rescatar al objeto que veta («pe» rescataría «pelo»,
+  // «pes» a «pestañas», «leg» a «leggins») no van aquí: se
+  // leen como palabra entera en CUT_HARM_GLUED_FULL_HEADS.
+  "mano", "mao", "pech", "peit", "tend", "lengu", "lingu", "orej",
+  "orelh", "nariz", "olh", "hand", "face", "head", "foot", "feet",
+  "chest", "tongu", "eye", "ear", "legs",
+  "antebraz", "antebrac", "forearm",
 ];
+
+// T-40 (R8a): las cabezas de CUT_HARM_HEADS que ninguna raíz
+// de la lista abre al inicio de la palabra. La lista se
+// DERIVA de la constante de cabezas, como T-39 derivó los
+// determinantes y los cuantificadores de las suyas: con las
+// raíces completadas quedan exactamente «pe», «pes» y «leg»
+// (el pie y los pies portugueses, cuyo singular «pie»
+// español sí va por raíz, y la pierna inglesa, cuyo plural
+// «legs» sí va por raíz porque ninguna palabra cotidiana
+// empieza por «legs»). Se leen como palabra entera en
+// gluedHarmHeads, con la guarda de su sitio: la aparición no
+// cuenta si la corrida en ese punto empieza por una raíz
+// cotidiana, porque entonces la palabra es el objeto que
+// veta y no la cabeza («pe» dentro de «pelo», «pes» dentro
+// de «pestañas», «leg» dentro de «leggins», y «pedazo» o
+// «pedaço» tras su «pe»).
+const CUT_HARM_GLUED_FULL_HEADS = [...CUT_HARM_HEADS].filter(
+  (h) => !CUT_HARM_GLUED_STEMS.some((s) => h.startsWith(s)),
+);
 const CUT_EVERYDAY_GLUED_STEMS = [
   "cabel", "pel", "flequill", "franj", "unh", "unas", "barb", "bigot", "bigod",
   "cuticul", "punt", "pont", "patill", "perill", "vell", "cej",
@@ -1414,54 +1469,76 @@ function peelGluedDeterminer(prefix: string): string {
   return det ? prefix.slice(0, prefix.length - det[0].length) : prefix;
 }
 
+// ¿La aparición que empieza en el índice i de la corrida
+// está en el sitio de una cabeza (abre la corrida o un
+// objeto)? Es la decisión que gluedHarmHeads aplicaba a
+// cada aparición de raíz, extraída sin cambiarla para que
+// las palabras enteras de T-40 pasen por la misma puerta.
+function gluedHeadAtBoundary(tail: string, i: number): boolean {
+  let prefix = peelGluedDeterminer(tail.slice(0, i));
+  // T-35 (R5d): la cadena de mediadores enlaza POR
+  // MEDIADOR, no por letra. La forma de T-34 exigía
+  // que el carácter anterior al mediador fuera «y»,
+  // «e» o puntuación, así que la pila corriente
+  // «também só» no se pelaba (el mediador va tras la
+  // «m» de «também») y «também até» solo se reconocía
+  // por la «e» final de «até». Ahora un mediador se
+  // pela cuando lo que lo precede es el inicio, la
+  // conjunción, la puntuación, otro mediador o un
+  // determinante; si lo precede cualquier otra cosa
+  // no se pela: es la cola de una palabra de
+  // contenido («consolo» no es «con» + «solo», ni el
+  // «logo» de «catálogo» un secuenciador).
+  for (;;) {
+    const med = CUT_MEDIATOR_GLUED_RE.exec(prefix);
+    if (!med) break;
+    const before = prefix.slice(0, prefix.length - med[0].length);
+    if (
+      before !== "" &&
+      !/[ye,;:]$/.test(before) &&
+      !CUT_MEDIATOR_GLUED_RE.test(before) &&
+      !CUT_DET_GLUED_RE.test(before) &&
+      // T-37 (R6d): la conjunción inglesa «and» es
+      // frontera de la cadena, como la «y»/«e» de una
+      // letra («…andthen…» pela «then»).
+      !before.endsWith("and")
+    ) {
+      break;
+    }
+    prefix = before;
+  }
+  // Tras el «de» del complemento no es cabeza («…de» acaba
+  // en «e» y no es la conjunción): es el caso de arriba.
+  // La cadena va antes de este control para que las
+  // fórmulas con «tarde» se pelen como unidad y no
+  // caigan en él.
+  if (/(?:de|del|do|da|dos|das)$/.test(prefix)) return false;
+  // La cabeza también abre el objeto tras la puntuación
+  // de lista pegada («elpelo,las…»): la coma cierra el
+  // objeto anterior igual que la conjunción.
+  // T-37 (R6d): el prefijo acabado en la conjunción
+  // inglesa «and» es frontera, como el acabado en «y»
+  // o en «e».
+  return prefix === "" || prefix.endsWith("y") || prefix.endsWith("e") || prefix.endsWith("and") || /[,;:]$/.test(prefix);
+}
+
 function gluedHarmHeads(tail: string): boolean {
   for (const s of CUT_HARM_GLUED_STEMS) {
     for (let i = tail.indexOf(s); i >= 0; i = tail.indexOf(s, i + 1)) {
-      let prefix = peelGluedDeterminer(tail.slice(0, i));
-      // T-35 (R5d): la cadena de mediadores enlaza POR
-      // MEDIADOR, no por letra. La forma de T-34 exigía
-      // que el carácter anterior al mediador fuera «y»,
-      // «e» o puntuación, así que la pila corriente
-      // «também só» no se pelaba (el mediador va tras la
-      // «m» de «também») y «também até» solo se reconocía
-      // por la «e» final de «até». Ahora un mediador se
-      // pela cuando lo que lo precede es el inicio, la
-      // conjunción, la puntuación, otro mediador o un
-      // determinante; si lo precede cualquier otra cosa
-      // no se pela: es la cola de una palabra de
-      // contenido («consolo» no es «con» + «solo», ni el
-      // «logo» de «catálogo» un secuenciador).
-      for (;;) {
-        const med = CUT_MEDIATOR_GLUED_RE.exec(prefix);
-        if (!med) break;
-        const before = prefix.slice(0, prefix.length - med[0].length);
-        if (
-          before !== "" &&
-          !/[ye,;:]$/.test(before) &&
-          !CUT_MEDIATOR_GLUED_RE.test(before) &&
-          !CUT_DET_GLUED_RE.test(before) &&
-          // T-37 (R6d): la conjunción inglesa «and» es
-          // frontera de la cadena, como la «y»/«e» de una
-          // letra («…andthen…» pela «then»).
-          !before.endsWith("and")
-        ) {
-          break;
-        }
-        prefix = before;
-      }
-      // Tras el «de» del complemento no es cabeza («…de» acaba
-      // en «e» y no es la conjunción): es el caso de arriba.
-      // La cadena va antes de este control para que las
-      // fórmulas con «tarde» se pelen como unidad y no
-      // caigan en él.
-      if (/(?:de|del|do|da|dos|das)$/.test(prefix)) continue;
-      // La cabeza también abre el objeto tras la puntuación
-      // de lista pegada («elpelo,las…»): la coma cierra el
-      // objeto anterior igual que la conjunción.
-      // T-37 (R6d): el prefijo acabado en la conjunción
-      // inglesa «and» es frontera, como el acabado en «y»
-      // o en «e».
-      if (prefix === "" || prefix.endsWith("y") || prefix.endsWith("e") || prefix.endsWith("and") || /[,;:]$/.test(prefix)) return true;
+      if (gluedHeadAtBoundary(tail, i)) return true;
+    }
+  }
+  // T-40 (R8a): las cabezas sin raíz (la lista derivada de
+  // arriba) se buscan como palabra entera, por la misma
+  // puerta de sitio que las raíces, con la guarda de la
+  // palabra cotidiana: si la corrida en ese punto empieza
+  // por una raíz de la clase cotidiana, la palabra es el
+  // objeto que veta («pelo», «pestañas», «leggins») y no
+  // la cabeza corta que comparte sus letras.
+  for (const w of CUT_HARM_GLUED_FULL_HEADS) {
+    for (let i = tail.indexOf(w); i >= 0; i = tail.indexOf(w, i + 1)) {
+      if (CUT_EVERYDAY_GLUED_STEMS.some((s) => tail.startsWith(s, i))) continue;
+      if (gluedHeadAtBoundary(tail, i)) return true;
     }
   }
   return false;
