@@ -76,4 +76,12 @@ export async function wirePackShare(messenger: PackShareMessenger, myPkHex: stri
   packShareService.setDataProvider(makePackDataProvider(deps));
   packShareService.setImporter(makePackImporter(deps));
   packShareService.setOfferFilter((adv) => isAcceptableOffer(packsSnapshot, adv));
+  // T-13 (M-23): una oferta solo entra si la huella de ese contacto ya se
+  // comparó. La puerta lee el store en el momento de la oferta (el filtro
+  // de arriba es síncrono y no puede).
+  packShareService.setOfferGate(async (senderPkHex) => {
+    const { findContactByPk } = await import("./store");
+    const contact = await findContactByPk(senderPkHex);
+    return contact?.verified === true;
+  });
 }

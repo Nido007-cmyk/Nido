@@ -137,15 +137,19 @@ describe("P1 el mensajero retoca lo de fuera", () => {
     expect(openCarry(touched, [caroKey.secret], caro.pk, contactsOfCaro, NOW + H + 1)).toBeNull();
   });
 
-  it("el eid no va autenticado: el mismo sobre con otro eid se abre igual (la deduplicación vive en el interior)", () => {
+  it("el eid no va autenticado: el mismo sobre con otro eid se abre igual; el almacén lo reconoce por la huella (T-13, M-27)", () => {
     const e = sealToCaro("hola");
     const rebadged = { ...e, eid: toHex(randomNonce(16)) };
     expect(openCarry(rebadged, [caroKey.secret], caro.pk, contactsOfCaro, NOW)?.text).toBe("hola");
     const st = new CarryStore();
     expect(st.accept(e, beto.pk, NOW)).toBe("stored");
+    // T-13 (M-27): en ESTE teléfono el reetiquetado ya no entra dos veces:
+    // la deduplicación del almacén ya no vive solo en el interior.
+    expect(st.accept(rebadged, beto.pk, NOW)).toBe("duplicate");
+    // Un teléfono que nunca lo vio sí lo acepta una vez (límite honesto:
+    // la huella es memoria local de cada teléfono, no un registro global).
     const st2 = new CarryStore();
-    st2.accept(e, beto.pk, NOW);
-    expect(st2.accept(rebadged, beto.pk, NOW)).toBe("stored"); // otro teléfono lo ve como nuevo
+    expect(st2.accept(rebadged, beto.pk, NOW)).toBe("stored");
   });
 
   it("cambiar la etiqueta por la de OTRA clave de buzón de la misma destinataria lo invalida (contexto atado a la clave)", () => {

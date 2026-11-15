@@ -104,7 +104,13 @@ export type PackShareEvent =
   | { type: "transfer_updated"; info: PackTransferInfo }
   | { type: "transfer_complete"; info: PackTransferInfo }
   | { type: "transfer_failed"; info: PackTransferInfo; error: string }
-  | { type: "offer_declined"; info: PackTransferInfo };
+  | { type: "offer_declined"; info: PackTransferInfo }
+  /**
+   * T-13 (M-23): la oferta quedó retenida porque la huella del contacto
+   * aún no se ha comparado. No hay sesión: la oferta no se enseña como
+   * recibida; la UI muestra el aviso de cotejo con este remitente.
+   */
+  | { type: "offer_held_unverified"; senderPkHex: string; packName: string };
 
 type PackShareEventHandler = (event: PackShareEvent) => void;
 
@@ -134,6 +140,14 @@ class PackShareService {
   private importer: PackImporter | null = null;
   /** 0.1.55: qué ofertas se enseñan (la app: solo packs del catálogo). */
   private offerFilter: ((adv: PackAdvertisement) => boolean) | null = null;
+  /**
+   * T-13 (M-23): puerta asíncrona de cotejo de huella. El filtro de
+   * ofertas es síncrono y no puede leer el store; esta puerta sí. Una
+   * oferta que no la pasa queda retenida con su causa (evento
+   * `offer_held_unverified`), sin sesión: no se puede aceptar por la
+   * puerta de atrás con trozos sueltos.
+   */
+  private offerGate: ((senderPkHex: string) => Promise<boolean>) | null = null;
 
   static getInstance(): PackShareService {
     if (!PackShareService.instance) {
@@ -177,6 +191,16 @@ class PackShareService {
    */
   setOfferFilter(filter: ((adv: PackAdvertisement) => boolean) | null): void {
     this.offerFilter = filter;
+  }
+
+  /**
+   * T-13 (M-23): puerta de cotejo para ofertas entrantes. La app la
+   * cablea con el estado `verified` del contacto. Si la puerta falla,
+   * la oferta se retiene (fail-closed): mejor una oferta esperando al
+   * cotejo que una instalada sin él.
+   */
+  setOfferGate(gate: ((senderPkHex: string) => Promise<boolean>) | null): void {
+    this.offerGate = gate;
   }
 
   subscribe(handler: PackShareEventHandler): () => void {
@@ -451,6 +475,26 @@ class PackShareService {
       if (!ok) return;
     }
 
+    // T-13 (M-23): la huella del remitente debe estar comparada antes de
+    // que su oferta se enseñe como recibida. Retenida con su causa, sin
+    // sesión: quien la mande otra vez tras el cotejo entrará normal.
+    if (this.offerGate) {
+      let allowed = false;
+      try {
+        allowed = await this.offerGate(adv.senderId);
+      } catch {
+        allowed = false;
+      }
+      if (!allowed) {
+        this.emit({
+          type: "offer_held_unverified",
+          senderPkHex: adv.senderId.toLowerCase(),
+          packName: adv.name,
+        });
+        return;
+      }
+    }
+
     const session = createReceiveSession(adv, this.myPkHex ?? "");
     this.receiveSessions.set(sessionId, session);
 
@@ -714,6 +758,7 @@ class PackShareService {
     this.dataProvider = null;
     this.importer = null;
     this.offerFilter = null;
+    this.offerGate = null;
   }
 }
 

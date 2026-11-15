@@ -120,6 +120,12 @@ interface RelayState {
   peers: Record<string, PeerRow>;
   held: HeldRow[];
   seen: Array<[string, number]>;
+  /**
+   * T-13 (M-27): huellas de sobres ya vistos (huella → hasta cuándo se
+   * recuerda). Los estados guardados por versiones anteriores no la
+   * traen: vale el vacío y se va llenando.
+   */
+  seenFp: Array<[string, number]>;
   /** id de mensaje mío → eid y caducidad del sobre que lo lleva. */
   own: Record<string, { eid: string; exp: number }>;
   /** id de mensaje → "in" (llegó por amigos) | "out" (salió también por amigos). */
@@ -132,7 +138,7 @@ interface RelayState {
   opened: Record<string, number>;
 }
 
-const EMPTY: RelayState = { enabled: false, mine: [], peers: {}, held: [], seen: [], own: {}, flags: {}, opened: {} };
+const EMPTY: RelayState = { enabled: false, mine: [], peers: {}, held: [], seen: [], seenFp: [], own: {}, flags: {}, opened: {} };
 /** A partir de aquí, la memoria antirrepetición solo olvida caducadas (ver rememberOpened). */
 const MAX_OPENED = 5000;
 const KEY = "relay_state_v1";
@@ -213,6 +219,7 @@ async function load(): Promise<RelayState> {
   }
   if (Array.isArray(b.held)) s.held = (b.held as unknown[]).filter(isObj) as unknown as HeldRow[];
   if (Array.isArray(b.seen)) s.seen = (b.seen as unknown[]).filter(Array.isArray) as Array<[string, number]>;
+  if (Array.isArray(b.seenFp)) s.seenFp = (b.seenFp as unknown[]).filter(Array.isArray) as Array<[string, number]>;
   if (isObj(b.opened)) {
     for (const [k, exp] of Object.entries(b.opened)) if (typeof exp === "number") s.opened[k] = exp;
   }
@@ -240,7 +247,7 @@ async function save(s: RelayState): Promise<void> {
 
 function storeFrom(s: RelayState): CarryStore {
   const st = new CarryStore(STORE_LIMITS);
-  st.restore(s.held, s.seen);
+  st.restore(s.held, s.seen, Date.now(), s.seenFp);
   return st;
 }
 
@@ -248,6 +255,7 @@ function storeInto(s: RelayState, st: CarryStore): void {
   const snap = st.snapshot();
   s.held = snap.held;
   s.seen = snap.seen;
+  s.seenFp = snap.seenFp;
 }
 
 function mySecrets(s: RelayState, myPkHex: string, now: number): CarryPrekeySecret[] {
@@ -428,16 +436,18 @@ export async function receive(
       for (const [k, exp] of Object.entries(s.opened)) if (exp <= now) delete s.opened[k];
       const isContact = (pk: string) => sigPkOf(pk) !== null;
       for (const e of list) {
-        if (!isWellFormedEnvelope(e) || st.known(e.eid)) continue;
+        // T-13 (M-27): el salto por huella va ANTES de intentar abrir:
+        // un sobre reetiquetado no debe gastar ni una apertura.
+        if (!isWellFormedEnvelope(e) || st.known(e.eid) || st.knownFingerprint(e, now)) continue;
         const opened = openCarry(e, secrets, me.pkHex, isContact, now);
         if (!opened && myTags.has(e.tag)) {
           // Con mi etiqueta pero no se abre (manipulado, de un no-contacto…):
           // no se lleva a ningún sitio.
-          st.forget(e.eid, e.exp);
+          st.forget(e.eid, e.exp, e);
           continue;
         }
         if (opened) {
-          st.forget(e.eid, e.exp);
+          st.forget(e.eid, e.exp, e);
           const key = `${opened.from}|${opened.kind}|${opened.id}`;
           if (s.opened[key] !== undefined) continue; // repetición en otro sobre
           rememberOpened(s.opened, key, opened.exp, now);
