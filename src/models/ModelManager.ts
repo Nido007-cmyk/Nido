@@ -165,10 +165,12 @@ async function measureUsedBytes(excludePaths: Set<string>): Promise<number> {
  *    same screen's normal mode). Always an explicit user action; never
  *    automatic, never during chat/inference.
  * 2. **Bundled** (`installBundled`): copies a model baked into the APK's
- *    compiled assets (via the `bundled-assets` native module +
- *    plugins/withBundledModels.js) into the document directory, purely
- *    locally. Not used by default (keeps the installable app small/fast to
- *    build) but available as an alternate build path — see manifest.ts.
+ *    compiled assets (via the `bundled-assets` native module) into the
+ *    document directory, purely locally. The config plugin that used to
+ *    bake the GGUF weights in (plugins/withBundledModels.js) was retired
+ *    in 0.1.99 — it copied the files without verifying them at copy
+ *    time — so today only the corpus packs travel this way; see
+ *    manifest.ts.
  */
 export class ModelManager {
   /**

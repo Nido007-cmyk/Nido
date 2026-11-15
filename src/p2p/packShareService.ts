@@ -50,6 +50,7 @@ import {
   isSendSessionTimedOut,
 } from "./packSharing";
 import { globalRevocationRegistry } from "./replayProtection";
+import { randomNonce, toHex } from "./crypto";
 
 /** Función para enviar un envelope pack_share (inyectada por el messenger). */
 export type PackShareSendFn = (
@@ -295,7 +296,12 @@ class PackShareService {
     const packData = await this.dataProvider(packId);
     if (!packData) return null;
 
-    const sessionId = `ps-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    // T-16 (m-01): la parte impredecible del id sale del CSPRNG de la
+    // casa (128 bits). Antes salía del generador no criptográfico del
+    // lenguaje, en base 36 y recortado a 6 caracteres: unos 31 bits, con
+    // la marca de tiempo a la vista. El prefijo y la marca se conservan
+    // (los registros y la depuración los usan).
+    const sessionId = `ps-${Date.now()}-${toHex(randomNonce(16))}`;
 
     // Importar createSendSession dinámicamente para evitar ciclos
     const { createSendSession } = await import("./packSharing");
@@ -416,7 +422,7 @@ class PackShareService {
         await this.handleAccept(sessionId, senderPkHex);
         break;
       case "DECLINE":
-        this.handleDecline(sessionId);
+        this.handleDecline(sessionId, senderPkHex);
         break;
       case "CHUNK":
         await this.handleChunk(sessionId, senderPkHex, data);
@@ -428,7 +434,7 @@ class PackShareService {
         await this.handleComplete(sessionId, senderPkHex);
         break;
       case "CANCEL":
-        this.handleCancel(sessionId);
+        this.handleCancel(sessionId, senderPkHex);
         break;
       default:
         // Acción desconocida: se ignora (fail-closed)
@@ -522,10 +528,13 @@ class PackShareService {
     await this.sendNextChunks(sessionId);
   }
 
-  private handleDecline(sessionId: string): void {
+  private handleDecline(sessionId: string, senderPkHex: string): void {
     const session = this.sendSessions.get(sessionId);
     if (!session) return;
     if (session.state !== "OFFERED") return;
+    // T-16 (m-01): misma ligadura que ACCEPT. Solo el destinatario de la
+    // oferta puede declinarla; un DECLINE de otro contacto se ignora.
+    if (session.peerPkHex !== senderPkHex) return;
 
     session.state = "DECLINED";
     session.lastActivityAt = Date.now();
@@ -653,10 +662,14 @@ class PackShareService {
     this.emit({ type: "transfer_complete", info });
   }
 
-  private handleCancel(sessionId: string): void {
-    // Puede ser sender o receiver
+  private handleCancel(sessionId: string, senderPkHex: string): void {
+    // Puede ser sender o receiver, pero T-16 (m-01): solo una de las dos
+    // partes de la sesión. En una sesión de envío manda el destinatario
+    // de la oferta; en una de recepción, su emisor. Un CANCEL de otro
+    // contacto se ignora (antes cancelaba transferencias ajenas).
     const sendSession = this.sendSessions.get(sessionId);
     if (sendSession) {
+      if (sendSession.peerPkHex !== senderPkHex) return;
       sendSession.state = "CANCELLED";
       sendSession.lastActivityAt = Date.now();
       this.emit({ type: "transfer_updated", info: this.sendSessionToInfo(sendSession) });
@@ -664,6 +677,7 @@ class PackShareService {
     }
     const recvSession = this.receiveSessions.get(sessionId);
     if (recvSession) {
+      if (recvSession.advertisement.senderId.toLowerCase() !== senderPkHex) return;
       const info = this.receiveSessionToInfo(sessionId, recvSession);
       info.state = "cancelled";
       info.updatedAt = Date.now();

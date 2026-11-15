@@ -171,6 +171,32 @@ export async function readVaultSetting(key: string): Promise<string | null> {
   }
 }
 
+/**
+ * T-15 (m-02): lectura estricta de un ajuste de la bóveda, SOLO para la
+ * ruta del nivel B. A diferencia de `readVaultSetting` — cuyo «null =
+ * sigue» es el contrato correcto de sus otros tres consumidores (puerta
+ * de respaldo, llave del staging, censo de borrado) y no se toca —, esta
+ * variante distingue el valor leído del error de lectura: sin backend o
+ * con la lectura lanzando, devuelve `ok: false`, porque quien pregunta
+ * (el nivel B, «máxima seguridad») no puede tratar «no sé» como
+ * «desactivado». No la uses para otra cosa sin pensarlo: fallar cerrado
+ * es la promesa del nivel B, no la de la casa entera.
+ */
+export type VaultSettingRead = { ok: true; value: string | null } | { ok: false; error: unknown };
+
+export async function readVaultSettingStrict(key: string): Promise<VaultSettingRead> {
+  if (!key.startsWith("nido_vault_")) throw new Error("keyManager: clave de ajuste no permitida.");
+  const backend = realBackend();
+  if (!backend) {
+    return { ok: false, error: new Error("keyManager: SecureStore no disponible.") };
+  }
+  try {
+    return { ok: true, value: await backend.getItemAsync(key) };
+  } catch (e) {
+    return { ok: false, error: e };
+  }
+}
+
 export async function writeVaultSetting(key: string, value: string | null): Promise<void> {
   if (!key.startsWith("nido_vault_")) throw new Error("keyManager: clave de ajuste no permitida.");
   const backend = realBackend();

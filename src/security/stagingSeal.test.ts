@@ -6,8 +6,9 @@
 
 /**
  * Auditoría 2026-10-29: el archivo de la rotación de clave ya no guarda las
- * claves en claro. Y la recuperación tras un cierre a mitad sigue funcionando,
- * también con un archivo antiguo en claro.
+ * claves en claro. Y la recuperación tras un cierre a mitad sigue funcionando
+ * con los archivos sellados; el formato antiguo en claro se retiró en 0.1.99
+ * (T-16 · P-05) y openStaging lo rechaza.
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -53,8 +54,12 @@ describe("archivo de rotación cifrado", () => {
     expect(keys.value).toBe(first);
   });
 
-  it("un archivo antiguo en claro se sigue leyendo", async () => {
-    expect(await openStaging(JSON_IN, memKeys())).toBe(JSON_IN);
+  it("un archivo antiguo en claro se RECHAZA: el formato sin sellar se retiró en 0.1.99 (T-16 · P-05)", async () => {
+    await expect(openStaging(JSON_IN, memKeys())).rejects.toThrow(/no sellado/);
+  });
+
+  it("un texto que ni siquiera es JSON también se rechaza como no sellado (T-16 · P-05)", async () => {
+    await expect(openStaging("esto no es un staging", memKeys())).rejects.toThrow(/no sellado/);
   });
 
   it("sin la llave no se abre, y lo dice con un error propio (para no borrarlo)", async () => {

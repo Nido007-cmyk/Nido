@@ -11,7 +11,8 @@
  * ahí con ModelManager.installBundled, que verifica tamaño y SHA-256 contra
  * el catálogo firmado antes de marcarlos instalados.
  *
- * A diferencia de withBundledModels.js (los GGUF, opcional y sin usar), aquí
+ * A diferencia del retirado withBundledModels.js (los GGUF; retirado en
+ * la 0.1.99 por copiar los pesos sin verificarlos al copiar), aquí
  * la falta de un archivo esperado hace FALLAR el prebuild: un APK sin estos
  * packs saldría sin números de emergencia hasta la primera descarga, y eso
  * tiene que verse en el CI, no en el teléfono de alguien.
