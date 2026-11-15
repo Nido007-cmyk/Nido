@@ -25,7 +25,12 @@
  *
  * Seguridad:
  * - Nunca loggear DEKs
- * - Borrar DEK viejo de memoria con fill(0)
+ * - Los bytes sueltos del DEK nuevo se ponen a cero con fill(0) al
+ *   terminar, pero los DEK viajan como strings hex, y un string en JS es
+ *   inmutable: no se puede borrar de memoria; lo que se hace es soltar
+ *   las referencias y dejar que el GC lo recoja. La compensación de ese
+ *   residuo es el nivel B de la bóveda (lockAndTerminate al pasar la app
+ *   a segundo plano), no un borrado que JS no puede hacer.
  * - Biométrico obligatorio
  * - El staging (rekey-staging.json) va CIFRADO con una llave guardada en
  *   SecureStore (Keystore de Android): ver stagingSeal.ts. Hasta 0.1.62 iba
@@ -208,8 +213,10 @@ export async function checkStaleRekeyStaging(
     if (!info.exists) return { recovered: false };
     
     // Cifrado desde la auditoría del 29-10-2026; uno en claro (0.1.62 o
-    // antes) se lee igual. Sin la llave se lanza y el archivo NO se borra:
-    // el próximo arranque lo reintenta (el catch de abajo).
+    // antes) ya no se lee: openStaging lo rechaza (formato retirado en
+    // 0.1.99, T-16 · P-05). Sin la llave se lanza, y ante cualquier error
+    // de apertura el archivo NO se borra: el próximo arranque lo
+    // reintenta (el catch de abajo).
     const raw = await openStaging(await FS.readAsStringAsync(stagingPath), stagingKeys);
     const parsed = JSON.parse(raw);
     const newDekHex = parsed.newDekHex;

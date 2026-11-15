@@ -18,8 +18,10 @@
  * una llave aleatoria guardada en SecureStore, es decir, protegida por el
  * Keystore de Android. Sin esa llave el archivo no dice nada. La recuperación
  * al arrancar sigue igual; solo cambia cómo se lee y se escribe el archivo.
- * Un archivo antiguo en claro (rotación interrumpida en 0.1.62 o antes) se
- * sigue leyendo.
+ * Un archivo antiguo en claro (rotación interrumpida en 0.1.62 o antes) ya
+ * no se lee: la ventana de compatibilidad se retiró en 0.1.99 (T-16 · P-05),
+ * porque toda instalación viva pasó por ≥0.1.63, que sella; openStaging lo
+ * rechaza con un error explícito en vez de devolverlo tal cual.
  */
 import nacl from "tweetnacl";
 import { fromHex, toHex, utf8Decode, utf8Encode } from "../p2p/crypto";
@@ -83,12 +85,18 @@ export function isSealedStaging(raw: string): boolean {
 }
 
 /**
- * Devuelve el JSON del archivo de rotación. Uno en claro (0.1.62 o antes) se
- * devuelve tal cual. Uno cifrado sin su llave lanza StagingKeyMissingError;
- * uno manipulado lanza un error normal.
+ * Devuelve el JSON del archivo de rotación sellado. Uno sin sellar (el
+ * formato en claro de 0.1.62 o antes, retirado en 0.1.99) lanza un error
+ * explícito: no se devuelve tal cual. Uno cifrado sin su llave lanza
+ * StagingKeyMissingError; uno manipulado lanza un error normal. Los tres
+ * errores reciben el mismo tratamiento en el llamador
+ * (checkStaleRekeyStaging): el archivo no se borra y el próximo arranque
+ * lo reintenta.
  */
 export async function openStaging(raw: string, keys: StagingKeyStore = secureStagingKeyStore): Promise<string> {
-  if (!isSealedStaging(raw)) return raw;
+  if (!isSealedStaging(raw)) {
+    throw new Error("Archivo de rotación no sellado: el formato en claro (0.1.62 o antes) está retirado y no se lee.");
+  }
   const env = JSON.parse(raw) as { n: unknown; c: unknown };
   if (typeof env.n !== "string" || typeof env.c !== "string") throw new Error("Archivo de rotación cifrado mal formado.");
   const hex = await keys.get();
