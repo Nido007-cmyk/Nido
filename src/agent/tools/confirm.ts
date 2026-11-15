@@ -28,9 +28,18 @@
  * - nido_approve_task / nido_reject_task (M-6): decidir sobre una tarea
  *   remota encolada convierte trabajo pendiente en trabajo decidido; es
  *   una decisión del usuario, no del agente.
- * Ya seguras por diseño (el SO confirma): place_call (abre el marcador),
- * send_sms (abre la app de mensajes). read_picked_file pide el archivo con
- * el picker del sistema.
+ * - place_call / send_sms (T-11, m-54): salen de la lista de «ya seguras
+ *   porque el SO confirma». Esa justificación no aguantaba la medición:
+ *   el marcador se abre con el número ya tecleado, pero nada confirma
+ *   la LLAMADA — un toque más la inicia, también a números de tarificación
+ *   especial, y el usuario no ha visto ningún diálogo de NIDO con el
+ *   número exacto que el modelo eligió; con send_sms pasa igual (la app
+ *   de mensajes se abre con destinatario y texto ya rellenados). Las dos
+ *   irreversibles de la lista canónica que actuaban fuera quedaban así
+ *   con UNA sola pregunta, la genérica del dispatcher y sin payload.
+ *   Ahora se confirman aquí, con el número (y el texto, en el SMS)
+ *   completos en el diálogo.
+ * read_picked_file pide el archivo con el picker del sistema.
  *
  * Para añadir una futura herramienta sensible: añádela a SENSITIVE_TOOLS y
  * envuelve su handler con `withConfirmation`.
@@ -129,6 +138,10 @@ export const SENSITIVE_TOOLS: ReadonlySet<string> = new Set([
   // M-6: decidir sobre una tarea remota encolada es una acción sensible.
   "nido_approve_task",
   "nido_reject_task",
+  // T-11 (m-54): irreversibles que salen de NIDO; el SO NO confirma la
+  // llamada ni el envío (ver la cabecera). Se confirman en el handler.
+  "place_call",
+  "send_sms",
 ]);
 
 /**

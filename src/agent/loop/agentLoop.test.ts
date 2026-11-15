@@ -20,6 +20,7 @@ import {
   type AgentEngine,
   type AgentLoopResult,
 } from "./agentLoop";
+import { withConfirmation, type ConfirmRequest } from "../tools/confirm";
 
 describe("prompt y directivas en portugués (F1 M-5 = F9-02)", () => {
   it("buildSystemPrompt en pt presenta a NIDO en portugués", () => {
@@ -780,24 +781,44 @@ describe("runAgentLoop — contactos deterministas y respaldos honestos", () => 
   it('"llama a Ruben" → confirmación con el número y place_call ejecutado', async () => {
     const engine = fakeEngine(["NO DEBERÍA USARSE"]);
     const calls: unknown[] = [];
-    const confirms: unknown[] = [];
+    const confirms: ConfirmRequest[] = [];
+    const dispatcherConfirms: unknown[] = [];
     const result = await runAgentLoop("llama a Ruben", {
       engine,
       handlers: {
-        place_call: async (args) => {
-          calls.push(args);
-          return "Abriendo el marcador con 5551112222…";
-        },
+        // T-11 (m-11 + m-54): la confirmación de place_call vive en el
+        // handler envuelto (como lo inyecta ChatScreen en producción),
+        // con el número en el diálogo; el dispatcher ya NO pregunta por
+        // su cuenta para las auto-confirmadas. Este test fija el nuevo
+        // reparto: una sola pregunta, la del handler, con el número.
+        place_call: withConfirmation(
+          "place_call",
+          async (args) => {
+            calls.push(args);
+            return "Abriendo el marcador con 5551112222…";
+          },
+          async (req) => {
+            confirms.push(req);
+            return true;
+          },
+          (args) => ({
+            tool: "place_call",
+            title: "Llamada telefónica",
+            message: `¿Abrir el marcador con ${String(args.phone ?? "")}?`,
+          }),
+        ),
       },
       onConfirmTool: async (_d, action) => {
-        confirms.push(action);
+        dispatcherConfirms.push(action);
         return true;
       },
       loadMemory: async () => null,
       contactSearch,
     });
     expect(engine.calls).toHaveLength(0);
-    expect(confirms).toEqual([{ tool: "place_call", args: { phone: "555 111 2222" } }]);
+    expect(dispatcherConfirms).toEqual([]);
+    expect(confirms).toHaveLength(1);
+    expect(confirms[0].message).toContain("555 111 2222");
     expect(calls).toEqual([{ phone: "555 111 2222" }]);
     expect(result.response).toBe("Abrí el marcador con 555 111 2222. Pulsa llamar para confirmar.");
   });
