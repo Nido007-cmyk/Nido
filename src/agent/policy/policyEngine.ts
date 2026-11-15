@@ -23,6 +23,8 @@
  * Pure module - no side effects, testable without a device.
  */
 
+import { IRREVERSIBLE_TOOLS } from "./irreversibleTools";
+
 /** Source of content: trusted (user) vs untrusted (retrieved/external) */
 export type ContentSource =
   | "user"           // Direct user input - trusted
@@ -67,6 +69,22 @@ export function neutralizeUntrustedTags(text: string): string {
   return text.replace(/<(?=\s*\/?\s*untrusted)/gi, "\u2039");
 }
 
+/**
+ * T-10 (0.1.99, m-29): neutraliza también los mímicos ESTRUCTURALES del
+ * protocolo del agente dentro de contenido no confiable: la valla
+ * exacta ```tool (un resultado que la trajera podría colarse como
+ * llamada si el historial se re-parsea) y las líneas que imitan el
+ * encabezado de las observaciones del bucle. SOLO la valla exacta de
+ * herramienta: el código legítimo (```python, ```ts, ``` a secas) pasa
+ * intacto, y el prefijo U+2039 espeja la técnica de
+ * neutralizeUntrustedTags.
+ */
+export function neutralizeStructuralMimics(text: string): string {
+  return text
+    .replace(/```tool(?=[\s]|$)/gm, "``` tool")
+    .replace(/^Observación de herramientas:/gm, "\u2039Observación de herramientas:");
+}
+
 /** Escapa un valor para usarlo como atributo del bloque <untrusted>. */
 export function escapeUntrustedAttr(value: string): string {
   return value
@@ -82,7 +100,7 @@ export function wrapUntrusted(content: LabeledContent): string {
     return content.content;
   }
   const origin = content.origin ? ` origin="${escapeUntrustedAttr(content.origin)}"` : "";
-  return `<untrusted source="${content.source}"${origin}>\n${neutralizeUntrustedTags(content.content)}\n</untrusted>`;
+  return `<untrusted source="${content.source}"${origin}>\n${neutralizeStructuralMimics(neutralizeUntrustedTags(content.content))}\n</untrusted>`;
 }
 
 /** Action risk level */
@@ -118,28 +136,12 @@ export interface PolicyDecision {
 /**
  * Irreversible actions that ALWAYS require human confirmation,
  * regardless of other factors.
- * Names match the tool manifest in ../tools/manifest.ts.
  *
- * NOTA: Esta es la lista legacy. La fuente canónica es
- * IRREVERSIBLE_TOOLS_CANONICAL en ./authorization.ts.
- * Se mantiene por compatibilidad; ambas deben coincidir.
- * El test authorization.test.ts verifica la consistencia.
+ * T-11 (0.1.99, m-12): la lista vive UNA sola vez, en
+ * ./irreversibleTools.ts, y la comparten evaluateAction y
+ * authorization.ts. Antes había dos copias literales que coincidían
+ * porque un test las comparaba, no por construcción.
  */
-const IRREVERSIBLE_TOOLS = new Set([
-  "send_sms",
-  "nido_send_message",
-  "place_call",
-  "nido_pair",
-  "nido_approve_task",
-  "send_email",
-  "purchase",
-  "delete_file",
-  "delete_memory",
-  "factory_reset",
-  // 0.1.20 (P3-9): borrar notas/recordatorios es irreversible → confirma.
-  "delete_note",
-  "delete_reminder",
-]);
 
 /**
  * Evaluate a tool action against the policy.
@@ -198,7 +200,11 @@ export function evaluateAction(action: ToolAction): PolicyDecision {
   // contenido de origen peer al loop de herramientas sin etiquetarlo como no
   // confiable en policyContext. La etiqueta la pone el loop/dispatcher,
   // nunca el modelo.
-  const MEMORY_WRITE_TOOLS = new Set(["remember_fact"]);
+  // T-11 (0.1.99, P-09): save_person entra en la misma puerta al
+  // cablearse en el manifiesto: también escribe memoria persistente que
+  // quedará como propia ('user'), con el mismo riesgo de inyección
+  // persistente que remember_fact.
+  const MEMORY_WRITE_TOOLS = new Set(["remember_fact", "save_person"]);
   if (MEMORY_WRITE_TOOLS.has(action.tool)) {
     const hasUntrusted = action.context.some(
       (c) => !isTrustedSource(c.source)
@@ -208,7 +214,7 @@ export function evaluateAction(action: ToolAction): PolicyDecision {
         allowed: true,
         risk: "medium",
         reason:
-          "remember_fact con contenido no confiable en el contexto requiere " +
+          `${action.tool} con contenido no confiable en el contexto requiere ` +
           "confirmación humana: lo guardado quedará como memoria propia ('user').",
         requiresConfirmation: true,
       };

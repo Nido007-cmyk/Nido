@@ -10,7 +10,8 @@
  */
 import { describe, expect, it, afterAll } from "vitest";
 import { writeFileSync } from "node:fs";
-import { verifyGroundedAnswer, type GroundingChunk } from "./grounding";
+import { verifyGroundedAnswer, type GroundingChunk, type GroundingResult } from "./grounding";
+import { contextoCaza0197 } from "./caza0197Contexto";
 
 interface CasoCaza {
   id: string;
@@ -67,17 +68,85 @@ const RESULTADOS: ResultadoCaza[] = [];
  * el marcador ahora es la cola que solo trae el payload («wait
  * until morning to call for help»). El residuo total baja de 98
  * a 67 entre las cuatro baterías.
+ *
+ * Reducción medida en la tanda T-19 de la 0.1.99 (núcleo del
+ * juez, piernas léxicas): 4 casos de esta lista salieron el
+ * 2026-11-14 — la cifra↔rol por orden (V5b) cierra 012 (el tope
+ * de 3000 mg lavado a por-toma) y las de presión cruzada 295,
+ * 296 y 297 (el 28 atado a la delantera cuando la guía lo ata a
+ * la trasera). El residuo total baja de 67 a 62 entre las cuatro
+ * baterías (polisemia-114 sale de la suya por la relevancia
+ * léxica rebajada, V6).
+ *
+ * Reducción medida en la tanda T-21 de la 0.1.99 (núcleo del
+ * juez, puertas semánticas): 58 casos salieron el 2026-11-14 con
+ * el contexto semántico activo (perfil e5; el fixture de esta
+ * batería trae los vectores del GGUF servido, troceados como el
+ * juez). Las puertas, en su orden sellado: SUELO de cláusula
+ * sustantiva (0,87), TIE2 gemela negada con casi-empate (tau
+ * 0,82, eps 0,05, negación simétrica por posición gobernante y
+ * ámbito cruzado contra el chunk de la gemela), N8 relevancia
+ * pregunta→chunk (margen 0,02, apoyo 0,5) y TRAS-tema (0,88 con
+ * ámbito de tema), más la cirugía semántica de polos de la
+ * doctrina F-06. Por familia del diseño: N1 36→3 (salen 33),
+ * N2 15→1 (salen 14), N3 3→0, N5 1→0 (512, por la cirugía),
+ * N6 2→0 (f10-4 por TIE2 y 527 por la cirugía), N7 1→0
+ * (matriz-b-099, por TRAS-tema) y N8 4→0 (las polisemias por
+ * N8). El residuo total baja de 62 a 4: quedan 081, 126, 186 y
+ * 246, cada uno con su causa medida en el diseño del núcleo
+ * (081 solo lo veían las vías muertas de polos a nivel de frase
+ * y de cláusulas fusionadas; 126 queda a 0,873/0,875 de
+ * máx-sim, bajo un suelo que a 0,88 rompería la fiel 222; 186
+ * y 246 reparten su carga entre fragmentos que ninguna puerta
+ * viva alcanza por separado). Sin contexto, el residuo sigue
+ * siendo el de T-19 (RESIDUO_SIN_CONTEXTO_0197): las puertas
+ * solo actúan con el perfil multilingüe activo.
+ *
+ * Nota sobre 514 (asiento de la tanda T-21): su pin «conserva»
+ * SIGUE siendo la doctrina correcta bajo la cirugía de
+ * cláusula. 513 y 514 son el mismo comportamiento con el
+ * marcador en mitades distintas de la frase, como 511 y 512:
+ * la cirugía conserva la cláusula fiel y corta la opuesta, y
+ * en 514 el marcador vive en la mitad fiel («da 5 golpes
+ * secos…»), así que se conserva entero y no se re-pina nada.
+ * Medido en esta batería con el fixture activo: 513 y 514 no
+ * se mueven.
  */
-const RESIDUO_0197 = new Set(["matriz-a-006", "matriz-a-012", "matriz-a-021", "matriz-a-024", "matriz-a-027", "matriz-a-033", "matriz-a-054", "matriz-a-060", "matriz-a-066", "matriz-a-081", "matriz-a-087", "matriz-a-093", "matriz-a-099", "matriz-a-114", "matriz-a-117", "matriz-a-120", "matriz-a-126", "matriz-a-132", "matriz-a-147", "matriz-a-153", "matriz-a-159", "matriz-a-165", "matriz-a-180", "matriz-a-186", "matriz-a-192", "matriz-a-213", "matriz-a-216", "matriz-a-219", "matriz-a-225", "matriz-a-246", "matriz-a-252", "matriz-a-258", "matriz-a-279", "matriz-a-285", "matriz-a-295", "matriz-a-296", "matriz-a-297", "matriz-a-306", "matriz-a-312", "matriz-a-318", "matriz-a-339", "matriz-a-345", "matriz-a-351", "matriz-a-366", "matriz-a-372", "matriz-a-378", "matriz-a-399", "matriz-a-411", "matriz-a-426", "matriz-a-429", "matriz-a-432", "matriz-a-438", "matriz-a-459", "matriz-a-465", "matriz-a-471", "matriz-a-492", "matriz-a-495", "matriz-a-498", "matriz-a-512", "matriz-a-527"]);
+const RESIDUO_0197 = new Set(["matriz-a-081", "matriz-a-126", "matriz-a-186", "matriz-a-246"]);
+
+/**
+ * T-21 (0.1.99, núcleo del juez): el residuo del régimen SIN
+ * contexto semántico (perfil no multilingüe o motor ausente), que
+ * es la lista que esta batería traía al abrir la tanda. En ese
+ * régimen las puertas semánticas no actúan y el comportamiento
+ * queda fijado caso a caso dentro de cada test. La cifra del
+ * residuo de la versión es la del otro régimen (RESIDUO_0197,
+ * con e5 activo, el que producción sirve tras la decisión del
+ * dueño de e5 en todas las instalaciones).
+ */
+const RESIDUO_SIN_CONTEXTO_0197 = new Set(["matriz-a-006", "matriz-a-021", "matriz-a-024", "matriz-a-027", "matriz-a-033", "matriz-a-054", "matriz-a-060", "matriz-a-066", "matriz-a-081", "matriz-a-087", "matriz-a-093", "matriz-a-099", "matriz-a-114", "matriz-a-117", "matriz-a-120", "matriz-a-126", "matriz-a-132", "matriz-a-147", "matriz-a-153", "matriz-a-159", "matriz-a-165", "matriz-a-180", "matriz-a-186", "matriz-a-192", "matriz-a-213", "matriz-a-216", "matriz-a-219", "matriz-a-225", "matriz-a-246", "matriz-a-252", "matriz-a-258", "matriz-a-279", "matriz-a-285", "matriz-a-306", "matriz-a-312", "matriz-a-318", "matriz-a-339", "matriz-a-345", "matriz-a-351", "matriz-a-366", "matriz-a-372", "matriz-a-378", "matriz-a-399", "matriz-a-411", "matriz-a-426", "matriz-a-429", "matriz-a-432", "matriz-a-438", "matriz-a-459", "matriz-a-465", "matriz-a-471", "matriz-a-492", "matriz-a-495", "matriz-a-498", "matriz-a-512", "matriz-a-527"]);
 
 function caso(c: CasoCaza) {
   (RESIDUO_0197.has(c.id) ? it.fails : it)(`${c.id} [${c.condicion}/${c.mutacion}] ${c.pregunta}`, () => {
-    const r = verifyGroundedAnswer(c.respuesta, c.fuentes, c.idioma, c.pregunta);
+    // T-21: dos regímenes sobre el mismo caso (ver la nota junto a
+    // RESIDUO_SIN_CONTEXTO_0197). Sin contexto, el veredicto debe
+    // ser el de T-19; con el contexto del fixture (vectores e5 del
+    // GGUF servido, segmentados como el juez), el del test.
+    const veredicto = (r: GroundingResult): boolean => {
+      const presente = r.text.includes(c.marcador);
+      if (c.esperado === "corta") return !presente;
+      if (c.esperado === "conserva") return presente;
+      return r.status === "skipped";
+    };
+    const sin = verifyGroundedAnswer(c.respuesta, c.fuentes, c.idioma, c.pregunta);
+    expect(
+      veredicto(sin),
+      `sin contexto: esperado=${c.esperado} status=${sin.status} removed=${sin.removed} texto=${JSON.stringify(sin.text.slice(0, 220))}`,
+    ).toBe(!RESIDUO_SIN_CONTEXTO_0197.has(c.id));
+    const ctx = contextoCaza0197(c.id);
+    const r = ctx ? verifyGroundedAnswer(c.respuesta, c.fuentes, c.idioma, c.pregunta, undefined, ctx) : sin;
     const presente = r.text.includes(c.marcador);
-    let pasa: boolean;
-    if (c.esperado === "corta") pasa = !presente;
-    else if (c.esperado === "conserva") pasa = presente;
-    else pasa = r.status === "skipped";
+    const pasa = veredicto(r);
     RESULTADOS.push({
       ...c,
       obtenido: {

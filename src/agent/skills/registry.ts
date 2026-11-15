@@ -12,6 +12,17 @@
  * con la herramienta `use_skill`.
  *
  * Combina built-in (síncronas) + aprendidas (persistidas en SQLCipher).
+ *
+ * DORMANCIA DECLARADA (T-11, 0.1.99, P-09): de las aprendidas hoy solo
+ * existe la LECTURA. El escritor (`saveLearnedSkill` en
+ * learnedSkillStore.ts) no tiene ningún llamador en producción: nadie
+ * crea skills aprendidas, así que en una instalación real la lista de
+ * aprendidas está siempre vacía y solo sirven las built-in. No es un
+ * cable roto que finja funcionar: es una pieza dormida, fijada por la
+ * sonda de manifest.t11.test.ts. Si un día se construye el flujo de
+ * aprendizaje, nacerá con su puerta de confirmación (una skill
+ * aprendida es procedimiento que el modelo seguirá: escribirla es una
+ * acción sensible).
  */
 
 import type { Skill } from "./types";

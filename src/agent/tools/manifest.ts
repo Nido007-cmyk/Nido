@@ -15,6 +15,21 @@ export interface ToolParameter {
   type: "string" | "number" | "boolean";
   description: string;
   required?: boolean;
+  /**
+   * T-10 (0.1.99, M-17): restricciones que la validación central impone
+   * además del tipo, pobladas SOLO donde la descripción del parámetro
+   * ya las promete. Sin poblar, la validación es la de siempre.
+   */
+  /** Valores admitidos (solo strings). */
+  enum?: string[];
+  /** Longitud máxima (solo strings). */
+  maxLength?: number;
+  /** Valor mínimo (solo numbers). */
+  min?: number;
+  /** Valor máximo (solo numbers). */
+  max?: number;
+  /** Formato con nombre: "iso-datetime" = fecha y hora ISO-8601 con «T». */
+  format?: "iso-datetime";
 }
 
 export interface ToolDefinition {
@@ -59,7 +74,7 @@ export const LOCAL_TOOLS: ToolDefinition[] = [
       "Olvida un recuerdo guardado (un dato o una persona) por su id. Es irreversible y pide confirmación al usuario; el recuerdo va en la confirmación para que sepa qué se borra.",
     parameters: {
       id: { type: "string", description: "Id del recuerdo", required: true },
-      kind: { type: "string", description: "fact o person" },
+      kind: { type: "string", description: "fact o person", enum: ["fact", "person"] },
       content: { type: "string", description: "El recuerdo tal como está guardado (se muestra en la confirmación)" },
     },
   },
@@ -68,7 +83,7 @@ export const LOCAL_TOOLS: ToolDefinition[] = [
     description: "Crea un recordatorio local (alarma del sistema, sin nube).",
     parameters: {
       text: { type: "string", description: "Qué recordar", required: true },
-      at: { type: "string", description: "Fecha/hora ISO local", required: true },
+      at: { type: "string", description: "Fecha/hora ISO local", required: true, format: "iso-datetime" },
     },
   },
   {
@@ -85,7 +100,19 @@ export const LOCAL_TOOLS: ToolDefinition[] = [
     description: "Guarda un dato sobre el usuario en la memoria persistente.",
     parameters: {
       content: { type: "string", description: "El dato, en palabras del usuario", required: true },
-      category: { type: "string", description: "general | preference | goal | event" },
+      category: { type: "string", description: "general | preference | goal | event", enum: ["general", "preference", "goal", "event"] },
+    },
+  },
+  {
+    // T-11 (0.1.99, P-09): el handler existía desde PEOPLE-FIX
+    // 2026-10-07 pero nunca entró en el manifiesto: el modelo no podía
+    // invocarla y «guarda a Ana como mi hermana» no guardaba a nadie.
+    name: "save_person",
+    description: "Guarda una persona en la memoria persistente (nombre, parentesco o relación y notas).",
+    parameters: {
+      name: { type: "string", description: "Nombre de la persona", required: true },
+      relationship: { type: "string", description: "Parentesco o relación con el usuario (p. ej. hermana, médico, jefe)" },
+      notes: { type: "string", description: "Notas sobre la persona" },
     },
   },
   {
@@ -104,7 +131,9 @@ export const LOCAL_TOOLS: ToolDefinition[] = [
       link: {
         type: "string",
         description:
-          "Enlace explícito a abrir (p.ej. https://ejemplo.com, tel:+15551234567). Solo https/http/tel/sms/mailto.",
+          // T-11 (P-10a): el hint prometía http y la descripción (y el
+          // clasificador) lo rechazan. Manda el clasificador.
+          "Enlace explícito a abrir (p.ej. https://ejemplo.com, tel:+15551234567). Solo https/tel/sms/mailto.",
         required: true,
       },
     },
@@ -136,8 +165,8 @@ export const LOCAL_TOOLS: ToolDefinition[] = [
     description: "Crea un evento en el calendario del teléfono (permiso del usuario).",
     parameters: {
       title: { type: "string", description: "Título del evento", required: true },
-      start: { type: "string", description: "Inicio en ISO-8601 local, p.ej. «2026-09-27T10:00:00»", required: true },
-      end: { type: "string", description: "Fin en ISO-8601 local (opcional)" },
+      start: { type: "string", description: "Inicio en ISO-8601 local, p.ej. «2026-09-27T10:00:00»", required: true, format: "iso-datetime" },
+      end: { type: "string", description: "Fin en ISO-8601 local (opcional)", format: "iso-datetime" },
       notes: { type: "string", description: "Notas del evento (opcional)" },
       location: { type: "string", description: "Lugar (opcional)" },
     },
@@ -146,8 +175,8 @@ export const LOCAL_TOOLS: ToolDefinition[] = [
     name: "list_calendar_events",
     description: "Lista eventos del calendario del teléfono en un rango de fechas.",
     parameters: {
-      from: { type: "string", description: "Desde, ISO-8601 (por defecto: ahora)" },
-      to: { type: "string", description: "Hasta, ISO-8601 (por defecto: 7 días)" },
+      from: { type: "string", description: "Desde, ISO-8601 (por defecto: ahora)", format: "iso-datetime" },
+      to: { type: "string", description: "Hasta, ISO-8601 (por defecto: 7 días)", format: "iso-datetime" },
       limit: { type: "number", description: "Máximo de eventos (por defecto 20)" },
     },
   },
@@ -199,7 +228,7 @@ export const LOCAL_TOOLS: ToolDefinition[] = [
       text: { type: "string", description: "Contenido de la tabla (p.ej. lo leído con read_picked_file)", required: true },
       filter: { type: "string", description: "Filtros «columna=valor», separados por «;» (opcional)" },
       sort_by: { type: "string", description: "Columna para ordenar; «-col» = descendente (opcional)" },
-      top_n: { type: "number", description: "Filas a mostrar (por defecto 5, máx. 20)" },
+      top_n: { type: "number", description: "Filas a mostrar (por defecto 5, máx. 20)", max: 20 },
     },
   },
   // Fase E: mensajería NIDO a NIDO, cifrada, sin internet.

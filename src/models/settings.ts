@@ -381,7 +381,15 @@ export async function getMaxTokens(): Promise<number> {
 
 export async function setMaxTokens(maxTokens: number): Promise<void> {
   return mutateSettings((s) => {
-    s.maxTokens = maxTokens;
+    // m-32 (T-10, 0.1.99): el setter persistía cualquier número tal
+    // cual (un -5 o un 1e9 llegaban al fichero y de ahí al tope de la
+    // generación). La UI solo ofrece 256–2048 (MAX_TOKENS_OPTIONS en
+    // constants/personalities; el rango se repite aquí para no crear
+    // un ciclo de imports): fuera de rango se recorta al extremo y un
+    // valor no finito cae al defecto.
+    s.maxTokens = !Number.isFinite(maxTokens)
+      ? DEFAULT_MAX_TOKENS
+      : Math.min(2048, Math.max(256, Math.round(maxTokens)));
   });
 }
 
