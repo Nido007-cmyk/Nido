@@ -1686,6 +1686,50 @@ describe("C-08: el rango de la guía ya no hace abstenerse a su propia respuesta
   });
 });
 
+describe("T-43 (H-B1): el rango «between» de la guía sostiene su interior, también cruzado", () => {
+  const VAC_EN: GroundingChunk = {
+    title: "Vaccine",
+    body: "The vaccine is kept between 2 and 8 degrees in the clinic fridge.",
+  };
+  const VAC_ES: GroundingChunk = {
+    title: "Vacuna",
+    body: "La vacuna se conserva entre 2 y 8 grados en la nevera de la clínica.",
+  };
+
+  it("la respuesta fiel interior (5) y el extremo inferior (2) se quedan: ni abstienen ni se recortan", () => {
+    const r = verifyGroundedAnswer("The vaccine is kept at 5 degrees.", [VAC_EN], "en", "");
+    expect(r.status).toBe("grounded");
+    expect(r.removed).toBe(0);
+    expect(r.text).toContain("5 degrees");
+    expect(verifyGroundedAnswer("The vaccine is kept at 2 degrees.", [VAC_EN], "en", "").removed).toBe(0);
+    expect(verifyGroundedAnswer("The vaccine is kept at 8 degrees.", [VAC_EN], "en", "").removed).toBe(0);
+  });
+
+  it("la fiel cruzada contra la fuente «between» conserva la frase (es y pt)", () => {
+    const es = verifyGroundedAnswer("La vacuna se conserva a 5 grados.", [VAC_EN], "es", "");
+    expect(es.status).toBe("unverified");
+    expect(es.removed).toBe(0);
+    expect(es.text).toContain("5 grados");
+    const pt = verifyGroundedAnswer("A vacina é conservada a 5 graus.", [VAC_EN], "pt", "");
+    expect(pt.status).toBe("unverified");
+    expect(pt.removed).toBe(0);
+    expect(pt.text).toContain("5 graus");
+  });
+
+  it("al revés también: fuente «entre» y respuesta inglesa interior", () => {
+    const r = verifyGroundedAnswer("The vaccine is kept at 5 degrees.", [VAC_ES], "en", "");
+    expect(r.status).toBe("unverified");
+    expect(r.removed).toBe(0);
+    expect(r.text).toContain("5 degrees");
+  });
+
+  it("la cifra fuera del «between» sigue cayendo (la cura no abre la puerta)", () => {
+    const r = verifyGroundedAnswer("The vaccine is kept at 25 degrees.", [VAC_EN], "en", "");
+    expect(r.removed).toBe(1);
+    expect(r.text).not.toContain("25 degrees");
+  });
+});
+
 describe("C-07: el verificador aprende fechas y días de semana", () => {
   // La nota clínica de la ronda del dueño: la cita es el MARTES 10 de
   // noviembre de 2026 (ancla del sistema: getDay() === 2).

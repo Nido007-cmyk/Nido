@@ -282,7 +282,7 @@ export function sentenceWordReadings(sentence: string): Array<{ value: number; d
   return out;
 }
 
-/** Un rango que la evidencia afirma («entre 37 y 40 °C», «10 a 14 días», «5–6 %»). */
+/** Un rango que la evidencia afirma («entre 37 y 40 °C», «between 37 and 40 °C», «10 a 14 días», «5–6 %»). */
 /**
  * El valor de UN token en letra («cinco», «twenty», «duzentos») o
  * null si no es un número de una sola palabra (CL-9: la simetría
@@ -299,20 +299,29 @@ export interface EvidenceRange {
 }
 
 /**
- * Los rangos de la evidencia (C-08): «N a M», «N–M» y «entre N y M»
- * (unidores `a`, `to`, `até`, guiones, y `y/e/and` solo tras «entre»,
- * que es donde la prosa los usa como rango y no como enumeración).
- * Un valor dentro de un rango está tan afirmado como sus extremos:
- * antes de esto, la respuesta exacta de la guía («39 °C» contra
- * «entre 37 y 40 °C») moría por no ser ni 37 ni 40. Los extremos se
- * leen con la primera lectura del token, la misma para ambos: un
- * token ambiguo («1.234») no mezcla lecturas dentro del rango.
+ * Los rangos de la evidencia (C-08): «N a M», «N–M» y el marco
+ * «entre N y M» / «between N and M» (unidores `a`, `to`, `até`,
+ * guiones, y `y/e/and` solo tras palabra de marco, que es donde la
+ * prosa los usa como rango y no como enumeración). Un valor dentro
+ * de un rango está tan afirmado como sus extremos: antes de esto,
+ * la respuesta exacta de la guía («39 °C» contra «entre 37 y 40 °C»)
+ * moría por no ser ni 37 ni 40. Los extremos se leen con la primera
+ * lectura del token, la misma para ambos: un token ambiguo
+ * («1.234») no mezcla lecturas dentro del rango.
+ * T-43 (H-B1 del barrido pre-versión 0.1.99): el marco era solo
+ * «entre» y la forma inglesa corriente quedaba fuera — contra
+ * «between 2 and 8 degrees», la respuesta fiel «at 5 degrees» se
+ * cortaba entera: el interior no caía en ningún rango y la única
+ * cantidad suelta de la evidencia era el extremo pegado a la
+ * unidad. La palabra de marco es {entre, between} con el mismo
+ * conjunto de unidores tras cualquiera de las dos; el «and»
+ * desnudo sin marco sigue sin ser rango.
  */
 export function evidenceRanges(texts: readonly string[]): EvidenceRange[] {
   const out: EvidenceRange[] = [];
   const patterns = [
     /(\d+(?:[.,]\d+)?)\s*(?:[-–—]|\ba\b|\bto\b|\baté\b)\s*(\d+(?:[.,]\d+)?)/g,
-    /\bentre\s+(\d+(?:[.,]\d+)?)\s+(?:y|e|and)\s+(\d+(?:[.,]\d+)?)/g,
+    /\b(?:entre|between)\s+(\d+(?:[.,]\d+)?)\s+(?:y|e|and)\s+(\d+(?:[.,]\d+)?)/g,
   ];
   for (const text of texts) {
     const noCites = text.replace(/\[\d+\]/g, " ");
@@ -656,11 +665,14 @@ export function quantitiesOf(text: string): Quantity[] {
       ...(ranged ? { ranged: true } : {}),
     });
   };
-  // Los rangos con unidad al final («entre 37 y 40 °C»): la unidad
-  // vale para los dos extremos, no solo para el segundo.
+  // Los rangos con unidad al final («entre 37 y 40 °C», «between
+  // 37 and 40 °C»): la unidad vale para los dos extremos, no solo
+  // para el segundo. El marco incluye «between» desde T-43 (H-B1):
+  // sin él, de «between 2 and 8 degrees» solo salía el extremo
+  // pegado a la unidad y el interior de la respuesta chocaba.
   const rangeRe = /(\d+(?:[.,]\d+)?)\s*(?:[-–—]|\ba\b|\bto\b|\baté\b)\s*(\d+(?:[.,]\d+)?)\s*([a-zñ°%]+)/g;
-  const entreRe = /\bentre\s+(\d+(?:[.,]\d+)?)\s+(?:y|e|and)\s+(\d+(?:[.,]\d+)?)\s*([a-zñ°%]+)/g;
-  for (const re of [rangeRe, entreRe]) {
+  const marcoRe = /\b(?:entre|between)\s+(\d+(?:[.,]\d+)?)\s+(?:y|e|and)\s+(\d+(?:[.,]\d+)?)\s*([a-zñ°%]+)/g;
+  for (const re of [rangeRe, marcoRe]) {
     for (const m of foldForWords(text).replace(/\[\d+\]/g, " ").matchAll(re)) {
       const lo = parseNumberToken(m[1]!)[0];
       const hi = parseNumberToken(m[2]!)[0];

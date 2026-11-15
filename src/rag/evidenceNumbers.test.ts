@@ -7,9 +7,12 @@
 import { describe, expect, it } from "vitest";
 import {
   evidenceNumberValues,
+  evidenceQuantities,
   evidenceRanges,
   numberTokens,
   parseNumberToken,
+  quantitiesOf,
+  quantityConflict,
   roundsFromEvidence,
   sentenceNumbersSupported,
 } from "./evidenceNumbers";
@@ -114,6 +117,62 @@ describe("C-08: los rangos de la evidencia sostienen su interior", () => {
     expect(sentenceNumbersSupported("Sumerge la zona en agua a 39 °C durante 25 minutos.", ev, ranges)).toBe(true);
     expect(sentenceNumbersSupported("Sumerge la zona en agua a 40 °C.", ev, ranges)).toBe(true);
     expect(sentenceNumbersSupported("Sumerge la zona en agua a 45 °C durante 25 minutos.", ev, ranges)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------
+// T-43 (H-B1 del barrido pre-versión 0.1.99): la forma inglesa
+// «between N and M» no era rango en ninguna extracción y la
+// respuesta fiel con un valor interior se cortaba entera (la
+// sonda de pares del barrido salió 71/73, con B-en-fiel e
+// I-x-fiel divergentes; en el barrido de la 0.1.96 ambos casos
+// salían con la frase intacta). El marco es {entre, between}
+// con el mismo conjunto de unidores tras cualquiera de las dos;
+// el «and» desnudo sin marco sigue sin ser rango, que es la
+// cautela declarada de C-08.
+
+describe("T-43: el marco «between N and M» es rango, con la vara de «entre»", () => {
+  it("evidenceRanges extrae «between» como su gemela «entre» (básico, invertido, decimales)", () => {
+    expect(evidenceRanges(["The vaccine is kept between 2 and 8 degrees."])).toEqual([{ min: 2, max: 8 }]);
+    expect(evidenceRanges(["The vaccine is kept between 8 and 2 degrees."])).toEqual([{ min: 2, max: 8 }]);
+    expect(evidenceRanges(["Keep it between 2.5 and 8.5 degrees."])).toEqual([{ min: 2.5, max: 8.5 }]);
+    expect(evidenceRanges(["La vacuna se conserva entre 2 y 8 grados."])).toEqual([{ min: 2, max: 8 }]);
+    expect(evidenceRanges(["A vacina é conservada entre 2 e 8 graus."])).toEqual([{ min: 2, max: 8 }]);
+  });
+
+  it("el «and» desnudo y las formas vecinas siguen sin ser rango en ningún marco", () => {
+    expect(evidenceRanges(["There are 2 and 8 people in the room."])).toEqual([]);
+    expect(evidenceRanges(["The vaccine is kept between two and eight degrees."])).toEqual([]);
+    expect(evidenceRanges(["La vacuna se conserva entre dos y ocho grados."])).toEqual([]);
+    expect(evidenceRanges(["Keep it between -2 and 8 degrees."])).toEqual([]);
+    expect(evidenceRanges(["Keep it between 2 degrees and 8 degrees."])).toEqual([]);
+    expect(evidenceRanges(["Keep it between 5 and 5 degrees."])).toEqual([]);
+  });
+
+  it("el interior de un «between» está sostenido y el exterior no", () => {
+    const guia = "Keep the vaccine between 37 and 40 degrees in the fridge.";
+    const ev = evidenceNumberValues([guia]);
+    const ranges = evidenceRanges([guia]);
+    expect(sentenceNumbersSupported("Keep the vaccine at 39 degrees.", ev, ranges)).toBe(true);
+    expect(sentenceNumbersSupported("Keep the vaccine at 37 degrees.", ev, ranges)).toBe(true);
+    expect(sentenceNumbersSupported("Keep the vaccine at 45 degrees.", ev, ranges)).toBe(false);
+  });
+
+  it("quantitiesOf funde los dos extremos de «between … degrees» como ranged, igual que «entre»", () => {
+    const en = quantitiesOf("The vaccine is kept between 2 and 8 degrees.");
+    const es = quantitiesOf("La vacuna se conserva entre 2 y 8 grados.");
+    expect(en).toEqual(es);
+    expect(en.filter((q) => q.ranged).map((q) => q.raw).sort()).toEqual([2, 8]);
+  });
+
+  it("quantityConflict calla dentro de un «between» y dispara fuera (la llamada del juez, con rangos)", () => {
+    const guia = "The vaccine is kept between 2 and 8 degrees in the clinic fridge.";
+    const evQ = evidenceQuantities([guia]);
+    const evN = evidenceNumberValues([guia]);
+    const ranges = evidenceRanges([guia]);
+    expect(quantityConflict("The vaccine is kept at 5 degrees.", evQ, evN, ranges)).toBe(false);
+    expect(quantityConflict("The vaccine is kept at 2 degrees.", evQ, evN, ranges)).toBe(false);
+    expect(quantityConflict("The vaccine is kept at 25 degrees.", evQ, evN, ranges)).toBe(true);
   });
 });
 
