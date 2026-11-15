@@ -36,8 +36,12 @@ describe("confirm: puerta de confirmación", () => {
     // P-F1: abrir un enlace externo cambia de app; requiere confirmación.
     expect(SENSITIVE_TOOLS.has("open_app")).toBe(true);
     expect(SENSITIVE_TOOLS.has("nido_review_tasks")).toBe(false); // solo lectura
-    // place_call/send_sms ya confirman en el SO; el resto no tiene efectos externos.
-    expect(SENSITIVE_TOOLS.has("place_call")).toBe(false);
+    // T-11 (m-54): place_call/send_sms se confirman en el handler; la
+    // justificación anterior («el SO confirma») no aguantaba: el
+    // marcador abre con el número tecleado pero nada confirma la
+    // llamada, y Mensajes abre con el texto ya relleno.
+    expect(SENSITIVE_TOOLS.has("place_call")).toBe(true);
+    expect(SENSITIVE_TOOLS.has("send_sms")).toBe(true);
     expect(SENSITIVE_TOOLS.has("save_note")).toBe(false);
   });
 

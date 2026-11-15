@@ -5,26 +5,36 @@
  */
 
 /**
- * authorization.ts — NIDO: fuente canónica de decisiones de autorización.
+ * authorization.ts — NIDO: decisiones de autorización de alto nivel.
  *
- * Unifica los dos sistemas paralelos:
- * - Policy Engine (`policyEngine.ts`): evaluateAction con allowed/requiresConfirmation
- * - withConfirmation (`confirm.ts`): wrapper que bloquea sin canal
+ * Cómo se reparte el trabajo en realidad (T-11, 0.1.99, m-12; la
+ * cabecera anterior afirmaba que «toda decisión pasa por authorize()»
+ * y que las demás rutas «delegan aquí», y no era cierto):
+ *
+ * - `authorize()` (este módulo) sirve a la delegación y al P2P: su
+ *   llamador real es `src/p2p/p2pAuthorization.ts`. Traduce la política
+ *   a los modos canónicos AUTO / ASK / DENY.
+ * - El dispatcher de herramientas del agente NO pasa por authorize():
+ *   usa `evaluateAction` (policyEngine.ts) directamente, porque es la
+ *   única vía que devuelve el aviso de procedencia (`injectionOrigin`)
+ *   en la decisión de confirmación, y rutear el dispatcher por
+ *   authorize() perdería ese aviso en las acciones más peligrosas.
+ * - `withConfirmation` (confirm.ts) es la puerta del handler: sin canal
+ *   de confirmación, bloquea (fail-closed).
+ *
+ * Lo que SÍ comparten todas las rutas, por construcción y no por
+ * vigilancia, es la LISTA de irreversibles: vive una sola vez en
+ * ./irreversibleTools.ts y las dos rutas la importan (antes había dos
+ * copias literales que coincidían porque un test las comparaba).
  *
  * Modos canónicos:
  * - AUTO: la acción procede sin intervención humana
  * - ASK: requiere confirmación humana explícita
  * - DENY: bloqueada, no procede bajo ninguna circunstancia
  *
- * Reglas:
- * 1. Toda decisión de autorización pasa por `authorize()`.
- * 2. Las rutas legacy (evaluateAction, withConfirmation) DELEGAN aquí.
- * 3. Ninguna ruta puede tomar decisiones independientemente.
- * 4. Fail-closed: ante duda, DENY.
- *
  * Preserva invariantes:
  * - validateTask (BLOCKER corregido)
- * - IRREVERSIBLE_TOOLS siempre requieren ASK
+ * - Las irreversibles siempre requieren ASK / confirmación
  * - nido_pair, nido_approve_task requieren ASK
  */
 
@@ -33,6 +43,7 @@ import {
   type PolicyDecision,
   type ToolAction,
 } from "./policyEngine";
+import { IRREVERSIBLE_TOOLS } from "./irreversibleTools";
 
 /** Decisión canónica de autorización. */
 export type AuthDecision = "AUTO" | "ASK" | "DENY";
@@ -48,23 +59,11 @@ export interface AuthResult {
 
 /**
  * Herramientas irreversibles: SIEMPRE requieren confirmación humana.
- * Fuente única de verdad (no duplicar en otros archivos).
+ * Nombre histórico de la lista única de ./irreversibleTools.ts (T-11,
+ * m-12): se re-exporta para no romper a los consumidores existentes
+ * (authorization.test.ts, externalEffects.test.ts, p2pAuthorization).
  */
-export const IRREVERSIBLE_TOOLS_CANONICAL = new Set([
-  "send_sms",
-  "nido_send_message",
-  "place_call",
-  "nido_pair",
-  "nido_approve_task",
-  "send_email",
-  "purchase",
-  "delete_file",
-  "delete_memory",
-  "factory_reset",
-  // 0.1.20 (P3-9): borrar notas/recordatorios es irreversible → confirma.
-  "delete_note",
-  "delete_reminder",
-]);
+export const IRREVERSIBLE_TOOLS_CANONICAL: ReadonlySet<string> = IRREVERSIBLE_TOOLS;
 
 /**
  * Herramientas denegadas siempre (ni siquiera con confirmación).
@@ -152,17 +151,17 @@ export function checkAuthConsistency(action: ToolAction): {
   const auth = authorize(action);
   const policy = policyEvaluate(action);
 
-  // Si authorize dice ASK, policy debe decir requiresConfirmation
+  // Si authorize dice ASK, policy debe decir requiresConfirmation.
+  // Desde T-11 (m-12) ambas rutas leen la MISMA lista importada, así
+  // que una divergencia aquí ya no puede venir de listas duplicadas:
+  // sería una divergencia de lógica, que es lo que este chequeo caza.
   if (auth.decision === "ASK" && !policy.requiresConfirmation) {
-    // Excepción: si la herramienta está en IRREVERSIBLE_TOOLS_CANONICAL
-    // pero policyEngine tiene una lista desactualizada, authorize tiene razón.
-    // Esto detecta la divergencia.
     if (IRREVERSIBLE_TOOLS_CANONICAL.has(action.tool)) {
       return {
         consistent: false,
         authDecision: auth.decision,
         policyDecision: policy,
-        issue: `Tool '${action.tool}' in canonical irreversible list but policyEngine doesn't require confirmation. Lists diverged.`,
+        issue: `Tool '${action.tool}' in canonical irreversible list but policyEngine doesn't require confirmation.`,
       };
     }
   }
