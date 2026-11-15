@@ -1246,12 +1246,26 @@ const CUT_HARM_GLUED_STEMS = [
   // (arteria, arterias, arteries) y además «artery», el caso
   // que T-39 dejó medido. Las de R8b («antebraz», «antebrac»,
   // «forearm») leen su cabeza por la raíz AL INICIO de la
-  // palabra, no por el accidente de letra: antes su única
-  // aparición dejaba delante «ante»/«fore», acabados en «e», y
-  // el test de frontera los aceptaba como si fueran la
-  // conjunción fundida, sin que el código lo declarara (el
-  // discriminador de la ronda 8, «desarmado», trae su «arm» a
-  // mitad de palabra tras consonante y sigue sin rescatar).
+  // palabra en posición de objeto: antes su única aparición
+  // dejaba delante «ante»/«fore», acabados en «e», y el test
+  // de frontera la aceptaba como si fuera la conjunción
+  // fundida, sin que el código lo declarara (el discriminador
+  // de la ronda 8, «desarmado», trae su «arm» a mitad de
+  // palabra tras consonante y sigue sin rescatar). La
+  // repetición de la ronda 9 midió lo que la redacción de
+  // T-40 no decía: la aparición INTERIOR de las mismas
+  // raíces («braz»/«brac»/«arm» tras «ante»/«fore») seguía
+  // rescatando por la letra desde las posiciones donde la
+  // lectura no opera, el complemento fundido sin
+  // determinante y la fusión sobre el objeto anterior
+  // («quierocortarmelasuñasdelantebrazo», «elpeloantebrazo»,
+  // «myhairforearm»: 16 casos con expectativa), donde la vía
+  // con espacios veta porque manda su primer objeto. Desde
+  // T-41 la puerta de sitio no acepta una aparición
+  // estrictamente interior a una palabra de la clase
+  // (gluedStemIsInterior, en gluedHarmHeads): esas
+  // posiciones vetan en paridad, y de las seis cabezas no
+  // queda cobertura por letra en ninguna posición.
   // Las colisiones de raíz al inicio de una palabra que no
   // veta («lenguado» por «lengu», «pechuga» por «pech», como
   // «venado» por «vena») son la frontera declarada desde R1,
@@ -1259,7 +1273,9 @@ const CUT_HARM_GLUED_STEMS = [
   // letra que sí queda, declarada como la de «whose»: la raíz
   // «head» aparece también a mitad de «forehead», tras un
   // prefijo acabado en «e», así que esa palabra —que no es
-  // cabeza de la clase— queda rescatada por la frontera de
+  // cabeza de la clase, y por eso su «head» no es aparición
+  // interior a una palabra de la clase para la puerta de
+  // T-41— queda rescatada por la frontera de
   // letra cuando un objeto cotidiano veta en la misma corrida
   // (medido por T-40: la lectura con espacios veta por su
   // primer objeto, pero la gemela pegada la rescata y el
@@ -1522,9 +1538,38 @@ function gluedHeadAtBoundary(tail: string, i: number): boolean {
   return prefix === "" || prefix.endsWith("y") || prefix.endsWith("e") || prefix.endsWith("and") || /[,;:]$/.test(prefix);
 }
 
+// T-41 (R9a): ¿la aparición de la raíz que empieza en i
+// es estrictamente interior a una palabra de la clase?
+// Lo es si la corrida deletrea una cabeza de
+// CUT_HARM_HEADS desde un índice anterior que la
+// contiene entera: la palabra abrió ahí, no en i, y la
+// aparición interior no es una apertura de objeto. La
+// cubierta es la palabra deletreada, no cualquier
+// aparición de raíz: una raíz también aparece cruzando
+// palabras («the» + «arm» deletrea «ear» desde la «e»
+// del determinante), y la forma que saltaba toda
+// aparición interior a otra raíz cortó casos fieles
+// medidos por esta tanda («…andthenthearm» y
+// «…andthentheartery» dejaban de disparar: su
+// «arm»/«arter» abre su palabra y rebasa la «ear»
+// espuria, no está contenida en ella).
+function gluedStemIsInterior(tail: string, i: number, s: string): boolean {
+  for (const h of CUT_HARM_HEADS) {
+    for (let j = tail.indexOf(h); j >= 0 && j < i; j = tail.indexOf(h, j + 1)) {
+      if (i + s.length <= j + h.length) return true;
+    }
+  }
+  return false;
+}
+
 function gluedHarmHeads(tail: string): boolean {
   for (const s of CUT_HARM_GLUED_STEMS) {
     for (let i = tail.indexOf(s); i >= 0; i = tail.indexOf(s, i + 1)) {
+      // T-41 (R9a): una aparición estrictamente interior
+      // a una palabra de la clase no rescata la corrida:
+      // su sitio no es el de una cabeza (ver
+      // gluedStemIsInterior).
+      if (gluedStemIsInterior(tail, i, s)) continue;
       if (gluedHeadAtBoundary(tail, i)) return true;
     }
   }
