@@ -88,10 +88,14 @@ describe("0.1.49: valores de fábrica", () => {
     expect(ff.isFeatureEnabled("security.panicButton")).toBe(false);
   });
 
-  it("0.1.55: «solo saludo privado» viene apagado (dejaría sin conexión a NIDO viejos)", async () => {
+  it("0.1.99 (M-21): «solo saludo privado» viene ENCENDIDO al llamar; la elección guardada manda", async () => {
     const ff = await import("./featureFlags");
     ff.resetFeatureFlagsForTests();
-    expect(ff.isFeatureEnabled("p2p.privateHelloOnly")).toBe(false);
+    // Era «viene apagado» en la 0.1.55; la auditoría M-21 lo volteó como
+    // las demás protecciones P2P de la 0.1.49: al LLAMAR nunca se dice la
+    // identidad en claro. El respondedor no se endurece por el defecto
+    // (eso lo cubre t14Flags.test.ts con isFeatureExplicitlyEnabled).
+    expect(ff.isFeatureEnabled("p2p.privateHelloOnly")).toBe(true);
   });
 });
 

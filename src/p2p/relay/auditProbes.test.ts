@@ -206,13 +206,25 @@ describe("P4 topes del almacén", () => {
     expect(st.size()).toBe(accepted);
   }, 120_000);
 
-  it("con el almacén lleno de sobres ajenos, ni mi propio sobre entra (se queda en solo directo)", () => {
+  it("con el almacén lleno de sobres ajenos, mi propio sobre SÍ entra (reserva de m-49)", () => {
+    // Era la sonda del asiento m-49 («ni mi propio sobre entra»): la
+    // T-14 la cierra con la reserva, y esta prueba queda como su
+    // regresión: los ajenos paran en el tope menos la reserva y los
+    // propios usan el tope entero.
     const st = new CarryStore();
     const sources = ["a", "b", "c", "d", "e", "f", "g"].map((c) => c.repeat(64));
+    let foreign = 0;
     for (let i = 0; i < 200; i++) {
-      expect(st.accept(sealToCaro("hola", { id: `f-${i}` }), sources[i % sources.length], NOW)).toBe("stored");
+      const r = st.accept(sealToCaro("hola", { id: `f-${i}` }), sources[i % sources.length], NOW);
+      if (r !== "stored") break;
+      foreign++;
     }
-    expect(st.addOwn(sealToCaro("mio", { id: "own-1" }), NOW)).toBe("full");
+    expect(foreign).toBe(STORE_LIMITS.maxEnvelopes - STORE_LIMITS.ownReserve);
+    for (let i = 0; i < STORE_LIMITS.ownReserve; i++) {
+      expect(st.addOwn(sealToCaro("mio", { id: `own-${i}` }), NOW)).toBe("stored");
+    }
+    expect(st.size()).toBe(STORE_LIMITS.maxEnvelopes);
+    expect(st.addOwn(sealToCaro("mio", { id: "own-x" }), NOW)).toBe("full");
   }, 120_000);
 
   it("borde de caducidad en el almacén: exp == ahora ya es tarde; exp == ahora+1 entra y el barrido lo tira al llegar", () => {

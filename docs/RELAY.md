@@ -168,6 +168,11 @@ Known limits:
 - **Relationships:** whoever carries for you learns that you have
   envelopes for someone; Briar documents the same kind of leak for its
   forums. Carrying is off by default for this reason.
+- **Envelopes are deniable, not anonymous against a network-wide
+  observer.** Anyone who sees enough of the network can correlate
+  envelope tags and timing; carriers learn that you had envelopes for
+  someone, as above. Deniability protects you against a carrier proving
+  later that you wrote a message; it does not hide that envelopes moved.
 
 ## Phase 2: how it works in the app
 

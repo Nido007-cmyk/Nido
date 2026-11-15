@@ -251,6 +251,18 @@ function storeFrom(s: RelayState): CarryStore {
   return st;
 }
 
+/**
+ * T-14 (P-21): huella del estado tal como se guarda. Guardar el estado
+ * entero cuesta una escritura SQLCipher completa; quien no cambió nada
+ * no debe pagarla (antes, cada saludo y cada frame de relevo guardaban
+ * siempre). La huella puede decir «cambió» de más si una mutación solo
+ * reordenó claves, pero nunca de menos: todo cambio real la altera.
+ */
+function stateDigest(s: RelayState): string {
+  const { flags, ...rest } = s;
+  return JSON.stringify(rest) + "\n" + JSON.stringify(flags);
+}
+
 function storeInto(s: RelayState, st: CarryStore): void {
   const snap = st.snapshot();
   s.held = snap.held;
@@ -292,12 +304,14 @@ export interface RelayUsage {
   envelopes: number;
   bytes: number;
   enabled: boolean;
+  /** T-14 (m-49): por qué el último sobre propio no se selló, si pasó. */
+  sealMiss: SealOwnResult | null;
 }
 
 export async function relayUsage(): Promise<RelayUsage> {
   const s = await load();
   const st = storeFrom(s);
-  return { envelopes: st.size(), bytes: st.bytes(), enabled: s.enabled };
+  return { envelopes: st.size(), bytes: st.bytes(), enabled: s.enabled, sealMiss: lastSealMiss };
 }
 
 /** Qué mensajes de esta lista llegaron o salieron por amigos. */
@@ -332,8 +346,10 @@ export interface Hello {
  * `peerPk`, dice además si hace falta decírselo a ese contacto.
  */
 export async function helloFor(me: Me, now: number, peerPk?: string): Promise<Hello> {
+  await sweepOnStartOnce();
   return locked(async () => {
     const s = await load();
+    const before = stateDigest(s);
     const myPk = me.pkHex.toLowerCase();
     s.mine = s.mine.filter((m) => m.pub.expiresAt > now && m.pub.owner === myPk);
     const newest = s.mine.reduce<MineRow | null>((a, m) => (!a || m.pub.createdAt > a.pub.createdAt ? m : a), null);
@@ -346,7 +362,9 @@ export async function helloFor(me: Me, now: number, peerPk?: string): Promise<He
       g.secret.kemSk.fill(0);
       pub = g.pub;
     }
-    await save(s);
+    // T-14 (P-21): sin rotación y sin poda, el saludo no cambió nada:
+    // no se guarda (antes se guardaba el estado entero en cada saludo).
+    if (stateDigest(s) !== before) await save(s);
     if (rotated) bump();
     const prekey = pub as CarryPrekeyPublic;
     const sent = peerPk ? s.peers[peerPk.toLowerCase()]?.sent : undefined;
@@ -407,9 +425,11 @@ export async function receive(
   sigPkOf: (pkHex: string) => string | null,
   now: number,
 ): Promise<CarryIncoming> {
+  await sweepOnStartOnce();
   return locked(async () => {
     const peer = peerPk.toLowerCase();
     const s = await load();
+    const before = stateDigest(s);
     const p = (isObj(payload) ? payload : {}) as { prekey?: unknown; carries?: unknown; put?: unknown };
     const peerSig = sigPkOf(peer);
     let changed = false;
@@ -468,7 +488,9 @@ export async function receive(
         sec.kemSk.fill(0);
       }
     }
-    await save(s);
+    // T-14 (P-21): un frame que no trajo nada nuevo (saludo repetido, sin
+    // sobres) no guarda el estado entero otra vez.
+    if (stateDigest(s) !== before) await save(s);
     if (changed || out.stored > 0) bump();
     return out;
   });
@@ -519,6 +541,57 @@ export async function confirmHandoff(peerPk: string, delivered: readonly string[
 export type SealOwnResult = "sealed" | "too_long" | "no_prekey" | "store_full" | "error";
 
 /**
+ * T-14 (m-49): la causa del último sobre propio que no se selló, a nivel
+ * de servicio. La causa H-5 vive en el Messenger y la tarjeta del relevo
+ * no lo alcanza; este apunte es el puente para que la tarjeta la enseñe
+ * (de momento, «almacén lleno»). Solo memoria: al reiniciar se olvida.
+ */
+let lastSealMiss: SealOwnResult | null = null;
+
+export function noteSealMiss(res: SealOwnResult): void {
+  lastSealMiss = res === "sealed" ? null : res;
+}
+
+/**
+ * T-14 (m-52): barrido de caducados a demanda: sobres del almacén, claves
+ * de buzón propias caducadas (con sus secretos), sobres propios ya
+ * caducados y la memoria antirrepetición caducada. Guarda solo si algo
+ * cambió. Devuelve cuántos sobres del almacén se tiraron. Lo llama la
+ * tarjeta del relevo al abrirse y el arranque del servicio (abajo).
+ */
+export async function sweepRelay(now: number): Promise<number> {
+  return locked(async () => {
+    const s = await load();
+    const before = stateDigest(s);
+    const st = storeFrom(s);
+    const dropped = st.sweep(now);
+    storeInto(s, st);
+    s.mine = s.mine.filter((m) => m.pub.expiresAt > now);
+    for (const [id, o] of Object.entries(s.own)) if (o.exp <= now) delete s.own[id];
+    for (const [k, exp] of Object.entries(s.opened)) if (exp <= now) delete s.opened[k];
+    if (stateDigest(s) !== before) await save(s);
+    return dropped;
+  });
+}
+
+/**
+ * T-14 (m-52): el servicio no tiene demonio ni arranque propio: su
+ * «arranque» es su primer uso en el proceso. La primera vez que alguien
+ * saluda, recibe o sella, se barre lo caducado que dejó la sesión
+ * anterior, en vez de esperar a que el azar de una entrega lo cruce.
+ */
+let startSweepDone = false;
+async function sweepOnStartOnce(): Promise<void> {
+  if (startSweepDone) return;
+  startSweepDone = true;
+  try {
+    await sweepRelay(Date.now());
+  } catch {
+    /* best-effort: el barrido de arranque nunca rompe el saludo */
+  }
+}
+
+/**
  * Un mensaje mío que no pudo salir directo: si el destinatario me dio una
  * clave de buzón vigente, sale también en sobre. Como `sealOwn`, pero
  * diciendo la causa cuando no se sella: con el almacén lleno de sobres
@@ -536,6 +609,7 @@ export async function sealOwnDetailed(
   now: number,
 ): Promise<SealOwnResult> {
   if (carryTextLength(text) > MAX_CARRY_TEXT) return "too_long";
+  await sweepOnStartOnce();
   return locked(async () => {
     const to = recipientPk.toLowerCase();
     const s = await load();

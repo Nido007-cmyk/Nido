@@ -1755,8 +1755,15 @@ export class NidoBluetoothTransport implements P2PTransport {
       // contacto podía reenviarse para sacárnosla). Se comprueba ANTES de
       // validar nada y sin responder.
       if (sealedFromPk === undefined) {
-        const { isFeatureEnabled } = await import("../config/featureFlags");
-        if (isFeatureEnabled("p2p.privateHelloOnly")) throw new Error(PRIVATE_ONLY_PLAIN_HELLO);
+        const { isFeatureExplicitlyEnabled } = await import("../config/featureFlags");
+        // 0.1.99 (M-21): se lee el encendido EXPRESO del usuario, no el
+        // valor efectivo. El defecto del ajuste pasó a encendido en la
+        // 0.1.99 para endurecer la INICIACIÓN (al llamar nunca decimos
+        // quiénes somos en claro), pero el lado respondedor no se
+        // endurece por un volteo de defecto: los saludos en claro se
+        // siguen contestando salvo que el usuario haya encendido el
+        // ajuste él mismo en Ajustes.
+        if (isFeatureExplicitlyEnabled("p2p.privateHelloOnly")) throw new Error(PRIVATE_ONLY_PLAIN_HELLO);
       }
       const { hello, contact, myPkHex, pkLower } = await this.validatePeerHello(inner);
       if (sealedFromPk !== undefined && pkLower !== sealedFromPk) {
