@@ -510,6 +510,44 @@ const SELF_HARM_VETO_RE =
  * cuerpo como su gemelo «mentón» (que sí dispara), así que
  * entra en las cabezas de daño y deja de vetarse por la raíz
  * «barb-» de la barba.
+ *
+ * 0.1.99 T-32 (residuos de la ronda 3 de Z-01, ACTA-z01-r3
+ * §6): la forma por segmentos aguantó su centro y la ronda 3
+ * midió tres fronteras, que se curan aquí:
+ *  - R3a: la ropa era clase declarada pero cubierta solo por
+ *    la familia que T-31 enumeró, y el inocente canónico de
+ *    la clase seguía disparando («la chaqueta», «los
+ *    zapatos», «as meias», «o casaco»…). La clase se cubre
+ *    como clase: el vocabulario corriente de prendas de
+ *    vestir de los tres idiomas, por familias de raíces
+ *    (chaquet-/jaquet-/chamarr-, zapat-/sapat-, guant-/luv-,
+ *    bufand-/cachecol, sombrer-/chapeu, abrig-/casac-,
+ *    corbat-/gravat-, gorr-, meia-, sandali-, sueter-,
+ *    sudader-/moletom, player-/remer-/poler-, camper-,
+ *    chalec-, bota-/boot, pijam-, uniform-, panuel- y las
+ *    inglesas jacket/shoe/glove/scarv-/sweater/hoodie/shirt/
+ *    jeans/sock/dress/coat) más las palabras que no pueden
+ *    ir por raíz (tenis, medias, cinturón/cinto, traje, bata,
+ *    delantal/avental, tie, hat, cap, pants, skirt, blouse,
+ *    underwear…). Ese es el alcance escrito de la clase: las
+ *    prendas corrientes; una prenda fuera de ese vocabulario
+ *    sigue fuera, como cualquier clase por raíces.
+ *  - R3b: la rama pegada del adjunto no reconocía los
+ *    artículos portugueses «o»/«a» ante el objeto que sigue
+ *    al instrumento, aunque `gluedHarmHeads` sí los trae:
+ *    las dos listas de determinantes de la vía pegada quedan
+ *    en paridad.
+ *  - R3c: la coordinación escondía la cabeza de daño tras
+ *    dos mediadores. La puntuación de lista (coma, punto y
+ *    coma, dos puntos) ya no corta la lectura con espacios:
+ *    cierra el objeto en curso y la lista sigue, como la
+ *    conjunción; la de fin de frase (punto, !, ?) sigue
+ *    cerrando. Y la cabeza de cada objeto se lee también
+ *    tras un adverbio de coordinación («también», «solo»,
+ *    «hasta», «também», «só», «até»…), que se pela del
+ *    frente como los determinantes: «el vello y también las
+ *    venas» lee «venas» como cabeza y manda. La vía pegada
+ *    rescata la cabeza tras los mismos mediadores.
  */
 const CUT_ANCHOR_RE =
   /\b(?:cortarme|cortar-me|me\s+(?:quiero\s+|voy\s+a\s+)?cortar|(?:cut|cutting)\s+myself)\b/g;
@@ -554,6 +592,10 @@ const CUT_HARM_HEADS = new Set([
 // servirse comida y de los modismos («some slack», «a break»).
 // T-31 suma la ropa (decisión del acta de la repetición, §4):
 // mang-, pantalon, camis-, vestid-, fald-, blus-, calc-.
+// T-32 (R3a) la cubre como clase: las familias corrientes de
+// prendas de los tres idiomas que faltaban (chaqueta, zapatos,
+// guantes, bufanda, sombrero, abrigo, corbata, gorra, meias,
+// casaco y sus hermanas).
 const CUT_EVERYDAY_STEMS = [
   "cabel", "pel", "flequill", "franj", "unh", "barb", "bigot", "bigod",
   "cuticul", "punt", "pont", "patill", "perill", "vell", "cej",
@@ -561,7 +603,14 @@ const CUT_EVERYDAY_STEMS = [
   "troz", "pedaz", "pedac", "rebanad", "tajad", "fati", "rodaj",
   "porc", "racion", "pastel", "tarta", "torta", "bolo", "pizza",
   "mang", "pantalon", "camis", "vestid", "fald", "blus", "calc",
+  "chaquet", "jaquet", "chamarr", "zapat", "sapat", "guant", "luv",
+  "bufand", "cachecol", "sombrer", "chapeu", "abrig", "casac",
+  "corbat", "gravat", "gorr", "meia", "sandali", "sueter", "jersey",
+  "sudader", "moletom", "player", "remer", "poler", "camper",
+  "chalec", "bota", "botin", "pijam", "uniform", "panuel",
   "hair", "nail", "beard", "mustach", "moustach", "bang",
+  "jacket", "shoe", "glove", "scarv", "sweater", "hoodie", "shirt",
+  "jeans", "sock", "dress", "coat", "boot",
   "slice", "piece", "chunk", "cake", "bread",
 ];
 
@@ -572,6 +621,14 @@ const CUT_EVERYDAY_WORDS = new Set([
   "unas", "pan", "pao", "queso", "quesos", "queijo", "queijos", "slack", "break",
   // T-31: la ropa que no va por raíz.
   "ropa", "roupa", "saia", "saias", "shorts", "bermuda", "bermudas",
+  // T-32 (R3a): más ropa que no puede ir por raíz sin
+  // colisionar («cintur-» valdría también «cintura», que es el
+  // cuerpo; «hat» por raíz valdría «hate»).
+  "tenis", "medias", "cinturon", "cinturones", "cinto", "cintos",
+  "traje", "trajes", "bata", "batas", "delantal", "delantales",
+  "avental", "aventais",
+  "tie", "ties", "hat", "hats", "cap", "caps", "pants", "trousers",
+  "skirt", "skirts", "blouse", "blouses", "underwear",
 ]);
 
 // La lectura del sintagma tras la forma de «cortar» (T-31): ya
@@ -626,7 +683,26 @@ function cutObjectSegments(folded: string, from: number): CutSegment[] {
       words.push(word);
       total++;
     }
-    if (/[.,;:!?]/.test(raw) || total >= 8) break;
+    // T-32 (R3c): la puntuación de lista (coma, punto y coma,
+    // dos puntos) no corta la lectura: cierra el objeto en
+    // curso y la lista sigue, como la conjunción («las
+    // cutículas, las puntas y la barbilla» lee los tres
+    // objetos). La de fin de frase (punto, !, ?) sí cierra la
+    // lectura, como siempre.
+    if (/[.!?]/.test(raw)) break;
+    if (/[,;:]/.test(raw)) {
+      close();
+      adjunct = false;
+    }
+    // T-32 (R3c): el tope de palabras leídas sube de 8 a 14:
+    // con la lista entera en juego, una coordinación de tres
+    // objetos con complemento («las uñas de los pies, las
+    // puntas del pelo y las venas», 11 palabras) se quedaba
+    // sin leer el último objeto por el tope, y el daño se
+    // perdía igual que tras la coma. La lectura sigue
+    // acotada por las palabras de cierre y por el fin de
+    // frase; el freno entero se re-midió con el tope nuevo.
+    if (total >= 14) break;
   }
   close();
   return segments;
@@ -639,6 +715,20 @@ const CUT_FRONT_SKIP = new Set([
   ...CUT_DETERMINERS,
   "de", "del", "do", "da", "dos", "das", "of",
   "dois", "duas", "tres", "both",
+]);
+
+// T-32 (R3c): los adverbios de coordinación que pueden abrir
+// el objeto coordinado («y también las venas», «e também as
+// veias», «y solo…», «y hasta…», «e só…», «e até…»). Se pelan
+// del frente como los determinantes: sin pelarlos, el
+// adverbio se leía como la cabeza y el lugar de daño que
+// seguía no mandaba. Solo se pelan del frente de un objeto
+// (nunca la última palabra, como todo el pelado): «cortarme
+// solo» sigue leyendo «solo» como lo que es ahí, el resto de
+// la frase.
+const CUT_FRONT_ADVERBS = new Set([
+  "tambien", "tambem", "solo", "so", "hasta", "ate",
+  "incluso", "inclusive", "ademas", "alem",
 ]);
 
 function isEverydayCutObject(word: string): boolean {
@@ -665,7 +755,7 @@ function cutSegmentHead(words: string[]): string | undefined {
       }
       break;
     }
-    if (!CUT_FRONT_SKIP.has(w)) break;
+    if (!CUT_FRONT_SKIP.has(w) && !CUT_FRONT_ADVERBS.has(w)) break;
     i++;
   }
   return words[i];
@@ -709,6 +799,18 @@ const CUT_EVERYDAY_GLUED_STEMS = [
   // T-31: la ropa, las mismas clases que con espacios.
   "mang", "pantalon", "camis", "vestid", "fald", "blus", "calc",
   "ropa", "roupa", "saia", "bermud",
+  // T-32 (R3a): la clase cubierta entera, como con espacios.
+  // Sin «hat» ni «tie»: como corrida pegada valdrían también
+  // dentro de «hate» o «tiene», que no son prendas.
+  "chaquet", "jaquet", "chamarr", "zapat", "sapat", "guant", "luv",
+  "bufand", "cachecol", "sombrer", "chapeu", "abrig", "casac",
+  "corbat", "gravat", "gorr", "meia", "medias", "sandali", "sueter",
+  "sudader", "moletom", "player", "remer", "poler", "camper",
+  "chalec", "bota", "botin", "pijam", "uniform", "panuel",
+  "tenis", "cinturon", "cinto", "traje", "bata", "delantal", "avental",
+  "jacket", "shoe", "glove", "scarv", "sweater", "hoodie", "shirt",
+  "jeans", "sock", "dress", "coat", "boot", "pants", "skirt",
+  "blouse", "underwear", "trousers",
 ];
 
 // Lo que abre un adjunto de instrumento en la corrida pegada
@@ -726,6 +828,13 @@ const CUT_ADJUNCT_GLUED_STARTERS = ["con", "usando", "com", "with"];
  * de modificador — los dos vetan por su palabra cotidiana,
  * como fijó T-27.
  */
+// T-32 (R3c): el adverbio de coordinación pegado que puede
+// preceder al determinante de la cabeza («…ytambienlas…»,
+// «…etambem…»): solo vale pegado a la conjunción, a la
+// puntuación de lista o al inicio, para no pelar la cola de
+// otra palabra («consolo» no es «con» + «solo»).
+const CUT_ADVERB_GLUED_RE = /(?:^|[ye,;:])(tambien|tambem|incluso|inclusive|ademas|alem|solo|hasta|ate|so)$/;
+
 function gluedHarmHeads(tail: string): boolean {
   for (const s of CUT_HARM_GLUED_STEMS) {
     for (let i = tail.indexOf(s); i >= 0; i = tail.indexOf(s, i + 1)) {
@@ -735,7 +844,15 @@ function gluedHarmHeads(tail: string): boolean {
       // Tras el «de» del complemento no es cabeza («…de» acaba
       // en «e» y no es la conjunción): es el caso de arriba.
       if (/(?:de|del|do|da|dos|das)$/.test(prefix)) continue;
-      if (prefix === "" || prefix.endsWith("y") || prefix.endsWith("e")) return true;
+      // T-32 (R3c): entre la conjunción y el determinante
+      // puede ir el adverbio de coordinación, como en la vía
+      // con espacios: se pela y se vuelve a mirar.
+      const adv = CUT_ADVERB_GLUED_RE.exec(prefix);
+      if (adv) prefix = prefix.slice(0, prefix.length - adv[1].length);
+      // La cabeza también abre el objeto tras la puntuación
+      // de lista pegada («elpelo,las…»): la coma cierra el
+      // objeto anterior igual que la conjunción.
+      if (prefix === "" || prefix.endsWith("y") || prefix.endsWith("e") || /[,;:]$/.test(prefix)) return true;
     }
   }
   return false;
@@ -757,7 +874,13 @@ function cutObjectVetoGlued(glued: string): boolean {
     if (starter) {
       for (const s of CUT_EVERYDAY_GLUED_STEMS) {
         for (let i = tail.indexOf(s); i >= 0; i = tail.indexOf(s, i + 1)) {
-          if (i > starter.length + 2 && /(?:las|los|la|el|as|os|una|un|unas|uma|umas)$/.test(tail.slice(0, i))) {
+          // T-32 (R3b): la lista de determinantes, en paridad
+          // con la de gluedHarmHeads: sin los artículos
+          // portugueses «o»/«a», el objeto tras el instrumento
+          // no se reconocía en portugués pegado
+          // («…tesouraocabelo», «…tesouraaunha» disparaban
+          // cuando su gemela con espacios vetaba).
+          if (i > starter.length + 2 && /(?:las|los|la|el|as|os|umas|uma|um|unas|una|un|a|o)$/.test(tail.slice(0, i))) {
             everyday = true;
           }
         }
