@@ -7,16 +7,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useTranslation } from "react-i18next";
-import { ModelManager } from "../models/ModelManager";
-import { RAM_BUDGET_BYTES, STORAGE_BUDGET_BYTES } from "../models/manifest";
-import { getMemoryInfo } from "ram-monitor";
+import * as FileSystem from "expo-file-system/legacy";
+import { getMemoryInfo, getDeviceTotalRamBytes } from "ram-monitor";
 import { getLastQueryStats, subscribeQueryStats } from "../services/telemetry";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
 import { radii } from "./theme/spacing";
-
-const modelManager = new ModelManager();
 
 function formatGB(bytes: number): string {
   if (bytes <= 0) return "0.0 GB";
@@ -53,26 +50,57 @@ export function DrawerFooterStats() {
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
   const { t } = useTranslation();
-  const [storageBytes, setStorageBytes] = useState(0);
+  // Telemetría honesta (auditoría 0.1.106, orden del dueño «esos datos
+  // se miden realmente»): cada cifra es la medición de lo que su
+  // etiqueta afirma, leída de la fuente del sistema.
+  // - RAM: RSS real del proceso (módulo nativo) sobre la RAM TOTAL
+  //   real del aparato (ActivityManager.totalMem vía ram-monitor).
+  //   Antes el denominador era RAM_BUDGET_BYTES (12 GB), el tope de
+  //   la auditoría bounty: medía el proceso contra un presupuesto,
+  //   no contra el aparato.
+  // - DISCO: el disco real del aparato (capacidad total − libre, vía
+  //   expo-file-system). Antes numeraba solo los archivos del
+  //   catálogo de NIDO contra el tope de 50 GB. La fila no enseña
+  //   cifra hasta que la primera medición real llega.
+  // - tok/s: solo la última tasa con generación real; un turno sin
+  //   generación (guía literal, texto seguro) registra 0 y no debe
+  //   fabricar un «0,0 tok/s» ni borrar la última tasa verdadera.
+  const [disk, setDisk] = useState<{ used: number; total: number } | null>(null);
   const [rssBytes, setRssBytes] = useState(0);
-  const [tokPerSec, setTokPerSec] = useState<number | null>(
-    getLastQueryStats()?.tokPerSec ?? null
-  );
+  const [totalRamBytes, setTotalRamBytes] = useState(0);
+  const [tokPerSec, setTokPerSec] = useState<number | null>(() => {
+    const last = getLastQueryStats()?.tokPerSec;
+    return last != null && last > 0 ? last : null;
+  });
 
   useEffect(() => {
     let cancelled = false;
     async function poll() {
-      const used = await modelManager.currentStorageUsageBytes();
-      if (!cancelled) setStorageBytes(used);
       try {
-        if (!cancelled) setRssBytes(getMemoryInfo().rssBytes);
+        const [total, free] = await Promise.all([
+          FileSystem.getTotalDiskCapacityAsync(),
+          FileSystem.getFreeDiskStorageAsync(),
+        ]);
+        if (!cancelled && total > 0) {
+          setDisk({ used: Math.max(0, total - free), total });
+        }
+      } catch {
+        // Sin lectura del sistema no se enseña cifra: la fila queda fuera.
+      }
+      try {
+        if (!cancelled) {
+          setRssBytes(getMemoryInfo().rssBytes);
+          setTotalRamBytes(getDeviceTotalRamBytes());
+        }
       } catch {
         // Native module not linked
       }
     }
     poll();
     const id = setInterval(poll, 5000);
-    const unsubscribe = subscribeQueryStats((s) => setTokPerSec(s.tokPerSec));
+    const unsubscribe = subscribeQueryStats((s) => {
+      if (s.tokPerSec > 0) setTokPerSec(s.tokPerSec);
+    });
     return () => {
       cancelled = true;
       clearInterval(id);
@@ -80,33 +108,37 @@ export function DrawerFooterStats() {
     };
   }, []);
 
-  const ramFraction = rssBytes / RAM_BUDGET_BYTES;
-  const storageFraction = storageBytes / STORAGE_BUDGET_BYTES;
+  const ramFraction = totalRamBytes > 0 ? rssBytes / totalRamBytes : 0;
+  const storageFraction = disk && disk.total > 0 ? disk.used / disk.total : 0;
 
   return (
     <View style={styles.container}>
       <View style={styles.row}>
-        <Text style={styles.label}>{t("drawerFooterStats.ram")}</Text>
+        <Text style={styles.label} numberOfLines={1}>{t("drawerFooterStats.ram")}</Text>
         <MiniBar
           fraction={ramFraction}
           over={ramFraction > 1}
           color={colors.emerald[400]}
         />
-        <Text style={styles.value}>
-          {formatGB(rssBytes)}/{formatGB(RAM_BUDGET_BYTES)}
+        <Text style={styles.value} numberOfLines={1}>
+          {totalRamBytes > 0
+            ? `${formatGB(rssBytes)}/${formatGB(totalRamBytes)}`
+            : formatGB(rssBytes)}
         </Text>
       </View>
-      <View style={styles.row}>
-        <Text style={styles.label}>{t("drawerFooterStats.disk")}</Text>
-        <MiniBar
-          fraction={storageFraction}
-          over={storageFraction > 1}
-          color={colors.cyan[400]}
-        />
-        <Text style={styles.value}>
-          {formatGB(storageBytes)}/{formatGB(STORAGE_BUDGET_BYTES)}
-        </Text>
-      </View>
+      {disk != null && (
+        <View style={styles.row}>
+          <Text style={styles.label} numberOfLines={1}>{t("drawerFooterStats.disk")}</Text>
+          <MiniBar
+            fraction={storageFraction}
+            over={storageFraction > 1}
+            color={colors.cyan[400]}
+          />
+          <Text style={styles.value} numberOfLines={1}>
+            {formatGB(disk.used)}/{formatGB(disk.total)}
+          </Text>
+        </View>
+      )}
       {tokPerSec != null && (
         <View style={styles.tokRow}>
           <Text style={styles.tokDot}>●</Text>
@@ -131,7 +163,11 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   label: {
     ...typography.ui.caption,
     color: colors.text.dim,
-    width: 28,
+    // 0.1.106 (Defecto D): la etiqueta va ENTERA en su línea. El
+    // ancho fijo de 28 px la partía en vertical, letra por letra
+    // («R A M», «DI SC O»), junto a la barra: sin ancho, sin
+    // encoger, y la barra y el valor ceden lo que haga falta.
+    flexShrink: 0,
     fontWeight: "700",
   },
   track: {
@@ -149,6 +185,9 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     ...typography.ui.caption,
     color: colors.text.muted,
     fontVariant: ["tabular-nums"],
+    // Con la fuente del sistema agrandada, el valor cede (una línea,
+    // con elipsis) antes que la etiqueta o la barra.
+    flexShrink: 1,
   },
   tokRow: {
     flexDirection: "row",

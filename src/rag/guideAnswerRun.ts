@@ -85,7 +85,44 @@ export async function answerFromGuide(
         pick = pickGuideChunk(candidates, lang, route, pickOpts);
       }
     }
-    if (!pick) return { answer: null, retrieved };
+    // 0.1.106 (carril atragantamiento-01106): la elección sobre la
+    // pregunta tal cual, calculada como mucho una vez y solo cuando
+    // hubo arrastre. Es la MISMA elección que el bloque de la
+    // 0.1.105 de abajo usa para mandar sobre el ancla; aquí se
+    // comparte porque también es el rescate cuando el flujo
+    // arrastrado no eligió nada (ver el `if (!pick)` siguiente).
+    const askedQuery = short ? stripShortRequest(query) : query;
+    const searchedQuery = short ? askedQuery : (retrievalQuery ?? query);
+    let askedTried = false;
+    let askedResult: { pick: RetrievedChunk; candidates: RetrievedChunk[] } | null = null;
+    const electOnAsked = async (): Promise<{ pick: RetrievedChunk; candidates: RetrievedChunk[] } | null> => {
+      if (askedTried) return askedResult;
+      askedTried = true;
+      if (searchedQuery === askedQuery) return null;
+      const rawWide = await retrieve(askedQuery, GUIDE_PICK_CHUNKS).catch(() => null);
+      if (!rawWide || rawWide.length === 0) return null;
+      const rawPick = pickGuideChunk(rawWide, lang, route, pickOpts);
+      if (!rawPick || pickIsSignDenied(rawWide, rawPick, query)) return null;
+      askedResult = { pick: rawPick, candidates: rawWide };
+      return askedResult;
+    };
+    if (!pick) {
+      // 0.1.106 (foto del dueño, 07:39): el hueco que dejaba caer el
+      // turno al texto seguro. El bloque de la 0.1.105 solo corre
+      // con un pick arrastrado en la mano; con el pick en null este
+      // return salía ANTES de elegir sobre la pregunta tal cual. Y
+      // el pick puede ser null con la guía correcta empatada arriba:
+      // un fragmento no literal como mejor global veta a todas las
+      // integradas (la regla sellada de pickGuideChunk) y la vía
+      // léxica de reserva las excluye por diseño. Si la pregunta tal
+      // cual SÍ elige con claridad (su lista no trae el veto), se
+      // sirve su guía; si tampoco elige, null como siempre: el suelo
+      // no baja jamás.
+      const rescued = await electOnAsked();
+      if (!rescued) return { answer: null, retrieved };
+      pick = rescued.pick;
+      candidates = rescued.candidates;
+    }
     // 0.1.105 (carril atragantamiento-01105, foto del dueño en su
     // Tab A9+ a las 05:31): la elección de la pregunta manda sobre
     // la del arrastre. La elección de arriba juzga sobre la lista
@@ -107,19 +144,15 @@ export async function answerFromGuide(
     // segunda búsqueda ni cambio alguno. R-03/H-08 no se tocan: lo
     // que se acota es el efecto del arrastre sobre la única vía
     // que servía sin juez.
-    const askedQuery = short ? stripShortRequest(query) : query;
-    const searchedQuery = short ? askedQuery : (retrievalQuery ?? query);
     if (searchedQuery !== askedQuery) {
-      const rawWide = await retrieve(askedQuery, GUIDE_PICK_CHUNKS).catch(() => null);
-      if (rawWide && rawWide.length > 0) {
-        const rawPick = pickGuideChunk(rawWide, lang, route, pickOpts);
+      const raw = await electOnAsked();
+      if (raw) {
         const otherGuide =
-          !!rawPick &&
-          ((parsePackChunkId(rawPick.chunkId)?.packId ?? "") !== (parsePackChunkId(pick.chunkId)?.packId ?? "") ||
-            guideTitleOf(rawPick.title) !== guideTitleOf(pick.title));
-        if (rawPick && otherGuide && !pickIsSignDenied(rawWide, rawPick, query)) {
-          pick = rawPick;
-          candidates = rawWide;
+          (parsePackChunkId(raw.pick.chunkId)?.packId ?? "") !== (parsePackChunkId(pick.chunkId)?.packId ?? "") ||
+          guideTitleOf(raw.pick.title) !== guideTitleOf(pick.title);
+        if (otherGuide) {
+          pick = raw.pick;
+          candidates = raw.candidates;
         }
       }
     }

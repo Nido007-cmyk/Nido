@@ -21,6 +21,7 @@
  */
 
 import { primarySourceIndex, splitSentences, stem } from "./grounding";
+import { parsePackChunkId } from "./packSource";
 import type { SentenceProvenance } from "./provenance";
 import type { RetrievedChunk } from "./retrieve";
 
@@ -150,7 +151,15 @@ export function buildEvidenceCard(
   chunks: readonly RetrievedChunk[],
   query: string,
   preferredIndex?: number | null,
+  opts?: { servedFixedText?: boolean },
 ): EvidenceCardData | null {
+  // 0.1.106 (Defecto B, foto del dueño 07:39): lo servido es un texto
+  // fijo de la casa (el texto seguro de salud que sustituye a la
+  // respuesta): no tiene fuente principal, y coronar la guía de
+  // mayor rango de la recuperación sobre él (la crecida, en la foto)
+  // presenta como fuente de ese texto una guía que no responde a la
+  // pregunta. Sin tarjeta: la respuesta es de la casa, no de una guía.
+  if (opts?.servedFixedText) return null;
   // Auditoría 0.1.79: un apartado de cierre («… — Importante») no es la
   // fuente principal de nada; si va primero, la tarjeta usa la siguiente.
   let index = primarySourceIndex(chunks);
@@ -188,4 +197,31 @@ export function buildEvidenceCard(
   }
   const excerpt = sentences.slice(lo, hi + 1).join(" ");
   return { chunkId: top.chunkId, index, title: top.title, highlight, excerpt, truncated: top.truncated ?? false };
+}
+
+/**
+ * 0.1.106 (Defecto A, foto del dueño 07:36): la guía que la respuesta
+ * de ABSTENCIÓN cita en su extracto, para que el mensaje ofrezca
+ * «Abrir la guía completa» igual que una respuesta fundamentada. La
+ * abstención marca las frases de su extracto con origen «source» y
+ * `replaced: true` sobre la fuente de la que el extracto salió (la
+ * marca de T-17: la frase del modelo fue sustituida por la de la
+ * fuente). Se devuelve el chunkId de ESA fuente solo si es un
+ * fragmento de guía de pack (lo que el lector de guías sabe abrir);
+ * en cualquier otro caso — texto seguro (procedencia toda «fixed»),
+ * fundamentada sin sustitución, fuente que no es de pack — null:
+ * no se ofrece abrir lo que no hay.
+ */
+export function abstentionGuideChunkId(
+  provenance: readonly SentenceProvenance[] | undefined,
+  chunks: readonly RetrievedChunk[],
+): string | null {
+  if (!provenance) return null;
+  for (const s of provenance) {
+    if (s.origin.kind === "source" && s.origin.replaced === true) {
+      const chunk = chunks[s.origin.n - 1];
+      return chunk && parsePackChunkId(chunk.chunkId) ? chunk.chunkId : null;
+    }
+  }
+  return null;
 }

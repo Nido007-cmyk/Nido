@@ -416,6 +416,28 @@ function describeToolCompact(t: ToolDefinition): string {
   return `- ${t.name}${params ? `(${params})` : ""}: ${t.description}`;
 }
 
+/**
+ * 0.1.106 (Defecto E): nivel MÍNIMO del catálogo para la graduación
+ * de presupuesto del bucle del agente. Cuando la ventana no admite
+ * el catálogo compacto (con descripciones), el turno no muere: el
+ * catálogo cede a nombre + firma de parámetros, sin descripciones.
+ * El modelo conserva con qué formar llamadas correctas (la
+ * validación del despachador sigue imponiendo el manifiesto entero)
+ * y el turno responde; las rutas deterministas ya atendieron antes
+ * las herramientas que el usuario pidió en claro.
+ */
+export function describeToolsForPromptMinimal(intent?: "recordar" | "actuar" | "conversar"): string {
+  const tools = intent ? LOCAL_TOOLS.filter((t) => TOOLS_BY_INTENT[intent].includes(t.name)) : LOCAL_TOOLS;
+  return tools.map(describeToolMinimal).join("\n");
+}
+
+function describeToolMinimal(t: ToolDefinition): string {
+  const params = Object.entries(t.parameters)
+    .map(([n, p]) => `${n}${p.required ? "*" : ""}:${p.type}`)
+    .join(", ");
+  return `- ${t.name}${params ? `(${params})` : ""}`;
+}
+
 /** Full rendering (with per-param docs) — kept for debugging/inspection, not the prompt. */
 export function describeToolsForPromptVerbose(): string {
   return LOCAL_TOOLS.map((t) => {
