@@ -4,6 +4,75 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.104-alpha - 2026-11-15
+
+0.1.103 put the judge back in front of every answer. Its
+tablet pass never got to prove that on the tire question,
+because the turn died earlier, in a different place: the app
+answered with a raw technical error, "system prompt exceeds
+the budget (530 estimated tokens over a maximum of 512).
+Reduce the system prompt or raise maxSystemTokens." No answer
+at all, and a message no user should ever see. The owner's
+verdict was that 0.1.103 is not approved on his tablet, and
+he is right. This release fixes that guard.
+
+**What was wrong.** The context budget guard threw an error
+whenever the estimated system message grew past half the
+loaded window (512 tokens on the tablet's 1024 window). The
+legitimate core of that message, the chosen personality plus
+the instruction to stick to the sources, already estimates
+490, which leaves a margin of 22 tokens. Into that same fixed
+message the app folds the summary it keeps of the
+conversation, and it stores that summary with no size cap.
+The owner's conversation had crossed the summary threshold
+during the 0.1.102 session, so the first turn that had to
+carry the summary was the tire question on 0.1.103, and every
+retry died the same way, because the stored summary does not
+change between retries. The guard could only trim history,
+and the summary does not live in the history: there was no
+way to degrade, only the throw. The raw text reached the
+screen because the error surface had a human category for
+prompts that exceed the context, but not for this message,
+which speaks of the budget instead. The comparison against
+0.1.98 shows the guard itself never changed: it is byte for
+byte the 0.1.98 one. The defect is old and latent; what
+changed is the state, a conversation that finally grew a
+summary on the small window. With the same state, 0.1.98
+would die the same way.
+
+**The fix.** Two changes, none of them in model loading,
+which stays exactly as 0.1.102 left it. First, the throw is
+gone: the system message always goes in whole, never silently
+truncated, and when it grows past its planning cap the
+history yields until the turn fits, down to no history at
+all. The only failure left is the physical one, a core that
+cannot fit even with no history, and that message already had
+a human category. Second, "exceeds the budget" now matches
+the context category of the error surface, so if that text
+ever reaches a bubble it is served with the human wording in
+Spanish, English and Portuguese, with no token counts: the
+conversation no longer fits in the model's memory, shorten
+the message or start a new conversation.
+
+**Declared.** The judge's declared residue stays at 4 cases
+(matriz-a-081, 126, 186 and 246), unchanged. This version's
+pre-release sweep of the three classes found nothing open:
+the full 902-case census, the clause-level census and the
+margin replica came out byte for byte identical to the
+previous sweep, the adversarial pairs scored 73 of 73, and
+the trilingual parity of the deterministic layer is exact at
+1,471 leaf keys per language. Still formally outstanding, as
+declared in 0.1.102: re-checking M-38 (no context reuse
+between conversations) on llama.rn rc.9, the version this
+release ships.
+
+**If you installed 0.1.103.** Install this release as an
+update over it. Your downloads and data are preserved, and
+the load behaves exactly as it did in 0.1.103. The deciding
+pass is repeating the tire question in the same conversation
+that carries the stored summary, the one that kills the turn
+today, and then the choking question.
+
 ## 0.1.103-alpha - 2026-11-15
 
 Answers were sometimes invented instead of read from the
