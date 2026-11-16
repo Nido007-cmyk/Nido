@@ -70,6 +70,12 @@ export function diagnose(error: string, t: TranslateFn): Diagnosis {
     lower.includes("no cabe en el contexto") ||
     lower.includes("excede el contexto") ||
     lower.includes("exceden nctx") ||
+    // 0.1.103 (foto del dueño): el lanzamiento de la guarda de
+    // presupuesto del sistema («system prompt excede el presupuesto
+    // (530 tokens estimados > máximo 512)…») tampoco casaba con
+    // ninguna categoría y la burbuja enseñaba la jerga con las
+    // cifras. Es el mismo problema de longitud, la misma salida.
+    lower.includes("excede el presupuesto") ||
     lower.includes("prompt too long") ||
     lower.includes("context length")
   ) {

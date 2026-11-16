@@ -13,8 +13,18 @@
  * or crashed into "Context is full".
  *
  * Now: one place decides what fits. Priorities, in order:
- *   1. System prompt is PINNED — always included in full; exceeding its cap
- *      throws an actionable error (fail-closed, never silently truncated).
+ *   1. System prompt is PINNED — always included in full, never truncated.
+ *      Its planning cap (maxSystemTokens) does NOT kill the turn: when the
+ *      system exceeds it, HISTORY yields (down to zero turns) and the turn
+ *      only fails at the physical limit — system + current message +
+ *      reserved headroom exceeding the window itself.
+ *      (0.1.103, foto del dueño: el cap lanzaba, y el resumen de la
+ *      conversación — que viaja dentro del mensaje de sistema y crece
+ *      solo, sin tope — dejó una conversación real inutilizable a
+ *      530 > 512 en la ventana de 1024, cuando el turno cabía de sobra.
+ *      El fail-closed original protegía de truncar el sistema en
+ *      silencio; degradar el historial protege lo mismo sin matar el
+ *      turno.)
  *   2. Generation headroom is RESERVED — never given to history.
  *   3. History is recent-first — newest turns kept, oldest dropped.
  *   4. No orphaned assistant turns — a kept assistant message always keeps
@@ -38,7 +48,12 @@ export interface ContextBudgetConfig {
   nCtx: number;
   /** Tokens reserved for generation — never allocated to history. */
   reserveGeneration: number;
-  /** Max tokens the system message may occupy; exceeding throws. */
+  /**
+   * Planning cap for the system message (half the window by default).
+   * Exceeding it does not fail the turn — history yields instead; the
+   * hard limit is the window itself (see applyContextBudget). Kept as
+   * the sizing reference for callers that compose the system message.
+   */
   maxSystemTokens: number;
 }
 
@@ -148,9 +163,11 @@ export function budgetConfigFor(nCtx: number, reserveGeneration: number): Contex
 }
 
 /**
- * Applies the budget. Throws an actionable error when even
- * system + current message + reserved headroom don't fit (fail-closed).
- * Pure function.
+ * Applies the budget. The system message always goes in full, however
+ * large: if it exceeds its planning cap, history is cut to whatever
+ * room remains (possibly none). Throws an actionable error only when
+ * even system + current message + reserved headroom don't fit the
+ * window itself (fail-closed at the physical limit). Pure function.
  */
 export function applyContextBudget(
   system: BudgetMessage,
@@ -160,12 +177,6 @@ export function applyContextBudget(
   countTokens: (text: string) => number = defaultTokenCounter
 ): BudgetedConversation {
   const systemTokens = countTokens(system.content);
-  if (systemTokens > config.maxSystemTokens) {
-    throw new Error(
-      `NIDO: system prompt excede el presupuesto (${systemTokens} tokens estimados > ` +
-        `máximo ${config.maxSystemTokens}). Reduce el system prompt o sube maxSystemTokens.`
-    );
-  }
   const currentTokens = countTokens(currentUser.content);
   const historyBudget = config.nCtx - config.reserveGeneration - systemTokens - currentTokens;
   if (historyBudget < 0) {
