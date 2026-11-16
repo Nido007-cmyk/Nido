@@ -4,6 +4,119 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.108-alpha - 2026-11-16
+
+The tablet pass of 0.1.107 closed complete and approved:
+every one of its five fixes was proven on the owner's
+tablet, in the same grown conversation. "Remind me to" and
+"save a note:" answer with their question, as they should.
+The CPR question served its guide complete, and the
+sequence that decides, the choking question right after
+the CPR block, served the choking guide on the first try,
+as the single consulted source at 90 percent. The tire
+question gave its honest abstention with its "Open the
+full guide" button, and in the drawer RAM and DISK read
+whole on their line, with the disk measured from the
+device itself (27.4 of 47.9 GB) and a real tokens per
+second rate instead of a fabricated 0.0. That pass left
+two things behind, and this release is those two things.
+
+First, in Settings every model carried a memory warning.
+The active model, Qwen3-0.6B at 378 MB, wore the yellow
+"Needs a lot of memory" on the same card that said
+"Currently in use"; both downloaded 0.5B models wore it
+too; and the 1.5B model wore the red "Too heavy for this
+device" together with the "Default" chip. The owner's
+verdict: the small models should not show that. Second,
+his own request from the same pass: the chat needs a way
+to jump to the end of a long conversation without
+scrolling all the way down by hand.
+
+**What was wrong.** An audit read the badge's arithmetic
+end to end and proved the formula itself exact: it is the
+load path's own verdict, and on the empty device the
+small models are green (the 0.5B models cost 610 to
+631 MiB and the Qwen3-0.6B 694 MiB, against a canonical
+budget of 856 MiB: the device's 3,416 MiB of real RAM,
+minus the app's 512 MiB baseline, minus the sealed 2 GiB
+system reserve). The 1.5B's red is correct under that
+sealed policy and stays: its cheapest possible load costs
+1,000.4 MiB, more than the whole budget, and its weights
+alone are 940 MiB. The yellow in the owner's photos came
+from the badge's second input, the live photo: it was
+taken once, when the card mounted, with the app already
+holding memory, it was never refreshed, and it never
+applied the releasable credit the real load applies when
+a model is already resident. Every model was judged as if
+it had to load on top of the resident one, and the active
+model was judged as if it had to load on top of itself.
+The "Default" chip was a static flag in the catalog, and
+on this tablet it named the 1.5B, while the default the
+app itself computes for 3,416 MiB is the small 0.5B.
+
+**The fix.** Only the surface changes; the formula, the
+context ladder, the 2 GiB reserve and the load itself are
+untouched. The resident model's own card now applies the
+same releasable credit the load applies, computed with
+the load's own inputs (the resident's weights, its loaded
+context, its architecture, its KV under its accepted
+profile), so the active model is judged the way it would
+actually load: by replacing itself. The live photo is
+taken again when the memory facts change: when the card
+mounts, when the active model changes after a load or an
+unload, and when the app comes back to the foreground.
+The "Default" chip is painted only when the model is the
+default computed for the device's own RAM, the same
+function the setup assistant uses to preselect one, so
+there is a single default per device across the whole
+app; on the owner's tablet the small 0.5B carries it now.
+And the chat gains its button: a floating button that
+appears only when you are 120 px or more from the end,
+the same threshold that already governed whether the list
+follows the bottom, now computed in one shared place, and
+one tap takes you, animated, to the last message. Its
+accessibility label is in Spanish, English and
+Portuguese.
+
+**Declared, without dressing up.** The live memory band
+behind the photos (roughly 430 to 570 MiB available) is
+the only explanation compatible with the photographed
+colors; the photo itself is not recorded, so that band is
+inferred, not measured on the device. Under pressure the
+real load can cap its own batch and its releasable credit
+can come out smaller than the badge's; the badge never
+promises more than its own account, which is the
+conservative of the two. The tire abstention's extract
+still comes from the top ranked section of its guide (in
+this pass the "Tire" glossary entry at 86 percent, above
+the breakdown guide at 84 percent): that is the sealed
+policy, unchanged here, with the owner's word still
+pending. The judge's declared residue stays at 4 cases
+(matriz-a-081, 126, 186 and 246), unchanged; this fix does
+not touch the judge, retrieval or grounding at all. This
+version's pre-release sweep of the three classes found
+nothing open: trilingual parity holds with the single new
+key present in the three languages, and the twin-function
+symmetry was verified piece by piece (the badge's credit
+replicates the load's own inputs, the button's threshold
+is follow-bottom's own, the Default chip uses the setup
+assistant's own default function). Still formally
+outstanding, as declared since 0.1.102: re-checking M-38
+(no context reuse between conversations) on llama.rn
+rc.9, the version this release ships.
+
+**If you installed 0.1.107.** Install this release as an
+update over it. Your downloads and data are preserved,
+and the load behaves exactly as it did in 0.1.107. The
+deciding pass is short: open Settings and read the model
+list. In normal use the small models should no longer
+carry the memory warning, the active model should no
+longer be warned against itself, the "Default" chip
+should sit on the small 0.5B, and the 1.5B should still
+be honestly red. Then open a long conversation, scroll
+up, and use the new button: one tap should take you to
+the last message.
+
 ## 0.1.107-alpha - 2026-11-16
 
 The tablet pass of 0.1.106 proved the safety floor this
