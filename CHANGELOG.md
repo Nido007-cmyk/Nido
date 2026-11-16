@@ -4,6 +4,85 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.103-alpha - 2026-11-15
+
+Answers were sometimes invented instead of read from the
+guides, and this release fixes the route that let that happen.
+0.1.102's tablet test approved the load: the chat loaded its
+model at its normal speed again, as in 0.1.98, and the owner
+closed the loading incident with his own pass. But the same
+pass caught the answers failing, in three photos from the
+owner's tablet. Asked how to change a car tire, the app twice
+answered, word for word identical, "first make sure the engine
+is running", which is wrong and dangerous. Asked a fourth time
+it invented a step that does not exist ("slide the radiator
+key down to release it") and left out every real step. Asked
+what to do if a child is choking, it served invented steps
+with no back blows, no abdominal thrusts and no call to
+emergency services first. The owner's diagnosis was right:
+the app was not answering from its guides.
+
+**What was wrong.** The grounding judge works when the guide
+is in front of it: measured in the test harness, it cuts or
+abstains on every one of these answers when the sources reach
+it. The failure was in the route, a new class the answer hunt
+had not seen, because its batteries always hand the judge its
+sources directly. On the small context window the tablet's
+memory ladder serves (1024 tokens), the fixed core of the
+prompt plus the default generation reserve filled the whole
+window, and the prompt fitting step dropped every retrieved
+source from the turn, starting with the very first message of
+a conversation. The chat then judged the model's answer
+against that empty list, which is to say it did not judge it
+at all, and the health safety substitution, which needs
+sources and a verdict, never fired. That is how the tire and
+the choking answers reached the screen. A second defect fed
+the first: the adaptive route assembled its prompts against
+the catalog's window (4096) instead of the loaded one, so its
+prompts were born impossible (about 3,354 estimated tokens),
+the engine rejected them, and the raw technical error reached
+the user's screen with its token counts showing. The
+identical first two answers came from the deterministic seed
+of the factual preset: with generation frozen and no sources,
+the same invention comes out twice.
+
+**The fix.** Four changes, none of them in model loading,
+which stays exactly as 0.1.102 left it. First, when fitting a
+turn would drop every source, the fit retries with the floor
+generation reserve (64, the degradable step the design already
+had) before returning an empty list: sources outrank the
+generation cushion, and generation degrades afterwards
+through the usual path, with its space note. Second, both
+adaptive routes assemble against the loaded window, not the
+catalog's, so the impossible prompts and the error cascade
+are gone. Third, when the fitted list comes out empty but
+retrieval did bring sources, the judge, the semantic context
+and the health substitution judge against the retrieved list,
+and abstention serves the guide's own extract again, as in
+0.1.98. When retrieval brings nothing, an ordinary question
+still generates as before. Fourth, the overflow error now has
+its own category with human wording in Spanish, English and
+Portuguese and no token counts: the conversation no longer
+fits in the model's memory, shorten the message or start a
+new conversation.
+
+**Declared.** The judge's declared residue stays at 4 cases
+(matriz-a-081, 126, 186 and 246), unchanged. This version's
+pre-release sweep of the three classes found nothing open:
+the full 902-case census, the clause-level census and the
+margin replica came out byte for byte identical to the
+previous sweep, the adversarial pairs scored 73 of 73, and
+the trilingual parity of the deterministic layer is exact at
+1,471 leaf keys per language, including the three new keys of
+the overflow message. Still formally outstanding, as declared
+in 0.1.102: re-checking M-38 (no context reuse between
+conversations) on llama.rn rc.9, the version this release
+ships.
+
+**If you installed 0.1.102.** Install this release as an
+update over it. Your downloads and data are preserved, and
+the load behaves exactly as it did in 0.1.102.
+
 ## 0.1.102-alpha - 2026-11-15
 
 The model loading goes back to exactly the form 0.1.98 had.
