@@ -308,7 +308,7 @@ La interfaz está disponible en español, inglés y portugués.
 ## Instalación
 
 1. Descarga `app-release.apk` desde la
-   [versión v0.1.104-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.104-alpha).
+   [versión v0.1.105-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.105-alpha).
 2. Compruébalo con el archivo `app-release.apk.sha256` publicado a su lado.
 3. Instálalo en un teléfono Android (arm64).
 4. En el primer arranque NIDO descarga su modelo de lenguaje, entre 0,4 y

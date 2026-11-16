@@ -4,6 +4,85 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.105-alpha - 2026-11-15
+
+0.1.104 survived the pass that killed 0.1.103: in the same
+grown conversation on the owner's tablet, no turn died and
+nothing dangerous was invented, and the owner judged that it
+answered quite well. But his photos caught the serving layer
+in two quieter failures. The choking answer cited the right
+guide while the main source card above it showed a different
+one, a flood guide, and its "read the whole guide" would have
+opened that wrong guide. The tire answer was the model's own
+bare refusal, "I can't help you with that," served with the
+roadside guide retrieved right in front of it. This release
+fixes both.
+
+**What was wrong.** The judge grounds every sentence in the
+chunk that supports it, and the citation printed in the text
+names that chunk. The main source card ignored the verdict:
+it was built from the retrieval list alone, it always took
+the top-ranked chunk, and it always labeled itself "1". When
+retrieval ranked an irrelevant guide above the one the answer
+actually used, the card showed the irrelevant one. The
+refusal reached the screen by another door: a capability
+refusal is not one of the catalogued knowledge abstentions,
+it asserts nothing the judge can check, and it slipped
+through the short-sentence rule, so the abstention path,
+which serves the guide's literal extract, never fired. The
+app even labeled it in its own footer as model text with no
+source, and served it anyway.
+
+**The fix.** The card is now derived from the source the
+served answer actually rests on, the one the turn's
+provenance names: the source supporting the most served
+sentences, and on a tie the first one cited. The card shows
+that source's true number and accent, and "read the whole
+guide" opens that guide. When no provenance names sources,
+the card keeps its previous behavior. And a pure refusal,
+one that declines without asserting anything, is now
+classified like an abstention in Spanish, English and
+Portuguese, under the same three guards that protect
+faithful short answers from being cut: if a refusal is all
+the turn has, the outcome is the honest abstention with the
+literal extract of the main source, not the model's refusal.
+A refusal that also asserts something is judged on what it
+asserts.
+
+**Declared, without dressing up.** The "Breakdown on the
+road" guide does not contain the steps for changing a wheel.
+It is a safety guide: stop somewhere safe, signal, get out
+on the safe side, wait off the roadway, ask for help. Its
+only mention of changing a wheel is a warning against doing
+it on the traffic side. With this fix, the tire question
+gets that guide's own extract, which is what the guide can
+honestly give; this version does not teach anyone to change
+a wheel, and it does not claim to. The offline corpus also
+has no cooking guide, so the rice question's abstention in
+the owner's pass was the designed behavior, not a failure.
+The judge's declared residue stays at 4 cases (matriz-a-081,
+126, 186 and 246), unchanged. This version's pre-release
+sweep of the three classes found nothing open: the full
+902-case census, the clause-level census and the margin
+replica came out byte for byte identical to the previous
+sweep even though this fix touches the judge itself (no
+hunted case is a pure refusal, so no verdict moved), the
+adversarial pairs scored 73 of 73, and the trilingual parity
+of the deterministic layer is exact at 1,471 leaf keys per
+language. Still formally outstanding, as declared in
+0.1.102: re-checking M-38 (no context reuse between
+conversations) on llama.rn rc.9, the version this release
+ships.
+
+**If you installed 0.1.104.** Install this release as an
+update over it. Your downloads and data are preserved, and
+the load behaves exactly as it did in 0.1.104. The deciding
+pass is the same tablet conversation: ask what to do if a
+child is choking and check that the main source card shows
+the choking guide the answer cites, then ask how to change
+a tire and check that the answer serves the roadside guide's
+own text instead of a bare refusal.
+
 ## 0.1.104-alpha - 2026-11-15
 
 0.1.103 put the judge back in front of every answer. Its
