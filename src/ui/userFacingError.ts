@@ -28,7 +28,7 @@ export function errorReason(t: TFunction, e: unknown, lang = "en"): string {
   if (ram) return ram;
   const detail = technicalDetail(e);
   const d = diagnose(detail, t as never);
-  if (d.category === "storage") return `${d.title}. ${d.recommendation}`;
+  if (d.category === "storage" || d.category === "context") return `${d.title}. ${d.recommendation}`;
   return detail;
 }
 
@@ -38,6 +38,6 @@ export function userFacingError(t: TFunction, e: unknown, lang = "en"): string {
   if (ram) return ram;
   const detail = technicalDetail(e);
   const d = diagnose(detail, t as never);
-  if (d.category === "storage") return `${d.title}. ${d.recommendation}`;
+  if (d.category === "storage" || d.category === "context") return `${d.title}. ${d.recommendation}`;
   return detail ? t("errors.unexpected", { detail }) : t("errors.unexpectedNoDetail");
 }

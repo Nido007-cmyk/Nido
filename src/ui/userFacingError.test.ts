@@ -45,4 +45,18 @@ describe("errores para personas", () => {
     expect(technicalDetail({ message: "x" })).toBe("x");
     expect(technicalDetail(new Error("y".repeat(500))).length).toBe(160);
   });
+
+  it("contexto desbordado (0.1.102): texto humano, sin cifras de tokens ni jerga", () => {
+    // Foto del dueño 2026-11-15: la burbuja enseñaba el mensaje crudo
+    // del motor («~3354 tokens estimados… contexto de 1024»).
+    const e = new Error(
+      "El modelo no pudo generar la respuesta porque el prompt solo (~3354 tokens estimados) no cabe en el contexto de 1024: acorta el texto o sube el contexto del modelo."
+    );
+    const text = userFacingError(t, e, "es");
+    expect(text).not.toContain("3354");
+    expect(text).not.toContain("tokens");
+    expect(text).not.toContain("contexto de 1024");
+    expect(text).toContain("conversación");
+    expect(errorReason(t, e, "es")).not.toContain("3354");
+  });
 });

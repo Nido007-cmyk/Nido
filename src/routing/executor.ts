@@ -298,6 +298,14 @@ export async function executeRoutingPlan(
         // renders a deterministic note too — this is the prompt half.)
         const noSourcesFoundNote = retrievalAttempted && citations.length === 0;
 
+        // 0.1.102 (turno desfondado): el presupuesto de ensamblado es la
+        // ventana CARGADA, no la del catálogo. Con el modelo servido a
+        // 1024 por la escalera de RAM y el catálogo diciendo 4096, el
+        // prompt nacía imposible (~3354 tokens estimados contra 1024),
+        // el motor lo rechazaba y el turno caía a la ruta fija o a la
+        // burbuja de error cruda (foto del dueño 2026-11-15).
+        const loadedNCtx = llamaEngine.getModelInfo()?.nCtx ?? generateModel?.defaultNCtx ?? 4096;
+
         answer = useTemplate
           ? await llamaEngine.generate({
               messages: assembleChatMessages(
@@ -310,7 +318,7 @@ export async function executeRoutingPlan(
                 // P2.3: budget history against the model's context window instead
                 // of hoping it fits; reserves the step's generation headroom.
                 {
-                  nCtx: generateModel?.defaultNCtx ?? 4096,
+                  nCtx: loadedNCtx,
                   reserveGeneration: genTokens,
                 }
               ),
@@ -326,7 +334,12 @@ export async function executeRoutingPlan(
               samplingPreset: citations.length > 0 ? ("factual" as const) : ("chat" as const),
             })
           : await llamaEngine.generate({
-              prompt: assemblePrompt(input.query, citations, input.systemPrompt, input.history, input.styleReminder, noSourcesFoundNote),
+              // La ruta sin plantilla tampoco ensamblaba con presupuesto:
+              // mismo desborde, misma cura (ventana cargada).
+              prompt: assemblePrompt(input.query, citations, input.systemPrompt, input.history, input.styleReminder, noSourcesFoundNote, {
+                nCtx: loadedNCtx,
+                reserveGeneration: genTokens,
+              }),
               nPredict: genTokens,
               onToken: timedOnToken,
               timeoutMs: step.timeoutMs ?? STEP_TIMEOUT_MS,
