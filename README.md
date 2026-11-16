@@ -287,7 +287,7 @@ The interface is available in English, Spanish and Portuguese.
 ## Install
 
 1. Download `app-release.apk` from the
-   [v0.1.103-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.103-alpha).
+   [v0.1.104-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.104-alpha).
 2. Check it against the `app-release.apk.sha256` file published next to it.
 3. Install it on an Android phone (arm64).
 4. On first launch NIDO downloads its language model, between about 0.4
