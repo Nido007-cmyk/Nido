@@ -464,6 +464,11 @@
   },
   "modelLoadErrorCard": {
     "actionRequired": "Acción requerida",
+    "context": {
+      "detail": "El texto acumulado de la conversación es más largo de lo que el modelo puede leer de una vez.",
+      "recommendation": "Acorta el mensaje o empieza una conversación nueva.",
+      "title": "La conversación ya no cabe en la memoria del modelo"
+    },
     "corrupt": {
       "detail": "El archivo descargado está incompleto o dañado — probablemente se interrumpió la descarga.",
       "recommendation": "Descárgalo de nuevo o cambia a un modelo que ya tengas en Ajustes.",

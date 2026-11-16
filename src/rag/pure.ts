@@ -1144,6 +1144,61 @@ export function fitChunksToBudget(
   return [];
 }
 
+/** Reserva suelo del reintento de ajuste: el último peldaño de degradableGenTokens. */
+const FLOOR_GENERATION_RESERVE = 64;
+
+/**
+ * 0.1.102 (turno desfondado, foto del dueño 2026-11-15): el ajuste de
+ * un turno con su política de desalojo total. fitChunksToBudget a la
+ * reserva efectiva puede devolver [] de una lista NO vacía (en el
+ * peldaño de emergencia, nCtx 1024, la reserva más el núcleo llenan la
+ * ventana): el modelo genera sin una sola fuente en el prompt y, la
+ * lista del juez siendo la ajustada, su texto se sirve crudo — así
+ * salió «primero asegúrate de que el motor esté en marcha» con la guía
+ * recuperada en el dispositivo. Antes de aceptar el vacío, el turno
+ * reintenta con la reserva suelo (64): las fuentes mandan sobre el
+ * colchón de generación, que se degrada después por la vía de siempre
+ * (degradableGenTokens en ChatScreen). `reserveUsed` dice con qué
+ * reserva se ajustó al final, para que la guarda del turno
+ * (applyContextBudget) juzgue con la misma y no mate el turno que el
+ * reintento acaba de salvar. Si ni con el suelo cabe un resto útil, el
+ * [] es la verdad y manda. El contrato de fitChunksToBudget (ajustar a
+ * la reserva dada, sin muñones) no cambia: la política es del turno.
+ */
+function fitChunksForTurn(
+  chunks: RetrievedChunk[],
+  fixedText: string,
+  nCtx: number,
+  reserveGeneration: number,
+  measure?: (list: RetrievedChunk[]) => number
+): { fitted: RetrievedChunk[]; reserveUsed: number } {
+  const fitted = fitChunksToBudget(chunks, fixedText, nCtx, reserveGeneration, measure);
+  if (fitted.length === 0 && chunks.length > 0 && reserveGeneration > FLOOR_GENERATION_RESERVE) {
+    const retry = fitChunksToBudget(chunks, fixedText, nCtx, FLOOR_GENERATION_RESERVE, measure);
+    if (retry.length > 0) return { fitted: retry, reserveUsed: FLOOR_GENERATION_RESERVE };
+  }
+  return { fitted, reserveUsed: reserveGeneration };
+}
+
+/**
+ * 0.1.102 (turno desfondado): la lista contra la que el juez de
+ * fundamentación y la sustitución por texto seguro miran un turno. La
+ * regla H-07 manda la lista AJUSTADA (lo que el modelo vio); pero si el
+ * ajuste la vació entera habiendo recuperado fuentes, juzgar contra la
+ * vacía es no juzgar: el texto del modelo se servía crudo aunque la
+ * guía estuviera en el dispositivo (foto del dueño 2026-11-15, llanta
+ * y atragantamiento). En ese rincón manda la lista RECUPERADA — es lo
+ * que la ruta adaptativa ya hace con sus citas — y la abstención sirve
+ * el extracto literal de la guía, que es la respuesta honesta del
+ * turno. Con la ajustada no vacía, H-07 queda intacta.
+ */
+export function judgeChunkList(
+  fitted: RetrievedChunk[],
+  retrieved: RetrievedChunk[]
+): RetrievedChunk[] {
+  return fitted.length > 0 ? fitted : retrieved;
+}
+
 /**
  * Suelo de utilidad de un resto truncado (H-07): conserva al menos
  * MIN_REMAINDER_CHARS caracteres — el tamaño del extracto literal que
@@ -1323,7 +1378,7 @@ export function assemblePrompt(
   }
   if (fitsBudget(prompt, effReserve)) return prompt;
   const fixedText = prompt.replace(renderChunkEntries(chunks), "");
-  const fitted = fitChunksToBudget(chunks, fixedText, budget.nCtx, effReserve);
+  const { fitted } = fitChunksForTurn(chunks, fixedText, budget.nCtx, effReserve);
   onFitted?.(fitted);
   return buildPrompt(fitted, turns);
 }
@@ -1445,6 +1500,10 @@ export function assembleChatMessages(
       defaultTokenCounter(systemMessage.content) +
         defaultTokenCounter(buildCurrentUser([]).content)
     );
+    // 0.1.102 (turno desfondado): la reserva con la que la guarda de
+    // abajo juzga el turno; el ajuste puede bajarla al suelo si ese
+    // reintento es el que salva las fuentes (ver fitChunksForTurn).
+    let fitReserveUsed = effReserve;
     // R-01: applyContextBudget can only cut HISTORY — if system + current
     // + reserve overflow on their own it throws and the whole turn dies
     // (the round's raw "prompt excede el contexto" error: long guide in
@@ -1471,22 +1530,26 @@ export function assembleChatMessages(
       // ajuste dejaba entrar un fragmento que luego no cabía por 50
       // tokens y el turno moría con «exceden nCtx … sin siquiera
       // historial» (nCtx 1024, documento importado).
-      const fitted = fitChunksToBudget(
+      const turnFit = fitChunksForTurn(
         chunks,
         fixedText,
         budget.nCtx,
         effReserve,
         (list) => defaultTokenCounter(buildSystemMessage(list).content) + defaultTokenCounter(buildCurrentUser(list).content)
       );
-      onFitted?.(fitted);
-      systemMessage = buildSystemMessage(fitted);
-      currentUser = buildCurrentUser(fitted);
+      onFitted?.(turnFit.fitted);
+      systemMessage = buildSystemMessage(turnFit.fitted);
+      currentUser = buildCurrentUser(turnFit.fitted);
+      // La guarda juzga con la reserva que el ajuste usó de verdad: si
+      // el reintento suelo salvó las fuentes, juzgar con la efectiva
+      // mataría el turno salvado («exceden nCtx sin siquiera historial»).
+      fitReserveUsed = turnFit.reserveUsed;
     }
     const budgeted = applyContextBudget(
       systemMessage,
       historyMessages,
       currentUser,
-      budgetConfigFor(budget.nCtx, effReserve)
+      budgetConfigFor(budget.nCtx, fitReserveUsed)
     );
     keptHistory = budgeted.history as ChatMessage[];
   }

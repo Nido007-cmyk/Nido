@@ -115,6 +115,11 @@
       "recommendation": "Verifique as configurações do modelo ou execute o assistente novamente."
     },
     "actionRequired": "Ação necessária",
+    "context": {
+      "detail": "O texto acumulado da conversa é mais longo do que o modelo consegue ler de uma vez.",
+      "recommendation": "Encurte a mensagem ou comece uma conversa nova.",
+      "title": "A conversa já não cabe na memória do modelo"
+    },
     "settings": "Configurações",
     "setupWizard": "Assistente de Configuração"
   },

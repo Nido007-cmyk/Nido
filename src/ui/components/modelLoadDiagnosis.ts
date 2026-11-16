@@ -12,7 +12,7 @@
  * identical to the previous inline implementation plus the storage branch.
  */
 
-export type DiagnosisCategory = "memory" | "corrupt" | "missing" | "storage" | "general";
+export type DiagnosisCategory = "memory" | "corrupt" | "missing" | "storage" | "context" | "general";
 
 export interface Diagnosis {
   title: string;
@@ -59,6 +59,25 @@ export function diagnose(error: string, t: TranslateFn): Diagnosis {
       category: "storage",
       detail: t("modelLoadErrorCard.storage.detail"),
       recommendation: t("modelLoadErrorCard.storage.recommendation"),
+    };
+  }
+  // 0.1.102 (foto del dueño): el rechazo por contexto desbordado del
+  // motor («el prompt solo (~3354 tokens estimados) no cabe en el
+  // contexto de 1024») caía a la plantilla genérica y la burbuja
+  // enseñaba la jerga con las cifras. Es un problema de longitud de la
+  // conversación, no del modelo: categoría propia, texto humano.
+  if (
+    lower.includes("no cabe en el contexto") ||
+    lower.includes("excede el contexto") ||
+    lower.includes("exceden nctx") ||
+    lower.includes("prompt too long") ||
+    lower.includes("context length")
+  ) {
+    return {
+      title: t("modelLoadErrorCard.context.title"),
+      category: "context",
+      detail: t("modelLoadErrorCard.context.detail"),
+      recommendation: t("modelLoadErrorCard.context.recommendation"),
     };
   }
   if (lower.includes("size mismatch") || lower.includes("verification") || lower.includes("hash")) {

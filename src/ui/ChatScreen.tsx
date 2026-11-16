@@ -41,7 +41,7 @@ import { embeddingIdleUnloadDue } from "../rag/embedPolicy";
 import { isNativeGateTaken } from "../inference/nativeGate";
 import { handleMemoryPressure } from "../inference/memoryPressure";
 import { retrieve, assemblePrompt, RetrievedChunk, ConversationTurn } from "../rag/retrieve";
-import { assembleChatMessages, contextualizeQuery, degradableGenTokens, ANSWER_CONTEXT_CHUNKS } from "../rag/pure";
+import { assembleChatMessages, contextualizeQuery, degradableGenTokens, judgeChunkList, ANSWER_CONTEXT_CHUNKS } from "../rag/pure";
 import { classifyTask, isRetrievalIrrelevant, isCreativeRequest } from "../routing/classify";
 import { shouldReasonThisTurn } from "../routing/calculationQuestion";
 import { semanticDanger } from "../services/semanticDanger";
@@ -1827,6 +1827,11 @@ export function ChatScreen({
       // for greetings/other retrieval-irrelevant tasks where no retrieval
       // was tried. Rendered deterministically under the bubble.
       let noSourcesFound = false;
+      // 0.1.102 (turno desfondado): las fuentes que la recuperación SÍ
+      // trajo, antes del ajuste de presupuesto. Si el ajuste las
+      // desaloja todas, el juez mira esta lista (judgeChunkList), no la
+      // vacía: sin esto el turno se servía sin que nadie lo juzgara.
+      let retrievedChunks: RetrievedChunk[] = [];
       // Adaptive-routing-specific telemetry, merged into the regular
       // recordQueryStats() call below — stays null (contributing nothing)
       // for Deep Research and for the plain fixed-active-model path, so
@@ -1875,6 +1880,7 @@ export function ChatScreen({
           deepTurn = false;
         } else {
           chunks = result.citations;
+          retrievedChunks = result.citations;
           // Deep Research always runs a retrieval pass per sub-question, so
           // "all passes returned nothing" is the honest signal here.
           noSourcesFound = result.noSourcesFound ?? result.citations.length === 0;
@@ -1913,7 +1919,8 @@ export function ChatScreen({
             chunks = g.answer.chunks;
           }
         }
-        const runFixedModelChat = async (): Promise<{ chunks: RetrievedChunk[]; noSourcesFound: boolean; genSpaceCut: boolean; genWasCut: boolean }> => {
+        retrievedChunks = preRetrieved ?? [];
+        const runFixedModelChat = async (): Promise<{ chunks: RetrievedChunk[]; retrieved: RetrievedChunk[]; noSourcesFound: boolean; genSpaceCut: boolean; genWasCut: boolean }> => {
           let c: RetrievedChunk[];
           fixedTaskType = classifyTask(query);
           // Honest no-result (2026-09-28): retrievalAttempted is true only
@@ -1965,7 +1972,7 @@ export function ChatScreen({
             const safe = healthSafeText(uiLang);
             assistantText = safe;
             setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, text: safe } : m)));
-            return { chunks: c, noSourcesFound: noSources, genSpaceCut: false, genWasCut: false };
+            return { chunks: c, retrieved: c, noSourcesFound: noSources, genSpaceCut: false, genWasCut: false };
           }
           setProcessing({ messageId: assistantId, status: "thinking" });
           // 2026-11-11 (carga cuando se necesita): aquí, y no antes, el turno necesita el modelo: ya
@@ -1974,7 +1981,7 @@ export function ChatScreen({
           // Detener durante «Cargando modelo…» cierra el turno sin
           // generar (mismo estado que detener antes del primer token).
           if (stopRequestedRef.current) {
-            return { chunks: c, noSourcesFound: noSources, genSpaceCut: false, genWasCut: false };
+            return { chunks: c, retrieved: c, noSourcesFound: noSources, genSpaceCut: false, genWasCut: false };
           }
           // Use the model's own chat template when its file ships one; the
           // plain prompt is only a fallback. Off-template, models ramble,
@@ -2062,7 +2069,7 @@ export function ChatScreen({
           const genWasCut = llamaEngine.lastGenerationWasCut;
           // 5.1: flush final del buffer de tokens.
           flushTokenBuffer();
-          return { chunks: fittedChunks ?? c, noSourcesFound: noSources, genSpaceCut: spaceCut, genWasCut };
+          return { chunks: fittedChunks ?? c, retrieved: c, noSourcesFound: noSources, genSpaceCut: spaceCut, genWasCut };
         };
 
         const adaptiveRoutingEnabled = await getAdaptiveRoutingEnabled();
@@ -2103,11 +2110,13 @@ export function ChatScreen({
               adaptiveTelemetry = { adaptiveRoutingUsed: true, outcome: "failure" };
               const fixed = await runFixedModelChat();
               chunks = fixed.chunks;
+              retrievedChunks = fixed.retrieved;
               noSourcesFound = fixed.noSourcesFound;
               fixedGenSpaceCut = fixed.genSpaceCut;
               fixedGenWasCut = fixed.genWasCut;
             } else {
               chunks = result.citations;
+              retrievedChunks = result.citations;
               // Executor reports retrievalAttempted; paired with zero
               // citations that's the honest no-result signal.
               noSourcesFound = result.retrievalAttempted && result.citations.length === 0;
@@ -2157,6 +2166,7 @@ export function ChatScreen({
             adaptiveTelemetry = { adaptiveRoutingUsed: true, outcome: "failure" };
             const fixedFallback = await runFixedModelChat();
             chunks = fixedFallback.chunks;
+            retrievedChunks = fixedFallback.retrieved;
             noSourcesFound = fixedFallback.noSourcesFound;
             fixedGenSpaceCut = fixedFallback.genSpaceCut;
             fixedGenWasCut = fixedFallback.genWasCut;
@@ -2164,6 +2174,7 @@ export function ChatScreen({
         } else {
           const fixedPlain = await runFixedModelChat();
           chunks = fixedPlain.chunks;
+          retrievedChunks = fixedPlain.retrieved;
           noSourcesFound = fixedPlain.noSourcesFound;
           fixedGenSpaceCut = fixedPlain.genSpaceCut;
           fixedGenWasCut = fixedPlain.genWasCut;
@@ -2198,6 +2209,12 @@ export function ChatScreen({
         ? await verifiedImportedPacks().catch(() => null)
         : null;
       const verifiedImportedIds = verifiedImported ? new Set(verifiedImported.keys()) : undefined;
+      // 0.1.102 (turno desfondado): la lista que el juez, la puerta de
+      // salud y la tarjeta de evidencia miran. H-07 manda la ajustada;
+      // si el ajuste la vació habiendo fuentes recuperadas, manda la
+      // recuperada (pure.ts, judgeChunkList) — sin esto, el turno de la
+      // foto del dueño se sirvió sin que el juez viera la guía.
+      const judgeChunks = judgeChunkList(chunks, retrievedChunks);
       if (!wasStopped) {
         // 0.1.34: si el modelo entró en bucle, queda solo la primera vez.
         // Bounty tanda 8: una generación cortada (el usuario detuvo o
@@ -2217,7 +2234,7 @@ export function ChatScreen({
         if (guideAnswered) {
           // Verbatim guide text: nothing to verify or trim. Every sentence is the guide's (R1).
           provenance = guideAnswerProvenance(finalText);
-        } else if (!deepTurn && chunks.length > 0 && isCreativeRequest(query)) {
+        } else if (!deepTurn && judgeChunks.length > 0 && isCreativeRequest(query)) {
           // 2026-10-30 (prueba física del dueño): petición creativa
           // («Cuéntame un cuento largo sobre un zorro que vive en un
           // faro») con documentos que casan solo por palabras sueltas —
@@ -2230,7 +2247,7 @@ export function ChatScreen({
           // hechos con fuentes se verifican igual que antes —
           // isCreativeRequest exige el objeto creado, así que «cuéntame
           // el número de emergencias de Chile» no entra por esta rama.
-        } else if (!deepTurn && chunks.length > 0) {
+        } else if (!deepTurn && judgeChunks.length > 0) {
           // 0.1.41 (prueba física, «¿qué es la inflación?»): se verificaba
           // el texto SIN recortar y el bucle volvía a la pantalla.
           // C-07: la fecha del turno — la marca temporal que el mensaje
@@ -2248,12 +2265,12 @@ export function ChatScreen({
           // valida y ninguna puerta lo lee todavía (eso es T-21).
           const semanticContext = await buildJudgeSemanticContext({
             answer: finalText,
-            chunks,
+            chunks: judgeChunks,
             query,
           }).catch(() => null);
           const verified = verifyGroundedAnswer(
             finalText,
-            chunks,
+            judgeChunks,
             uiLang,
             query,
             new Date(Number(userMsg.id.split("-")[0]) || Date.now()),
@@ -2310,7 +2327,7 @@ export function ChatScreen({
           !deepTurn &&
           shouldSubstituteSafeText({
             deepTurn,
-            sources: chunks,
+            sources: judgeChunks,
             grounding,
             isHealth: isHealthQuestion(query),
             isEmergency: isEmergencySituation(query),
@@ -2370,7 +2387,7 @@ export function ChatScreen({
       // Programa bounty, tanda 1: la tarjeta de evidencia se calcula
       // aquí, al cerrar la respuesta, con la pregunta y las fuentes en
       // la mano — es el único punto donde las dos cosas conviven.
-      const evidenceFirst = chunks.length > 0 ? buildEvidenceCard(chunks, query) : null;
+      const evidenceFirst = judgeChunks.length > 0 ? buildEvidenceCard(judgeChunks, query) : null;
 
       // Programa bounty, tanda 8: la caja de comprobación de fuentes
       // (sourceCheck.ts) — solo en la ruta sin verificación, donde
@@ -2379,12 +2396,12 @@ export function ChatScreen({
       // la misma costura y con el tope total intacto (2 notas; las
       // cifras van primero y ganan el empate — decisión declarada).
       const numberConflicts =
-        grounding === "unverified" && chunks.length > 0
+        grounding === "unverified" && judgeChunks.length > 0
           ? [
-              ...findNumberConflicts(assistantText, chunks),
+              ...findNumberConflicts(assistantText, judgeChunks),
               ...findDateConflicts(
                 assistantText,
-                chunks,
+                judgeChunks,
                 new Date(Number(userMsg.id.split("-")[0]) || Date.now()),
               ),
             ].slice(0, 2)
@@ -2395,7 +2412,7 @@ export function ChatScreen({
           m.id === assistantId
             ? {
                 ...m,
-                citations: chunks,
+                citations: judgeChunks,
                 stopped: wasStopped,
                 noSourcesFound,
                 grounding,

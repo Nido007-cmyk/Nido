@@ -115,6 +115,11 @@
       "recommendation": "Check your model settings or re-run the setup wizard."
     },
     "actionRequired": "Action required",
+    "context": {
+      "detail": "The accumulated text of the conversation is longer than the model can read at once.",
+      "recommendation": "Shorten the message or start a new conversation.",
+      "title": "The conversation no longer fits in the model's memory"
+    },
     "settings": "Settings",
     "setupWizard": "Setup Wizard"
   },
