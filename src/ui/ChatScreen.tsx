@@ -25,6 +25,8 @@ import {
 } from "react-native";
 import { VaultOfferBanner } from "./VaultOfferBanner";
 import { PanicButton } from "./components/PanicButton";
+import { ScrollToBottomButton } from "./components/ScrollToBottomButton";
+import { distanceToBottomPx, isAwayFromBottom } from "./ChatScreen.pure";
 import { PrivateTextInput as TextInput } from "./components/PrivateTextInput";
 import { LinearGradient } from "expo-linear-gradient";
 import { impact, notification, ImpactFeedbackStyle, NotificationFeedbackType } from "../services/haptics";
@@ -459,10 +461,32 @@ export function ChatScreen({
     // the reply cut off at the bottom of the list.
     requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated }));
   }, []);
+  // 0.1.108: el botón flotante de ir al final se alimenta de la
+  // MISMA cuenta que followBottom (ChatScreen.pure, umbral de
+  // 120 px): el estado solo cambia al cruzar el umbral, con espejo
+  // en ref para no re-renderizar en cada evento de scroll.
+  const [awayFromBottom, setAwayFromBottom] = useState(false);
+  const awayFromBottomRef = useRef(false);
   const onListScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-    followBottom.current = contentSize.height - layoutMeasurement.height - contentOffset.y < 120;
+    const distance = distanceToBottomPx({
+      contentOffsetY: contentOffset.y,
+      contentHeight: contentSize.height,
+      layoutHeight: layoutMeasurement.height,
+    });
+    followBottom.current = !isAwayFromBottom(distance);
+    const away = isAwayFromBottom(distance);
+    if (away !== awayFromBottomRef.current) {
+      awayFromBottomRef.current = away;
+      setAwayFromBottom(away);
+    }
   }, []);
+  const goToBottom = useCallback(() => {
+    followBottom.current = true;
+    awayFromBottomRef.current = false;
+    setAwayFromBottom(false);
+    scrollToBottom(true);
+  }, [scrollToBottom]);
   const inputRef = useRef<TextInput>(null);
   // Labels for whatever's downloadable — the built-in catalog (sync,
   // available immediately).
@@ -2941,6 +2965,9 @@ export function ChatScreen({
         {/* 0.1.51: la protección por hardware se ofrece aquí, no solo en Ajustes. */}
         <VaultOfferBanner />
 
+        {/* 0.1.108: la lista vive en su propio flex para que el botón
+            de ir al final flote sobre ella, abajo a la derecha. */}
+        <View style={styles.flex}>
         <FlatList
           ref={listRef}
           style={styles.flex}
@@ -3352,6 +3379,12 @@ export function ChatScreen({
             </View>
           }
         />
+        <ScrollToBottomButton
+          visible={awayFromBottom}
+          onPress={goToBottom}
+          accessibilityLabel={t("chatScreen.scrollToBottom")}
+        />
+        </View>
 
         {/* Input Bar */}
         <View style={[styles.inputContainer, { backgroundColor: colors.bg.black, borderTopColor: "transparent" }]}>

@@ -491,6 +491,7 @@
       "about": "Sobre & Informações"
     },
     "inputPlaceholder": "Pergunte qualquer coisa…",
+    "scrollToBottom": "Ir para o fim da conversa",
     "noRelevantOfflineSources": "Nenhuma fonte offline relevante encontrada para esta pergunta.",
     "stopGeneration": "Parar geração",
     "emergencySend": "Enviar como emergência",

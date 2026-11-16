@@ -4,12 +4,14 @@
  * See LICENSE file for details.
  */
 
-import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert } from "react-native";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert, AppState } from "react-native";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
 import { useTranslation } from "react-i18next";
 import { CatalogModel } from "../models/manifest";
-import { computeCompatibility } from "../models/compatibility";
+import { computeCompatibility, residentReleasableBytes } from "../models/compatibility";
+import { defaultLlmForRam } from "../models/defaultModel";
+import type { LlmMemoryProfile } from "../inference/LlamaEngine";
 import { readRamSnapshot, type RamSnapshot } from "../inference/ramBudget";
 import { getDeviceTotalRamBytes } from "ram-monitor";
 import { useTheme } from "./theme";
@@ -84,9 +86,18 @@ interface Props {
   activating?: boolean;
   /** Some model is being loaded: Use and delete are unavailable until it finishes. */
   busy?: boolean;
+  /**
+   * 0.1.108: la carga REALMENTE residente cuando esta tarjeta es la
+   * del modelo activo (la pantalla la lee del motor: su contexto
+   * cargado y el perfil de memoria aceptado). Con ella, la foto viva
+   * de ESTA tarjeta aplica el mismo crédito liberable que la carga
+   * (residentReleasableBytes): el activo no se juzga cargándose
+   * encima de sí mismo. Sin ella, la foto va como siempre.
+   */
+  residentLoad?: { nCtx: number; memoryProfile?: LlmMemoryProfile } | null;
 }
 
-export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemove, onDiscardPartial, activating, busy }: Props) {
+export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemove, onDiscardPartial, activating, busy, residentLoad }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
@@ -105,12 +116,19 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
   const packIndex = indexStatus?.[item.id];
 
   const [deviceRam, setDeviceRam] = useState(0);
-  // F3-14: la foto en vivo del montaje de la tarjeta. La insignia es
-  // la peor de la canónica (por aparato) y la de este momento: un
-  // «cabe» calculado en vacío dejaba de ser verdad con el teléfono
-  // ocupado, que es cuando el usuario va a intentarlo.
+  // F3-14: la foto en vivo de la tarjeta. La insignia es la peor de
+  // la canónica (por aparato) y la de este momento: un «cabe»
+  // calculado en vacío dejaba de ser verdad con el teléfono ocupado,
+  // que es cuando el usuario va a intentarlo.
+  // 0.1.108: la foto ya no es solo la del montaje (la auditoría de la
+  // pasada de la 0.1.107 la cazó juzgando para siempre por un
+  // instante): se rehace cuando cambian los hechos de memoria que la
+  // pantalla puede ver — el modelo activo cambia (una carga o una
+  // descarga acaba de ocurrir: la pantalla refresca su estado y la
+  // foto se rehace DESPUÉS) — y cuando la app vuelve a primer plano
+  // (patrón de ExactAlarmCard/RelayCard).
   const [liveSnapshot, setLiveSnapshot] = useState<RamSnapshot | null>(null);
-  useEffect(() => {
+  const refreshLivePhoto = useCallback(() => {
     try {
       setDeviceRam(getDeviceTotalRamBytes());
       setLiveSnapshot(readRamSnapshot());
@@ -118,8 +136,53 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
       // native module fallback
     }
   }, []);
+  useEffect(() => {
+    refreshLivePhoto();
+  }, [refreshLivePhoto]);
+  const firstActiveRef = useRef(true);
+  useEffect(() => {
+    if (firstActiveRef.current) {
+      firstActiveRef.current = false;
+      return;
+    }
+    refreshLivePhoto();
+  }, [isActive, refreshLivePhoto]);
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") refreshLivePhoto();
+    });
+    return () => sub.remove();
+  }, [refreshLivePhoto]);
 
-  const compatibility = item.kind === "llm" ? computeCompatibility(item, deviceRam, liveSnapshot) : "unknown";
+  // 0.1.108 (A1): SOLO en la tarjeta del residente, y solo cuando la
+  // pantalla declara su carga real, la foto viva lleva el crédito
+  // liberable que la carga sí aplica: su huella estimada completa.
+  // La canónica nunca lleva crédito: sigue siendo el suelo.
+  const liveForBadge = useMemo<RamSnapshot | null>(() => {
+    if (!liveSnapshot || !isActive || !residentLoad || deviceRam <= 0) return liveSnapshot;
+    const credit = residentReleasableBytes(
+      item,
+      residentLoad.nCtx,
+      residentLoad.memoryProfile === "kv-q8",
+      deviceRam,
+    );
+    return credit > 0 ? { ...liveSnapshot, releasableBytes: credit } : liveSnapshot;
+  }, [liveSnapshot, isActive, residentLoad, item, deviceRam]);
+
+  const compatibility = item.kind === "llm" ? computeCompatibility(item, deviceRam, liveForBadge) : "unknown";
+
+  // 0.1.108 (A3): el chip «Default» nombra al default DE ESTE
+  // APARATO, no a una bandera fija del catálogo: la bandera
+  // `required` (que sigue protegiendo del borrado, intacta) marcaba
+  // al 1.5B en todas partes, y en la tableta del dueño ese modelo ni
+  // cabe — el chip coronaba justo al único pequeño en rojo. En LLM
+  // el chip lo lleva el default calculado para la RAM del aparato
+  // (defaultLlmForRam); en el resto (el embedding `required`) se
+  // queda como hoy.
+  const showDefaultChip =
+    item.kind === "llm"
+      ? deviceRam > 0 && defaultLlmForRam(deviceRam).id === item.id
+      : item.required;
   const calculating = t("catalogItemCard.calculating");
 
   // Models added from the Hugging Face browser can be dropped from the list even if never downloaded.
@@ -178,7 +241,7 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
             <Text style={styles.metaText}>{formatMB(item.sizeBytes)}</Text>
             <Text style={styles.metaBullet}>•</Text>
             <Text style={styles.metaText}>{item.license}</Text>
-            {item.required && (
+            {showDefaultChip && (
               <>
                 <Text style={styles.metaBullet}>•</Text>
                 <Text style={styles.defaultChipText}>{t("catalogItemCard.default")}</Text>

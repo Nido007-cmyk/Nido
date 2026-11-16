@@ -111,6 +111,7 @@
     "initializingCore": "Iniciando NIDO…",
     "loadingModel": "Cargando modelo…",
     "inputPlaceholder": "Pregunta lo que sea…",
+    "scrollToBottom": "Ir al final de la conversación",
     "noRelevantOfflineSources": "No se encontraron fuentes offline relevantes para esta pregunta.",
     "interrupted": "Respuesta cortada: la app se cerró antes de que terminara. Pregunta de nuevo para continuar.",
     "interruptedMemory": "Respuesta cortada: NIDO se cerró por falta de memoria. Cierra otras apps o elige un modelo más ligero en Ajustes, y pregunta de nuevo.",
