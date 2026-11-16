@@ -51,9 +51,17 @@ describe("applyContextBudget — basic", () => {
     expect(r.estimatedTotalTokens).toBeLessThanOrEqual(2000);
   });
 
-  it("system is pinned: throws when it exceeds maxSystemTokens", () => {
+  it("system is pinned: exceeding maxSystemTokens degrades history, never truncates or throws (0.1.103)", () => {
+    // Hasta la 0.1.103 esto lanzaba «excede el presupuesto»: en la
+    // tableta del dueño el resumen de la conversación, que viaja
+    // dentro del sistema, superó el tope (530 > 512 a nCtx 1024) y la
+    // conversación quedó inutilizable aunque el turno cabía. El
+    // sistema va entero; lo que cede es el historial.
     const huge = "z".repeat(7000); // ~2383 tokens > 2048 cap
-    expect(() => applyContextBudget(SYS(huge), [], msg("user", "q"), config)).toThrow(/excede el presupuesto/);
+    const r = applyContextBudget(SYS(huge), [], msg("user", "q"), config);
+    expect(r.system.content).toBe(huge);
+    expect(r.history).toHaveLength(0);
+    expect(r.estimatedTotalTokens).toBeLessThanOrEqual(4096);
   });
 
   it("fail-closed when system + current + reserve don't fit", () => {

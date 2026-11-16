@@ -59,4 +59,21 @@ describe("errores para personas", () => {
     expect(text).toContain("conversación");
     expect(errorReason(t, e, "es")).not.toContain("3354");
   });
+
+  it("presupuesto del sistema (0.1.103): la guarda interna también es texto humano, sin cifras", () => {
+    // Foto del dueño 2026-11-15 19:15 MST: la burbuja enseñaba el
+    // lanzamiento crudo de applyContextBudget («system prompt excede
+    // el presupuesto (530 tokens estimados > máximo 512)…») porque su
+    // texto no casaba con ninguna categoría de diagnose().
+    const e = new Error(
+      "NIDO: system prompt excede el presupuesto (530 tokens estimados > máximo 512). Reduce el system prompt o sube maxSystemTokens."
+    );
+    const text = userFacingError(t, e, "es");
+    expect(text).toContain("conversación");
+    expect(text).not.toContain("530");
+    expect(text).not.toContain("tokens");
+    expect(text).not.toContain("maxSystemTokens");
+    expect(text).not.toContain("presupuesto");
+    expect(errorReason(t, e, "es")).not.toContain("530");
+  });
 });
