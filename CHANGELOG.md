@@ -4,6 +4,147 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.107-alpha - 2026-11-16
+
+The tablet pass of 0.1.106 proved the safety floor this
+line of work was built for. In the same grown conversation,
+nothing was invented, no wrong guide was served as an
+answer, and no one word shell appeared; the CPR question
+was perfect, and the tire question got its designed honest
+abstention with the roadside guide's own text. But the
+pass left five catches, and this release fixes all five.
+
+First, the choking question right after the CPR block did
+not get its guide on the first try. It fell to the generic
+health safe text, with the choking guide sitting in its
+own source list at 87 percent, tied with the flood guide,
+and only the second asking served the guide, complete and
+correct, as the single consulted source at 89 percent.
+Second, the card shown over that safe text named the flood
+guide as the main source, a guide that does not answer the
+question. Third, the tire abstention quoted the roadside
+guide but offered no way to open it, while grounded
+answers offered theirs. Fourth, two incomplete messages
+the app itself suggests, "remind me to" and "save a note:",
+died with the error that the conversation no longer fits
+in the model's memory, while the complete message ("remind
+me to drink water") worked, saved, and asked its follow up
+question. Fifth, in the side drawer the RAM and DISK
+labels broke letter by letter down the screen, over meters
+that did not measure what their labels claimed: the RAM
+meter showed 0.1 GB with a model loaded.
+
+**What was wrong.** The choking rescue of 0.1.106, the one
+that chooses again on the question exactly as asked, only
+ran when the anchored choice already produced a pick. The
+anchored pick can be null with the right guide tied at the
+top: the guide picker requires an integrated guide to be
+the global best or within a hair of a literal global best,
+so a non-literal fragment sitting as global best vetoes
+every integrated guide, the lexical fallback excludes them
+by design, and the question as asked was never tried in
+that flow. The card was built unconditionally at the end
+of the turn, and with a fixed text served, its provenance
+is all fixed text, so it fell back to rank one of the
+search. The open guide button needs the guide's identifier
+on the message itself, and only literal answers ever got
+one; the abstention's only opening path was a card that
+lives in memory and is gone when the session reopens. The
+incomplete messages died for a different reason: no
+deterministic router caught the bare starter (the note
+rules demand content after the verb, and the complete
+reminder is caught by the reminder router before assembly),
+so the turn fell to the agent path with the "act" intent,
+whose system prompt with the tool catalog measures 1,738
+to 1,746 tokens in the three languages. On the
+1,024 token context rung that turn can never run at all
+(1,856 with the message and the generation minimum), and
+the budget assertion threw. The fixed path that had served
+CPR, tire and choking in the same conversation minutes
+earlier was not the one killing these turns. In the
+drawer, the label had a fixed width of 28 px with no
+protection against shrinking, and DISK does not fit in
+28 px, so the renderer broke the word; and the meters
+read figures that did not come from the device.
+
+**The fix.** The literal path's clean choice on the
+question as asked now also runs when the anchored flow is
+about to return nothing: if it clearly chooses a guide
+that is not negated by a sign in the question, that guide
+is served, on the first try. Every path that serves today
+is unchanged byte for byte; without anchoring nothing
+changes; and if the clean choice also finds nothing, the
+turn returns nothing as today, so the floor never lowers.
+When a fixed text is served, no source card is built at
+all, instead of a card naming a guide that does not
+answer. The abstention now carries its extract's guide
+identifier on the message, so its "read the whole guide"
+button appears and survives reopening the session; with
+the safe text there is no button, which is correct. Bare
+starters are caught deterministically, only the exact bare
+starter and never a message with content, and answered
+with the tool's own clarifying question ("What note do
+you want to save?", in the owner's words in Spanish) with
+a pending state, so the reply completes the action; the
+reminder starter asks what to remind and then runs the
+usual machinery, honoring a time if the reply brings one.
+Behind that, the agent assembly now graduates its tool
+catalog (full, minimal, none) after the memory graduation
+that already existed, so no "act" turn can die on budget
+in a small window; on large windows the first candidate
+fits and the prompt stays byte for byte the one from
+before. In the drawer, the labels sit whole on their own
+line and the bar yields; RAM is the process's real
+resident memory over the device's real total RAM (if the
+total cannot be read, only the value is shown, with no
+invented denominator), DISK is the device's real total
+capacity minus its real free space and its row stays
+hidden until it has measured, and the tokens per second
+figure ignores zero or negative samples instead of
+publishing them.
+
+**Declared, without dressing up.** Ranking ties in the
+model's route can still happen; their worst case remains
+the fixed safe text, and now, when the question as asked
+clearly chooses its guide, the literal path serves it on
+the first try instead of the second. One starter, the
+document one, has no deterministic clarifying question,
+because there is no seam to re-enter the knowledge path
+with the completed question; it is covered by the no
+death regression over the whole suggestions class in the
+three languages, which is also what guards every example
+the app offers against a grown conversation on the
+smallest rung. The abstention's extract still comes from
+the top ranked section of its guide, the sealed policy;
+that does not change here. The judge's declared residue
+stays at 4 cases (matriz-a-081, 126, 186 and 246),
+unchanged. This version's pre-release sweep of the three
+classes found nothing open: the deterministic layer's
+battery grew by exactly this fix's 37 new tests and
+nothing else, trilingual parity is exact at 1,471 leaf
+keys per language, the full 902-case census, the
+clause-level census and the margin replica came out byte
+for byte identical to the previous sweep (this fix does
+not touch the judge), and the adversarial pairs scored 73
+of 73. Still formally outstanding, as declared since
+0.1.102: re-checking M-38 (no context reuse between
+conversations) on llama.rn rc.9, the version this release
+ships.
+
+**If you installed 0.1.106.** Install this release as an
+update over it. Your downloads and data are preserved,
+and the load behaves exactly as it did in 0.1.106. The
+deciding pass runs in the same grown conversation: first
+ask how to do CPR on an adult, then ask what to do if a
+child is choking; the choking guide has to be served on
+the first try, not the second. Then type the incomplete
+examples the app itself suggests, "remind me to" and
+"save a note:": each has to answer with its question, not
+die. The tire question's abstention has to offer opening
+the guide it quotes, and in the drawer the RAM and DISK
+labels have to read whole, with figures measured from
+the device itself.
+
 ## 0.1.106-alpha - 2026-11-16
 
 The tablet pass of 0.1.105 confirmed both fixes the
