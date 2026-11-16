@@ -4,6 +4,90 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.106-alpha - 2026-11-16
+
+The tablet pass of 0.1.105 confirmed both fixes the
+version was built for: the choking question's main source
+card showed
+the choking guide the answer cited, with its true number,
+and the tire question got the honest abstention with the
+roadside guide's own text instead of a bare refusal. A new
+question asked for the first time in that conversation,
+adult CPR, came back with the right guide, complete and in
+order, served word for word. But the same pass caught a
+deeper instability in how a repeated question is answered.
+On the previous version, in the morning, the choking
+question had once been answered with a single word, the
+title of an unrelated English glossary entry, served as if
+it were grounded. And on 0.1.105 itself, after a block of
+CPR questions, the same choking question served the CPR
+guide word for word. This release fixes both.
+
+**What was wrong.** A question with few content words does
+not search alone: it inherits the previous question as an
+anchor, a sealed design that lets short follow ups like
+"and in which room?" keep their topic. The choking question
+has two content words, so it inherited whatever came before
+it. After the CPR block, the anchored search crowned the
+anchor's own guide, and the literal serving path, the one
+that serves a guide word for word with no model in between,
+served it with no check at all against the question actually
+asked: the CPR guide does not contain the word for choking
+even once. The one word answer had a different cause. When
+the grown conversation's budget fit shrinks the judge's
+source list to a single fragment, a reply that merely echoes
+that fragment's title passed as a faithful short copy,
+because alone in the list it was its own standard of
+relevance; and since the verdict came out grounded, the
+health substitution that replaces a failed answer with a
+fixed safe text never fired.
+
+**The fix.** When a search ran with an anchored question,
+the literal path now also makes its choice on the question
+exactly as asked, with its own search and the same cosine
+standard, and if that clear choice is a different guide, it
+serves that one: the guide served is a function of the
+question, not of the anchor. If the question as asked
+chooses no guide, the legitimate elliptical follow up case,
+the anchored choice is served as before. And in the judge,
+a sentence that is only the echo of a listed fragment's
+title is now removed like any other ungrounded sentence, so
+the shell answer falls to the honest abstention and, for
+health questions, to the fixed safe text. Body copies are
+not titles and are untouched.
+
+**Declared, without dressing up.** Ranking ties in the
+model's route can still happen: in the 0.1.105 pass the
+flood guide tied the choking guide at 87 percent. What this
+release closes is the worst case of the two paths caught:
+the shell can no longer be served as grounded, and the
+literal path can no longer serve the anchor's guide. The
+abstention's extract still comes from the top ranked
+section of its guide, the sealed policy; it does not always
+start at a procedure's first step, and that does not change
+here. The judge's declared residue stays at 4 cases
+(matriz-a-081, 126, 186 and 246), unchanged. This version's
+pre-release sweep of the three classes found nothing open:
+the full 902-case census, the clause-level census and the
+margin replica came out byte for byte identical to the
+previous sweep even though this fix touches the judge
+itself (no hunted case is a title echo, so no verdict
+moved), the adversarial pairs scored 73 of 73, and the
+trilingual parity of the deterministic layer is exact at
+1,471 leaf keys per language. Still formally outstanding,
+as declared since 0.1.102: re-checking M-38 (no context
+reuse between conversations) on llama.rn rc.9, the version
+this release ships.
+
+**If you installed 0.1.105.** Install this release as an
+update over it. Your downloads and data are preserved, and
+the load behaves exactly as it did in 0.1.105. The deciding
+pass runs in the same grown conversation: first ask how to
+do CPR on an adult, then ask again what to do if a child is
+choking; the guide served has to be the choking guide, not
+the CPR one. The choking question on its own, first try,
+and the tire question remain as controls.
+
 ## 0.1.105-alpha - 2026-11-15
 
 0.1.104 survived the pass that killed 0.1.103: in the same
