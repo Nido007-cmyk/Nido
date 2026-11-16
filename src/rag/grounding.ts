@@ -312,15 +312,19 @@ const ABSTENTION_CLAUSE_SPLIT_RE = /[,;:—–-]/;
 const ABSTENTION_INTERROGATIVE_RE =
   /^\s*(?:qu[eé]|cu[aá]l(?:es)?|cu[aá]nt[oa]s?|c[oó]mo|cu[aá]ndo|d[oó]nde|qui[eé]n(?:es)?|por qu[eé]|what|which|how|when|where|who|whom|qual|quais|quant[oa]s?|como|quando|onde|quem|por que)(?![\p{L}])/iu;
 
-export function isPureAbstention(sentence: string): boolean {
-  if (!IDK_RE.test(sentence)) return false;
-  // Lo que queda al quitar la frase de abstención.
-  const rest = sentence.replace(new RegExp(IDK_RE.source, "giu"), " ");
+/**
+ * ¿La frase casa con el patrón de declinar `re` y no afirma nada más?
+ * Lo que queda al quitar la frase que declina se pasa por las tres
+ * guardas de siempre: contraste con contenido, cópula con cifra y
+ * cláusula declarativa tras un corte (M-01) — solo las piezas que
+ * SIGUEN a un separador; la primera es el resto de la frase que
+ * declina o su complemento de tema.
+ */
+function declinesWithoutAsserting(sentence: string, re: RegExp): boolean {
+  if (!re.test(sentence)) return false;
+  const rest = sentence.replace(new RegExp(re.source, "giu"), " ");
   if (ABSTENTION_CONTRAST_RE.test(rest)) return false;
   if (ABSTENTION_COPULA_DIGIT_RE.test(rest)) return false;
-  // La cláusula declarativa tras el primer corte (M-01): solo las
-  // piezas que SIGUEN a un separador; la primera es el resto de la
-  // abstención misma o su complemento de tema.
   const pieces = rest.split(ABSTENTION_CLAUSE_SPLIT_RE);
   for (let i = 1; i < pieces.length; i++) {
     const piece = pieces[i]!;
@@ -328,6 +332,47 @@ export function isPureAbstention(sentence: string): boolean {
     if (new Set(contentStems(piece)).size >= MIN_JUDGED_TERMS) return false;
   }
   return true;
+}
+
+export function isPureAbstention(sentence: string): boolean {
+  return declinesWithoutAsserting(sentence, IDK_RE);
+}
+
+/**
+ * 0.1.104 (pasada del dueño en su Tab A9+): la negativa de capacidad
+ * («No puedo ayudarte con eso.») es la otra forma de declinar, y el
+ * juez no la conocía. IDK_RE cataloga abstenciones de conocimiento
+ * («no lo sé», «las fuentes no…»); la negativa no casa con él, no
+ * afirma nada juzgable (sus raíces quedan bajo MIN_JUDGED_TERMS y
+ * «pasa» por la regla de la frase corta) y se servía tal cual como
+ * respuesta, con la guía recuperada delante y el pie etiquetándola
+ * «del modelo sin fuente» — a «Como cambio la llanta de un carro»,
+ * con la guía de avería en carretera recuperada. Una negativa pura
+ * se trata como una abstención pura: se conserva sin juicio y, si es
+ * todo lo que el turno trae, el desenlace es la abstención honesta
+ * con su extracto. Las guardas son las de la abstención: la negativa
+ * que además afirma («no puedo ayudarte, pero la dosis es 5 ml») no
+ * es pura y se juzga por lo que afirma.
+ */
+const REFUSAL_RE = new RegExp(
+  [
+    // es
+    "\\bno (te |le |les )?puedo ayud",
+    "\\bno puedo (responder|contestar)",
+    "\\bno me es posible ayud",
+    // en
+    "\\bi (can'?t|cannot|can not) (help|answer)",
+    "\\bi'?m (unable|not able) to help",
+    // pt
+    "\\bn[aã]o posso (te |lhe )?ajud",
+    "\\bn[aã]o consigo ajud",
+    "\\bn[aã]o posso responder",
+  ].join("|"),
+  "iu",
+);
+
+export function isPureRefusal(sentence: string): boolean {
+  return declinesWithoutAsserting(sentence, REFUSAL_RE);
 }
 
 // ------------------------------------------------------- verificación
@@ -3572,7 +3617,8 @@ export function verifyGroundedAnswer(
     for (let si = 0; si < sentences.length; si++) {
       const s = sentences[si]!;
       // C2-H1: solo la abstención pura se conserva sin juicio.
-      if (isPureAbstention(s)) {
+      // 0.1.104: la negativa pura, igual (ver isPureRefusal).
+      if (isPureAbstention(s) || isPureRefusal(s)) {
         kept.push(s);
         langProv.push({ text: s, origin: { kind: "abstain" } });
         continue;
@@ -3748,7 +3794,10 @@ export function verifyGroundedAnswer(
     let s = sentences[si]!;
     // C2-H1: solo la abstención pura se conserva sin juicio; la que afirma
     // un dato se juzga por ese dato, como cualquier frase del modelo.
-    if (isPureAbstention(s)) {
+    // 0.1.104: la negativa pura declina igual que la abstención pura —
+    // sin esta línea, «No puedo ayudarte con eso.» se servía como
+    // respuesta con la guía delante (ver isPureRefusal).
+    if (isPureAbstention(s) || isPureRefusal(s)) {
       abstained = true;
       kept.push(s);
       prov.push({ text: s, origin: { kind: "abstain" } });
