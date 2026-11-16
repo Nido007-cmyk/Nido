@@ -76,19 +76,19 @@ jest.mock("expo-file-system/legacy", () => ({
   getFreeDiskStorageAsync: async () => 100 * GB,
 }));
 
-const storageUsageSpy = jest.fn(async () => 999 * GB);
+const mockStorageUsageSpy = jest.fn(async () => 999 * GB);
 jest.mock("../models/ModelManager", () => ({
   ModelManager: class {
-    currentStorageUsageBytes = storageUsageSpy;
+    currentStorageUsageBytes = mockStorageUsageSpy;
   },
 }));
 
-let statsCallback: ((s: { tokPerSec: number }) => void) | null = null;
+let mockStatsCallback: ((s: { tokPerSec: number }) => void) | null = null;
 jest.mock("../services/telemetry", () => ({
   // El último turno registrado fue una guía literal: sin generación.
   getLastQueryStats: () => ({ tokPerSec: 0 }),
   subscribeQueryStats: (cb: (s: { tokPerSec: number }) => void) => {
-    statsCallback = cb;
+    mockStatsCallback = cb;
     return () => {};
   },
 }));
@@ -118,17 +118,17 @@ describe("DrawerFooterStats · etiquetas enteras y cifras que miden de verdad", 
     render(<DrawerFooterStats />);
     expect(await screen.findByText("28.0 GB/128.0 GB")).toBeTruthy();
     expect(screen.queryByText(/50\.0 GB/)).toBeNull();
-    expect(storageUsageSpy).not.toHaveBeenCalled();
+    expect(mockStorageUsageSpy).not.toHaveBeenCalled();
   });
 
   it("tok/s: un turno sin generación no fabrica un 0,0; la última tasa real se queda", async () => {
     render(<DrawerFooterStats />);
     await screen.findByText("1.2 GB/8.0 GB");
     expect(screen.queryByText(/tok\/s/)).toBeNull();
-    act(() => statsCallback?.({ tokPerSec: 12.34 }));
+    act(() => mockStatsCallback?.({ tokPerSec: 12.34 }));
     expect(await screen.findByText("última consulta · 12.3 tok/s")).toBeTruthy();
     // Un turno de guía literal registra 0: la fila NO se degrada a 0,0.
-    act(() => statsCallback?.({ tokPerSec: 0 }));
+    act(() => mockStatsCallback?.({ tokPerSec: 0 }));
     expect(screen.queryByText(/0\.0 tok\/s/)).toBeNull();
     expect(screen.getByText("última consulta · 12.3 tok/s")).toBeTruthy();
   });
