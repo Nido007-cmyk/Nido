@@ -52,6 +52,10 @@ const MIN_RATE: Record<Family, number> = {
   noteDelete: 1,
   memoryForget: 1,
   weeklyPlan: 1,
+  // 0.1.106 (Defecto E): mínimo MEDIDO al crear la familia, como
+  // manda la regla de la casa: el barrido de los arrancadores mide
+  // 113/113 = 1,0000, y su mínimo es 1.
+  starter: 1,
 };
 
 describe("barrido del router", () => {

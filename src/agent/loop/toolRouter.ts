@@ -60,6 +60,8 @@ export const TOOL_KINDS = [
   "currencyInfo",
   "memoryForgetHelp",
   "memoryForget",
+  "messageStarter",
+  "messageStarterFill",
   "nidoCode",
   "nidoInbox",
   "nidoSend",
@@ -69,12 +71,16 @@ export const TOOL_KINDS = [
   "noteRead",
   "noteSave",
   "noteSearch",
+  "noteStarter",
+  "noteStarterFill",
   "openLink",
   "pickFile",
   "reminderDelete",
   "reminderFill",
   "reminderList",
   "reminderOfferCreate",
+  "reminderStarter",
+  "reminderStarterFill",
   "time",
   "weekday",
 ] as const;
@@ -106,7 +112,15 @@ export type ToolAction =
   | { kind: "pickFile"; analyze: boolean; lang: RouterLang }
   | { kind: "reminderList"; lang: RouterLang; range?: "today" | "tomorrow" }
   | { kind: "noteDelete"; target: DeleteTarget; lang: RouterLang }
-  | { kind: "reminderDelete"; target: DeleteTarget; range?: "today" | "tomorrow"; lang: RouterLang };
+  | { kind: "reminderDelete"; target: DeleteTarget; range?: "today" | "tomorrow"; lang: RouterLang }
+  // 0.1.106 (Defecto E): arrancadores incompletos (ver STARTER_RULES):
+  // la intención empezada y su relleno en el turno siguiente.
+  | { kind: "noteStarter"; lang: RouterLang }
+  | { kind: "noteStarterFill"; title: string; body: string; lang: RouterLang }
+  | { kind: "reminderStarter"; lang: RouterLang }
+  | { kind: "reminderStarterFill"; text: string; lang: RouterLang }
+  | { kind: "messageStarter"; lang: RouterLang }
+  | { kind: "messageStarterFill"; to: string; lang: RouterLang };
 
 /**
  * La unión y TOOL_KINDS no pueden desajustarse: si un kind entra en la
@@ -153,6 +167,8 @@ export function toolForAction(a: ToolAction): string {
     case "weekday":
       return "device_time";
     case "noteSave":
+    case "noteStarter":
+    case "noteStarterFill":
       return "save_note";
     case "noteList":
       return "list_notes";
@@ -165,6 +181,8 @@ export function toolForAction(a: ToolAction): string {
     case "calendarCreate":
       return "create_calendar_event";
     case "nidoSend":
+    case "messageStarter":
+    case "messageStarterFill":
       return "nido_send_message";
     case "nidoInbox":
       return "nido_read_inbox";
@@ -199,6 +217,8 @@ export function toolForAction(a: ToolAction): string {
       return "device_time";
     case "reminderOfferCreate":
     case "reminderFill":
+    case "reminderStarter":
+    case "reminderStarterFill":
       return "create_reminder";
   }
 }
@@ -269,6 +289,7 @@ export function beginUserTurn(): void {
 /** Nuevo chat, cambio de conversación o de idioma: se olvida todo seguimiento. */
 export function resetConversationState(): void {
   pendingAsk = null;
+  pendingStarter = null;
   emptyReminderList = null;
 }
 function followupExpired(at: number, turn: number, now: Date): boolean {
@@ -302,6 +323,8 @@ function offerCreateAction(t: string, now: Date): ToolAction | null {
 let pendingAsk: { dueAt: string; lang: RouterLang; at: number; turn: number; repeat: ReminderRepeat | null } | null = null;
 export function notePendingReminderAsk(dueAt: string, lang: RouterLang, now: Date, repeat: ReminderRepeat | null = null): void {
   pendingAsk = { dueAt, lang, at: now.getTime(), turn: followupTurn, repeat };
+  // Una sola pregunta abierta a la vez: esta cierra un arrancador abierto.
+  pendingStarter = null;
 }
 /** Se creó el recordatorio por otra vía: la pregunta ya no está abierta. */
 export function clearPendingReminderAsk(): void {
@@ -347,6 +370,103 @@ function pendingFillAction(t: string, now: Date): ToolAction | null {
   // No se consume aquí: la puerta del chat y el loop lo consultan los dos;
   // se borra al crear el recordatorio.
   return { kind: "reminderFill", text, dueAt: p.dueAt, lang: p.lang, repeat: p.repeat };
+}
+
+/**
+ * 0.1.106 (Defecto E): los ARRANCADORES incompletos — entre ellos los
+ * ejemplos que el PROPIO app sugiere («remind me to», «save a note:»,
+ * «guarda una nota:», «manda un mensaje a» y sus equivalentes). Todas
+ * las reglas de contenido exigen el texto tras el verbo, así que el
+ * arrancador pelado no lo capturaba nadie: caía al bucle del modelo y
+ * en el peldaño de 1024 moría en la guarda de presupuesto, mientras
+ * el mensaje COMPLETO pasaba por la vía determinista. Ahora el
+ * arrancador se reconoce como intención empezada: se responde con la
+ * pregunta de SU herramienta (la del dueño para la nota: «¿Qué nota
+ * quieres salvar?») y la respuesta del usuario, en el turno
+ * siguiente, completa la intención — el mismo trato que la casa ya
+ * daba al recordatorio con fecha sin texto (pendingAsk).
+ */
+let pendingStarter: { tool: "note" | "reminder" | "message"; lang: RouterLang; at: number; turn: number } | null = null;
+export function notePendingStarter(tool: "note" | "reminder" | "message", lang: RouterLang, now: Date): void {
+  pendingStarter = { tool, lang, at: now.getTime(), turn: followupTurn };
+  // Una sola pregunta abierta a la vez: la nueva cierra la anterior.
+  pendingAsk = null;
+}
+/** El arrancador se consumió o se anuló: la pregunta ya no está abierta. */
+export function clearPendingStarter(): void {
+  pendingStarter = null;
+}
+
+// Solo la forma PELADA (el verbo y nada más, con la puntuación que
+// teclea una persona): un arrancador jamás roba un mensaje con
+// contenido, que ya capturaron las reglas de contenido de arriba.
+const STARTER_RULES: Array<{ re: RegExp; tool: "note" | "reminder" | "message"; lang: RouterLang }> = [
+  { re: new RegExp(`^${POLITE}remind me(?: to)?$`, "i"), tool: "reminder", lang: "en" },
+  { re: new RegExp(`^${POLITE}recu[ée]rdame(?: que)?$`, "i"), tool: "reminder", lang: "es" },
+  { re: new RegExp(`^${POLITE}(?:ponme|crea|cr[eé]a|haz|hacer|agrega|a[ñn]ade)(?:me)? un recordatorio$`, "i"), tool: "reminder", lang: "es" },
+  { re: new RegExp(`^${POLITE}lembra-me de$`, "i"), tool: "reminder", lang: "pt" },
+  { re: new RegExp(`^${POLITE}lembre-me de$`, "i"), tool: "reminder", lang: "pt" },
+  { re: new RegExp(`^${POLITE}(?:cria|faz|fa[çc]a|p[õo]e|coloca) um lembrete$`, "i"), tool: "reminder", lang: "pt" },
+  { re: new RegExp(`^${POLITE}(?:save|take|make|write|add|create) a note:?\\s*$`, "i"), tool: "note", lang: "en" },
+  // Sin verbos pelados de una palabra («anota», «apunta»): la suite
+  // adversaria de la casa los sella como demasiado ambiguos para
+  // disparar nada. Solo formas con su objeto o la locución entera.
+  { re: new RegExp(`^${POLITE}(?:toma nota|guarda una nota|crea una nota|haz una nota|escribe una nota|agrega una nota|a[ñn]ade una nota):?\\s*$`, "i"), tool: "note", lang: "es" },
+  { re: new RegExp(`^${POLITE}(?:toma nota|tome nota|salva uma nota|salve uma nota|cria uma nota|crie uma nota|escreve uma nota|escreva uma nota|guarda uma nota):?\\s*$`, "i"), tool: "note", lang: "pt" },
+  // «nota:» pelado, como la regla de contenido de la casa: solo con
+  // los dos puntos («nota» sola es demasiado común). La palabra es
+  // igual en es y pt; el idioma fino lo fija la interfaz al llamar.
+  { re: new RegExp(`^${POLITE}nota\\s*:$`, "i"), tool: "note", lang: "es" },
+  { re: new RegExp(`^${POLITE}send (?:a )?message(?: to)?$`, "i"), tool: "message", lang: "en" },
+  { re: new RegExp(`^${POLITE}(?:manda|env[ií]a)(?:me)? un mensaje(?: a)?$`, "i"), tool: "message", lang: "es" },
+  { re: new RegExp(`^${POLITE}(?:envia|manda) uma mensagem(?: (?:ao|a|para))?$`, "i"), tool: "message", lang: "pt" },
+];
+function starterAction(t: string): ToolAction | null {
+  for (const { re, tool, lang } of STARTER_RULES) {
+    if (!re.test(t)) continue;
+    return tool === "note"
+      ? { kind: "noteStarter", lang }
+      : tool === "reminder"
+        ? { kind: "reminderStarter", lang }
+        : { kind: "messageStarter", lang };
+  }
+  return null;
+}
+
+/**
+ * La respuesta a la pregunta del arrancador, en el turno siguiente:
+ * el contenido que faltaba. Las guardas son las de pendingFillAction
+ * (anulación que CONSUME la pregunta, acuses, peticiones creativas,
+ * preguntas), con dos diferencias de fondo: las órdenes completas ya
+ * las capturaron las reglas de arriba (esto solo se consulta al
+ * final, como pendingFillAction), y el contenido de un recordatorio
+ * PUEDE traer su cuándo («call mom tomorrow at 5»): el bucle lo
+ * reparsea como la frase completa, así que aquí no se rechaza por
+ * parecer una orden de recordatorio. Como en pendingFillAction, el
+ * estado no se consume aquí: lo limpia quien ejecuta el relleno.
+ */
+function starterFillAction(t: string, now: Date): ToolAction | null {
+  const p = pendingStarter;
+  if (!p || followupExpired(p.at, p.turn, now)) return null;
+  const s = t.trim().replace(/[.!]+$/, "");
+  if (ASK_CANCEL_RE.test(s)) {
+    pendingStarter = null;
+    return null;
+  }
+  if (ASK_ACK_RE.test(s) || ASK_NOT_CONTENT_RE.test(s)) return null;
+  if (/\?/.test(s)) return null;
+  if (/^(?:qu[eé]|c[oó]mo|cu[aá]nto|cu[aá]ndo|d[oó]nde|por qu[eé]|qui[eé]n|cu[aá]l|what|how|when|where|why|who|which|o que|como|quanto|quando|onde|quem|qual)(?![\p{L}])/iu.test(s)) return null;
+  if (p.tool === "note") {
+    if (s.length < 2 || s.length > 600) return null;
+    return { kind: "noteStarterFill", title: noteTitleFrom(s), body: s, lang: p.lang };
+  }
+  const words = s.split(/\s+/).filter(Boolean);
+  if (p.tool === "reminder") {
+    if (words.length < 1 || words.length > 20) return null;
+    return { kind: "reminderStarterFill", text: s, lang: p.lang };
+  }
+  if (words.length < 1 || words.length > 4) return null;
+  return { kind: "messageStarterFill", to: s, lang: p.lang };
 }
 
 /** Fecha (00:00 local) de un día con nombre (Navidad, Año Nuevo…), o null. */
@@ -1265,8 +1385,10 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
     if (!m) continue;
     return { kind: "pickFile", analyze: /^anali[sz]|^analy|^revisa|^check/i.test(m[1]), lang };
   }
-  // Al final: solo si nada más casó, la respuesta a «¿qué te recuerdo?».
-  return pendingFillAction(t, now);
+  // Al final: solo si nada más casó, el arrancador incompleto
+  // (0.1.106, Defecto E), la respuesta a su pregunta, y la respuesta
+  // a «¿qué te recuerdo?».
+  return starterAction(t) ?? starterFillAction(t, now) ?? pendingFillAction(t, now);
 }
 
 // ------------------------------------------------------------ respuestas
@@ -1285,6 +1407,9 @@ type Key =
   | "calAskWhen"
   | "calCreated"
   | "nidoAskText"
+  | "noteStarterAsk"
+  | "reminderStarterAsk"
+  | "messageStarterAsk"
   | "opened"
   | "disabled"
   | "cancelled"
@@ -1541,6 +1666,23 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
     es: "¿Qué le escribo a {{to}}? Dímelo así: «manda por nido a {{to}} que …».",
     en: "What should I send {{to}}? Say it like: “send a nido message to {{to}} saying …”.",
     pt: "O que escrevo para {{to}}? Diga assim: “manda uma mensagem pelo nido para {{to}} dizendo …”.",
+  },
+  // 0.1.106 (Defecto E): la pregunta de cada arrancador incompleto.
+  // La de la nota es textual del dueño («¿Qué nota quieres salvar?»).
+  noteStarterAsk: {
+    es: "¿Qué nota quieres salvar?",
+    en: "What note do you want to save?",
+    pt: "Que nota você quer salvar?",
+  },
+  reminderStarterAsk: {
+    es: "¿Qué quieres que te recuerde?",
+    en: "What do you want me to remind you?",
+    pt: "O que você quer que eu te lembre?",
+  },
+  messageStarterAsk: {
+    es: "¿A quién quieres enviarle un mensaje?",
+    en: "Who do you want to send a message to?",
+    pt: "Para quem você quer enviar uma mensagem?",
   },
   opened: { es: "Abriendo {{url}}…", en: "Opening {{url}}…", pt: "Abrindo {{url}}…" },
   disabled: {
@@ -2061,6 +2203,38 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
       case "noteSave": {
         const out = await run("save_note", { title: action.title, body: action.body });
         return out.ok ? say(routerMessage("noteSaved", lang, { title: action.title })) : failure(out);
+      }
+
+      // 0.1.106 (Defecto E): el arrancador no ejecuta nada: anota la
+      // pregunta abierta y responde con ella. El relleno de la nota
+      // guarda como noteSave; el del mensaje deja el flujo donde la
+      // casa lo deja siempre (pedir el texto con la forma enseñada).
+      // El relleno del recordatorio NO pasa por aquí: el bucle lo
+      // consume por su vía de recordatorios (su cuándo se honra).
+      case "noteStarter": {
+        notePendingStarter("note", lang, now);
+        return say(routerMessage("noteStarterAsk", lang));
+      }
+
+      case "reminderStarter": {
+        notePendingStarter("reminder", lang, now);
+        return say(routerMessage("reminderStarterAsk", lang));
+      }
+
+      case "messageStarter": {
+        notePendingStarter("message", lang, now);
+        return say(routerMessage("messageStarterAsk", lang));
+      }
+
+      case "noteStarterFill": {
+        pendingStarter = null;
+        const out = await run("save_note", { title: action.title, body: action.body });
+        return out.ok ? say(routerMessage("noteSaved", lang, { title: action.title })) : failure(out);
+      }
+
+      case "messageStarterFill": {
+        pendingStarter = null;
+        return say(routerMessage("nidoAskText", lang, { to: action.to }));
       }
 
       case "noteList": {

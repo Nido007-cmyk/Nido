@@ -150,7 +150,7 @@ import { cleanCitations } from "../services/citations";
 import { SourceFootnotes } from "./components/SourceFootnotes";
 import { EvidenceFirstCard } from "./components/EvidenceFirstCard";
 import { sourceAccent } from "./components/sourceColors";
-import { buildEvidenceCard, servedSourceIndex, type EvidenceCardData } from "../rag/evidenceCard";
+import { buildEvidenceCard, servedSourceIndex, abstentionGuideChunkId, type EvidenceCardData } from "../rag/evidenceCard";
 import { findDateConflicts, findNumberConflicts, type NumberConflict } from "../rag/sourceCheck";
 import { SourceReader } from "./components/SourceReader";
 import { onLaunchAction, registerShortcuts, takeLaunchAction } from "../services/launchActions";
@@ -2394,7 +2394,23 @@ export function ChatScreen({
       // la [2] y la tarjeta enseñaba la [1] (la crecida), y «Leer la
       // guía entera» abría la guía equivocada en plena emergencia.
       const evidenceFirst =
-        judgeChunks.length > 0 ? buildEvidenceCard(judgeChunks, query, servedSourceIndex(provenance, judgeChunks)) : null;
+        judgeChunks.length > 0
+          ? buildEvidenceCard(judgeChunks, query, servedSourceIndex(provenance, judgeChunks), {
+              // 0.1.106 (Defecto B): lo servido es el texto seguro de
+              // salud, un texto fijo de la casa: no tiene fuente
+              // principal, y la tarjeta no corona sobre él la guía de
+              // mayor rango de la recuperación (en la foto, la crecida
+              // sobre el texto seguro del atragantamiento).
+              servedFixedText: assistantText === healthSafeText(uiLang),
+            })
+          : null;
+
+      // 0.1.106 (Defecto A): la respuesta de abstención con extracto
+      // ofrece «Abrir la guía completa» de la guía del extracto, como
+      // la fundamentada: el guideChunkId sale de la procedencia del
+      // turno (la frase sustituida marca la fuente del extracto) y
+      // persiste con el mensaje, también al reabrir la sesión.
+      const abstentionGuideId = grounding === "abstained" ? abstentionGuideChunkId(provenance, judgeChunks) : null;
 
       // Programa bounty, tanda 8: la caja de comprobación de fuentes
       // (sourceCheck.ts) — solo en la ruta sin verificación, donde
@@ -2424,6 +2440,7 @@ export function ChatScreen({
                 noSourcesFound,
                 grounding,
                 provenance,
+                ...(abstentionGuideId ? { guideChunkId: abstentionGuideId } : {}),
                 evidenceFirst: evidenceFirst ?? undefined,
                 numberConflicts: numberConflicts.length > 0 ? numberConflicts : undefined,
               }

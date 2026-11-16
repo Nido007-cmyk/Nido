@@ -28,6 +28,7 @@ import { estimateTokens } from "./contextBudget";
 import type { ChatMessageInput, SamplingPresetName } from "../../inference/LlamaEngine";
 import {
   describeToolsForPrompt,
+  describeToolsForPromptMinimal,
   dispatchToolCall,
   dispatchToolCallDetailed,
   type DispatchOptions,
@@ -48,6 +49,7 @@ import {
   reminderRepeatWhen,
   notePendingReminderAsk,
   clearPendingReminderAsk,
+  clearPendingStarter,
   choiceTurnKind,
   resolveChoiceReply,
   routerMessage,
@@ -696,14 +698,24 @@ export function appendMutationConfirmation(
 export function buildSystemPrompt(
   intent: AgentIntent,
   memoryText: string,
-  lang: "es" | "en" | "pt" = "es"
+  lang: "es" | "en" | "pt" = "es",
+  // 0.1.106 (Defecto E): nivel del catálogo de herramientas. «full»
+  // es byte a byte el prompt de siempre; la graduación del ensamblado
+  // baja a «minimal» (nombre + firma, sin descripciones) y a «none»
+  // (sin catálogo ni formato de bloque) solo cuando la ventana no
+  // admite el nivel anterior — en el peldaño de 1024 el catálogo
+  // completo de «actuar» (∼1740 tokens) no cabía ni con la memoria
+  // vacía y la guarda mataba el turno antes de empezar.
+  toolsLevel: "full" | "minimal" | "none" = "full"
 ): string {
   const intentHint =
-    intent === "recordar"
-      ? "El usuario quiere que guardes algo en tu memoria persistente: usa la herramienta remember_fact."
-      : intent === "actuar"
-        ? "El usuario pide una acción local: usa la herramienta adecuada de la lista. No inventes herramientas."
-        : "Responde directamente. Solo usa herramientas si aportan algo concreto.";
+    toolsLevel === "none"
+      ? "Responde directamente. En este turno no hay herramientas disponibles."
+      : intent === "recordar"
+        ? "El usuario quiere que guardes algo en tu memoria persistente: usa la herramienta remember_fact."
+        : intent === "actuar"
+          ? "El usuario pide una acción local: usa la herramienta adecuada de la lista. No inventes herramientas."
+          : "Responde directamente. Solo usa herramientas si aportan algo concreto.";
 
   // BUG-1-2026-10-06: el modelo no sabe qué día es hoy y genera fechas
   // en años pasados (ej: 2023 para "March 15th"). Inyectar fecha actual.
@@ -717,7 +729,8 @@ export function buildSystemPrompt(
 
   // use_skill only exists in the actuar list — don't advertise skills
   // the model can't load. One line: the skill store has the details.
-  const showSkills = intent === "actuar";
+  // Con el catálogo degradado la línea también cede: es coste fijo.
+  const showSkills = intent === "actuar" && toolsLevel === "full";
 
   const parts = [
     lang === "en"
@@ -759,20 +772,29 @@ export function buildSystemPrompt(
       : ["(vacía por ahora)"]),
     "",
     "## Herramientas",
-    describeToolsForPrompt(intent),
+    toolsLevel === "full"
+      ? describeToolsForPrompt(intent)
+      : toolsLevel === "minimal"
+        ? describeToolsForPromptMinimal(intent)
+        : "(sin herramientas en este turno)",
   ];
 
   if (showSkills) {
     parts.push("", "Skills (pídelas con use_skill): " + listSkillNamesForPrompt());
   }
 
+  if (toolsLevel !== "none") {
+    parts.push(
+      "",
+      "Para usar una herramienta emite un bloque:",
+      "```tool",
+      '{"name": "device_time", "arguments": {}}',
+      "```",
+      "Recibirás el resultado como Observación. Si no necesitas herramientas, responde directo."
+    );
+  }
+
   parts.push(
-    "",
-    "Para usar una herramienta emite un bloque:",
-    "```tool",
-    '{"name": "device_time", "arguments": {}}',
-    "```",
-    "Recibirás el resultado como Observación. Si no necesitas herramientas, responde directo.",
     "",
     "REGLA DE GROUNDING: basa tu respuesta ESTRICTAMENTE en la fuente citada. No mezcles datos ni inventes detalles; si la fuente no tiene la respuesta, dilo.",
     "",
@@ -1167,11 +1189,16 @@ async function runAgentLoopCore(
   // repetición: se crea por la vía de recordatorios de abajo (la misma
   // que «recuérdame cada lunes…»), no por la herramienta de una sola vez.
   const fillWithRepeat = toolAction?.kind === "reminderFill" && toolAction.repeat ? toolAction : null;
+  // 0.1.106 (Defecto E): la respuesta a «¿Qué quieres que te
+  // recuerde?» (el arrancador incompleto) se consume abajo, por la
+  // vía de recordatorios, como fillWithRepeat: el texto se reparsea
+  // como la frase completa y su cuándo, si lo trae, se honra.
+  const starterFill = toolAction?.kind === "reminderStarterFill" ? toolAction : null;
   // Una herramienta apagada SÍ entra aquí: runToolAction responde, en el
   // idioma del usuario, que está desactivada y dónde activarla (en vez de
   // mandar el turno al modelo). En tareas programadas solo si la
   // herramienta está entre las permitidas para la tarea.
-  if (toolAction && !fillWithRepeat && (!options.restrictFastPathsToHandlers || toolForAction(toolAction) in handlers)) {
+  if (toolAction && !fillWithRepeat && !starterFill && (!options.restrictFastPathsToHandlers || toolForAction(toolAction) in handlers)) {
     const outcome = await runToolAction(toolAction, toolDeps);
     return { response: outcome.response, intent, toolUses: outcome.toolUses, deterministic: true };
   }
@@ -1180,8 +1207,8 @@ async function runAgentLoopCore(
   // y crearía un recordatorio SIN hora. Un temporizador es un
   // recordatorio con hora (ahora + duración) y la misma notificación.
   const timerLang: RouterLang = options.lang === "en" || options.lang === "pt" ? options.lang : "es";
-  const timerAction = fastPathAllowed("create_reminder") && !fillWithRepeat ? extractTimerAction(userText) : null;
-  if (!timerAction && fastPathAllowed("create_reminder") && !fillWithRepeat && timerOutOfRange(userText)) {
+  const timerAction = fastPathAllowed("create_reminder") && !fillWithRepeat && !starterFill ? extractTimerAction(userText) : null;
+  if (!timerAction && fastPathAllowed("create_reminder") && !fillWithRepeat && !starterFill && timerOutOfRange(userText)) {
     const tl: RouterLang = options.lang === "en" || options.lang === "pt" ? options.lang : "es";
     return { response: routerMessage("timerOutOfRange", tl), intent, toolUses: [], deterministic: true };
   }
@@ -1229,6 +1256,10 @@ async function runAgentLoopCore(
     if (fillWithRepeat && fillWithRepeat.kind === "reminderFill") {
       clearPendingReminderAsk();
       reminderAction = { text: fillWithRepeat.text, dueAt: fillWithRepeat.dueAt, repeat: fillWithRepeat.repeat ?? undefined };
+    } else if (starterFill) {
+      clearPendingStarter();
+      const prefix = { es: "recuérdame ", en: "remind me to ", pt: "lembra-me de " }[starterFill.lang];
+      reminderAction = extractReminderAction(prefix + starterFill.text) ?? { text: starterFill.text, dueAt: null };
     } else {
       reminderAction = extractReminderAction(userText);
     }
@@ -1556,8 +1587,8 @@ async function runAgentLoopCore(
     }
   }
 
-  const buildMessages = (memoryText: string): ChatMessageInput[] => [
-    { role: "system", content: buildSystemPrompt(intent, memoryText, options.lang ?? "es") },
+  const buildMessages = (memoryText: string, toolsLevel: "full" | "minimal" | "none" = "full"): ChatMessageInput[] => [
+    { role: "system", content: buildSystemPrompt(intent, memoryText, options.lang ?? "es", toolsLevel) },
     { role: "user", content: userText },
   ];
 
@@ -1586,8 +1617,28 @@ async function runAgentLoopCore(
       // No cabe: siguiente graduación.
     }
   }
+  // 0.1.106 (Defecto E): si ni con la memoria vacía cabe, el CATÁLOGO
+  // también gradúa antes de que la guarda mate el turno (la memoria
+  // ya graduaba desde P-16; el catálogo era el último bloque fijo que
+  // no cedía, y en «actuar» es el más grande del prompt). El orden es
+  // el de coste: primero cede la memoria entera, luego las
+  // descripciones del catálogo, luego el catálogo. El sistema base
+  // (461–590 tokens) cabe en el peldaño de 1024 siempre: un mensaje
+  // corto jamás muere por memoria.
   if (!messages) {
-    messages = buildMessages("");
+    for (const level of ["minimal", "none"] as const) {
+      const candidate = buildMessages("", level);
+      try {
+        assertPromptBudget(candidate, nCtx, adaptiveNPredict(candidate, nCtx, maxNPredict), "inicio");
+        messages = candidate;
+        break;
+      } catch {
+        // No cabe: siguiente nivel del catálogo.
+      }
+    }
+  }
+  if (!messages) {
+    messages = buildMessages("", "none");
     assertPromptBudget(messages, nCtx, adaptiveNPredict(messages, nCtx, maxNPredict), "inicio (sin memoria)");
   }
 

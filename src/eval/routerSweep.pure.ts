@@ -65,7 +65,10 @@ export type Family =
   | "calendar"
   | "noteDelete"
   | "memoryForget"
-  | "weeklyPlan";
+  | "weeklyPlan"
+  // 0.1.106 (Defecto E): los arrancadores incompletos, intenciones
+  // empezadas que el router captura y pregunta lo que falta.
+  | "starter";
 
 export interface SweepCase {
   text: string;
@@ -101,6 +104,7 @@ export const EXPECTED: Record<Family, readonly string[]> = {
   // recuerdo nombrado, la guía que pide cuál.
   memoryForget: ["memoryForget", "memoryForgetHelp"],
   weeklyPlan: ["weekly_plan"],
+  starter: ["noteStarter", "reminderStarter", "messageStarter"],
 };
 
 /**
@@ -144,6 +148,14 @@ export const PENDING_ROUTES: readonly string[] = [
   "pickFile",
   "reminderFill",
   "reminderOfferCreate",
+  // 0.1.106 (Defecto E): los rellenos de los arrancadores exigen el
+  // estado de la pregunta abierta en la conversación, que este
+  // barrido sin estado no puede producir; los ejercita su regresión
+  // propia (src/agent/loop/starters01106.test.ts, con la cadena
+  // pregunta → respuesta → ejecución en los tres idiomas).
+  "noteStarterFill",
+  "reminderStarterFill",
+  "messageStarterFill",
 ];
 
 // ------------------------------------------------------------ plantillas
@@ -481,6 +493,29 @@ const WEEKLY_PLAN = [
   ["pt", "plano semanal"],
 ] as const;
 
+// 0.1.106 (Defecto E): los arrancadores incompletos en su forma
+// pelada — entre ellos los ejemplos que el propio app sugiere. Lo
+// correcto es que el router los capture como intención empezada
+// (su familia «starter»), nunca que caigan al modelo ni a la charla.
+const STARTERS = [
+  ["es", "recuérdame"],
+  ["es", "guarda una nota:"],
+  ["es", "guarda una nota"],
+  ["es", "manda un mensaje a"],
+  ["es", "ponme un recordatorio"],
+  ["es", "toma nota"],
+  ["en", "remind me to"],
+  ["en", "remind me"],
+  ["en", "save a note:"],
+  ["en", "send a message to"],
+  ["en", "take a note"],
+  ["pt", "lembra-me de"],
+  ["pt", "lembre-me de"],
+  ["pt", "guarda uma nota:"],
+  ["pt", "envia uma mensagem ao"],
+  ["pt", "cria um lembrete"],
+] as const;
+
 /**
  * 0.1.43 (paso 2): las «casi órdenes» de cada familia nueva — frases
  * que parecen una orden pero no lo son. Lo correcto es que se queden
@@ -711,6 +746,7 @@ export function buildCorpus(): SweepCase[] {
     ["noteDelete", NOTE_DELETE],
     ["memoryForget", MEMORY_FORGET],
     ["weeklyPlan", WEEKLY_PLAN],
+    ["starter", STARTERS],
   ];
   for (const [family, list] of fixed) for (const [lang, s] of list) add(family, lang as "es" | "en" | "pt", s, s);
   return out;
