@@ -97,7 +97,7 @@ import { DrawerFooterStats } from "./DrawerFooterStats";
 
 describe("DrawerFooterStats · etiquetas enteras y cifras que miden de verdad", () => {
   it("RAM y DISCO se leen enteros en su línea, sin ancho que los parta", async () => {
-    render(<DrawerFooterStats />);
+    await render(<DrawerFooterStats />);
     const ram = await screen.findByText("RAM");
     const disco = await screen.findByText("DISCO");
     for (const label of [ram, disco]) {
@@ -109,26 +109,26 @@ describe("DrawerFooterStats · etiquetas enteras y cifras que miden de verdad", 
   });
 
   it("RAM: el denominador es la RAM total real del aparato (8 GB), no el presupuesto de 12", async () => {
-    render(<DrawerFooterStats />);
+    await render(<DrawerFooterStats />);
     expect(await screen.findByText("1.2 GB/8.0 GB")).toBeTruthy();
     expect(screen.queryByText(/12\.0 GB/)).toBeNull();
   });
 
   it("DISCO: usado y total son el disco real (128 − 100 = 28), no el catálogo contra 50", async () => {
-    render(<DrawerFooterStats />);
+    await render(<DrawerFooterStats />);
     expect(await screen.findByText("28.0 GB/128.0 GB")).toBeTruthy();
     expect(screen.queryByText(/50\.0 GB/)).toBeNull();
     expect(mockStorageUsageSpy).not.toHaveBeenCalled();
   });
 
   it("tok/s: un turno sin generación no fabrica un 0,0; la última tasa real se queda", async () => {
-    render(<DrawerFooterStats />);
+    await render(<DrawerFooterStats />);
     await screen.findByText("1.2 GB/8.0 GB");
     expect(screen.queryByText(/tok\/s/)).toBeNull();
-    act(() => mockStatsCallback?.({ tokPerSec: 12.34 }));
+    await act(async () => mockStatsCallback?.({ tokPerSec: 12.34 }));
     expect(await screen.findByText("última consulta · 12.3 tok/s")).toBeTruthy();
     // Un turno de guía literal registra 0: la fila NO se degrada a 0,0.
-    act(() => mockStatsCallback?.({ tokPerSec: 0 }));
+    await act(async () => mockStatsCallback?.({ tokPerSec: 0 }));
     expect(screen.queryByText(/0\.0 tok\/s/)).toBeNull();
     expect(screen.getByText("última consulta · 12.3 tok/s")).toBeTruthy();
   });
