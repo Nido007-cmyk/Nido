@@ -86,6 +86,43 @@ export async function answerFromGuide(
       }
     }
     if (!pick) return { answer: null, retrieved };
+    // 0.1.105 (carril atragantamiento-01105, foto del dueño en su
+    // Tab A9+ a las 05:31): la elección de la pregunta manda sobre
+    // la del arrastre. La elección de arriba juzga sobre la lista
+    // que trajo la búsqueda, y la búsqueda corre con la pregunta
+    // contextualizada de R-03: una pregunta fina (la del
+    // atragantamiento tiene 2 términos de contenido) hereda la
+    // pregunta anterior como ancla, y tras un bloque de RCP la guía
+    // coronada fue la del ANCLA, servida tal cual («sin modelo»)
+    // sin que ninguna puerta mirara la pregunta que el usuario
+    // hizo. Cuando la pregunta buscada difiere de la hecha, se
+    // elige TAMBIÉN sobre la pregunta tal cual, con su propia
+    // búsqueda (sus puntuaciones son de su escala: no se mezclan
+    // con las de la lista arrastrada), y si esa elección clara es
+    // OTRA guía, es la que se sirve: la misma pregunta no puede
+    // cambiar de guía por el tema anterior. Si la pregunta tal cual
+    // no elige guía (el caso legítimo de R-03: la continuación
+    // elíptica que solo se entiende con el ancla), se sirve la
+    // elección arrastrada como siempre. Sin arrastre no hay
+    // segunda búsqueda ni cambio alguno. R-03/H-08 no se tocan: lo
+    // que se acota es el efecto del arrastre sobre la única vía
+    // que servía sin juez.
+    const askedQuery = short ? stripShortRequest(query) : query;
+    const searchedQuery = short ? askedQuery : (retrievalQuery ?? query);
+    if (searchedQuery !== askedQuery) {
+      const rawWide = await retrieve(askedQuery, GUIDE_PICK_CHUNKS).catch(() => null);
+      if (rawWide && rawWide.length > 0) {
+        const rawPick = pickGuideChunk(rawWide, lang, route, pickOpts);
+        const otherGuide =
+          !!rawPick &&
+          ((parsePackChunkId(rawPick.chunkId)?.packId ?? "") !== (parsePackChunkId(pick.chunkId)?.packId ?? "") ||
+            guideTitleOf(rawPick.title) !== guideTitleOf(pick.title));
+        if (rawPick && otherGuide && !pickIsSignDenied(rawWide, rawPick, query)) {
+          pick = rawPick;
+          candidates = rawWide;
+        }
+      }
+    }
     const doc = await readPackSource(pick.chunkId);
     if (!doc) return { answer: null, retrieved };
     const sameGuide = candidates.filter((c) => c !== pick && guideTitleOf(c.title) === doc.title);

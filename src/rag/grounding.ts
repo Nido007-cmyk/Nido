@@ -375,6 +375,61 @@ export function isPureRefusal(sentence: string): boolean {
   return declinesWithoutAsserting(sentence, REFUSAL_RE);
 }
 
+/**
+ * 0.1.105 (carril atragantamiento-01105, foto del dueño en su Tab
+ * A9+): la cáscara de cita. El modelo devolvió «[1] Cauterization»
+ * como respuesta entera a una pregunta de atragantamiento: una cita
+ * y el TÍTULO del fragmento coronado, sin una palabra del cuerpo.
+ * La frase tiene menos raíces juzgables que MIN_JUDGED_TERMS y la
+ * regla de la frase corta la dejaba pasar como «del modelo sin
+ * fuente»; con la lista del juez reducida a ese fragmento solo (el
+ * ajuste de presupuesto de una conversación crecida puede dejar un
+ * único superviviente diminuto), ninguna pierna de relevancia la
+ * retira, porque sola en la lista ella es su propia referencia de
+ * relevancia, y la puerta final de la abstención no se abría sin
+ * retiradas. Resultado medido: veredicto «grounded» con la cáscara
+ * tal cual, y la sustitución por el texto seguro de salud, que
+ * exige «unverified»/«abstained», sin disparar.
+ *
+ * Un título no es contenido: una frase que, quitadas las citas, ES
+ * el título de un fragmento de la lista (el título entero o su
+ * primera parte antes de « — », que es la forma «Guía — Apartado»
+ * de los packs) no afirma nada del cuerpo y se retira como
+ * cualquier frase sin fundamento. Si era lo único servido, el turno
+ * cae a la abstención honesta (y en salud, a la sustitución). La
+ * regla es agnóstica de clase y no toca las copias cortas fieles
+ * del CUERPO (A3-03): esas no son títulos.
+ */
+function normalizeTitleEcho(text: string): string {
+  return text
+    .replace(/\[\d+\]/g, " ")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(/[.\s]+$/u, "")
+    .trim();
+}
+
+function chunkTitleEchoForms(chunks: GroundingChunk[]): Set<string> {
+  const forms = new Set<string>();
+  for (const c of chunks) {
+    const title = c.title ?? "";
+    const full = normalizeTitleEcho(title);
+    if (full) forms.add(full);
+    const cut = title.indexOf(" — ");
+    if (cut > 0) {
+      const head = normalizeTitleEcho(title.slice(0, cut));
+      if (head) forms.add(head);
+    }
+  }
+  return forms;
+}
+
+function isChunkTitleEcho(sentence: string, echoForms: Set<string>): boolean {
+  if (echoForms.size === 0) return false;
+  const s = normalizeTitleEcho(sentence);
+  return s.length > 0 && echoForms.has(s);
+}
+
 // ------------------------------------------------------- verificación
 
 export interface SentenceSupport {
@@ -3790,6 +3845,9 @@ export function verifyGroundedAnswer(
   let judgedKept = 0;
   const kept: string[] = [];
   const prov: SentenceProvenance[] = [];
+  // 0.1.105 (cáscara 01105): los títulos de la lista, para retirar
+  // sus ecos antes de que la frase corta los deje pasar.
+  const titleEchoForms = chunkTitleEchoForms(chunks);
   for (let si = 0; si < sentences.length; si++) {
     let s = sentences[si]!;
     // C2-H1: solo la abstención pura se conserva sin juicio; la que afirma
@@ -3801,6 +3859,14 @@ export function verifyGroundedAnswer(
       abstained = true;
       kept.push(s);
       prov.push({ text: s, origin: { kind: "abstain" } });
+      continue;
+    }
+    // 0.1.105 (cáscara 01105): el eco del título de un fragmento no
+    // es una respuesta (cita y encabezado, sin contenido del
+    // cuerpo): se retira antes de juzgarla, como cualquier frase
+    // sin fundamento (ver chunkTitleEchoForms).
+    if (isChunkTitleEcho(s, titleEchoForms)) {
+      removed++;
       continue;
     }
     // La jurisdicción del dato de esta frase, calculada al entrar:
