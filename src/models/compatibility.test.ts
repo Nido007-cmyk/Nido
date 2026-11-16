@@ -24,7 +24,13 @@ vi.mock("ram-monitor", () => ({
   getMemoryInfo: () => ({ rssBytes: 0, totalPssBytes: 0 }),
 }));
 
-import { APP_BASELINE_BYTES, canonicalSnapshot, computeCompatibility, type Compatibility } from "./compatibility";
+import {
+  APP_BASELINE_BYTES,
+  canonicalSnapshot,
+  computeCompatibility,
+  residentReleasableBytes,
+  type Compatibility,
+} from "./compatibility";
 import { contextCeilingForDevice, contextSpecForModel } from "./defaultModel";
 import { MODEL_CATALOG } from "./manifest";
 import { checkRamBudget, estimateContextBytes, KV_Q8_BYTES_PER_ELEMENT } from "../inference/ramBudget";
@@ -146,5 +152,52 @@ describe("etiqueta de compatibilidad", () => {
     expect(spec.nCtx).toBe(2048);
     expect(spec.nUbatch).toBe(128);
     expect(estimateContextBytes(spec).totalBytes).toBe(727_484_096);
+  });
+});
+
+// 0.1.108 (pasada de la 0.1.107): la fórmula no se toca; la superficie
+// sí. La carga real, con un modelo residente, suma a su foto el
+// crédito `releasableBytes` — la huella estimada completa del modelo
+// que va a salir (LlamaEngine.loadNow) — y la foto de la tarjeta no
+// lo traía: la insignia juzgaba al modelo ACTIVO cargándose encima de
+// sí mismo y le pintaba «Currently in use» y «Needs a lot of memory»
+// a la vez. El crédito de la tarjeta se calcula con la misma cuenta.
+describe("0.1.108: el crédito liberable del residente en la tarjeta", () => {
+  it("el crédito es la cuenta de la carga: el Qwen3 residente en su techo de la Tab libera sus 693,8 MiB", () => {
+    const m = byId("qwen3-0.6b-q4km");
+    // Residente cargado en su techo (2048 en la Tab) con KV fp16: el
+    // crédito es byte a byte el coste que el censo fija para su carga.
+    expect(residentReleasableBytes(m, 2048, false, TAB_RAM)).toBe(727_484_096);
+    // Cargado degradado (menos contexto) libera menos; con KV q8, menos aún.
+    expect(residentReleasableBytes(m, 1024, false, TAB_RAM)).toBeLessThan(727_484_096);
+    expect(residentReleasableBytes(m, 2048, true, TAB_RAM)).toBeLessThan(727_484_096);
+  });
+
+  it("la foto de las fotos: sin crédito el activo sale amarillo; con su crédito, verde", () => {
+    const m = byId("qwen3-0.6b-q4km");
+    // La banda de la pasada: disponible por total ≈ 500 MiB (RSS de
+    // 868 MiB con la app en uso y el modelo residente dentro), término
+    // en vivo holgado para que mande la cuenta por total.
+    const live = {
+      totalRamBytes: TAB_RAM,
+      rssBytes: 868 * MiB,
+      availBytes: 2 * GB,
+      lowMemThresholdBytes: 216 * MiB,
+    };
+    expect(computeCompatibility(m, TAB_RAM, live)).toBe("yellow");
+    const credited = { ...live, releasableBytes: residentReleasableBytes(m, 2048, false, TAB_RAM) };
+    expect(computeCompatibility(m, TAB_RAM, credited)).toBe("green");
+  });
+
+  it("el crédito no maquilla: la roja del 1.5B en la Tab se queda (la canónica es el suelo)", () => {
+    const m = byId("qwen2.5-1.5b-instruct-q4km");
+    const live = {
+      totalRamBytes: TAB_RAM,
+      rssBytes: 868 * MiB,
+      availBytes: 2 * GB,
+      lowMemThresholdBytes: 216 * MiB,
+    };
+    const credited = { ...live, releasableBytes: residentReleasableBytes(m, 4096, false, TAB_RAM) };
+    expect(computeCompatibility(m, TAB_RAM, credited)).toBe("red");
   });
 });

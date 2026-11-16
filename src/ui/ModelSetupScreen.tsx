@@ -129,6 +129,16 @@ export function ModelSetupScreen(props: Props) {
   // 0.1.92: bytes de una descarga en pausa que siguen en el disco.
   const [partialById, setPartialById] = useState<Record<string, number>>({});
   const [activeIds, setActiveIds] = useState<Partial<Record<AssetKind, string>>>({});
+  // 0.1.108: la carga residente REAL (del motor: contexto cargado y
+  // perfil aceptado) para que la tarjeta del activo aplique el
+  // crédito liberable de la carga. Se relee en cada render de la
+  // pantalla: refreshStatus ya la vuelve a pintar tras cada carga o
+  // descarga, que es cuando este dato cambia.
+  const residentInfo = llamaEngine.getModelInfo();
+  const residentLoadFor = (item: CatalogModel) =>
+    residentInfo && residentInfo.filename === item.filename
+      ? { nCtx: residentInfo.nCtx, memoryProfile: residentInfo.memoryProfile }
+      : null;
   const [toast, setToast] = useState<string | null>(null);
   const [dangerModalVisible, setDangerModalVisible] = useState(false);
   // A1: restaurar un respaldo hecho con otra clave (otro teléfono o antes
@@ -765,6 +775,7 @@ export function ModelSetupScreen(props: Props) {
                   onDiscardPartial={discardPartial}
                   activating={activatingId === item.id}
                   busy={activatingId !== null}
+                  residentLoad={activeIds[item.kind] === item.id ? residentLoadFor(item) : undefined}
                 />
               )}
             />

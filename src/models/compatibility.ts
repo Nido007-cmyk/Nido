@@ -4,7 +4,12 @@
  * See LICENSE file for details.
  */
 
-import { KV_Q8_BYTES_PER_ELEMENT, type RamSnapshot } from "../inference/ramBudget";
+import {
+  batchForRam,
+  estimateContextBytes,
+  KV_Q8_BYTES_PER_ELEMENT,
+  type RamSnapshot,
+} from "../inference/ramBudget";
 import { planContext } from "../inference/memoryLadder";
 import { contextCeilingForDevice, contextSpecForModel } from "./defaultModel";
 import type { CatalogModel } from "./manifest";
@@ -51,6 +56,15 @@ import type { CatalogModel } from "./manifest";
  * photo AND, when a live photo was supplied, on that one too.
  * CatalogItemCard passes the snapshot of its mount; a caller without
  * one (the routing profile) still gets the per-device verdict.
+ *
+ * 0.1.108 (pasada de la 0.1.107): two surface corrections on that
+ * live photo, formula untouched. The card now REFRESHES it when the
+ * memory facts change (the active model changes; the app returns to
+ * the foreground), instead of judging forever by the mount instant.
+ * And the resident model's own card carries the same releasable
+ * credit the load path applies (residentReleasableBytes below): the
+ * badge no longer judges the active model as if it loaded on top of
+ * itself.
  */
 export type Compatibility = "green" | "yellow" | "red" | "unknown";
 
@@ -85,6 +99,46 @@ function colorOnSnapshot(model: CatalogModel, deviceRamBytes: number, snapshot: 
     { ceiling, safety: 1 },
   );
   return q8Plan?.verdict.fits ? "yellow" : "red";
+}
+
+/**
+ * 0.1.108 (pasada de la 0.1.107): el crédito liberable del modelo
+ * residente, para la foto viva de SU tarjeta.
+ *
+ * La carga real, cuando hay un modelo residente, suma a su foto el
+ * crédito `releasableBytes` — la huella estimada completa del modelo
+ * que va a salir — en los dos términos del presupuesto
+ * (LlamaEngine.loadNow, con su comentario «crédito simétrico»). La
+ * foto de la tarjeta nunca lo traía: la insignia juzgaba cada modelo
+ * como si se cargara ENCIMA del residente, y al activo, encima de sí
+ * mismo, así que la tableta del dueño enseñaba «Currently in use» y
+ * «Needs a lot of memory» en la misma tarjeta.
+ *
+ * La cuenta es la de la carga, con sus mismas entradas: los pesos
+ * del residente, SU contexto realmente cargado (no el techo: el
+ * residente libera lo que ocupa, no lo que ocuparía), su arquitectura
+ * y la KV de SU perfil aceptado; el lote es el del aparato
+ * (batchForRam sin presión, el mismo con el que el spec propio de la
+ * insignia se construye en contextSpecForModel). La fórmula de coste
+ * no cambia: esto solo construye el crédito que checkRamBudget ya
+ * sabe aplicar.
+ */
+export function residentReleasableBytes(
+  model: CatalogModel,
+  loadedNCtx: number,
+  kvQ8: boolean,
+  deviceRamBytes: number,
+): number {
+  if (deviceRamBytes <= 0 || loadedNCtx <= 0) return 0;
+  return estimateContextBytes({
+    fileSizeBytes: model.sizeBytes,
+    nCtx: loadedNCtx,
+    nLayer: model.arch?.nLayer,
+    nKvHeads: model.arch?.nKvHeads,
+    headDim: model.arch?.headDim,
+    kvBytesPerElement: kvQ8 ? KV_Q8_BYTES_PER_ELEMENT : undefined,
+    nUbatch: batchForRam(deviceRamBytes).nUbatch,
+  }).totalBytes;
 }
 
 const SEVERITY: Record<Compatibility, number> = { unknown: -1, green: 0, yellow: 1, red: 2 };
