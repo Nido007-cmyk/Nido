@@ -8,7 +8,7 @@ All notable changes to NIDO are recorded here. Versions follow
 
 Answers were sometimes invented instead of read from the
 guides, and this release fixes the route that let that happen.
-0.1.102 passed its tablet test for loading: the chat loaded its
+0.1.102's tablet test approved the load: the chat loaded its
 model at its normal speed again, as in 0.1.98, and the owner
 closed the loading incident with his own pass. But the same
 pass caught the answers failing, in three photos from the
