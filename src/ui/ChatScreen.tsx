@@ -150,7 +150,7 @@ import { cleanCitations } from "../services/citations";
 import { SourceFootnotes } from "./components/SourceFootnotes";
 import { EvidenceFirstCard } from "./components/EvidenceFirstCard";
 import { sourceAccent } from "./components/sourceColors";
-import { buildEvidenceCard, type EvidenceCardData } from "../rag/evidenceCard";
+import { buildEvidenceCard, servedSourceIndex, type EvidenceCardData } from "../rag/evidenceCard";
 import { findDateConflicts, findNumberConflicts, type NumberConflict } from "../rag/sourceCheck";
 import { SourceReader } from "./components/SourceReader";
 import { onLaunchAction, registerShortcuts, takeLaunchAction } from "../services/launchActions";
@@ -2387,7 +2387,14 @@ export function ChatScreen({
       // Programa bounty, tanda 1: la tarjeta de evidencia se calcula
       // aquí, al cerrar la respuesta, con la pregunta y las fuentes en
       // la mano — es el único punto donde las dos cosas conviven.
-      const evidenceFirst = judgeChunks.length > 0 ? buildEvidenceCard(judgeChunks, query) : null;
+      // 0.1.104 (pasada del dueño en su Tab A9+): la tarjeta enseña la
+      // fuente en la que la respuesta SERVIDA se basa (servedSourceIndex
+      // sobre la procedencia del turno), no la de mayor rango de la
+      // recuperación: la respuesta del atragantamiento salió citada a
+      // la [2] y la tarjeta enseñaba la [1] (la crecida), y «Leer la
+      // guía entera» abría la guía equivocada en plena emergencia.
+      const evidenceFirst =
+        judgeChunks.length > 0 ? buildEvidenceCard(judgeChunks, query, servedSourceIndex(provenance, judgeChunks)) : null;
 
       // Programa bounty, tanda 8: la caja de comprobación de fuentes
       // (sourceCheck.ts) — solo en la ruta sin verificación, donde

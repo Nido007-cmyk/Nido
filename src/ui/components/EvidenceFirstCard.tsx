@@ -34,7 +34,12 @@ export function EvidenceFirstCard({ card }: Props) {
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
   const [readerOpen, setReaderOpen] = useState(false);
-  const accent = sourceAccent(colors, 0);
+  // La tarjeta se etiqueta con el número verdadero de su fuente en la
+  // lista de citas (index + 1) y con su acento — antes el disco decía
+  // siempre «1» y el acento era el de la fuente 0, llevara la tarjeta
+  // dentro la fuente que llevara.
+  const index = card.index ?? 0;
+  const accent = sourceAccent(colors, index);
   const canRead = !!parsePackChunkId(card.chunkId);
 
   // El pasaje con su frase en negrita: texto real partido en tres, no
@@ -48,7 +53,7 @@ export function EvidenceFirstCard({ card }: Props) {
     <>
       <View style={styles.header}>
         <View style={[styles.disc, { backgroundColor: accent.subtle, borderColor: accent.border }]}>
-          <Text style={[styles.discText, { color: accent.solid }]}>1</Text>
+          <Text style={[styles.discText, { color: accent.solid }]}>{index + 1}</Text>
         </View>
         <View style={styles.headerText}>
           <Text style={styles.caption}>{t("sourceFootnotes.evidenceFirst")}</Text>

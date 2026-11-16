@@ -21,11 +21,20 @@
  */
 
 import { primarySourceIndex, splitSentences, stem } from "./grounding";
+import type { SentenceProvenance } from "./provenance";
 import type { RetrievedChunk } from "./retrieve";
 
 export interface EvidenceCardData {
   /** Chunk de la fuente principal (para abrir el lector de la guía). */
   chunkId: string;
+  /**
+   * Posición de esta fuente en la lista de citas del turno (0-based):
+   * su número de cita es index + 1. La tarjeta se etiqueta y se tiñe
+   * con ese número, el mismo que la lista de notas y que el [n] del
+   * texto — antes el disco decía siempre «1» aunque la tarjeta
+   * llevara dentro otra fuente.
+   */
+  index: number;
   title: string;
   /** La frase del pasaje que mejor responde a la pregunta. */
   highlight: string;
@@ -81,15 +90,82 @@ export function bestPassageSentence(body: string, query: string): string {
 const EXCERPT_MAX_CHARS = 320;
 
 /**
- * La tarjeta de evidencia de una respuesta: la fuente principal
- * (chunks[0], la de mayor rango de la recuperación), su frase que
- * mejor responde y el pasaje que la rodea. null sin fuentes o con la
- * fuente principal vacía — la tarjeta no finge lo que no hay.
+ * La fuente en la que la respuesta SERVIDA se basa, según la
+ * procedencia del turno: las frases con origen «source» votan por su
+ * [n] (y las de «guide» con chunkId, por su chunk en la lista). Gana
+ * la que sostiene más frases; en empate, la primera citada en la
+ * respuesta. null cuando la procedencia no nombra ninguna fuente
+ * (turno detenido, creativo, guía literal, texto fijo): quien llama
+ * cae entonces a la fuente de mayor rango, como siempre.
+ *
+ * Por qué existe (foto del dueño, 0.1.104, 2026-11-15): el juez
+ * fundamenta cada frase en SU chunk (argmax de apoyo), pero la
+ * tarjeta se construía solo desde la lista, con el rango 1 de la
+ * recuperación. Cuando la recuperación rankeaba una guía irrelevante
+ * (la crecida) por encima de la buena (el atragantamiento), la
+ * respuesta salía citada a la [2] y la tarjeta enseñaba la [1] — y
+ * «Leer la guía entera» abría la guía equivocada en una emergencia.
  */
-export function buildEvidenceCard(chunks: readonly RetrievedChunk[], query: string): EvidenceCardData | null {
+export function servedSourceIndex(
+  provenance: readonly SentenceProvenance[] | undefined,
+  chunks: readonly RetrievedChunk[],
+): number | null {
+  if (!provenance || chunks.length === 0) return null;
+  const votes = new Map<number, { count: number; firstAt: number }>();
+  provenance.forEach((s, at) => {
+    let idx: number | null = null;
+    if (s.origin.kind === "source") {
+      const i = s.origin.n - 1;
+      if (i >= 0 && i < chunks.length) idx = i;
+    } else if (s.origin.kind === "guide" && s.origin.chunkId) {
+      const guideChunkId = s.origin.chunkId;
+      const i = chunks.findIndex((c) => c.chunkId === guideChunkId);
+      if (i >= 0) idx = i;
+    }
+    if (idx === null) return;
+    const v = votes.get(idx);
+    if (v) v.count++;
+    else votes.set(idx, { count: 1, firstAt: at });
+  });
+  let best: number | null = null;
+  for (const [idx, v] of votes) {
+    if (best === null) {
+      best = idx;
+      continue;
+    }
+    const b = votes.get(best)!;
+    if (v.count > b.count || (v.count === b.count && v.firstAt < b.firstAt)) best = idx;
+  }
+  return best;
+}
+
+/**
+ * La tarjeta de evidencia de una respuesta: la fuente en la que la
+ * respuesta servida se basa (preferredIndex, el de servedSourceIndex)
+ * o, sin ella, la de mayor rango de la recuperación; su frase que
+ * mejor responde y el pasaje que la rodea. null sin fuentes o con la
+ * fuente elegida vacía — la tarjeta no finge lo que no hay.
+ */
+export function buildEvidenceCard(
+  chunks: readonly RetrievedChunk[],
+  query: string,
+  preferredIndex?: number | null,
+): EvidenceCardData | null {
   // Auditoría 0.1.79: un apartado de cierre («… — Importante») no es la
   // fuente principal de nada; si va primero, la tarjeta usa la siguiente.
-  const top = chunks[primarySourceIndex(chunks)];
+  let index = primarySourceIndex(chunks);
+  // La fuente servida manda sobre el rango — salvo que su cuerpo esté
+  // vacío, en cuyo caso manda la de siempre (que si también está
+  // vacía, no hay tarjeta).
+  if (
+    preferredIndex != null &&
+    preferredIndex >= 0 &&
+    preferredIndex < chunks.length &&
+    chunks[preferredIndex]?.body?.trim()
+  ) {
+    index = preferredIndex;
+  }
+  const top = chunks[index];
   if (!top || !top.body || top.body.trim().length === 0) return null;
   const highlight = bestPassageSentence(top.body, query);
   const sentences = splitSentences(top.body.trim());
@@ -111,5 +187,5 @@ export function buildEvidenceCard(chunks: readonly RetrievedChunk[], query: stri
     }
   }
   const excerpt = sentences.slice(lo, hi + 1).join(" ");
-  return { chunkId: top.chunkId, title: top.title, highlight, excerpt, truncated: top.truncated ?? false };
+  return { chunkId: top.chunkId, index, title: top.title, highlight, excerpt, truncated: top.truncated ?? false };
 }
