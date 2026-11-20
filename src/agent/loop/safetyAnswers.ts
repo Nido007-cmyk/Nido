@@ -4,6 +4,8 @@
  * See LICENSE file for details.
  */
 
+import { isNarratedEventText } from "../../rag/packFacts";
+
 /**
  * safetyAnswers.ts — 0.1.55: respuestas FIJAS para preguntas donde un error
  * de la IA puede matar. El modelo no las contesta: un modelo pequeño puede
@@ -63,7 +65,7 @@ const CO_DEVICE_RE =
 
 // Dentro de casa o en un espacio cerrado.
 const CO_INDOOR_RE =
-  /\b(dentro|adentro|en (la |mi )?casa|garaje|garage|cochera|sotano|porche|cuarto|habitacion|dormitorio|recamara|sala|tienda de campana|casa de campana|carpa|caravana|cerrad[oa]|inside|indoors?|in (the|my) (house|home|garage|basement|tent|room|bedroom|camper|rv)|basement|crawl ?space|shed|tent|camper|enclosed|em casa|garagem|porao|barraca|quarto|fechad[oa])\b/;
+  /\b(dentro|adentro|en (la |mi )?casa|garaje|garage|cochera|sotano|porche|cuarto|habitacion|dormitorio|recamara|sala|tienda de campana|casa de campana|carpa|caravana|cerrad[oa]|inside|indoors?|in (the|my) (house|home|garage|basement|tent|room|bedroom|camper|rv)|basement|crawl ?space|shed|tent|camper|enclosed|porch|em casa|garagem|porao|barraca|quarto|fechad[oa]|varanda)\b/;
 
 const CO_WORD_RE = /\b(monoxido|carbon monoxide)\b/;
 
@@ -73,11 +75,11 @@ const CO_WORD_RE = /\b(monoxido|carbon monoxide)\b/;
 // sótano?» no es un peligro y no debe recibir «Nunca lo uses dentro».
 // Por eso NO están en CO_DEVICE_RE (que también dispara ese aviso).
 const CO_SYMPTOM_ONLY_DEVICE_RE =
-  /\b(calentador(es)? (de|a) gas|calentador de agua|estufa(s)? (de|a) gas|calefactor(es)? (de|a) gas|caldera|calefon|chimenea|gas (heater|fire|fireplace|stove|furnace)|space heater|water heater|furnace|boiler|fireplace|aquecedor(es)? (de|a) gas|caldeira|lareira|fogao a gas)\b/;
+  /\b(calentador(es)? (de|a) gas|calentador de agua|estufa(s)? (de|a) gas|calefactor(es)? (de|a) gas|caldera|calefon|chimenea|gas (heater|fire|fireplace|stove|furnace)|space heater|water heater|furnace|boiler|fireplace|aquecedor(es)? (de|a) gas|aquecedor de agua|caldeira|lareira|fogao a gas)\b/;
 
 // Síntomas o alarma: entonces no es una pregunta de planificación.
 const CO_SYMPTOM_RE =
-  /\b(?:(?:me|nos|le|les|te) duele(?:n)? la cabeza|dolor de cabeza|marea|nausea|vomit|confus|debil|desmay|alarma (?:de co |de monoxido )?(?:sono|suena|esta sonando)|headache|dizz|nause|confused|weak|faint|alarm (?:is )?(?:going off|beeping|sounding)|dor de cabeca|tontura|enjo|alarme (?:esta )?(?:tocando|disparou))/;
+  /\b(?:(?:me|nos|le|les|te) duele(?:n)? la cabeza|dolor de cabeza|marea|nausea|vomit|confus|debil|desmay|alarma (?:de co |de monoxido )?(?:sono|suena|esta sonando)|headache|dizz|nause|confused|weak|faint|alarm (?:is )?(?:going off|beeping|sounding)|dor de cabeca|tont|enjo|fraqueza|desmai|alarme (?:de monoxido )?(?:esta )?(?:tocando|disparou))/;
 
 const CO_TEXT: Record<SafetyLang, string> = {
   es:
@@ -240,7 +242,7 @@ export const EMERGENCY_NUMBERS: readonly EmergencyEntry[] = [
 // ligar» sigue fuera, porque la rama sigue exigiendo el verbo
 // pegado a «número» (con su relativo, su modal o su «para»).
 const EMERGENCY_Q_RE =
-  /\b(numero|telefono|tel)s? (de |del |para )?(las? )?(emergencias?|urgencias?|emergency|policia|ambulancia|bomberos)\b|\b(?:a )?(que|cual) (?:es el )?numero (?:(?:que )?(?:debo )?(?:llamo|llamar|marco|marcar)|para (?:llamar|marcar))\b|\bemergency (number|phone|line)s?\b|\bwhat number (do i|should i|to) (call|dial)\b|\bnumber (for|to call) (the )?(police|ambulance|fire)\b|\bnumeros? de (emergencia|urgencia)\b|\b(?:qual|que) (?:e )?(?:o |a )?numero (?:(?:que )?(?:eu )?(?:devo )?(?:ligar|ligo|discar)|para (?:ligar|discar))\b|\btelefone (de |da )?(emergencia|emergency)\b/;
+  /\b(numero|telefono|tel)s? (de |del |para )?(las? )?(emergencias?|urgencias?|emergency|policia|ambulancia|bomberos)\b|\b(?:a )?(que|cual) (?:es el )?numero (?:(?:que )?(?:debo )?(?:llamo|llamas|llamar|marco|marcar)|para (?:llamar|marcar))\b|\bemergency (number|phone|line)s?\b|\bwhat number (do i|should i|to) (call|dial)\b|\bnumber (for|to call) (the )?(police|ambulance|fire)\b|\bnumeros? de (emergencia|urgencia)\b|\b(?:qual|que) (?:e )?(?:o |a )?numero (?:(?:que )?(?:eu )?(?:devo )?(?:ligar|ligo|discar)|para (?:ligar|discar))\b|\btelefone (de |da )?(emergencia|emergency)\b/;
 
 function findCountry(folded: string): EmergencyEntry | null {
   for (const e of EMERGENCY_NUMBERS) {
@@ -1712,6 +1714,10 @@ export function matchSafetyAnswer(userText: string, lang: SafetyLang): SafetyHit
     return { kind: "co-hazard", lang, text: CO_TEXT[lang], deterministic: true };
   }
 
-  if (EMERGENCY_Q_RE.test(folded)) return emergencyText(lang, folded);
+  // Causa C de DIAG-A (paquete de arreglos del móvil, §4.1): la
+  // narración en pasado tampoco pregunta en esta cara — «la
+  // vecina marcó el número de emergencias y contó lo que había
+  // pasado» contaba un suceso y recibía la tabla de números.
+  if (EMERGENCY_Q_RE.test(folded) && !isNarratedEventText(userText)) return emergencyText(lang, folded);
   return null;
 }

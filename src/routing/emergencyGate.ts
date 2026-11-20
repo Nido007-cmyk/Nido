@@ -521,6 +521,10 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     // (el suceso ya ocurrió y se nombra en pasado, sin víctima cerca
     // que la cara por raíz pueda leer).
     "se desmayo", "se ahogo", "se desvanecio",
+    // Causa E de DIAG-A (paquete de arreglos 2026-11-20): el
+    // desvanecimiento en su participio, con los vetos de
+    // resolución y de marco que la cara ya aplica.
+    "desvanecido", "desvanecida",
     "cuesta respirar", "cuesta mucho respirar",
     // 0.1.99 T-01 (m-10, auditoría 2026-11-14): la respiración
     // contada con su marca de gravedad dentro de la frase («mi
@@ -545,6 +549,10 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "esta teniendo una convulsion", "le esta dando una convulsion",
     "esta teniendo un infarto", "le esta dando un infarto",
     "esta teniendo un ictus", "le esta dando un ictus", "le esta dando un derrame",
+    // Causa E de DIAG-A: «un ataque» a secas, solo en su marco
+    // estrecho (el veto «ataque de risa» de abajo fija el límite:
+    // con complemento no corporal nombrado, no cuenta).
+    "le esta dando un ataque",
     // F-1 (auditoría de la RCP, 2026-11-06): la reanimación en
     // curso, contada por quien la ve o la hace. El suceso ES la
     // situación: no se exige señal de pregunta.
@@ -591,6 +599,11 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "smoke coming", "smoke pouring", "full of smoke", "there is a fire", "there s a fire",
     "house on fire", "kitchen on fire", "building on fire", "car on fire", "room on fire",
     "bleeding a lot", "bleeding heavily", "won t stop bleeding",
+    // Causa E de DIAG-A: el chorro con su verbo, con la sangre
+    // nombrada en la frase (la vara de la cura: sin sangre
+    // nombrada, el aspersor y la manguera no entran).
+    "blood is pouring", "pouring blood", "blood is spraying", "spraying blood",
+    "blood is spurting", "spurting blood",
     // Auditoría completa (F-5): la contracción corriente («isn't
     // breathing» se pliega a «isn t breathing», que no contiene «not
     // breathing») y las convulsiones, que es y pt ya traían.
@@ -630,6 +643,9 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "segurando o peito", "apertando o peito", "mao no peito",
     "fumaca saindo", "saindo fumaca", "tem fogo", "pegando fogo", "em chamas", "saindo chamas",
     "sangrando muito", "nao para de sangrar", "esta convulsionando",
+    // Causa E de DIAG-A: o jorro com o seu verbo, com o sangue
+    // nomeado na frase.
+    "sangue espirrando", "espirrando sangue", "sangue a espirrar", "sangue esta espirrando",
     // Auditoría completa (F-5): «não consigo respirar», la forma
     // corriente que el portugués no traía, y los eventos de las otras
     // dos lenguas.
@@ -685,9 +701,24 @@ const EMERGENCY_VETOES = [
   // fuga; sin ellas, el signo «saliendo gas» no las caza, pero
   // quedan vetadas por nombre como las demás metáforas de la lista.
   "a todo gas", "full gas", "dar gas",
+  // Causa E de DIAG-A: el límite del signo «le esta dando un
+  // ataque» — el ataque que no es del cuerpo no es situación.
+  "ataque de risa",
 ];
 
 const ALL_SIGNS: string[] = Object.values(EMERGENCY_SIGNS).flat();
+
+/**
+ * Cláusulas de resolución tras conector adversativo: el suceso
+ * se cuenta ya cerrado («pero ya está bien»). Sin el conector,
+ * la misma frase no veta (puede ser el estado previo a otro
+ * suceso vivo del mismo texto).
+ */
+const RESOLVED_CLAUSES = [
+  "pero ya esta bien", "pero ya esta mejor", "pero ya paso",
+  "mas ja esta bem", "mas ja passou",
+  "but is fine now", "but he is fine now", "but she is fine now", "but is already fine",
+];
 
 /**
  * Raíces de situación (R-07, ronda física de la 0.1.68): la cara de
@@ -897,6 +928,12 @@ export function isEmergencySituation(text: string): boolean {
   const vetoHay = ` ${folded} `;
   if (EMERGENCY_VETOES.some((x) => vetoHay.includes(` ${x} `) || vetoHay.includes(` ${x}`))) return false;
   if (hasHistoricalFrame(folded)) return false;
+  // Causa E de DIAG-A (paquete de arreglos del móvil, §4.3): el
+  // suceso ya resuelto, contado con su cláusula de resolución
+  // («…ayer en el mercado, pero ya está bien»), no es una
+  // situación viva. La cláusula ha de venir tras el conector
+  // adversativo: un «ya está bien» suelto no veta nada.
+  if (RESOLVED_CLAUSES.some((x) => vetoHay.includes(` ${x}`))) return false;
   return (
     ALL_SIGNS.some((t) => folded.includes(` ${t} `) || folded.includes(` ${t}`)) ||
     (ALL_STEMS.some((t) => folded.includes(` ${t}`)) && stemHitHasBodyContext(folded)) ||

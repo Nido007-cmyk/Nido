@@ -127,6 +127,44 @@ const SERVICE_WORDS: Array<[ServiceKind, RegExp]> = [
 
 const NUMBER_CUES = / (numero|numeros|telefono|telefonos|tel|llamo|llamar|llamas|llama|telefonear|marco|marca|marcar|linea|number|numbers|phone|call|dial|telephone|hotline|telefone|telefones|telefonar|ligo|liga|ligas|ligar|disca|discas|discar|disco|chamo|chama|chamas|chamar|contacto|contact) /;
 
+// Causas C y D de DIAG-A (paquete de arreglos del móvil,
+// 2026-11-20): la capa de veto que esta ruta no tenía. El
+// plegado convierte el pretérito español en la señal de
+// presente («llamó» → «llamo»), así que contar un suceso
+// disparaba la ruta del número; y la regla de las cinco
+// palabras bastaba sola para que una frase-tema corta con
+// servicio («Historia de los bomberos») entrara como
+// pregunta. La pregunta genuina no se toca: con forma
+// interrogativa, cualquier señal vale como siempre.
+const NARRATIVE_FRAME_RE = / (en el cuento|en la novela|en el relato|me conto que|segun el relato) /;
+const NARRATIVE_PAST_RE = / (llamo|marco|disco|ligo|telefono) /;
+const NARRATIVE_LINK_RE = / (despues|cuando|conto|habia|mientras|vio) /;
+const INTERROGATIVE_RE = / (cual|cuales|que numero|a que numero|como llamo|como llamar|what number|what is the number|which number) /;
+const TOPIC_FRAME_RE = / (historia de|history of|en accion) /;
+const TOPIC_COMPLEMENT_RE = / (bomberos|bombeiros|policia|police|firefighters|ambulancia|ambulance|ambulancias) (de|in) /;
+
+function isNarratedEvent(folded: string): boolean {
+  if (NARRATIVE_FRAME_RE.test(folded)) return true;
+  return NARRATIVE_PAST_RE.test(folded) && NARRATIVE_LINK_RE.test(folded);
+}
+
+function isTopicPhrase(folded: string): boolean {
+  return TOPIC_FRAME_RE.test(folded) || TOPIC_COMPLEMENT_RE.test(folded);
+}
+
+/**
+ * La misma capa de veto de la causa C, exportada para la otra
+ * cara del número (la tabla fija de `safetyAnswers`): un suceso
+ * narrado en pasado no pregunta por el número en ninguna de
+ * las dos caras. Con forma interrogativa, nunca es narración.
+ */
+export function isNarratedEventText(text: string): boolean {
+  if (/[¿?]/.test(text)) return false;
+  const folded = foldText(text);
+  if (INTERROGATIVE_RE.test(folded)) return false;
+  return isNarratedEvent(folded);
+}
+
 /** Which emergency service the question asks for, or null when it isn't asking for an emergency number. */
 export function emergencyQuestionKind(text: string): ServiceKind | null {
   const folded = foldText(text);
@@ -150,7 +188,16 @@ export function emergencyQuestionKind(text: string): ServiceKind | null {
   if (kinds.length === 0) return null;
   // "policía en Chile" is a request on its own; longer phrases need a cue
   // ("número", "llamo", "phone"…) so "la historia de los bomberos de Chile" isn't one.
-  const asks = NUMBER_CUES.test(folded) || words.length <= 5;
+  const hasCue = NUMBER_CUES.test(folded);
+  let asks = hasCue || words.length <= 5;
+  if (asks && !/[¿?]/.test(text) && !INTERROGATIVE_RE.test(folded)) {
+    // Causa C: la narración no pregunta, aunque el plegado le
+    // preste la señal de presente.
+    if (hasCue && isNarratedEvent(folded)) asks = false;
+    // Causa D: la longitud sola ya no basta si la frase corta
+    // trae forma de tema.
+    if (!hasCue && words.length <= 5 && isTopicPhrase(folded)) asks = false;
+  }
   if (!asks) return null;
   return kinds.find((k) => k !== "general") ?? "general";
 }
