@@ -5,7 +5,7 @@
     "close": "Fechar",
     "remove": "Remover",
     "retry": "Tentar novamente",
-    "dismiss": "Dispensar",
+    "dismiss": "Descartar",
     "languageSection": "IDIOMA",
     "confirm": "Confirmar",
     "yes": "Sim",
@@ -30,7 +30,7 @@
     "noMatches": "Nenhuma conversa corresponde.",
     "shortcuts": "Atalhos",
     "showAll": "Ver todos (+{{count}})",
-    "deleteTitle": "Apagar este chat?",
+    "deleteTitle": "Apagar esta conversa?",
     "deleteBody": "“{{title}}” será apagado deste telefone. Não dá para desfazer.",
     "deleteConfirm": "Apagar",
     "deleteBusy": "Espere a resposta terminar para apagar este chat."
@@ -38,13 +38,13 @@
   "installNotice": {
     "pausedTooHeavy": "Há uma parte baixada ({{done}}) de um modelo que não cabe neste dispositivo. Você pode apagá-la para liberar espaço.",
     "integrity": "O arquivo baixado não coincide com sua impressão digital, então não conta como baixado. Se baixar de novo, a cópia nova o substitui.",
-    "interrupted": "O último download foi interrompido antes de terminar. Se baixar de novo, começará do início.",
-    "sizeMismatch": "O último download chegou incompleto e foi apagado. Se baixar de novo, chegará uma cópia nova.",
-    "storage": "Não houve espaço livre suficiente para terminar o download. Libere espaço e tente de novo.",
-    "stalled": "O último download travou e não terminou. Você pode tentar de novo.",
+    "interrupted": "A última transferência foi interrompida antes de terminar. Se baixar de novo, começará do início.",
+    "sizeMismatch": "A última transferência chegou incompleta e foi apagado. Se baixar de novo, chegará uma cópia nova.",
+    "storage": "Não houve espaço livre suficiente para terminar a transferência. Libere espaço e tente de novo.",
+    "stalled": "A última transferência travou e não terminou. Você pode tentar de novo.",
     "paused": "Uma parte já está baixada ({{done}} de {{total}}). Se baixar de novo, continuará daí.",
     "unverifiable": "O arquivo está no aparelho, mas não pôde ser verificado, então não conta como baixado. Se baixar de novo, será verificado outra vez.",
-    "failed": "O último download não terminou. Você pode tentar de novo."
+    "failed": "A última transferência não terminou. Você pode tentar de novo."
   },
   "catalogItemCard": {
     "discardPartial": "Apagar o que foi baixado",
@@ -53,9 +53,9 @@
     "removeFromListMessage": "Este modelo não foi baixado. Ele será removido da sua lista.",
     "removeCorpusTitle": "Remover pacote da base de conhecimento?",
     "removeModelTitle": "Remover pesos do modelo?",
-    "removeCorpusMessage": "Isso exclui o conjunto de dados local e libera {{size}}. Os tópicos não estarão disponíveis offline até serem baixados novamente.",
+    "removeCorpusMessage": "Isso exclui o conjunto de dados local e libera {{size}}. Os tópicos não estarão disponíveis sem conexão até serem baixados novamente.",
     "removeModelMessage": "Isso exclui o arquivo de pesos local e libera {{size}}.",
-    "removeAssetButton": "Remover Recurso",
+    "removeAssetButton": "Remover recurso",
     "kind": {
       "llm": "LLM",
       "embedding": "Embedding",
@@ -69,8 +69,8 @@
     },
     "downloadingAsset": "Baixando",
     "eta": "Tempo restante: {{eta}}",
-    "retryDownload": "🔄 Repetir Download",
-    "downloadAsset": "📥 Baixar Recurso",
+    "retryDownload": "🔄 Tentar baixar de novo",
+    "downloadAsset": "📥 Baixar recurso",
     "loadingModel": "Carregando modelo…",
     "selectUse": "🔘 Selecionar e Usar",
     "indexedNote": "Na sua base de conhecimento",
@@ -90,8 +90,8 @@
   },
   "modelLoadErrorCard": {
     "corrupt": {
-      "title": "O download não passou na verificação",
-      "detail": "O arquivo baixado está incompleto ou danificado — o download provavelmente foi interrompido.",
+      "title": "A transferência não passou na verificação",
+      "detail": "O arquivo baixado está incompleto ou danificado — a transferência provavelmente foi interrompida.",
       "recommendation": "Baixe novamente ou troque para um modelo que você já tem em Ajustes."
     },
     "missing": {
@@ -120,7 +120,7 @@
       "recommendation": "Encurte a mensagem ou comece uma conversa nova.",
       "title": "A conversa já não cabe na memória do modelo"
     },
-    "settings": "Configurações",
+    "settings": "Ajustes",
     "setupWizard": "Assistente de Configuração"
   },
   "usageStatsScreen": {},
@@ -149,7 +149,7 @@
     },
     "installedModels": "Modelos instalados",
     "toasts": {
-      "indexed": "\"{{name}}\" indexado na base de conhecimento offline",
+      "indexed": "\"{{name}}\" indexado na base de conhecimento sem conexão",
       "removed": "\"{{name}}\" removido",
       "partialDiscarded": "A parte baixada de {{name}} foi apagada.",
       "activeSet": "Modelo {{kind}} ativo definido como \"{{name}}\"",
@@ -178,12 +178,12 @@
     "wipeRecovery": {
       "recovering": "A concluir a eliminação de dados interrompida…",
       "blockedTitle": "Eliminação de dados incompleta",
-      "blockedBody": "A eliminação total de dados foi interrompida e não pôde ser concluída com segurança. A app não será iniciada com dados parcialmente eliminados. Podes tentar novamente ou reinstalar a app.",
+      "blockedBody": "A eliminação total de dados foi interrompida e não pôde ser concluída com segurança. O app não será iniciado com dados parcialmente eliminados. Você pode tentar novamente ou reinstalar o app.",
       "retry": "Tentar novamente"
     },
     "startupError": {
       "title": "Erro ao iniciar",
-      "body": "Não foi possível verificar o estado dos modelos. Pode ser um problema temporário de armazenamento. Tenta novamente ou reinstala a app se persistir.",
+      "body": "Não foi possível verificar o estado dos modelos. Pode ser um problema temporário de armazenamento. Tente novamente ou reinstale o app se persistir.",
       "retry": "Tentar novamente"
     }
   },
@@ -207,7 +207,7 @@
       "storageLow": "Armazenamento acabando",
       "freeOf": "{{free}} livres",
       "totalOf": "{{total}} no total",
-      "privateTitle": "Privado por design",
+      "privateTitle": "Privado por desenho",
       "privateText": "Sem necessidade de conta. O NIDO só se conecta quando você pedir — por exemplo, para baixar um modelo.",
       "language": "Idioma",
       "continue": "Continuar"
@@ -217,7 +217,7 @@
       "subtitle": "Comece com o essencial ou adicione mais conhecimento agora. Você sempre pode adicionar mais depois.",
       "recommended": "Recomendado",
       "downloadSize": "Cerca de {{size}} para baixar",
-      "startDownload": "Iniciar download",
+      "startDownload": "Iniciar transferência",
       "back": "Voltar",
       "modelTitle": "Escolha seu modelo",
       "modelSubtitle": "O modelo inicial é escolhido conforme a RAM do seu telefone. Você pode mudar depois em Ajustes.",
@@ -231,11 +231,11 @@
       "timeLeft": "Cerca de {{time}} restantes",
       "keepOpen": "Você pode deixar o app aberto; ele continuará.",
       "assetCounter": "Modelo {{current}} de {{total}}",
-      "errorTitle": "O download foi interrompido.",
+      "errorTitle": "A transferência foi interrompida.",
       "errorText": "Verifique sua conexão e tente novamente. Nada foi instalado ainda.",
       "tryAgain": "Tentar novamente",
       "autoRetrying": "Tentando novamente automaticamente em {{seconds}}s (tentativa {{attempt}} de {{max}})…",
-      "restartStuck": "Downloads travados? Reiniciar"
+      "restartStuck": "Transferências travadas? Reiniciar"
     },
     "step4": {
       "settingUp": "Organizando seu conhecimento",
@@ -258,7 +258,7 @@
     "adaptiveRoutingNote": "Classifica cada mensagem e escolhe qual modelo baixado responde a ela (ex.: um modelo leve para conversa casual, um mais forte para perguntas de pesquisa/comparação), alternando entre eles conforme necessário. Ativado por padrão e independente da Pesquisa Profunda — se falhar por qualquer motivo, o chat volta automaticamente ao seu modelo ativo normal, nunca deixando você sem resposta."
   },
   "corpusSettingsTab": {
-    "downloadablePacks": "Pacotes de conhecimento para download",
+    "downloadablePacks": "Pacotes de conhecimento para transferência",
     "yourDocuments": "Seus documentos"
   },
   "packImport": {
@@ -287,14 +287,14 @@
       "imageNoOcr": "“{{name}}” é uma imagem e esta versão do NIDO não traz reconhecimento de texto (OCR), por isso não foi possível importar.",
       "ocrFailed": "“{{name}}” não pôde ser lido nem com o reconhecimento de texto (OCR)."
     },
-    "hint": "Importe suas próprias notas em .txt, .md, .csv, .json ou .pdf, ou imagens de texto impresso — indexadas apenas neste aparelho, nunca enviadas a lugar nenhum. As páginas digitalizadas dos PDFs e as imagens são lidas com reconhecimento de texto (OCR) no próprio aparelho, e PDFs protegidos por senha não são suportados.",
+    "hint": "Importe suas próprias notas em .txt, .md, .csv, .json ou .pdf, ou imagens de texto impresso — indexadas apenas neste aparelho, nunca enviadas a lugar nenhum. As páginas digitalizadas dos PDFs e as imagens são lidas com reconhecimento de texto (OCR) no próprio aparelho, e PDFs protegidos por senha não são aceitos.",
     "nameRequiredTitle": "Nome obrigatório",
     "nameRequiredMessage": "Dê um nome a esta coleção antes de importar.",
     "importFailedTitle": "Falha na importação",
     "exportFailedTitle": "Falha na exportação",
     "removeConfirmTitle": "Remover esta coleção?",
     "removeConfirmMessage": "Isso exclui \"{{name}}\" ({{count}} trechos) da sua base de conhecimento local. Isso não pode ser desfeito — exporte antes se quiser guardar uma cópia.",
-    "namePlaceholder": "Nome da coleção (ex.: Especificações do Projeto)",
+    "namePlaceholder": "Nome da coleção (ex.: especificações do projeto)",
     "pickButton": "Selecionar Arquivos e Importar",
     "stageReading": "Lendo arquivos…",
     "stageOcr": "Reconhecendo o texto (OCR)…",
@@ -322,7 +322,7 @@
     "exportButton": "Exportar / Compartilhar",
     "exporting": "Exportando…",
     "emptyTitle": "Sua biblioteca está vazia",
-    "emptyDescription": "Adicione seus documentos e o Nido poderá pesquisá-los offline. Tudo fica no seu dispositivo.",
+    "emptyDescription": "Adicione seus documentos e o Nido poderá pesquisá-los sem conexão. Tudo fica no seu dispositivo.",
     "emptyAction": "Adicionar documentos",
     "importFailedBody": "Não foi possível importar o documento. Verifique se o arquivo é válido e tente de novo.",
     "exportFailedBody": "Não foi possível exportar o documento."
@@ -330,8 +330,8 @@
   "memorySettings": {
     "title": "Histórico de conversas e memória",
     "autoSummarizeLabel": "Resumo automático de contexto",
-    "autoSummarizeValue": "Condensa trocas antigas para que conversas longas não percam contexto",
-    "turnsBeforeSummarizing": "Trocas recentes antes de resumir",
+    "autoSummarizeValue": "Condensa turnos antigos para que conversas longas não percam contexto",
+    "turnsBeforeSummarizing": "Turnos recentes antes de resumir",
     "maxSavedSessions": "Máximo de sessões salvas",
     "unlimited": "Ilimitado",
     "autoTitlesLabel": "Gerar títulos automaticamente",
@@ -342,7 +342,7 @@
     "clearAllChatHistory": "Limpar Todo o Histórico de Conversas"
   },
   "voiceSettings": {
-    "title": "Entrada de Voz",
+    "title": "Entrada de voz",
     "enabledLabel": "Entrada por voz",
     "enabledValue": "Mostra o botão de microfone no chat para ditar mensagens.",
     "speechEngineLabel": "Mecanismo de reconhecimento de voz",
@@ -419,19 +419,19 @@
     },
     "facts": {
       "emptyTitle": "Sem dados guardados",
-      "emptyDescription": "Quando me contares algo sobre ti, vou guardá-lo aqui."
+      "emptyDescription": "Quando você me contar algo sobre si, vai ficar guardado aqui."
     },
     "notes": {
       "emptyTitle": "Sem notas",
-      "emptyDescription": "Pede-me para guardar uma nota e ela aparecerá aqui."
+      "emptyDescription": "Peça para eu guardar uma nota e ela aparecerá aqui."
     },
     "people": {
       "emptyTitle": "Sem pessoas",
-      "emptyDescription": "As pessoas que mencionares aparecerão aqui."
+      "emptyDescription": "As pessoas que você mencionar aparecerão aqui."
     },
     "reminders": {
       "emptyTitle": "Sem lembretes",
-      "emptyDescription": "Pede-me para te lembrar de algo e vais vê-lo aqui."
+      "emptyDescription": "Peça-me um lembrete e ele aparecerá aqui."
     },
     "deleteTitle": "Eliminar",
     "deleteMessage": "Eliminar este item da memória? Não pode ser desfeito.",
@@ -464,8 +464,8 @@
     "localLlmCore": "Modelo local",
     "cycleTone": "Alternar tom do assistente",
     "newChatSession": "Novo chat",
-    "deepResearch": "Pesquisa Aprofundada",
-    "deepResearchActive": "Pesquisa Aprofundada Ativa",
+    "deepResearch": "Pesquisa profunda",
+    "deepResearchActive": "Pesquisa profunda ativa",
     "statusLine": "Sem conexão · privado"
   },
   "chatScreen": {
@@ -473,7 +473,7 @@
     "initializingCore": "Iniciando o NIDO…",
     "loadingModel": "Carregando modelo…",
     "mountingWeights": "Carregando o modelo…",
-    "indexingKnowledgeBase": "Indexando conhecimento novo para busca offline…",
+    "indexingKnowledgeBase": "Indexando conhecimento novo para busca sem conexão…",
     "reasoningElapsed": "💭 Raciocinando… {{seconds}}s",
     "reasoningUnfinished": "O raciocínio não terminou antes do fim da resposta (interrompido ou sem tokens). Toque em 💭 para ler.",
     "showReasoning": "Mostrar raciocínio",
@@ -481,18 +481,18 @@
     "messageReused": "Mensagem copiada para a caixa de texto",
     "stopping": "Parando… (terminando a etapa atual)",
     "toneChanged": "Tom: {{tone}}",
-    "modelDownloadComplete": "✅ Download de \"{{label}}\" concluído",
+    "modelDownloadComplete": "✅ Transferência de \"{{label}}\" concluída",
     "drawerItems": {
       "prompts": "Ideias de Prompts",
       "myDocuments": "Meus Documentos",
       "memory": "Minha Memória",
-      "settings": "Configurações",
+      "settings": "Ajustes",
       "telemetry": "Telemetria de Execução",
       "about": "Sobre & Informações"
     },
     "inputPlaceholder": "Pergunte qualquer coisa…",
     "scrollToBottom": "Ir para o fim da conversa",
-    "noRelevantOfflineSources": "Nenhuma fonte offline relevante encontrada para esta pergunta.",
+    "noRelevantOfflineSources": "Nenhuma fonte relevante sem conexão encontrada para esta pergunta.",
     "stopGeneration": "Parar geração",
     "emergencySend": "Enviar como emergência",
     "sendMessage": "Enviar mensagem",
@@ -503,7 +503,7 @@
     },
     "stoppedByUser": "Interrompido pelo usuário",
     "retry": "Tentar novamente",
-    "deepResearchBanner": "Pesquisa profunda · Dividindo → Buscando offline → Sintetizando",
+    "deepResearchBanner": "Pesquisa profunda · Dividindo → Buscando sem conexão → Sintetizando",
     "copyResponse": "Copiar resposta",
     "copied": "Copiado",
     "rateUp": "Boa resposta",
@@ -523,12 +523,12 @@
       "reminder": {
         "title": "Lembre-me de algo",
         "hint": "“Ligar para a mãe amanhã às 5”",
-        "prompt": "lembra-me de "
+        "prompt": "lembre-me de "
       },
       "note": {
-        "title": "Guardar uma nota",
+        "title": "Guarde uma nota",
         "hint": "“Anote: comprar leite e pão”",
-        "prompt": "guarda uma nota: "
+        "prompt": "guarde uma nota: "
       },
       "documents": {
         "title": "Pergunte aos seus documentos",
@@ -538,7 +538,7 @@
       "message": {
         "title": "Mensagem para outro NIDO",
         "hint": "Criptografada, por Bluetooth, sem internet",
-        "prompt": "envia uma mensagem ao "
+        "prompt": "envie uma mensagem para "
       }
     },
     "staged": {
@@ -558,8 +558,8 @@
     "heroSubtitle": "Seu agente. Seu mundo.",
     "versionBadge": "v{{version}} • {{build}}",
     "buildDevelopment": "BUILD DE DESENVOLVIMENTO",
-    "buildRelease": "BUILD DE RELEASE",
-    "airGappedTitle": "Privado por design",
+    "buildRelease": "BUILD DE LANÇAMENTO",
+    "airGappedTitle": "Privado por desenho",
     "airGappedBody": "O NIDO é seu assistente pessoal de IA que funciona inteiramente no seu telefone — sem conta, sem nuvem, sem servidores. Suas perguntas e seus documentos ficam neste dispositivo. As mensagens que você envia aos seus contatos pareados viajam criptografadas, de telefone a telefone, sem passar por nenhum servidor.",
     "hardwareTitle": "Feito para o seu telefone",
     "hardwareBody": "O NIDO foi projetado para rodar em um telefone: mantém baixo o uso de memória e monitora o armazenamento para que o app seja rápido e responsivo.",
@@ -574,7 +574,7 @@
     "limitsTitle": "Conheça os limites",
     "limitsBody": "O NIDO executa modelos de IA dentro do seu telefone. Eles podem errar ou inventar dados, e os modelos menores com mais frequência. Não dependa só do NIDO para decisões de saúde, jurídicas, financeiras ou de segurança: consulte um profissional ou uma fonte confiável.",
     "privacyTitle": "Privacidade e termos",
-    "privacyBody": "O NIDO não tem contas, nem análise de uso, nem servidores próprios. Ele só se conecta quando você pedir: os downloads que você inicia (modelos e pacotes de conhecimento) e as mensagens com seus contatos pareados, que viajam criptografadas entre telefones por Bluetooth ou pela sua rede local. Cada conexão fica registrada: você pode vê-la em Configurações → «Verificação de segurança e registro de rede». A política de privacidade e os termos de uso completos estão em PRIVACY.md e TERMS.md no repositório.",
+    "privacyBody": "O NIDO não tem contas, nem análise de uso, nem servidores próprios. Ele só se conecta quando você pedir: as transferências que você inicia (modelos e pacotes de conhecimento) e as mensagens com seus contatos pareados, que viajam criptografadas entre telefones por Bluetooth ou pela sua rede local. Cada conexão fica registrada: você pode vê-la em Ajustes → «Verificação de segurança e registro de rede». A política de privacidade e os termos de uso completos estão em PRIVACY.md e TERMS.md no repositório.",
     "licensesTitle": "Licenças",
     "licensesBody": "A licença do NIDO, de cada modelo de IA, do texto da Wikipédia que ele traz e das bibliotecas com que é feito.",
     "licensesOpen": "Ver licenças",
@@ -586,13 +586,13 @@
     "developmentCopied": "Endereço copiado"
   },
   "sourceFootnotes": {
-    "title": "Fontes offline consultadas",
-    "titleGrounded": "Baseada nestas fontes offline",
+    "title": "Fontes consultadas sem conexão",
+    "titleGrounded": "Baseada nestas fontes sem conexão",
     "titlePartial": "Baseada nestas fontes · frases sem respaldo removidas",
     "titleAbstained": "Há fontes, mas não respondem exatamente a isso",
     "titleUnverified": "Fontes consultadas · sem verificação automática (outro idioma)",
     "localIndex": "Índice local",
-    "relevanceCaption": "Os números indicam força de correspondência absoluta com o índice offline, não confiança.",
+    "relevanceCaption": "Os números indicam força de correspondência absoluta com o índice sem conexão, não confiança.",
     "readWhole": "Ler o guia inteiro",
     "evidenceFirst": "Fonte principal",
     "numberConflict": "Um número da resposta não coincide com a fonte, que diz: «{{source}}»"
@@ -643,11 +643,11 @@
   },
   "personalities": {
     "succinct": {
-      "label": "Sucinto e Direto",
+      "label": "Sucinto e direto",
       "description": "Mais rápido — 2–3 parágrafos curtos ou tópicos, sem introdução. Padrão para celular."
     },
     "detailed": {
-      "label": "Completo e Detalhado",
+      "label": "Completo e detalhado",
       "description": "Explicações estruturadas e completas, com comparações e raciocínio."
     },
     "summary": {
@@ -687,7 +687,7 @@
       "leakAskedTool": "O modelo pediu ferramenta",
       "leakRetried": "Com nova tentativa",
       "leakByTool": "Ferramentas que o modelo pediu",
-      "leakByRoute": "Resolvidos pelo código",
+      "leakByRoute": "Resolvidas pelo código",
       "leakHint": "Se o modelo pediu uma ferramenta, o roteador devia ter reconhecido o comando: é uma falha do roteador, não do modelo. Só contagens e nomes de ferramenta, nunca o texto."
     },
     "title": "Telemetria de execução",
@@ -752,7 +752,7 @@
     "summary": "{{queries}} perguntas × {{configs}} configurações = {{total}} respostas",
     "keepScreenOn": "Mantenha a tela ligada e o app aberto durante a execução.",
     "chatBusy": "Aguarde a resposta atual do chat terminar antes de rodar uma avaliação.",
-    "run": "▶ Rodar",
+    "run": "▶ Executar",
     "stop": "■ Parar",
     "stopping": "Parando…",
     "progress": "Config. {{config}}/{{configs}} · Pergunta {{query}}/{{queries}}",
@@ -781,8 +781,8 @@
     "unlocking": "Verificando…",
     "cancelled": "Autenticação cancelada.",
     "failed": "Não foi possível verificar sua identidade. Tente novamente.",
-    "noGate": "Este dispositivo não tem biometria nem PIN configurado: o gate de acesso não pode proteger o app. Seus dados continuam criptografados em repouso.",
-    "continueWithoutGate": "Continuar sem gate",
+    "noGate": "Este dispositivo não tem biometria nem PIN configurado: a porta de acesso não pode proteger o app. Seus dados continuam criptografados em repouso.",
+    "continueWithoutGate": "Continuar sem porta",
     "retry": "Tentar novamente"
   },
   "nido": {
@@ -824,11 +824,11 @@
     "verifiedNotice": "✓ {{name}} verificado.",
     "verifyFailed": "Não foi possível verificar este contato.",
     "unverifiedBanner": "Vocês ainda não compararam a impressão digital com {{name}}. Até que o façam, as negociações, as tarefas delegadas e os pacotes com este contato ficam em pausa.",
-    "linkActive": "🟢 Enlace ativo",
-    "linkStopped": "⚪ Enlace parado",
+    "linkActive": "🟢 Ligação ativa",
+    "linkStopped": "⚪ Ligação parada",
     "tabChats": "Conversas",
     "tabContacts": "Contatos",
-    "tabLink": "Enlace",
+    "tabLink": "Ligação",
     "tabNegotiations": "Negociações",
     "noContactsTitle": "Sem contatos ainda",
     "noContactsBody": "Emparelhe seu primeiro contato na aba Contatos: mostre seu QR e cole o código dele como texto.",
@@ -865,7 +865,7 @@
     "sendMessage": "Enviar mensagem",
     "retryNotice": "Tentando a entrega da mensagem novamente…",
     "sendAgainNotice": "Enviando como nova mensagem…",
-    "pairedNotice": "✓ {{name}} emparelhado, ainda não verificado. Comparem a impressão digital e toque em «Verificar».",
+    "pairedNotice": "✓ {{name}} emparelhado, ainda não verificado. Compare a impressão digital e toque em «Verificar».",
     "connectedNotice": "✓ Conectado com {{alias}}.",
     "copiedNotice": "✓ {{label}} copiado.",
     "pairDisambiguationTitle": "Escolha como emparelhar",
@@ -887,7 +887,7 @@
     "resendCancelledTitle": "Enviar novamente como nova mensagem?",
     "resendCancelledMessage": "Você cancelou esta mensagem. Enviar novamente como NOVA mensagem? A mensagem cancelada continua cancelada.",
     "errorLabel": "Erro",
-    "tabPacks": "Packs",
+    "tabPacks": "Pacotes",
     "identityError": "Não foi possível criar a identidade: {{error}}",
     "deleteMessageTitle": "Apagar mensagem",
     "deleteMessageConfirm": "Apagar esta mensagem? Será apagada apenas neste dispositivo.",
@@ -908,8 +908,8 @@
     "revocationRecoveryDone": "Lista de revogações redefinida. Revise seus contatos e revogue novamente onde apropriado.",
     "revocationRecoveryFailed": "Não foi possível redefinir a lista. Tente novamente.",
     "connecting": "Conectando…",
-    "noNearbyForPaired": "Nenhum dispositivo próximo encontrado. Verifique se o Bluetooth está ligado.",
-    "pairedNotFound": "Não foi possível conectar a {{name}}. Verifique se o outro tablet tem o NIDO aberto.",
+    "noNearbyForPaired": "Nenhum dispositivo próximo encontrado. Verifique se o Bluetooth está ligado e se o outro NIDO está por perto.",
+    "pairedNotFound": "Não foi possível conectar a {{name}}. Verifique se o outro tablet está com o NIDO aberto na tela P2P e com a tela ligada, e tente de novo.",
     "waitingForPeer": "Aguardando {{name}} conectar… Se não chamar em alguns segundos, este tablet chama.",
     "troubleshootTitle": "Problemas para conectar?",
     "troubleshootBody": "Se não conectar, tente nesta ordem:\n\n1. Abra o NIDO nesta tela nos dois tablets e toque em Conectar em qualquer um.\n2. Ligue o Bluetooth nos dois. Se o Bluetooth falhar, coloque os dois na mesma rede Wi-Fi (não precisa de internet): o NIDO usa o Wi-Fi local como reserva.\n3. Reinicie os dois tablets.\n4. Em Configurações do Android → Bluetooth, emparelhe os tablets entre si.\n5. Se desconectar em segundo plano: Configurações → Apps → NIDO → Bateria → Sem restrições.",
@@ -966,8 +966,8 @@
   },
   "agentConfirm": {
     "createEventTitle": "Criar evento",
-    "createEventMessage": "Criar “{{title}}” no teu calendário em {{start}}?",
-    "createEventMessageWithEnd": "Criar “{{title}}” no teu calendário de {{start}} até {{end}}?",
+    "createEventMessage": "Criar “{{title}}” no seu calendário em {{start}}?",
+    "createEventMessageWithEnd": "Criar “{{title}}” no seu calendário de {{start}} até {{end}}?",
     "sendMessageTitle": "Enviar mensagem NIDO",
     "sendMessageMessage": "Enviar para “{{to}}” via NIDO (criptografado)?\n\n“{{text}}”",
     "placeCallTitle": "Chamada telefônica",
@@ -1008,15 +1008,15 @@
   },
   "downloadErrors": {
     "checksumMismatch": "A verificação de integridade falhou (SHA-256 não confere), então o arquivo foi excluído. Tentar de novo baixa tudo desde o início.",
-    "sizeMismatch": "O download falhou na verificação: recebido {{received}} de {{expected}}. O arquivo incompleto foi excluído, então tentar de novo começa do início.",
+    "sizeMismatch": "A transferência falhou na verificação: recebido {{received}} de {{expected}}. O arquivo incompleto foi excluído, então tentar de novo começa do início.",
     "sizeMismatchOtherVersion": "O arquivo no servidor é de uma versão diferente da que este NIDO espera (recebido {{received}}, esperado {{expected}}), então nada foi instalado. Atualize o NIDO para a versão mais recente e baixe de novo.",
     "notFound": "O arquivo não está mais disponível no servidor (HTTP {{status}}). Tentar de novo não vai resolver.",
     "httpErrorTransient": "O servidor retornou um erro (HTTP {{status}}) após {{received}} de {{expected}}. Você pode tentar de novo — pode funcionar mais tarde.",
     "httpErrorPermanent": "O servidor retornou um erro (HTTP {{status}}) após {{received}} de {{expected}}. Repetir a mesma requisição não vai ajudar.",
-    "unpinnedSource": "Esta entrada de modelo não tem uma revisão de download fixada, então nenhuma requisição de rede foi feita. Tentar de novo não vai ajudar até que a entrada do catálogo seja corrigida.",
-    "unknownSourceContract": "A fonte de download desta entrada não é uma fonte segura reconhecida, então nenhuma requisição de rede foi feita. Tentar de novo não vai ajudar até que a entrada do catálogo seja corrigida.",
-    "stalled": "O download parou (sem progresso por {{seconds}}s). Seu progresso ({{received}} de {{expected}}) foi mantido — tentar de novo continua de onde parou.",
-    "interrupted": "O download foi interrompido após {{received}} de {{expected}}. O arquivo parcial foi descartado, então tentar de novo começa do início.",
+    "unpinnedSource": "Esta entrada de modelo não tem uma revisão de transferência fixada, então nenhuma requisição de rede foi feita. Tentar de novo não vai ajudar até que a entrada do catálogo seja corrigida.",
+    "unknownSourceContract": "A fonte de transferência desta entrada não é uma fonte segura reconhecida, então nenhuma requisição de rede foi feita. Tentar de novo não vai ajudar até que a entrada do catálogo seja corrigida.",
+    "stalled": "A transferência parou (sem progresso por {{seconds}}s). Seu progresso ({{received}} de {{expected}}) foi mantido — tentar de novo continua de onde parou.",
+    "interrupted": "A transferência foi interrompida após {{received}} de {{expected}}. O arquivo parcial foi descartado, então tentar de novo começa do início.",
     "insufficientStorage": "Não há espaço livre suficiente neste telefone para esta transferência — ela precisa de {{needed}}, mas apenas {{free}} estão disponíveis. Libere espaço e tente novamente.",
     "cancelled": "A verificação foi cancelada após {{received}} de {{expected}}. Nada foi excluído — você pode verificar novamente."
   },
@@ -1081,7 +1081,7 @@
     "engineTitle": "Motor",
     "engineModel": "Modelo",
     "ctxWindow": "Janela de contexto",
-    "threads": "Conversas",
+    "threads": "Threads",
     "license": "Licença",
     "inference": "Inferência",
     "emptyEngine": "Nenhum modelo carregado."
@@ -1123,19 +1123,19 @@
       "read:notes": "Ler notas",
       "read:reminders": "Ler lembretes",
       "write:notes": "Escrever notas",
-      "write:reminder": "Criar lembrete",
+      "write:reminder": "Criar lembretes",
       "write:reminders": "Criar lembretes"
     }
   },
   "packshare": {
-    "availablePacks": "Packs disponíveis",
-    "noPacks": "Nenhum pack instalado para compartilhar.",
+    "availablePacks": "Pacotes disponíveis",
+    "noPacks": "Nenhum pacote instalado para compartilhar.",
     "noDescription": "Sem descrição",
     "share": "Compartilhar",
     "activeTransfers": "Transferências ativas",
     "history": "Histórico",
     "emptyTitle": "Sem transferências",
-    "emptyMessage": "Compartilhe um pack de conhecimento com outro NIDO.",
+    "emptyMessage": "Compartilhe um pacote de conhecimento com outro NIDO.",
     "sentOffer": "Oferta enviada",
     "receivedOffer": "Oferta recebida",
     "sending": "Enviando...",
@@ -1153,7 +1153,7 @@
     "noPeersTitle": "Nenhum contato conectado",
     "noPeersMessage": "Conecte-se primeiro com um contato (aba Contatos) e tente de novo.",
     "offerFailedTitle": "Não foi possível enviar",
-    "offerFailedMessage": "Não foi possível enviar a oferta. Verifique se o contato continua conectado. Só é possível compartilhar os packs do catálogo do NIDO, exatamente como foram baixados.",
+    "offerFailedMessage": "Não foi possível enviar a oferta. Verifique se o contato continua conectado. Só é possível compartilhar os pacotes do catálogo do NIDO, exatamente como foram baixados.",
     "unavailableTitle": "Ainda não está pronto",
     "unavailableMessage": "O NIDO ainda está carregando sua identidade. Espere alguns segundos e tente de novo.",
     "tooLargeTitle": "Pacote grande demais",
@@ -1206,7 +1206,7 @@
     "ratchetV5Desc": "Cada mensagem usa sua própria chave, como o Double Ratchet do Signal: uma chave roubada hoje não abre as mensagens anteriores. A sessão também mistura ML-KEM-768, para que o tráfego gravado hoje continue fechado para computadores quânticos futuros. Ativado por padrão; é usado quando os dois telefones o têm. Vale a partir da próxima conexão.",
     "privateHelloOnlyTitle": "Só saudação privada",
     "privateHelloOnlyDesc": "Ao chamar, seu telefone nunca diz às claras quem você é: não chama contatos com um NIDO antigo (anterior à 0.1.49) nem dispositivos que não são seus contatos. Vem ativada; se você a desativar, poderá chamar também quem não atualizou. Se você a ativar aqui por conta própria, ela também deixa de responder às saudações às claras que chegarem.",
-    "recoveredTitle": "Configurações redefinidas",
+    "recoveredTitle": "Ajustes redefinidos",
     "recoveredNotice": "Suas configurações estavam danificadas e voltaram aos padrões de fábrica. Revise suas configurações, incluindo as ferramentas que você tinha desativado: elas podem ter sido ativadas de novo."
   },
   "backup": {
@@ -1266,7 +1266,7 @@
     },
     "createNow": "Criar backup agora",
     "showKey": "Ver minha chave de criptografia",
-    "rotateKey": "Rotacionar chave de criptografia",
+    "rotateKey": "Trocar chave de criptografia",
     "saveToDownloads": "Salvar em Downloads",
     "close": "Fechar",
     "lastBackup": "Último backup: {{path}}",
@@ -1308,13 +1308,13 @@
   },
   "networkLog": {
     "title": "REGISTRO DE REDE",
-    "body": "Aqui fica registrada a atividade de rede do próprio NIDO: downloads, conexões por Wi-Fi local, Bluetooth e descoberta de proximidade. As entradas nunca contêm seu conteúdo: apenas o tipo de atividade, para onde foi, o tamanho, a hora e o resultado. O que o sistema ou outro app faz, como abrir um link ou o ditado por voz do sistema, não é uma requisição do NIDO e não aparece aqui.",
+    "body": "Aqui fica registrada a atividade de rede do próprio NIDO: transferências, conexões por Wi-Fi local, Bluetooth e descoberta de proximidade. As entradas nunca contêm seu conteúdo: apenas o tipo de atividade, para onde foi, o tamanho, a hora e o resultado. O que o sistema ou outro app faz, como abrir um link ou o ditado por voz do sistema, não é uma requisição do NIDO e não aparece aqui.",
     "empty": "Nenhuma requisição de rede registrada.",
     "showing": "Mostrando as últimas {{shown}} de {{total}}.",
     "kind": {
-      "download_start": "Download iniciado",
-      "download_complete": "Download concluído",
-      "download_failed": "Download com falha",
+      "download_start": "Transferência iniciada",
+      "download_complete": "Transferência concluída",
+      "download_failed": "Transferência com falha",
       "lan_connect": "Conexão por Wi-Fi local",
       "bt_connect": "Conexão por Bluetooth",
       "discovery": "Descoberta iniciada"
@@ -1372,7 +1372,7 @@
   },
   "scheduledTasks": {
     "title": "Tarefas agendadas",
-    "body": "Algo que o agente faz sozinho em um horário fixo, como um resumo das suas notas toda manhã. As tarefas rodam enquanto o NIDO está aberto; se estiver fechado nesse horário, o telefone mostra um aviso e a tarefa roda ao abrir o app. Uma tarefa pode ler suas notas, calendário e caixa de entrada, e salvar notas. Nunca pode enviar mensagens, ligar, parear nem abrir outros apps.",
+    "body": "Algo que o agente faz sozinho em um horário fixo, como um resumo das suas notas toda manhã. As tarefas são executadas enquanto o NIDO está aberto; se estiver fechado nesse horário, o telefone mostra um aviso e a tarefa é executada ao abrir o app. Uma tarefa pode ler suas notas, calendário e caixa de entrada, e salvar notas. Nunca pode enviar mensagens, ligar, parear nem abrir outros apps.",
     "empty": "Você ainda não tem tarefas agendadas.",
     "loadFailed": "Não foi possível carregar suas tarefas.",
     "add": "Nova tarefa",
@@ -1876,7 +1876,7 @@
     "licenseLink": "Texto oficial",
     "notes": {
       "lfm": "Não é Apache nem MIT: o uso comercial só é permitido a entidades com menos de 10 milhões de USD de receita anual, e quem o redistribuir deve entregar uma cópia da licença.",
-      "ccBySa": "Você pode compartilhar e adaptar dando crédito à Wikipédia (e ao NIDO como compilador dos pacotes), linkando a licença, indicando as mudanças e mantendo CC BY-SA 4.0.",
+      "ccBySa": "Você pode compartilhar e adaptar dando crédito à Wikipédia (e ao NIDO como compilador dos pacotes), com ligação para a licença, indicando as mudanças e mantendo CC BY-SA 4.0.",
       "ccByNido": "Guias escritos pelo NIDO a partir das recomendações públicas da Cruz Vermelha, da AHA, da OMS e de outras organizações, que não os revisaram nem endossam o NIDO. Você pode compartilhá-los e adaptá-los citando o NIDO. Informação geral: não substitui um curso de primeiros socorros; em uma emergência, ligue para o número de emergência."
     }
   },
@@ -1911,7 +1911,7 @@
     "noCountryBody": "Escolha outro país ou pergunte no chat.",
     "pickCountry": "Escolher país",
     "describeLabel": "Descreva o que está acontecendo",
-    "describePlaceholder": "Ex.: meu filho engasgou",
+    "describePlaceholder": "Ex.: meu filho está engasgando",
     "describeHint": "O NIDO responde com os guias do celular, sem internet.",
     "ask": "Perguntar",
     "quickGuides": "Guias rápidos",
@@ -1950,7 +1950,7 @@
     "models": "Modelos e conhecimento",
     "memory": "Memória e conversas",
     "appearance": "Aparência, idioma e voz",
-    "backup": "Cópia de segurança",
+    "backup": "Backup",
     "diagnostics": "Diagnóstico",
     "help": "Ajuda e informação",
     "danger": "Zona de perigo"
@@ -1968,7 +1968,7 @@
     "openMemoryDesc": "Dados, notas, pessoas e lembretes que o NIDO guarda sobre você.",
     "openTelemetry": "Abrir a telemetria de execução",
     "openTelemetryDesc": "Velocidade, tempos e memória de cada resposta. Exporte em JSON ou CSV e avalie modelos.",
-    "crashSection": "Diagnóstico de fechamentos",
+    "crashSection": "Diagnóstico de falhas",
     "backupKeyDesc": "Ver sua chave de criptografia ou trocá-la.",
     "openBackupKey": "Ver minha chave ou trocá-la",
     "aboutSection": "Sobre o NIDO",
@@ -1985,10 +1985,10 @@
     "open": "Ler os guias",
     "intro": "Leia qualquer guia guardado neste dispositivo, do início ao fim. Ler não carrega o modelo.",
     "loading": "Carregando guias",
-    "noPacks": "Ainda não há guias. Os packs que você baixar ou adicionar aparecerão aqui, prontos para ler sem modelo.",
-    "noGuides": "Este pack não tem guias legíveis.",
-    "readError": "Não foi possível abrir este guia. O pack pode ter sido removido ou atualizado.",
-    "truncated": "Este texto é muito longo e é mostrado encurtado na tela. O guia continua guardado inteiro no pack.",
+    "noPacks": "Ainda não há guias. Os pacotes que você baixar ou adicionar aparecerão aqui, prontos para ler sem modelo.",
+    "noGuides": "Este pacote não tem guias legíveis.",
+    "readError": "Não foi possível abrir este guia. O pacote pode ter sido removido ou atualizado.",
+    "truncated": "Este texto é muito longo e é mostrado encurtado na tela. O guia continua guardado inteiro no pacote.",
     "back": "Voltar"
   },
   "sourceReader": {
@@ -1997,7 +1997,7 @@
     "hint": "A parte destacada é a que o NIDO usou para responder.",
     "usedPart": "Usada na resposta",
     "source": "Fonte original: {{source}}",
-    "notFound": "O guia não foi encontrado: o pack pode ter sido removido ou atualizado."
+    "notFound": "O guia não foi encontrado: o pacote pode ter sido removido ou atualizado."
   },
   "cpr": {
     "close": "Fechar a prática de RCP",
@@ -2011,8 +2011,8 @@
     "ofThirty": "de 30",
     "breathsNow": "2 respirações",
     "compressionCount": "Compressão {{count}}",
-    "voiceOn": "Voz: sim",
-    "voiceOff": "Voz: não",
+    "voiceOn": "Voz: ativada",
+    "voiceOff": "Voz: desativada",
     "noBeep": "Este telefone não consegue apitar: siga o círculo e a vibração.",
     "source": "Guia: {{title}} (NIDO Essencial). Fontes: {{sources}}. Verificado em {{verified}}.",
     "notForBabies": "Esta prática segue o guia de adultos e crianças maiores. Bebês e crianças pequenas têm outro guia: pergunte ao NIDO sobre RCP em bebês. Aprenda RCP em um curso prático e, numa emergência, ligue para o número de emergência.",
@@ -2054,9 +2054,9 @@
     "qwen2_5-1_5b-instruct-q4km": "Rápido. Ideal para o dia a dia. Leve e ágil, fica no seu dispositivo (~1,0 GB).",
     "qwen2_5-0_5b-instruct-q4km": "Leve. O chat mais rápido no dispositivo, para celulares com menos RAM (~0,4 GB). Melhor para perguntas rápidas do dia a dia; mais fraco em raciocínios complexos.",
     "qwen2_5-0_5b-instruct-q5km": "Só para comparar. O mesmo modelo de 0,5B com mais precisão (~5 bits em vez de ~4); +22 MB sobre o Q4_K_M. Fora do caminho padrão até que o teste em dispositivos mostre que melhora.",
-    "qwen3-0_6b-q4km": "Nova geração do modelo leve: segue melhor as instruções que o Qwen2.5-0.5B com um tamanho parecido (~0,4 GB). Download opcional enquanto é avaliado em dispositivos reais.",
+    "qwen3-0_6b-q4km": "Nova geração do modelo leve: segue melhor as instruções que o Qwen2.5-0.5B com um tamanho parecido (~0,4 GB). Transferência opcional enquanto é avaliado em dispositivos reais.",
     "qwen2_5-7b-instruct-q4km": "Potente. O raciocínio mais forte para tarefas complexas. Precisa de mais recursos (~4,7 GB).",
-    "lfm2_5-8b-a1b-q4km": "Mistura de especialistas: 8B no total, ~1,5B ativos por palavra. O mais rápido do nosso teste (~15 palavras/s) e o que melhor raciocina, mas pensa antes de responder: dê mais margem de resposta. ~5,2 GB.",
+    "lfm2_5-8b-a1b-q4km": "Mistura de especialistas: 8B no total, ~1,5B ativos por token. O mais rápido do nosso teste (~15 tokens/s) e o que melhor raciocina, mas pensa antes de responder: dê mais margem de resposta. ~5,2 GB.",
     "gemma-4-e4b-it-q4_0": "Local e privado. O modelo do Google para dispositivos. Equilíbrio entre desempenho e privacidade (~5,2 GB).",
     "corpus-standard": "Mais 1.000 temas tirados da Wikipédia para a busca local. ~600 KB.",
     "corpus-full": "Mais 4.000 temas tirados da Wikipédia para a busca local. ~2,4 MB.",
@@ -2074,15 +2074,15 @@
     "nido-sin-servicios-e5": "18 guias sem conexão para viver em casa quando os serviços falham: sem água, luz ou gás; para buscar em espanhol, português e inglês. ~0,3 MB.",
     "nido-hogar": "21 guias sem conexão (7 em cada idioma: espanhol, inglês e português) para prevenir e enfrentar os perigos da casa. ~0,3 MB.",
     "nido-hogar-e5": "21 guias sem conexão para prevenir e enfrentar os perigos da casa, para buscar em espanhol, português e inglês. ~0,3 MB.",
-    "nido-desastres": "18 guias sem conexão (6 em cada idioma: espanhol, inglês e português) de desastres específicos por região, além do pack Essencial. ~0,3 MB.",
-    "nido-desastres-e5": "18 guias sem conexão de desastres específicos por região, além do pack Essencial, para buscar em espanhol, português e inglês. ~0,3 MB.",
+    "nido-desastres": "18 guias sem conexão (6 em cada idioma: espanhol, inglês e português) de desastres específicos por região, além do pacote Essencial. ~0,3 MB.",
+    "nido-desastres-e5": "18 guias sem conexão de desastres específicos por região, além do pacote Essencial, para buscar em espanhol, português e inglês. ~0,3 MB.",
     "nido-campo": "18 guias sem conexão (6 em cada idioma: espanhol, inglês e português) para a vida no campo e com animais. ~0,3 MB.",
     "nido-campo-e5": "18 guias sem conexão para a vida no campo e com animais, para buscar em espanhol, português e inglês. ~0,3 MB.",
     "nido-viaje": "18 guias sem conexão (6 em cada idioma: espanhol, inglês e português) para a estrada e as viagens de carro. ~0,2 MB.",
     "nido-viaje-e5": "18 guias sem conexão para a estrada e as viagens de carro, para buscar em espanhol, português e inglês. ~0,2 MB.",
-    "minimum": "Só os modelos. Usa a base de conhecimento integrada de 858 temas (cópia da Wikipédia de 1º de novembro de 2026), sem downloads extras.",
-    "standard": "+ 1.000 temas tirados da Wikipédia e os guias de primeiros socorros, desastres e sobrevivência do NIDO (~1,87 MB de download extra).",
-    "full": "+ 5.000 temas tirados da Wikipédia no total e os guias de primeiros socorros, desastres e sobrevivência do NIDO (~4,40 MB de download extra).",
-    "encyclopedia": "Completo, mais os ~50.000 Artigos Vitais da Wikipédia (~169 MB de download extra)."
+    "minimum": "Só os modelos. Usa a base de conhecimento integrada de 858 temas (cópia da Wikipédia de 1º de novembro de 2026), sem transferências extras.",
+    "standard": "+ 1.000 temas tirados da Wikipédia e os guias de primeiros socorros, desastres e sobrevivência do NIDO (~1,87 MB de transferência extra).",
+    "full": "+ 5.000 temas tirados da Wikipédia no total e os guias de primeiros socorros, desastres e sobrevivência do NIDO (~4,40 MB de transferência extra).",
+    "encyclopedia": "Completo, mais os ~50.000 Artigos Vitais da Wikipédia (~169 MB de transferência extra)."
   }
 }
