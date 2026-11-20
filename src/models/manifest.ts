@@ -674,8 +674,8 @@ export const MODEL_CATALOG: CatalogModel[] = [
     label: "Wikipedia Vital Articles (+50,000 articles)",
     filename: "corpus/wiki-vital5.sqlite",
     sizeBytes: 163647488,
-    sha256: "d3b87d562baba3489f6878bf99783f50d504db94c347029771e53f6d1aecc666",
-    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v1/wiki-vital5.sqlite",
+    sha256: "c5f32a6ed86aa5d0ec7211ae53ac52811b8b63f74ba52232d1aea97ac98d2996",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v17/wiki-vital5.sqlite",
     // NIDO-hosted (Fase 2, 2026-10-05): CC BY-SA 4.0 Wikipedia content,
     // redistributed with attribution (ATTRIBUTION.txt in release assets).
     // Release assets are immutable per tag. Integrity does not depend on
@@ -695,8 +695,8 @@ export const MODEL_CATALOG: CatalogModel[] = [
     label: "Wikipedia Vital Articles (+50,000 articles, multilingual search)",
     filename: "corpus/wiki-vital5-e5.sqlite",
     sizeBytes: 163647488,
-    sha256: "6eda30dfc736faaad2925ada3f346a51e0211e57353e9842ccb897885da33886",
-    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/wiki-vital5-e5.sqlite",
+    sha256: "15cd1b2a2b5e3ec141778a1b5fe943f0f1bbe91bcf5131df86ab36274b74e4d2",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v17/wiki-vital5-e5.sqlite",
     // Compiled by NIDO from Wikipedia: CC BY-SA 4.0 (ShareAlike, so not MIT).
     // Notice inside the file (meta: license, attribution) and in
     // LICENSE-ATTRIBUTION.txt next to the download.
