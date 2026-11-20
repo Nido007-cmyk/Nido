@@ -230,6 +230,15 @@ Un pack v2 (`meta.formatVersion = 2`) añade las tablas `guides`, `regions`
 y `facts` y la columna `chunks.keys`; las versiones antiguas de la app lo
 siguen leyendo como antes.
 
+Desde la 0.1.109 la biblioteca del constructor valida mientras lee: un
+manifiesto con un campo ausente o mal formado, una fecha `verified` o
+`checked` imposible, un dato cuya cita no coincide con el texto de su
+fuente, un vector de chunk con la longitud equivocada o con valores
+dañados y una guía cuyas cuentas declaradas no cuadran con su contenido
+se rechazan con un error que nombra el problema, en vez de empaquetarse
+en silencio. Y una introducción muy corta sigue dando su chunk: ninguna
+sección se cae solo por ser corta.
+
 ## Poner un pack en tu teléfono
 
 **Para probar, por USB** (un build de desarrollo de NIDO, depuración USB activada):
