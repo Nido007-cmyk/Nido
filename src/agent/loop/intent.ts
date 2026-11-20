@@ -145,7 +145,13 @@ const ACT_PATTERNS: RegExp[] = [
   // "Recuerda / no olvides / acuérdate de" + infinitivo = recordatorio (acción),
   // no memoria: "recuerda comprar pan" ≠ "recuerda que mi cumple es en mayo".
   /\brecuerda +[a-záéíóúñü]+(ar|er|ir)\b/i,
-  /\bno (te )?olvides +[a-záéíóúñü]+(ar|er|ir)\b/i,
+  /\bno (?:te )?olvides (?:de )?[a-záéíóúñü]+(ar|er|ir)\b/i,
+  // F-PC55 (paquete de arreglos del móvil, §8.1): la gemela «no se te/me
+  // olvide|pase» con su infinitivo y su clítico opcional, y las dos
+  // inglesas con «to».
+  /\bno se (?:te|me) (?:olvide|pase) (?:de )?[a-záéíóúñü]+(ar|er|ir)(?:me|te|se|nos)?\b/i,
+  /\bdon'?t forget to [a-z]+\b/i,
+  /\bdo not forget to [a-z]+\b/i,
   /\bacu[eé]rdate de +[a-záéíóúñü]+(ar|er|ir)\b/i,
   /\bcreate a reminder\b/i,
   /\bremind me\b/i,

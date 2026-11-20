@@ -614,7 +614,11 @@ export const NEAR_MISS: Record<"contact" | "reminderManage" | "calendar" | "note
     ["en", "never forget my anniversary"],
     ["pt", "esquece isso"],
     ["pt", "esqueci a senha"],
-    ["pt", "não esqueça de ligar para a mãe"],
+    // «não esqueça de ligar para a mãe» salió de esta lista con
+    // F-PC55 (paquete de arreglos del móvil, §8.1): la apertura
+    // «não esqueça de» + infinitivo ES una orden de recordatorio
+    // (la gemela de «don't forget to…»), no una casi orden de
+    // olvido. Su cobertura positiva vive en olvidarParidad (R1).
   ],
   noteDelete: [
     ["es", "borré sin querer una foto"],

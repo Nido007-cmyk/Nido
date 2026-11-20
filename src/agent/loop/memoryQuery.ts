@@ -149,6 +149,19 @@ const STR: Record<string, Record<MemoryQueryLang, string>> = {
     en: "Here's what you've told me:",
     pt: "Isto é o que você me contou:",
   },
+  // F-PC60 y F-PC61 (paquete de arreglos del móvil, §8.6 y §8.7).
+  peopleCount: {
+    es: "Tienes {{n}} {{rel}} {{kept}}: {{names}}.",
+    en: "You have {{n}} {{rel}} saved: {{names}}.",
+    pt: "Você tem {{n}} {{rel}} guardados: {{names}}.",
+  },
+  // F-PC61 (serie de curas, tanda M): el resumen anuncia
+  // el resto que no enseña (FPC55-61-CURA-PREP §2.7).
+  aboutMore: {
+    es: "…y {{n}} más.",
+    en: "…and {{n}} more.",
+    pt: "…e mais {{n}}.",
+  },
 };
 
 function msg(key: string, lang: MemoryQueryLang, vars: Record<string, string> = {}): string {
@@ -226,6 +239,32 @@ const BIRTHDAY_RE = /cumplea[ñn]os|aniversario|birthday|aniversário/i;
  *  suelta, para que ni «esposa» ni «sister» la falsifiquen. */
 const NAME_CLAUSE_RE = /se llama|se chama|chama-se|name is|is called|^o nome\b[^.!?]*?(?<![\p{L}])é(?![\p{L}])|^el nombre\b[^.!?]*?(?<![\p{L}])es(?![\p{L}])|^the name\b[^.!?]*?(?<![\p{L}])is(?![\p{L}])/iu;
 
+/** F-PC57 (serie de curas, tanda M): ¿nombra el hecho a la
+ *  persona? El casa es el que la propia pieza ya usa para
+ *  `personName` en `birthdayServingSlice`: los tokens del
+ *  nombre, plegados, como tokens consecutivos y enteros
+ *  del hecho. La subcadena que esto sustituye casaba «Ana»
+ *  dentro de «Anabel» y de «Mariana», «Juan» en «Juana» y
+ *  «Luis» en «Luisa», y el orden de los hechos decidía
+ *  entre personas distintas (FPC55-61-CURA-PREP §2.3). */
+function factNamesPerson(content: string, personName: string): boolean {
+  const tokens = factTokens(content);
+  const nameWords = factTokens(personName).map((t) => fold(t.text));
+  if (!nameWords.length) return false;
+  for (let i = 0; i + nameWords.length <= tokens.length; i++) {
+    let matches = true;
+    for (let j = 0; j < nameWords.length; j++) {
+      if (fold(tokens[i + j]!.text) !== nameWords[j]) {
+        matches = false;
+        break;
+      }
+    }
+    if (matches) return true;
+  }
+  return false;
+}
+
+
 /** Hecho de cumpleaños de una persona (por nombre o parentesco) o propio. */
 function findBirthdayFact(
   mem: MemoryQueryData,
@@ -245,7 +284,7 @@ function findBirthdayFact(
     );
   }
   if (opts.personName) {
-    const hit = candidates.find((f) => fold(f.content).includes(fold(opts.personName!)));
+    const hit = candidates.find((f) => factNamesPerson(f.content, opts.personName!));
     if (hit) return hit.content;
   }
   if (opts.rel) {
@@ -381,6 +420,67 @@ function birthdayServingSlice(
   const word = relIdxs.length ? tokens[relIdxs[chosen]!]!.text : null;
   const slice = clauseSlice(fact, tokens, spans[chosen]!.from, spans[chosen]!.to);
   return slice ? { slice, word } : null;
+}
+
+/** F-PC56 rama 1 (serie de curas, tanda M): la extracción
+ *  de nombre de la rama 1, espejo de las cláusulas del
+ *  selector (ADV-F-C1, ADV-F2-C1 y ADV-F2-C2, sin cambiar
+ *  ni una letra): el verbo de nombre con su captura
+ *  guardada contra la conjunción suelta, y los marcos
+ *  «o nome / el nombre / the name» con su cópula. */
+const NAME_VERB_EXTRACT_RE =
+  /(?:se llama|se chama|chama-se|name is|is called)\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: (?!(?:e|y|and)(?![\p{L}]))[\p{L}]+)?)/iu;
+const NAME_FRAME_EXTRACT_RES: RegExp[] = [
+  /^o nome\b[^.!?]*?(?<![\p{L}])é\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: (?!(?:e|y|and)(?![\p{L}]))[\p{L}]+)?)/iu,
+  /^el nombre\b[^.!?]*?(?<![\p{L}])es\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: (?!(?:e|y|and)(?![\p{L}]))[\p{L}]+)?)/iu,
+  /^the name\b[^.!?]*?(?<![\p{L}])is\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: (?!(?:e|y|and)(?![\p{L}]))[\p{L}]+)?)/iu,
+];
+
+/** F-PC56 rama 1 (serie de curas, tanda M): el nombre que
+ *  el hecho guarda PARA el parentesco preguntado, con la
+ *  disciplina de segmento de su hermana
+ *  `birthdayServingSlice` (FPC55-61-CURA-PREP §2.2). La
+ *  rama servía la primera cláusula de nombre del hecho
+ *  entero: en el hecho combinado, papá recibía el nombre
+ *  de mamá. Aquí se localizan las ocurrencias del token
+ *  de parentesco con la disciplina de dos pasadas de la
+ *  hermana (exacta, luego plegada con la guardia
+ *  avô/avó), se toma la cláusula de cada ocurrencia y
+ *  dentro de ella se busca el nombre que esa cláusula le
+ *  ata: los marcos sobre la cláusula como sobre un
+ *  inicio, y el verbo de nombre desde el ancla. El
+ *  primer segmento que rinde nombre manda; si ninguno
+ *  rinde, null y la rama decide el desenlace honesto.
+ *  Devuelve también la palabra de parentesco tal como
+ *  está escrita en el hecho, para el posesivo pt. */
+function nameServingSlice(
+  fact: string,
+  rel: string
+): { name: string; word: string } | null {
+  const tokens = factTokens(fact);
+  let idxs = tokens.flatMap((tk, i) => (exactSameRel(tk.text, rel) ? [i] : []));
+  if (!idxs.length) {
+    const relLow = rel.trim().toLowerCase();
+    idxs = tokens.flatMap((tk, i) => {
+      const wLow = tk.text.trim().toLowerCase();
+      if ((relLow === "avô" || relLow === "avó") && (wLow === "avô" || wLow === "avó") && wLow !== relLow) {
+        return [];
+      }
+      return sameRel(tk.text, rel) ? [i] : [];
+    });
+  }
+  for (const i of idxs) {
+    const tk = tokens[i]!;
+    const clause = clauseSlice(fact, tokens, tk.start, tk.end);
+    for (const re of NAME_FRAME_EXTRACT_RES) {
+      const m = re.exec(clause);
+      if (m) return { name: m[1]!, word: tk.text };
+    }
+    const { end } = clauseBounds(fact, tokens, tk.start, tk.end);
+    const m = NAME_VERB_EXTRACT_RE.exec(fact.slice(tk.start, end));
+    if (m) return { name: m[1]!, word: tk.text };
+  }
+  return null;
 }
 
 /** Títulos y abreviaturas cuya punto NO cierra frase dentro de un
@@ -1147,6 +1247,53 @@ export function unfuseMi(text: string): string {
   return text.replace(MI_FUSION_RE, (_m, pre: string, w: string) => pre + (MI_FUSIONS[w.toLowerCase()] ?? w));
 }
 
+/**
+ * F-PC60 (serie de curas, tanda M): las formas de CONTEO
+ * sobre fichas, como constantes compartidas que
+ * `isMemoryStyleQuery` también reconoce — la disciplina
+ * de espejo de las ramas 1 a 4, sin la cual la pregunta
+ * con solo fichas guardadas ni entra en la ruta
+ * (FPC55-61-CURA-PREP §2.6, formas en su letra). La
+ * captura es la palabra preguntada, que la respuesta
+ * sirve tal como el usuario la escribió; en las formas
+ * totales, la palabra de personas de cada lengua.
+ */
+const COUNT_Q_RES: { re: RegExp; total?: boolean }[] = [
+  { re: /¿?cu[áa]nt[oa]s?\s+(hijos|hijas|hermanos|hermanas|nietos|nietas|primos|primas|tíos|tías|sobrinos|sobrinas)\s+tengo\??$/i },
+  { re: /¿?cu[áa]ntas?\s+(personas)\s+tienes\s+guardadas\??$/i, total: true },
+  { re: /how many (kids|children|sons|daughters|brothers|sisters|grandchildren|cousins) do i have\??$/i },
+  { re: /how many (people) do you have saved\??$/i, total: true },
+  { re: /quant[oa]s?\s+(filhos|filhas|irmãos|irmãs|netos|netas|primos|primas|tios|tias|sobrinhos|sobrinhas)\s+(?:eu\s+)?tenho\??$/i },
+  { re: /quantas (pessoas) você guardou\??$/i, total: true },
+];
+
+/** Los grupos de REL_GROUPS que cada palabra de conteo
+ *  suma, por su índice en REL_GROUPS. La unión declarada
+ *  de los plurales genéricos (§2.6): el plural genérico
+ *  («hijos», «filhos», «kids», «children») cuenta los dos
+ *  grupos hijo e hija, y el de hermanos los dos suyos;
+ *  la misma clase gramatical manda en los demás pares
+ *  (nietos, primos, tíos, sobrinos y sus formas pt/en sin
+ *  género). Las formas específicas de género cuentan
+ *  solo su grupo. */
+const COUNT_TOKEN_GROUPS: Record<string, number[]> = {
+  hijos: [6, 7], filhos: [6, 7], kids: [6, 7], children: [6, 7],
+  hijas: [7], filhas: [7], daughters: [7], sons: [6],
+  hermanos: [2, 3], irmaos: [2, 3], brothers: [2, 3], siblings: [2, 3],
+  hermanas: [3], irmas: [3], sisters: [3],
+  nietos: [22, 23], netos: [22, 23], grandchildren: [22, 23],
+  nietas: [23], netas: [23],
+  primos: [12, 13], cousins: [12, 13], primas: [13],
+  tios: [10, 11], tias: [11],
+  sobrinos: [24, 25], sobrinhos: [24, 25], sobrinas: [25],
+};
+
+/** Las palabras de conteo femeninas en es (plegadas): su
+ *  participio en la respuesta es «guardadas». */
+const ES_FEM_COUNT_WORDS = new Set([
+  "hijas", "hermanas", "nietas", "primas", "tias", "sobrinas", "personas",
+]);
+
 export function isMemoryStyleQuery(userText: string): boolean {
   const t = unfuseMi((userText ?? "").trim()).replace(/\s+([?!.]+)$/, "$1").replace(/[.!]+$/, "");
   if (!t) return false;
@@ -1157,6 +1304,7 @@ export function isMemoryStyleQuery(userText: string): boolean {
   if (BDAY_COUNTDOWN_SELF_RES.some((re) => re.test(t))) return true;
   if (BDAY_COUNTDOWN_PERSON_RES.some((re) => re.test(t))) return true;
   if (ABOUT_ME_Q_RES.some((re) => re.test(t))) return true;
+  if (COUNT_Q_RES.some((c) => c.re.test(t))) return true;
   return false;
 }
 
@@ -1183,30 +1331,33 @@ export function answerMemoryQuery(
     // «name is» / «is called» (en) guardan el mismo dato y la app
     // decía «no me lo has contado» en ninguna dirección. La
     // canónica es el suelo: el hecho es sirve como hasta hoy.
-    const fact = mem.facts.find(
+    const candidates = mem.facts.filter(
       (f) => BIRTHDAY_RE.test(f.content) === false && NAME_CLAUSE_RE.test(f.content)
         && fold(f.content).split(/[^a-z0-9-]+/).some((w) => w && sameRel(w, rel))
     );
-    if (fact) {
-      // ADV-F-C1: la extracción espeja las cláusulas del selector —
-      // «chama-se» trae el nombre tras el reflexivo, y en el marco
-      // «o nome d… é» el nombre va tras la cópula, al final.
-      // ADV-F2-C1: los marcos es/en extraen igual, tras su cópula.
-      // ADV-F2-C2: el segundo término de la captura no puede ser la
-      // conjunción suelta («e» pt, «y» es, «and» en): «…se chama
-      // João e ele mora…» servía «João e». La mirada exige la palabra
-      // entera, así los nombres compuestos legítimos («María Elena»,
-      // «Mary Ann», «João Pedro») se siguen sirviendo enteros.
-      const m =
-        /(?:se llama|se chama|chama-se|name is|is called)\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: (?!(?:e|y|and)(?![\p{L}]))[\p{L}]+)?)/iu.exec(fact.content) ??
-        /^o nome\b[^.!?]*?(?<![\p{L}])é\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: (?!(?:e|y|and)(?![\p{L}]))[\p{L}]+)?)/iu.exec(fact.content) ??
-        /^el nombre\b[^.!?]*?(?<![\p{L}])es\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: (?!(?:e|y|and)(?![\p{L}]))[\p{L}]+)?)/iu.exec(fact.content) ??
-        /^the name\b[^.!?]*?(?<![\p{L}])is\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: (?!(?:e|y|and)(?![\p{L}]))[\p{L}]+)?)/iu.exec(fact.content);
-      // ADV-F-C2, asiento del hecho: la palabra de parentesco tal
-      // como está escrita en el hecho (con su acento) es el registro
-      // servido en este asiento; de ella sale el género del posesivo.
-      const factRel = fact.content.split(/[^\p{L}]+/u).find((w) => w && sameRel(w, rel));
-      if (m) return msg("personName", lang, { rel, name: m[1], poss: ptPossessive(ptServingRel(factRel, rel)) });
+    // F-PC56 rama 1 (serie de curas, tanda M): la selección
+    // de hechos no cambia; lo que cambia es qué se extrae
+    // de cada uno. Se iteran los hechos que la selección
+    // admite, en su orden, y de cada uno se sirve el
+    // nombre de la cláusula del parentesco preguntado
+    // (nameServingSlice), nunca la primera cláusula del
+    // hecho: en el hecho combinado, papá recibía el
+    // nombre de mamá. La palabra de parentesco tal como
+    // está escrita en el segmento servido es el registro
+    // del que sale el género del posesivo pt (la
+    // disciplina de ADV-F-C2, ahora sobre el segmento).
+    // Si ningún segmento de ningún hecho rinde nombre
+    // para quien se pregunta, el desenlace es el
+    // notKnown honesto.
+    for (const fact of candidates) {
+      const served = nameServingSlice(fact.content, rel);
+      if (served) {
+        return msg("personName", lang, {
+          rel,
+          name: served.name,
+          poss: ptPossessive(ptServingRel(served.word, rel)),
+        });
+      }
     }
     return msg("notKnown", lang);
   }
@@ -1215,8 +1366,26 @@ export function answerMemoryQuery(
   if (SELF_NAME_Q_RES.some((re) => re.test(t))) {
     const fact = mem.facts.find((f) => /me llamo|my name is|meu nome é/i.test(f.content));
     if (fact) {
-      const m = /(?:me llamo|my name is|meu nome é)\s+(.+)$/i.exec(fact.content);
-      if (m) return msg("selfName", lang, { name: m[1].replace(/[.!]+$/, "") });
+      // F-PC56 rama 2 (serie de curas, tanda M): la captura
+      // `(.+)$` servía la cola entera del hecho tras la
+      // frase de nombre propio («Me llamo Ana y mi esposo
+      // se llama Luis» → «Ana y mi esposo se llama Luis»).
+      // La captura se aplica ahora sobre la cláusula de la
+      // frase (clauseSlice, con la frase como ancla): el
+      // nombre propio sale sin cola, y el compuesto
+      // («Ana María») sale entero porque la conjunción no
+      // entra en su cláusula.
+      const phrase = /(?:me llamo|my name is|meu nome é)\s+/i.exec(fact.content);
+      if (phrase) {
+        const segment = clauseSlice(
+          fact.content,
+          factTokens(fact.content),
+          phrase.index,
+          phrase.index + phrase[0].length
+        );
+        const m = /(?:me llamo|my name is|meu nome é)\s+(.+)$/i.exec(segment);
+        if (m) return msg("selfName", lang, { name: m[1].replace(/[.!]+$/, "") });
+      }
     }
     return msg("notKnown", lang);
   }
@@ -1287,7 +1456,57 @@ export function answerMemoryQuery(
     for (const p of mem.people.slice(0, 4))
       lines.push(`• ${p.name}${p.relationship ? ` (${p.relationship})` : ""}`);
     if (!lines.length) return msg("notKnown", lang);
+    // F-PC61 (serie de curas, tanda M): los topes (6
+    // hechos, 4 personas) se quedan; lo que entra es el
+    // anuncio del resto. Si quedan hechos o personas
+    // fuera de lo enseñado, la respuesta añade la línea
+    // final con su cuenta; con todo enseñado no se añade
+    // ni una letra (la salida es byte a byte la de hoy).
+    const rest =
+      mem.facts.length - Math.min(6, mem.facts.length) +
+      (mem.people.length - Math.min(4, mem.people.length));
+    if (rest > 0) lines.push(msg("aboutMore", lang, { n: String(rest) }));
     return `${msg("aboutYou", lang)}\n${lines.join("\n")}`;
+  }
+
+  // 4b) F-PC60 (serie de curas, tanda M): «¿cuántos hijos
+  // tengo?» — conteo sobre las FICHAS guardadas. Ninguna
+  // rama contaba ítems: la forma caía a la cita de un
+  // hecho o a la negación con las fichas presentes. La
+  // rama cuenta las personas cuyo parentesco cae en los
+  // grupos de la palabra preguntada (con la unión de los
+  // plurales genéricos de COUNT_TOKEN_GROUPS) y sirve la
+  // palabra tal como se escribió, el número y los
+  // nombres en orden de guardado. La forma total cuenta
+  // `mem.people` entero. Con cero personas de ese
+  // parentesco la rama NO responde: cae a la rama 5, que
+  // cita el hecho si el conteo vive como hecho («Tengo
+  // cuatro hijos») o rinde el notKnown honesto.
+  const countQ = COUNT_Q_RES.map((c) => ({ c, m: c.re.exec(t) })).find((x) => x.m !== null);
+  if (countQ) {
+    const word = countQ.m![1]!;
+    const pool = countQ.c.total
+      ? mem.people
+      : mem.people.filter((p) => {
+          if (!p.relationship) return false;
+          const groups = COUNT_TOKEN_GROUPS[fold(word)] ?? [];
+          const folded = fold(p.relationship);
+          return groups.some((gi) => REL_GROUPS[gi]!.includes(folded));
+        });
+    if (pool.length) {
+      return msg("peopleCount", lang, {
+        n: String(pool.length),
+        rel: word,
+        // El participio es concuerda con la palabra
+        // preguntada («hijos guardados», «personas
+        // guardadas»): la batería de la tanda lo fija en
+        // esa forma contra la plantilla de §2.6, y el
+        // asiento de cierre lo declara. En pt manda la
+        // forma fija de la plantilla, como en §2.6.
+        kept: ES_FEM_COUNT_WORDS.has(fold(word)) ? "guardadas" : "guardados",
+        names: pool.map((p) => p.name).join(", "),
+      });
+    }
   }
 
   // 5) Genérica sobre datos propios: «¿qué coche tengo?», «¿dónde vivo?»,

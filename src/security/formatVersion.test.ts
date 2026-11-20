@@ -110,3 +110,51 @@ describe("checkFormatVersion", () => {
     expect(INSTALL_JOURNAL_VERSION).toBe(1);
   });
 });
+
+describe("F-PC65 · la forma canónica y el contraste del grandfathering (paquete de arreglos, §3)", () => {
+  it("rechaza \"0x1\" (hexadecimal colado por Number())", () => {
+    expect(() => check("0x1")).toThrowError(TestVersionError);
+  });
+  it("rechaza \"1e0\" (exponente colado por Number())", () => {
+    expect(() => check("1e0")).toThrowError(TestVersionError);
+  });
+  it("rechaza \"1.0\" en cadena (punto decimal como representación)", () => {
+    expect(() => check("1.0")).toThrowError(TestVersionError);
+  });
+  it("acepta \"1\" y devuelve 1", () => {
+    expect(check("1")).toBe(1);
+  });
+  it("acepta el número 1", () => {
+    expect(check(1)).toBe(1);
+  });
+  it("acepta \" 1 \" (los espacios alrededor son la forma escrita por la app)", () => {
+    expect(check(" 1 ")).toBe(1);
+  });
+  it("acepta \"01\" (ceros a la izquierda, entero decimal)", () => {
+    expect(check("01")).toBe(1);
+  });
+  it("acepta el número 1.0 (es el entero 1, no una representación)", () => {
+    expect(check(1.0)).toBe(1);
+  });
+  it("rechaza \"2\" (major distinto del soportado)", () => {
+    expect(() => check("2")).toThrowError(TestVersionError);
+  });
+  it("rechaza \"abc\"", () => {
+    expect(() => check("abc")).toThrowError(TestVersionError);
+  });
+  it("rechaza la cadena vacía", () => {
+    expect(() => check("")).toThrowError(TestVersionError);
+  });
+  it("rechaza \"1.5\"", () => {
+    expect(() => check("1.5")).toThrowError(TestVersionError);
+  });
+  it("ausente con allowMissingAs 1: acepta y devuelve 1", () => {
+    expect(check(undefined, { allowMissingAs: 1 })).toBe(1);
+  });
+  it("ausente con allowMissingAs 2: rechaza (no coincide con el soportado)", () => {
+    expect(() => check(undefined, { allowMissingAs: 2 })).toThrowError(TestVersionError);
+  });
+  it("ausente sin allowMissingAs: rechaza", () => {
+    expect(() => check(undefined)).toThrowError(TestVersionError);
+  });
+});

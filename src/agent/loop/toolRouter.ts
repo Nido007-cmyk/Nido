@@ -412,14 +412,14 @@ const STARTER_RULES: Array<{ re: RegExp; tool: "note" | "reminder" | "message"; 
   // adversaria de la casa los sella como demasiado ambiguos para
   // disparar nada. Solo formas con su objeto o la locución entera.
   { re: new RegExp(`^${POLITE}(?:toma nota|guarda una nota|crea una nota|haz una nota|escribe una nota|agrega una nota|a[ñn]ade una nota):?\\s*$`, "i"), tool: "note", lang: "es" },
-  { re: new RegExp(`^${POLITE}(?:toma nota|tome nota|salva uma nota|salve uma nota|cria uma nota|crie uma nota|escreve uma nota|escreva uma nota|guarda uma nota):?\\s*$`, "i"), tool: "note", lang: "pt" },
+  { re: new RegExp(`^${POLITE}(?:toma nota|tome nota|salva uma nota|salve uma nota|cria uma nota|crie uma nota|escreve uma nota|escreva uma nota|guarda uma nota|guarde uma nota):?\\s*$`, "i"), tool: "note", lang: "pt" },
   // «nota:» pelado, como la regla de contenido de la casa: solo con
   // los dos puntos («nota» sola es demasiado común). La palabra es
   // igual en es y pt; el idioma fino lo fija la interfaz al llamar.
   { re: new RegExp(`^${POLITE}nota\\s*:$`, "i"), tool: "note", lang: "es" },
   { re: new RegExp(`^${POLITE}send (?:a )?message(?: to)?$`, "i"), tool: "message", lang: "en" },
   { re: new RegExp(`^${POLITE}(?:manda|env[ií]a)(?:me)? un mensaje(?: a)?$`, "i"), tool: "message", lang: "es" },
-  { re: new RegExp(`^${POLITE}(?:envia|manda) uma mensagem(?: (?:ao|a|para))?$`, "i"), tool: "message", lang: "pt" },
+  { re: new RegExp(`^${POLITE}(?:envia|envie|manda|mande) uma mensagem(?: (?:ao|a|para))?$`, "i"), tool: "message", lang: "pt" },
 ];
 function starterAction(t: string): ToolAction | null {
   for (const { re, tool, lang } of STARTER_RULES) {
@@ -655,7 +655,7 @@ const NOTE_SAVE_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   },
   {
     re: new RegExp(
-      `^${POLITE}(?:anota a[ií]|anote|tome nota|toma nota|salva uma nota|salve uma nota|cria uma nota|crie uma nota|escreve uma nota|escreva uma nota)(?:\\s+(?:dizendo|que|de)|:)?\\s+(.+)$`,
+      `^${POLITE}(?:anota a[ií]|anote|tome nota|toma nota|salva uma nota|salve uma nota|cria uma nota|crie uma nota|escreve uma nota|escreva uma nota|guarda uma nota|guarde uma nota)(?:\\s+(?:dizendo|que|de)|:)?\\s+(.+)$`,
       "is",
     ),
     lang: "pt",
@@ -668,9 +668,9 @@ const NOTE_SAVE_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
 ];
 
 const NOTE_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
-  { re: /^(?:(?:mu[eé]strame|lista|listar|ver|dame|ens[eé][ñn]ame|abre)\s+)?(?:mis|las|todas las|todas mis)\s+notas(?: guardadas)?$|^qu[eé] notas tengo$|^cu[aá]les son mis notas$|^notas$/i, lang: "es" },
-  { re: /^(?:(?:show|list|see|open)(?: me)?\s+)?(?:my|all|all my)\s+notes$|^what notes do i have$/i, lang: "en" },
-  { re: /^(?:(?:mostra|mostre|lista|listar|ver|abre)\s+)?(?:minhas|as|todas as)\s+notas$|^quais notas eu tenho$/i, lang: "pt" },
+  { re: /^(?:(?:mu[eé]strame|lista|listar|ver|dame|ens[eé][ñn]ame|abre)\s+)?(?:mis|las|todas las|todas mis)\s+notas(?: guardadas)?$|^qu[eé] notas tengo(?: guardadas)?$|^cu[aá]les son mis notas$|^notas$/i, lang: "es" },
+  { re: /^(?:(?:show|list|see|open)(?: me)?\s+)?(?:my|all|all my)\s+notes$|^what notes do i have(?: saved)?$/i, lang: "en" },
+  { re: /^(?:(?:mostra|mostre|lista|listar|ver|abre)\s+)?(?:minhas|as minhas|as|todas as)\s+notas$|^quais notas eu tenho$|^que notas (?:eu )?tenho(?: salvas)?$/i, lang: "pt" },
 ];
 
 // 0.1.14 (guía de usuario): "qué recordatorios tengo" no tenía camino propio.
@@ -1454,6 +1454,7 @@ type Key =
   | "memoryForgot"
   | "memoryForgetNone"
   | "memoryForgetWhich"
+  | "memoryForgetMore"
   | "countdownToday"
   | "countdownOne"
   | "countdownMany"
@@ -1588,6 +1589,14 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
     es: "Hay varios recuerdos que coinciden; dime cuál con más detalle o bórralo en «Mi memoria»:",
     en: "Several memories match; tell me which one in more detail, or delete it in “My Memory”:",
     pt: "Há várias lembranças que coincidem; diga qual com mais detalhe ou apague em “Minha Memória”:",
+  },
+  // Residuo memoryForgetWhich (§10.16 del paquete, juzgado con causa
+  // propia): el corte a 6 se anuncia, como el resumen de memoria
+  // anuncia el suyo desde F-PC61.
+  memoryForgetMore: {
+    es: "…y {{n}} más.",
+    en: "…and {{n}} more.",
+    pt: "…e mais {{n}}.",
   },
   memoryForgetHelp: {
     es: "No borro recuerdos por mi cuenta. Para olvidar algo, abre el menú → «Mi memoria» y bórralo ahí: verás exactamente qué se elimina.",
@@ -2484,7 +2493,9 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
         });
         if (matches.length === 0) return say(routerMessage("memoryForgetNone", lang, { q: action.query }));
         if (matches.length > 1) {
-          return say(`${routerMessage("memoryForgetWhich", lang)}\n${matches.slice(0, 6).map((m) => `• ${m.label}`).join("\n")}`);
+          const rest = matches.length - 6;
+          const more = rest > 0 ? `\n${routerMessage("memoryForgetMore", lang, { n: String(rest) })}` : "";
+          return say(`${routerMessage("memoryForgetWhich", lang)}\n${matches.slice(0, 6).map((m) => `• ${m.label}`).join("\n")}${more}`);
         }
         const chosen = matches[0];
         const out = await run("delete_memory", { id: chosen.id, kind: chosen.kind, content: chosen.label });

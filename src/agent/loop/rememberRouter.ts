@@ -35,19 +35,19 @@ export interface RememberExtraction {
  * Patrones de extracción: [regex, índice del grupo de captura].
  * Ordenados de más específico a más general.
  */
-const EXTRACTION_PATTERNS: Array<{ re: RegExp; group: number }> = [
+const EXTRACTION_PATTERNS: Array<{ re: RegExp; group: number; cedeInfinitivo?: boolean }> = [
   // "recuerda que el cumpleaños de mi mamá es el 15 de marzo"
-  { re: /recuerda( que|te que)?[:\s]+(.+)/i, group: 2 },
+  { re: /recuerda( que|te que)?[:\s]+(.+)/i, group: 2, cedeInfinitivo: true },
   // "recuérdame que X" / "recuerdame que X" (con pronombre "me")
   { re: /recu[eé]rdame( que)?[:\s]+(.+)/i, group: 2 },
   // "acuérdate de que X" / "acuérdate que X"
-  { re: /acu[eé]rdate( de)?( que)?[:\s]+(.+)/i, group: 3 },
+  { re: /acu[eé]rdate( de)?( que)?[:\s]+(.+)/i, group: 3, cedeInfinitivo: true },
   // 0.1.41 (prueba física): «que no se te olvide que el martes pago la
   // renta» iba a conversación y el modelo lo repetía como «La respuesta
   // es: …». Formas con «se»: «no se te olvide», «que no se te pase».
-  { re: /^(?:que\s+)?no\s+se\s+te\s+(?:olvide|pase)(?:\s+de)?(?:\s+que)?[:\s]+(.+)/i, group: 1 },
+  { re: /^(?:que\s+)?no\s+se\s+te\s+(?:olvide|pase)(?:\s+de)?(?:\s+que)?[:\s]+(.+)/i, group: 1, cedeInfinitivo: true },
   // "no olvides que X" / "no te olvides de que X"
-  { re: /no (te )?olvides( de)?( que)?[:\s]+(.+)/i, group: 4 },
+  { re: /no (te )?olvides( de)?( que)?[:\s]+(.+)/i, group: 4, cedeInfinitivo: true },
   // "guarda en tu memoria que X" / "guarda en memoria: X"
   // NOTA: solo captura si hay "que" explícito después de "memoria",
   // para evitar capturar cláusulas de propósito como "para que me avises".
@@ -97,7 +97,10 @@ const EXTRACTION_PATTERNS: Array<{ re: RegExp; group: number }> = [
   // 0.1.41: "keep in mind that X" / "bear in mind that X" (como orden).
   { re: /^(?:(?:please|hey|ok|okay|nido|also|and)[,!]?\s+)*(?:keep|bear) in mind(?: that)?[:\s]+(.+)/i, group: 1 },
   // Inglés: "don't forget that X"
-  { re: /don't forget( that)?[:\s]+(.+)/i, group: 2 },
+  { re: /don't forget( that)?[:\s]+(.+)/i, group: 2, cedeInfinitivo: true },
+  // F-PC55 (paquete de arreglos del móvil, §8.5): la gemela sin
+  // contracción, «do not forget that X», que faltaba.
+  { re: /do not forget( that)?[:\s]+(.+)/i, group: 2, cedeInfinitivo: true },
   // 0.1.14: portugués — "lembre que X", "me lembra que X", "lembre-se de que X".
   { re: /lembr[ae](?:-se)?(?: de)? que[:\s]+(.+)/i, group: 1 },
   // 0.1.41: "tenha em mente que X" / "leve em conta que X".
@@ -154,6 +157,20 @@ const QUERY_PATTERNS: RegExp[] = [
   /(dime|cu[áa]l es) la fecha de/i,
   // "¿cuándo es el cumpleaños de X?"
   /cu[áa]ndo es el cumplea[ñn]os de/i,
+  // F-PC40 (paquete de arreglos del móvil, §6.4): las gemelas en
+  // y pt de los patrones de consulta; sin ellas la consulta
+  // en/pt se guardaba como hecho. La gemela en del patrón
+  // «dime / cuál es la fecha de» NO entra: medida contra el
+  // árbol, clasifica «what is the date of the concert» como
+  // consulta de memoria y rompe la guarda R-06 de intent (las
+  // gemelas es del mismo patrón sí clasifican así en la base:
+  // la paridad de esa rama queda como hueco declarado, para
+  // dirimen con su enmienda).
+  /remember (?:me )?(?:the date of|when is|what is)/i,
+  /when is (?:the )?birthday of/i,
+  /lembra (?:que dia (?:é|e)|qual (?:é|e) a data)/i,
+  /(?:me (?:diz|diga)|qual (?:é|e)) a data d[aeo]/i,
+  /quando (?:é|e) o anivers[áa]rio d[aeo]/i,
 ];
 
 /**
@@ -344,7 +361,7 @@ export interface PersonExtraction {
 const ES_REL =
   "mamá|mama|papá|papa|madre|padre|hermano|hermana|esposo|esposa|hijo|hija|novio|novia|amigo|amiga|tío|tio|tía|tia|primo|prima|abuelo|abuela|sobrino|sobrina|cuñado|cuñada|cunado|cunada|suegro|suegra|yerno|nuera|nieto|nieta|compadre|comadre|pareja";
 const PT_REL =
-  "mãe|mae|pai|irmão|irmao|irmã|irma|esposa|marido|esposo|filho|filha|namorado|namorada|amigo|amiga|tio|tia|primo|prima|avô|avo|avó|sobrinho|sobrinha|cunhado|cunhada|sogro|sogra|genro|nora|neto|neta|compadre|comadre";
+  "mãe|mae|pai|irmão|irmao|irmã|irma|esposa|marido|esposo|filho|filha|namorado|namorada|amigo|amiga|tio|tia|primo|prima|avô|avo|avó|sobrinho|sobrinha|cunhado|cunhada|sogro|sogra|genro|nora|neto|neta|compadre|comadre|parceiro|parceira";
 /**
  * Nombre: corrida de 1 a 3 palabras (la validación fina va en
  * validName, en código, porque con la bandera /i las clases de
@@ -482,77 +499,238 @@ export function fixRelationTypos(text: string): string {
 export function extractPeople(userText: string): PersonExtraction[] {
   const trimmed = fixRelationTypos(userText.trim());
   if (!trimmed || looksLikeQuestion(trimmed)) return [];
-  const out: PersonExtraction[] = [];
   const start = "^(?:(?:hola|buenas|oye)[,.\\s]+)?(?:recuerda(?:te)?(?:\\s+que)?[,\\s]+)?";
 
-  // Plural: "mis hijos se llaman Leo y Max"
+  // F-PC59 (serie de curas): la extracción recoge a TODAS las personas
+  // del dictado, no solo la primera. Cada patrón rinde sus
+  // coincidencias y la salida va en el orden del texto, deduplicada
+  // por nombre plegado.
+  const found: Array<{ at: number; person: PersonExtraction }> = [];
+  const seen = new Set<string>();
+  const push = (
+    at: number,
+    rawName: string | null,
+    relationship: string,
+    notes?: string
+  ) => {
+    if (!rawName) return;
+    const name = validName(rawName);
+    if (!name) return;
+    const key = name
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+    if (seen.has(key)) return;
+    seen.add(key);
+    found.push({
+      at,
+      person: notes ? { name, relationship, notes } : { name, relationship },
+    });
+  };
+
+  // Plural: "mis hijos se llaman Leo, Max y Ana" — la lista entera,
+  // partida por comas y por la conjunción, cada nombre validado.
   const mp = new RegExp(
-    `${start}mis (hijos|hijas|hermanos|hermanas) se llaman (${NAME_SRC}) y (${NAME_SRC})`,
+    `${start}mis (hijos|hijas|hermanos|hermanas) se llaman (.+)`,
     "i"
   ).exec(trimmed);
   if (mp) {
     const relBase = mp[1].toLowerCase().replace(/s$/, "");
-    for (const raw of [mp[2], mp[3]]) {
-      const name = validName(raw);
-      if (name) out.push({ name, relationship: relBase, notes: trimmed });
+    for (const raw of mp[2].split(/\s*,\s*|\s+y\s+/)) {
+      push(mp.index, raw.trim().replace(/[.!]+$/, ""), relBase, trimmed);
     }
-    if (out.length) return out;
   }
 
-  // "mi mejor amigo se llama Diego"
-  const mb = new RegExp(`${start}mi mejor (amigo|amiga) se llama (${NAME_SRC})`, "i").exec(trimmed);
-  if (mb) {
-    const name = validName(mb[2]);
-    if (name) return [{ name, relationship: `mejor ${mb[1].toLowerCase()}` }];
+  // Los singulares barren el texto en forma global. La cabecera de
+  // segmento (inicio, puntuación, conjunción o el saludo/gatillo de
+  // siempre) mantiene la precisión de 0.1.20: «la esposa de mi
+  // hermano se llama Laura» no casa, porque «mi hermano» no abre
+  // segmento.
+  const lead =
+    "(?:^|[,.;]\\s*|\\s+(?:y|e|and)\\s+|(?:hola|buenas|oye|olá|ola|oi|recuerda(?:te)?(?:\\s+que)?|lembr[ae](?:-se)?(?:\\s+de)?\\s+que)[,.\\s]+)";
+  const sweep: Array<{
+    re: RegExp;
+    nameGroup: number;
+    rel: (m: RegExpExecArray) => string;
+    notes?: boolean;
+  }> = [
+    // "mi mejor amigo se llama Diego"
+    {
+      re: new RegExp(`${lead}mi mejor (amigo|amiga) se llama (${NAME_SRC})`, "gi"),
+      nameGroup: 2,
+      rel: (m) => `mejor ${m[1].toLowerCase()}`,
+    },
+    // "mi [relación] se llama [Nombre]"
+    {
+      re: new RegExp(`${lead}mi (${ES_REL}) se llama (${NAME_SRC})`, "gi"),
+      nameGroup: 2,
+      rel: (m) => canonRel(m[1]),
+    },
+    // "recuerda que mi [relación] [Nombre]..." (sin «se llama»: si lo
+    // hay, el patrón anterior ya lo capturó; «se» está vetado como
+    // nombre).
+    {
+      re: new RegExp(`recuerda( que)? mi (${ES_REL}) (${NAME_SRC})`, "gi"),
+      nameGroup: 3,
+      rel: (m) => canonRel(m[2]),
+      notes: true,
+    },
+    // "my mom's name is Mary", "my brother is called John"
+    // B12 (barrido «revisa todo», clase 1): la lista gana los parentescos
+    // extendidos (uncle/aunt/grandfather/grandmother/cousin/nephew/
+    // niece) que es y pt ya creaban y REL_GROUPS ya sabe resolver.
+    // F-PC43 (serie de curas): tras niece entran grandson, granddaughter
+    // y partner, y el bloque extendido del censo (grandpa, grandma,
+    // godfather, godmother y los cinco -in-law).
+    {
+      re: new RegExp(
+        `${lead}my (mom|dad|mother|father|brother|sister|husband|wife|son|daughter|boyfriend|girlfriend|friend|uncle|aunt|grandfather|grandmother|cousin|nephew|niece|grandson|granddaughter|partner|grandpa|grandma|godfather|godmother|father-in-law|mother-in-law|brother-in-law|sister-in-law|son-in-law|daughter-in-law)(?:'s name)? is (?:called )?(${NAME_SRC})`,
+        "gi"
+      ),
+      nameGroup: 2,
+      rel: (m) => m[1].toLowerCase(),
+    },
+    // F-PC43: "my best friend is called Sam"
+    {
+      re: new RegExp(`${lead}my best friend is (?:called )?(${NAME_SRC})`, "gi"),
+      nameGroup: 1,
+      rel: () => "best friend",
+    },
+    // "se llama [Nombre], es mi [relación]"
+    {
+      re: new RegExp(`se llama (${NAME_SRC}),? es mi (${ES_REL})`, "gi"),
+      nameGroup: 1,
+      rel: (m) => canonRel(m[2]),
+    },
+    // PT: "minha mãe se chama Maria", "meu irmão chama-se João"
+    // F-PC58 (serie de curas): el artículo delante del posesivo entra,
+    // como el lado de consulta ya admite.
+    {
+      re: new RegExp(
+        `${lead}(?:[ao]\\s+)?(?:minha|meu) (${PT_REL}) (?:se chama|chama-se) (${NAME_SRC})`,
+        "gi"
+      ),
+      nameGroup: 2,
+      rel: (m) => canonRel(m[1]),
+    },
+    // F-PC43: "meu melhor amigo se chama Sam"
+    {
+      re: new RegExp(
+        `${lead}(?:meu|minha) melhor (amigo|amiga) se chama (${NAME_SRC})`,
+        "gi"
+      ),
+      nameGroup: 2,
+      rel: (m) => `melhor ${m[1].toLowerCase()}`,
+    },
+  ];
+  for (const s of sweep) {
+    let m: RegExpExecArray | null;
+    s.re.lastIndex = 0;
+    while ((m = s.re.exec(trimmed)) !== null) {
+      const raw = m[s.nameGroup];
+      const name = raw ? validName(raw) : null;
+      if (raw && name) {
+        push(m.index, raw, s.rel(m), s.notes ? trimmed : undefined);
+        // La captura de nombre puede comerse el puente hacia la
+        // presentación siguiente («Marta y mi»): el barrido reanuda
+        // tras el nombre validado, no tras la captura entera.
+        const nameAt = m[0].indexOf(raw);
+        if (nameAt >= 0) {
+          const kept = raw
+            .split(/\s+/)
+            .slice(0, name.split(" ").length)
+            .join(" ").length;
+          s.re.lastIndex = m.index + nameAt + kept;
+        }
+      }
+      if (s.re.lastIndex <= m.index) s.re.lastIndex = m.index + 1;
+    }
   }
 
-  // "mi [relación] se llama [Nombre]"
-  const m1 = new RegExp(`${start}mi (${ES_REL}) se llama (${NAME_SRC})`, "i").exec(trimmed);
-  if (m1) {
-    const name = validName(m1[2]);
-    if (name) return [{ name, relationship: canonRel(m1[1]) }];
+  // F-PC43: los plurales en y pt, espejo del es, con su mapa de
+  // singular explícito.
+  const PLURAL_EN: Record<string, string> = {
+    kids: "kid",
+    children: "child",
+    sons: "son",
+    daughters: "daughter",
+    brothers: "brother",
+    sisters: "sister",
+  };
+  const mpEn = new RegExp(
+    `${lead}my (kids|children|sons|daughters|brothers|sisters) are called (${NAME_SRC}) and (${NAME_SRC})`,
+    "gi"
+  );
+  for (const m of trimmed.matchAll(mpEn)) {
+    const rel = PLURAL_EN[m[1].toLowerCase()];
+    if (rel) {
+      push(m.index, m[2], rel, trimmed);
+      push(m.index, m[3], rel, trimmed);
+    }
+  }
+  const PLURAL_PT: Record<string, string> = {
+    filhos: "filho",
+    filhas: "filha",
+    irmãos: "irmão",
+    irmãs: "irmã",
+  };
+  const mpPt = new RegExp(
+    `${lead}(?:meus|minhas) (filhos|filhas|irmãos|irmãs) se chamam (${NAME_SRC}) e (${NAME_SRC})`,
+    "gi"
+  );
+  for (const m of trimmed.matchAll(mpPt)) {
+    const rel = PLURAL_PT[m[1].toLowerCase()];
+    if (rel) {
+      push(m.index, m[2], rel, trimmed);
+      push(m.index, m[3], rel, trimmed);
+    }
   }
 
-  // "recuerda que mi [relación] [Nombre]..." (sin «se llama»: si lo hay,
-  // el patrón anterior ya lo capturó; «se» está vetado como nombre).
-  const m2 = new RegExp(`recuerda( que)? mi (${ES_REL}) (${NAME_SRC})`, "i").exec(trimmed);
-  if (m2) {
-    const name = validName(m2[3]);
-    if (name) return [{ name, relationship: canonRel(m2[2]), notes: trimmed }];
+  // F-PC59 (c): la continuación sin verbo — «y mi papá José» tras una
+  // primera extracción; nunca abre por sí sola. El nombre va en su
+  // forma capitalizada: lo que sigue en minúscula es el verbo de la
+  // frase, no un apellido.
+  if (found.length) {
+    const NAME_UPPER_SRC =
+      "[A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][A-Za-zÁÉÍÓÚÑÜÀÂÊÔÃÕÇáéíóúñüàâêôãõç]+(?: [A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][A-Za-zÁÉÍÓÚÑÜÀÂÊÔÃÕÇáéíóúñüàâêôãõç]+){0,2}";
+    const cont: Array<{ re: RegExp; rel: (m: RegExpExecArray) => string }> = [
+      {
+        re: new RegExp(`\\s+(?:y|e)\\s+mi (${ES_REL}) (${NAME_UPPER_SRC})`, "gi"),
+        rel: (m) => canonRel(m[1]),
+      },
+      {
+        re: new RegExp(
+          `\\s+e\\s+(?:[ao]\\s+)?(?:meu|minha) (${PT_REL}) (${NAME_UPPER_SRC})`,
+          "gi"
+        ),
+        rel: (m) => canonRel(m[1]),
+      },
+      {
+        re: new RegExp(
+          `\\s+and\\s+my (mom|dad|mother|father|brother|sister|son|daughter) (${NAME_UPPER_SRC})`,
+          "gi"
+        ),
+        rel: (m) => m[1].toLowerCase(),
+      },
+    ];
+    for (const c of cont) {
+      for (const m of trimmed.matchAll(c.re)) {
+        // La clase de mayúsculas no discrimina bajo la bandera i: el
+        // recorte a la corrida capitalizada va en código.
+        const words = (m[2] ?? "").split(/\s+/).filter(Boolean);
+        const run: string[] = [];
+        for (const w of words) {
+          if (!STARTS_UPPER.test(w)) break;
+          run.push(w);
+        }
+        if (run.length) push(m.index, run.join(" "), c.rel(m));
+      }
+    }
   }
 
-  // "my mom's name is Mary", "my brother is called John"
-  // B12 (barrido «revisa todo», clase 1): la lista gana los parentescos
-  // extendidos (uncle/aunt/grandfather/grandmother/cousin/nephew/
-  // niece) que es y pt ya creaban y REL_GROUPS ya sabe resolver.
-  const m3 = new RegExp(
-    `my (mom|dad|mother|father|brother|sister|husband|wife|son|daughter|boyfriend|girlfriend|friend|uncle|aunt|grandfather|grandmother|cousin|nephew|niece)(?:'s name)? is (?:called )?(${NAME_SRC})`,
-    "i"
-  ).exec(trimmed);
-  if (m3) {
-    const name = validName(m3[2]);
-    if (name) return [{ name, relationship: m3[1].toLowerCase() }];
-  }
-
-  // "se llama [Nombre], es mi [relación]"
-  const m4 = new RegExp(`se llama (${NAME_SRC}),? es mi (${ES_REL})`, "i").exec(trimmed);
-  if (m4) {
-    const name = validName(m4[1]);
-    if (name) return [{ name, relationship: canonRel(m4[2]) }];
-  }
-
-  // PT: "minha mãe se chama Maria", "meu irmão chama-se João"
-  const m5 = new RegExp(
-    `^(?:(?:olá|ola|oi)[,.\\s]+)?(?:lembr[ae](?:-se)?(?:\\s+de)?\\s+que\\s+)?(?:minha|meu) (${PT_REL}) (?:se chama|chama-se) (${NAME_SRC})`,
-    "i"
-  ).exec(trimmed);
-  if (m5) {
-    const name = validName(m5[2]);
-    if (name) return [{ name, relationship: canonRel(m5[1]) }];
-  }
-
-  return out;
+  return found.sort((a, b) => a.at - b.at).map((f) => f.person);
 }
+
 
 export function extractPerson(userText: string): PersonExtraction | null {
   return extractPeople(userText)[0] ?? null;
@@ -578,7 +756,7 @@ export function extractSelfName(userText: string): string | null {
     new RegExp(`^(?:yo\\s+)?me\\s+llamo\\s+(${NAME_SRC})$`, "i"),
     new RegExp(`^mi\\s+nombre\\s+es\\s+(${NAME_SRC})$`, "i"),
     new RegExp(`^my\\s+name\\s+is\\s+(${NAME_SRC})$`, "i"),
-    new RegExp(`^meu\\s+nome\\s+(?:é|e)\\s+(${NAME_SRC})$`, "i"),
+    new RegExp(`^(?:o\\s+)?meu\\s+nome\\s+(?:é|e)\\s+(${NAME_SRC})$`, "i"),
     new RegExp(`^eu\\s+me\\s+chamo\\s+(${NAME_SRC})$`, "i"),
   ];
   for (const re of patterns) {
@@ -622,18 +800,18 @@ const DIET_ALLERGY_RES: RegExp[] = [
   /^tengo\s+(?:un[oa]?|dos|tres|cuatro|cinco|\d)\s+(?:hij[oa]s?|niet[oa]s?|herman[oa]s?|perr[oa]s?|gat[oa]s?|mascotas?)$/i,
   /^i(?:'m|\s+am)\s+(?:married|single|divorced|widowed|engaged|diabetic)$/i,
   /^i\s+have\s+(?:a|an|one|two|three|four|five|\d)\s+(?:kids?|children|child|sons?|daughters?|brothers?|sisters?|dogs?|cats?|pets?|grandchildren)$/i,
-  /^(?:eu\s+)?(?:sou|estou)\s+(?:casad[oa]|solteir[oa]|divorciad[oa]|vi[uú]v[oa]|diab[eé]tic[oa])$/i,
-  /^(?:eu\s+)?tenho\s+(?:um|uma|dois|duas|tr[eê]s|\d)\s+(?:filh[oa]s?|net[oa]s?|irm[aã][oa]?s?|cachorros?|gatos?)$/i,
+  /^(?:eu\s+)?(?:sou|estou)\s+(?:casad[oa]|solteir[oa]|divorciad[oa]|vi[uú]v[oa]|comprometid[oa]|diab[eé]tic[oa])$/i,
+  /^(?:eu\s+)?tenho\s+(?:um|uma|dois|duas|tr[eê]s|quatro|cinco|\d)\s+(?:filh[oa]s?|net[oa]s?|irm[aã][oa]?s?|cachorros?|gatos?)$/i,
   /^soy\s+al[eé]rgic[oa]\s+a(?:l|\s+la|\s+los|\s+las)?\s+[\p{L}][\p{L}\s-]{1,30}$/iu,
   /^tengo\s+alergia\s+a(?:l|\s+la|\s+los|\s+las)?\s+[\p{L}][\p{L}\s-]{1,30}$/iu,
   /^no\s+(?:como|bebo|tomo)\s+(?:carne|cerdo|puerco|gluten|l[aá]cteos|alcohol|pescado|mariscos|az[uú]car|picante)$/i,
-  /^i(?:'m|\s+am)\s+(?:a\s+)?(?:vegetarian|vegan|pescatarian|celiac|lactose\s+intolerant|gluten\s+intolerant)$/i,
+  /^i(?:'m|\s+am)\s+(?:a\s+)?(?:vegetarian|vegan|pescatarian|celiac|hypertensive|asthmatic|lactose\s+intolerant|gluten\s+intolerant)$/i,
   /^i(?:'m|\s+am)\s+allergic\s+to\s+[a-z][a-z\s-]{1,30}$/i,
   /^i\s+(?:don't|do\s+not)\s+(?:eat|drink)\s+(?:meat|pork|gluten|dairy|alcohol|fish|seafood|sugar|spicy\s+food)$/i,
-  /^(?:eu\s+)?sou\s+(?:vegetarian[oa]|vegan[oa]|cel[ií]ac[oa]|intolerante\s+[aà]\s+lactose)$/i,
+  /^(?:eu\s+)?sou\s+(?:vegetarian[oa]|vegan[oa]|cel[ií]ac[oa]|pescetarian[oa]|hipertens[oa]|asm[aá]tic[oa]|intolerante\s+[aà]\s+lactose)$/i,
   /^(?:eu\s+)?sou\s+al[eé]rgic[oa]\s+(?:a|ao|à|aos|às)\s+[\p{L}][\p{L}\s-]{1,30}$/iu,
   /^(?:eu\s+)?tenho\s+alergia\s+(?:a|ao|à|aos|às)\s+[\p{L}][\p{L}\s-]{1,30}$/iu,
-  /^(?:eu\s+)?n[aã]o\s+(?:como|bebo)\s+(?:carne|porco|gl[uú]ten|latic[ií]nios|[aá]lcool|peixe|frutos\s+do\s+mar)$/i,
+  /^(?:eu\s+)?n[aã]o\s+(?:como|bebo)\s+(?:carne|porco|gl[uú]ten|latic[ií]nios|[aá]lcool|peixe|frutos\s+do\s+mar|a[cç][uú]car|picante)$/i,
 ];
 
 export function extractImplicitFact(userText: string): RememberExtraction | null {
@@ -723,6 +901,19 @@ export function isInterrogativeContent(content: string): boolean {
   return false;
 }
 
+/** ¿Abre el contenido con un infinitivo es/pt (con clítico opcional)?
+ *  Espejo de la guardia de F-PC55 en el extractor de recordatorios. */
+function factContentOpensWithInfinitive(content: string): boolean {
+  const first = (content.replace(/^de\s+/i, "").trim().split(/\s+/)[0] ?? "")
+    .toLowerCase()
+    .replace(/[^a-záéíóúñüçãõ]/g, "");
+  return (
+    first.length >= 3 &&
+    /(?:ar|er|ir)(?:me|te|se|nos|lo|la|los|las|le|les)?$/.test(first)
+  );
+}
+
+
 /**
  * Intenta extraer un hecho de memoria del texto del usuario de forma
  * determinística. Retorna null si no hay un patrón explícito.
@@ -742,7 +933,7 @@ export function extractRememberFact(userText: string): RememberExtraction | null
   // No guardar consultas como hechos.
   if (isMemoryQuery(trimmed)) return null;
 
-  for (const { re, group } of EXTRACTION_PATTERNS) {
+  for (const { re, group, cedeInfinitivo } of EXTRACTION_PATTERNS) {
     const match = re.exec(trimmed);
     // 0.1.37 (auditoría): «traduce al inglés: recuérdame comprar pan» o
     // «una canción que se llame recuérdame siempre» guardaban un hecho: el
@@ -751,6 +942,11 @@ export function extractRememberFact(userText: string): RememberExtraction | null
       // FIX 2026-10-07: limpiar instrucciones trailing ("Save it so you can
       // remind me in time") que no son parte del hecho.
       const content = stripTrailingInstructions(match[group].trim());
+      // F-PC55 (paquete de arreglos del móvil, §8.5): con la apertura
+      // marcada, un contenido en infinitivo es la tarea, no el hecho:
+      // la captura se rechaza y la extracción sigue con el resto de
+      // patrones.
+      if (cedeInfinitivo && factContentOpensWithInfinitive(content)) continue;
       // Validación mínima: el contenido debe ser sustancial.
       // 0.1.19 (sonda de routing): "recuerda mañana" guardaba el hecho
       // basura "mañana". Si al quitar las palabras de fecha/hora no queda

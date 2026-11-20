@@ -115,10 +115,13 @@ describe("extractContactAction — SMS (es / en / pt)", () => {
     });
   });
   it("pt: manda um sms para … dizendo …", () => {
+    // F-PC45 (paquete de arreglos): el separador es «dizendo
+    // que», así que el cuerpo ya no arrastra el «que» (la
+    // expectativa anterior fijaba el defecto).
     expect(extractContactAction("manda um sms para a Ana dizendo que chego tarde")).toEqual({
       kind: "sms",
       target: "Ana",
-      message: "que chego tarde",
+      message: "chego tarde",
       lang: "pt",
     });
   });

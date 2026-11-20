@@ -48,12 +48,25 @@ function normalizeCalcText(text: string): string | null {
   // caracteres del final, así que una frase normal nunca se convierte en
   // cuenta por accidente.
   // Verbo inicial: "suma 45 y 67", "multiplica 6 por 9", "divide 100 entre 4".
-  const verb = /^(suma|sumar|resta|restar|multiplica|multiplicar|divide|dividir|sum|add|subtract|multiply|divide)\s+/i.exec(t);
+  // F-PC42 (paquete de arreglos del móvil, §5.5): la fila pt
+  // (soma|somar|some|adiciona|adicionar|subtrai|subtrair|subtraia)
+  // entra entre la es y la en.
+  const verb = /^(suma|sumar|resta|restar|multiplica|multiplicar|divide|dividir|soma|somar|some|adiciona|adicionar|subtrai|subtrair|subtraia|sum|add|subtract|multiply|divide)\s+/i.exec(t);
   if (verb) {
     t = t.slice(verb[0].length).replace(/^(?:el|la|los|las|de|del|o|a|the)\s+/i, "");
+    // F-PC41 (§5.4): tras el verbo dividir, el «por» (y el «by»)
+    // es divisor, no producto: «divide 100 por 4» es 25. El
+    // rescate vive solo en esta rama del verbo y solo para
+    // divide|dividir; la regla general del «por» no se toca
+    // («multiplica 6 por 9» sigue siendo 54).
+    if (/^(?:divide|dividir)$/i.test(verb[1])) {
+      t = t.replace(/(\d)\s+(?:por|by)\s+(?=\d)/gi, "$1/");
+    }
     // "resta 25 de 100" es 100 − 25: el minuendo va DESPUÉS del "de".
-    if (/^(?:resta|restar|subtract)$/i.test(verb[1])) {
-      const sub = /^(\d+(?:[.,]\d+)?)\s+de\s+(\d+(?:[.,]\d+)?)$/i.exec(t);
+    // F-PC42: la resta pt («subtrai 25 de 100») y el «from» inglés
+    // («subtract 25 from 100») comparten el caso especial.
+    if (/^(?:resta|restar|subtract|subtrai|subtrair|subtraia)$/i.test(verb[1])) {
+      const sub = /^(\d+(?:[.,]\d+)?)\s+(?:de|from)\s+(\d+(?:[.,]\d+)?)$/i.exec(t);
       if (sub) {
         if (/\d,\d{3}(?!\d)/.test(sub[1]) || /\d,\d{3}(?!\d)/.test(sub[2])) return null;
         return `(${sub[2].replace(",", ".")})-(${sub[1].replace(",", ".")})`;
@@ -86,7 +99,8 @@ function normalizeCalcText(text: string): string | null {
   // "15 percent of 200" / "15 por ciento de 200" → (15/100)*200
   t = t.replace(/(\d+(?:[.,]\d+)?)\s*(?:percent|por\s*ciento|por\s*cento)\s+(?:de|del|of|do|da)\s+/gi, "($1/100)*");
   // "3 docenas" → (3*12); "2 elevado a 10" → 2^10
-  t = t.replace(/(\d+(?:[.,]\d+)?)\s+(?:docenas?|dozen)\b/gi, "($1*12)");
+  // F-PC42: las «dúzias» portuguesas comparten la fila.
+  t = t.replace(/(\d+(?:[.,]\d+)?)\s+(?:docenas?|dozen|d[uú]zias?)\b/gi, "($1*12)");
   // 0.1.31: también «to the power of» / «elevado a la potencia» / «elevado à».
   t = t.replace(/(\d+(?:[.,]\d+)?)\s+(?:elevado\s+a(?:\s+la(?:\s+potencia)?)?|elevado\s+[àa]|raised\s+to(?:\s+the\s+power\s+of)?|to\s+the\s+power\s+of|to\s+the)\s+(\d+(?:[.,]\d+)?)/gi, "$1^$2");
   // Operadores entre cifras: "45 más 67", "9 por 7", "100 entre 4", "45 y 67".
@@ -94,7 +108,7 @@ function normalizeCalcText(text: string): string | null {
   t = t.replace(/(\d)\s+(?:menos|minus)\s+(?=\d)/gi, "$1-");
   t = t.replace(/(\d)\s+(?:por|vezes|times)\s+(?=\d)/gi, "$1*");
   t = t.replace(/(\d)\s+(?:entre|dividido\s+(?:entre|por)|divided\s+by)\s+(?=\d)/gi, "$1/");
-  t = t.replace(/(\d)\s+(?:y|and)\s+(?=\d)/gi, "$1+");
+  t = t.replace(/(\d)\s+(?:y|and|e)\s+(?=\d)/gi, "$1+");
   t = t.replace(/(\d)\s*[x×]\s*(?=\d)/gi, "$1*").replace(/[·∙]/g, "*").replace(/÷/g, "/");
   if (/,/.test(t)) {
     // Coma decimal solo si no hay puntos y ninguna coma va seguida de
@@ -254,8 +268,14 @@ const RECURRENCE_RE =
  * números escritos con letras ni se detectaban. Ahora se crea una sola vez
  * y se avisa (recurrenceRequested).
  */
+// F-PC36 (paquete de arreglos del móvil, §5.1): el «doze»
+// portugués faltaba en el tramo pt de la cadena. F-PC38 (§5.3,
+// salida A del dirimen): «once» tras «diez», «eleven» tras «ten»
+// y «onze» tras «dez». Consecuencia aceptada: «every once in a
+// while» pasa a detectar (un intervalo no soportado que hoy se
+// crea en silencio pasa a crearse con el aviso).
 const INTERVAL_NUMBER =
-  "\\d+|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|doce|quince|veinte|treinta|two|three|four|five|six|seven|eight|nine|ten|twelve|fifteen|twenty|thirty|dois|duas|tr[eê]s|quatro|sete|oito|nove|dez|quinze|vinte|trinta|other|otro|otra";
+  "\\d+|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|quince|veinte|treinta|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|dois|duas|tr[eê]s|quatro|sete|oito|nove|dez|onze|doze|quinze|vinte|trinta|other|otro|otra";
 const UNSUPPORTED_INTERVAL_RE = new RegExp(
   `(?<![\\p{L}])(?:(?:cada|every|each|a\\s+cada)\\s+(?:${INTERVAL_NUMBER})(?=\\s|$|[,.;!?])|biweekly|bi-weekly|fortnightly|every\\s+weekday|weekdays|quincenal(?:mente)?|de\\s+lunes\\s+a\\s+viernes|entre\\s+semana|de\\s+segunda\\s+a\\s+sexta|dias\\s+[úu]teis)(?![\\p{L}])`,
   "iu",
@@ -580,7 +600,39 @@ const IMPOSSIBLE_DATE_RE =
  * recuérdame…») o una cortesía/enlace («oye,», «mejor», «y también»). Una
  * frase citada («traduce: recuérdame…», «una canción que se llame
  * recuérdame…») no lo es.
+ *
+ * CURA-VIA-RAPIDA (dirimen de la casa, 2026-11-19; portada al móvil
+ * en su paquete de arreglos, §1): la rama de fecha de esta guardia
+ * era de CONTENCIÓN — bastaba que el preámbulo contuviera una fecha
+ * parseable en cualquier sitio — y una enumeración multiaacción con
+ * la fecha en otra subtarea pasaba por «una fecha delante del
+ * verbo»: la vía servía el turno entero con solo el recordatorio y
+ * perdía las demás subtareas en silencio (S7 y S12 del arnés de
+ * PC, con cero generaciones). La rama es ahora de IDENTIDAD: ha de
+ * haber fecha, y retirado lo que el parser cobra como fecha solo
+ * pueden quedar las palabras de LEAD_RESIDUE_WORDS; cualquier otro
+ * material delante del verbo no es un lead de orden simple y el
+ * turno sigue al modelo.
  */
+
+/**
+ * Las únicas palabras que pueden quedar en el preámbulo tras retirar
+ * la expresión de fecha: las de cortesía/enlace de la regex de
+ * `isOrderLead`, palabra a palabra, y la gramática que la propia
+ * expresión de fecha deja («este viernes», «el día…», «…que viene»).
+ */
+const LEAD_RESIDUE_WORDS = new Set([
+  "por", "favor", "porfa", "oye", "hey", "hola", "ok", "okay", "vale",
+  "bueno", "please", "hi", "nido", "ei", "olá", "ola", "mejor", "better",
+  "melhor", "no", "não", "y", "and", "e", "también", "also", "também",
+  "entonces", "then", "então", "ahora", "now", "agora", "can", "could",
+  "would", "will", "you", "puedes", "podrías", "me", "pode", "você",
+  "el", "la", "los", "las", "un", "una", "the", "a", "an", "on", "at",
+  "de", "del", "en", "em", "na", "al", "ao", "à", "às", "este", "esta",
+  "esto", "ese", "esa", "this", "next", "próximo", "próxima", "que",
+  "viene", "día", "dia",
+]);
+
 export function isOrderLead(rawLead: string): boolean {
   const lead = rawLead.trim().replace(/[,:;]+$/, "").trim();
   if (!lead) return true;
@@ -589,7 +641,12 @@ export function isOrderLead(rawLead: string): boolean {
   ) {
     return true;
   }
-  return Boolean(parseReminderDateTime(lead));
+  if (!parseReminderDateTime(lead)) return false;
+  const residue = stripDateWords(lead)
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+  return residue.every((w) => LEAD_RESIDUE_WORDS.has(w.toLowerCase()));
 }
 
 // «los lunes», «on mondays», «todas as segundas» junto a un intervalo no
@@ -740,6 +797,21 @@ const QUE_FACT_FAMILY_RE =
  *  contenido con fecha es un recordatorio y no un hecho. */
 const FIRST_PERSON_EVENT_RE = /\b(?:tengo|debo|hay que|tenho|preciso|i have|i need)\b/i;
 
+/** Aperturas es/pt de la familia «no olvides» sumadas por F-PC55. */
+const FORGET_OPENING_NEW_RE =
+  /^(?:(?:que\s+)?no\s+se\s+(?:te|me)\s+(?:olvide|pase)(?:\s+de)?|no\s+(?:te\s+)?olvides(?:\s+de)?|acu[ée]rdate\s+de|recuerda|n[aã]o\s+(?:se\s+)?esque[cç]a(?:\s+de)?|n[aã]o\s+esque[cç]as(?:\s+de)?|n[aã]o\s+se\s+esque[cç]e(?:\s+de)?)$/i;
+
+/** ¿Abre el contenido con un infinitivo es/pt (con clítico opcional)? */
+function opensWithInfinitive(content: string): boolean {
+  const first = (content.replace(/^de\s+/i, "").trim().split(/\s+/)[0] ?? "")
+    .toLowerCase()
+    .replace(/[^a-záéíóúñüçãõ]/g, "");
+  return (
+    first.length >= 3 &&
+    /(?:ar|er|ir)(?:me|te|se|nos|lo|la|los|las|le|les)?$/.test(first)
+  );
+}
+
 function extractReminderCore(userText: string, now: Date = new Date()): ReminderAction | null {
   lastMissingText = null;
   // 0.1.41: la forma de pregunta llega entre signos («¿me recuerdas mañana
@@ -780,7 +852,7 @@ function extractReminderCore(userText: string, now: Date = new Date()): Reminder
   // «despiértame a las 7», «me acorde às 7», «wake me at 7» creaban
   // nada: caían al modelo. El verbo va en su grupo para saber si es un
   // aviso (su texto puede ser la propia orden cuando no hay tarea).
-  const m = /((?:agr[ée]game|cr[ée]ame|ponme|crea)(?=\s+(?:una?\s+)?(?:cita|recordatorio|aviso|alarma)(?![a-záéíóúñ]))|(?:pon|agrega|a[ñn]ade|programa)(?=\s+(?:una?\s+)?(?:cita|recordatorio|aviso)(?![a-záéíóúñ]))|recu[ée]rdame|me\s+recuerdas|me\s+(?:puedes|podr[ií]as)\s+recordar|(?:puedes|podr[ií]as)\s+recordarme|me\s+(?:avisas|puedes\s+avisar|podr[ií]as\s+avisar)|remember me to|remind me(?: to)?|(?:voc[eê]\s+)?(?:pode|podes|poderia)\s+me\s+lembrar(?!\s+que\b)(?:\s+de)?|me\s+lembrar(?!\s+que\b)(?:\s+de)?|me lembr[ae](?!\s+que\b)(?: de)?|lembr[ae]-me(?: de)?|av[íi]same|despi[ée]rtame|despertame|me\s+avisa|me\s+acord[ae]|acord[ae]-me|wake\s+me(?:\s+up)?|let\s+me\s+know|pon(?:me)?\s+una\s+alarma|set\s+(?:a|an|my)\s+(?:reminder|alarm)(?:\s+for)?|no\s+me\s+dejes\s+olvidar|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|faz|fa[çc]a)\s+um\s+lembrete|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|define|defina)\s+um\s+alarme(?:\s+para)?|que\s+no\s+se\s+me\s+olvide|don'?t\s+let\s+me\s+forget(?:\s+to)?)\s+(?:una?\s+)?(?:cita|recordatorio|reminder)?\s*(.+)/i.exec(trimmed);
+  const m = /((?:agr[ée]game|cr[ée]ame|ponme|crea)(?=\s+(?:una?\s+)?(?:cita|recordatorio|aviso|alarma)(?![a-záéíóúñ]))|(?:pon|agrega|a[ñn]ade|programa)(?=\s+(?:una?\s+)?(?:cita|recordatorio|aviso)(?![a-záéíóúñ]))|recu[ée]rdame|me\s+recuerdas|me\s+(?:puedes|podr[ií]as)\s+recordar|(?:puedes|podr[ií]as)\s+recordarme|me\s+(?:avisas|puedes\s+avisar|podr[ií]as\s+avisar)|remember me to|remind me(?: to)?|(?:voc[eê]\s+)?(?:pode|podes|poderia)\s+me\s+lembrar(?!\s+que\b)(?:\s+de)?|me\s+lembrar(?!\s+que\b)(?:\s+de)?|me lembr[ae](?!\s+que\b)(?: de)?|lembr[ae]-me(?: de)?|av[íi]same|despi[ée]rtame|despertame|me\s+avisa|me\s+acord[ae]|acord[ae]-me|wake\s+me(?:\s+up)?|let\s+me\s+know|pon(?:me)?\s+una\s+alarma|set\s+(?:a|an|my)\s+(?:reminder|alarm)(?:\s+for)?|no\s+me\s+dejes\s+olvidar|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|faz|fa[çc]a)\s+um\s+lembrete|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|define|defina)\s+um\s+alarme(?:\s+para)?|que\s+no\s+se\s+me\s+olvide|don'?t\s+let\s+me\s+forget(?:\s+to)?|(?:que\s+)?no\s+se\s+(?:te|me)\s+(?:olvide|pase)(?:\s+de)?|no\s+(?:te\s+)?olvides(?:\s+de)?|acu[ée]rdate\s+de|recuerda|don'?t\s+forget\s+to|do\s+not\s+forget\s+to|n[aã]o\s+(?:se\s+)?esque[cç]a(?:\s+de)?|n[aã]o\s+esque[cç]as(?:\s+de)?|n[aã]o\s+se\s+esque[cç]e(?:\s+de)?)\s+(?:una?\s+)?(?:cita|recordatorio|reminder)?\s*(.+)/i.exec(trimmed);
   if (!m) return null;
   // 0.1.37 (auditoría): el verbo tiene que abrir la orden. Delante solo
   // cabe una fecha («mañana recuérdame…») o una cortesía («oye, …»). Así
@@ -866,6 +938,13 @@ function extractReminderCore(userText: string, now: Date = new Date()): Reminder
   // de la pregunta y nadie la respondía. Si el texto empieza con palabra
   // interrogativa, que responda el flujo normal.
   if (INTERROGATIVE_START_RE.test(text)) return null;
+  // F-PC55 (paquete de arreglos del móvil, §8.1): las aperturas es/pt
+  // que la tanda suma a la familia «no olvides» solo crean con
+  // contenido en infinitivo. Sin infinitivo la frase es un hecho
+  // («no se te olvide que mañana es…») y la extracción cede a la
+  // memoria; las inglesas ya exigen «to» en la propia apertura y no
+  // llevan guardia.
+  if (FORGET_OPENING_NEW_RE.test(m[1].trim()) && !opensWithInfinitive(text)) return null;
 
   // CALENDAR-FIX 2026-10-07: parsear fecha/hora del texto.
   let dueAt = parseReminderDateTime(text, now);
@@ -1108,7 +1187,7 @@ const NUMBER_WORDS: Record<string, number> = {
   quince: 15, fifteen: 15, veinte: 20, twenty: 20,
   treinta: 30, thirty: 30, "media": 0.5, "half": 0.5,
   um: 1, uma: 1, dois: 2, duas: 2, "três": 3, quatro: 4, sete: 7,
-  oito: 8, nove: 9, dez: 10, vinte: 20, trinta: 30, "meia": 0.5,
+  oito: 8, nove: 9, dez: 10, onze: 11, doze: 12, quinze: 15, vinte: 20, trinta: 30, "meia": 0.5,
 };
 
 /**
@@ -1144,7 +1223,7 @@ function parseRelativeDetailed(t: string, now: Date): RelativeReading | null {
   // (one|una|um sí; a|an no) y «in a week» creaba el aviso MAÑANA;
   // y la quincena/fortnight/quinzena no existía como unidad en
   // ningún idioma y también salía mañana. Quincena = 14 días.
-  const m = /\b(?:en|in|em|daqui a|dentro\s+de|within)\s+(\d+|uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half|um|uma|dois|duas|três|quatro|sete|oito|nove|dez|vinte|trinta|meia|an?)\s*(?:an?\s+)?(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w|quincenas?|quinzenas?|fortnights?)\b/i.exec(t);
+  const m = /\b(?:en|in|em|daqui a|dentro\s+de|within)\s+(\d+|uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half|um|uma|dois|duas|três|quatro|sete|oito|nove|dez|onze|doze|quinze|vinte|trinta|meia|an?)\s*(?:an?\s+)?(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w|quincenas?|quinzenas?|fortnights?)\b/i.exec(t);
   if (!m) return null;
 
   const rawNum = m[1].toLowerCase();
@@ -1207,7 +1286,7 @@ export interface TimerAction {
 const TIMER_NUMBER_WORDS: Record<string, number> = {
   ...NUMBER_WORDS,
   um: 1, uma: 1, dois: 2, duas: 2, três: 3, tres: 3, quatro: 4, cinco: 5,
-  seis: 6, sete: 7, oito: 8, nove: 9, dez: 10, quinze: 15, vinte: 20,
+  seis: 6, sete: 7, oito: 8, nove: 9, dez: 10, onze: 11, doze: 12, quinze: 15, vinte: 20,
   trinta: 30, meia: 0.5,
   // «an hour and a half», «a minute»: el artículo como cantidad.
   an: 1, a: 1,
@@ -1878,10 +1957,10 @@ export function extractWeeklyPlanAction(userText: string): WeeklyPlanAction | nu
   // «¿cuánto cuesta el plan semanal?» y «mi plan de datos» no disparan.
   const bare = t.trim().replace(/[.?!\s]+$/, "");
   const isPlanRequest =
-    /plan\s*(my|la)?\s*week\b|planifica(r)?\s*(mi\s+|la\s+)?semana|(?:ay[uú]dame\s+a\s+|quiero\s+|necesito\s+|^)planea(?:r)?\s+(?:mi\s+|la\s+)?semana|organiza(r)?\s*(mi\s+|la\s+)?semana|horario\s+semanal/i.test(t) ||
+    /plan\s*(my|the|la)?\s*week\b|planifica(r)?\s*(mi\s+|la\s+)?semana|(?:ay[uú]dame\s+a\s+|quiero\s+|necesito\s+|^)planea(?:r)?\s+(?:mi\s+|la\s+)?semana|organiza(r)?\s*(mi\s+|la\s+)?semana|organize\s+(?:my\s+)?week\b|horario\s+semanal/i.test(t) ||
     /(?:haz(?:me)?|quiero|necesito|dame|cr[eé]a(?:me)?|arma(?:me)?|prep[aá]ra(?:me)?)\s+(?:un\s+|una\s+)?plan\s+(?:semanal|de\s+(?:la|mi)\s+semana|para\s+(?:la|mi)\s+semana)/i.test(t) ||
     /(?:make(?:\s+me)?|give\s+me|i\s+want|i\s+need|create)\s+(?:a\s+)?(?:weekly\s+plan|plan\s+for\s+(?:my|the)\s+week)/i.test(t) ||
-    /(?:faz|quero|preciso|planej[ae](?:r)?|organiz[ae](?:r)?)\s+(?:um\s+|a\s+)?(?:plano\s+(?:semanal|da\s+(?:minha\s+)?semana)|minha\s+semana)/i.test(t) ||
+    /(?:faz|quero|preciso|planej[ae](?:r)?|organiz[ae](?:r)?)\s+(?:um\s+|a\s+)?(?:plano\s+(?:semanal|(?:da|para\s+a)\s+(?:minha\s+)?semana)|minha\s+semana)/i.test(t) ||
     /^(?:plan\s+(?:semanal|de\s+la\s+semana)|weekly\s+plan|plano\s+semanal)$/i.test(bare);
   if (!isPlanRequest) return null;
 
@@ -1897,23 +1976,42 @@ export function extractWeeklyPlanAction(userText: string): WeeklyPlanAction | nu
   if (workMatch) {
     let s = parseInt(workMatch[1], 10);
     let e = parseInt(workMatch[2], 10);
-    // "9 to 6" = 9 AM a 6 PM
-    if (e < s) e += 12;
-    if (s >= 1 && s <= 12 && e >= 1 && e <= 23) {
+    // F-PC48 (paquete de arreglos del móvil, §5.6): las tres
+    // ramas de la lectura. (1) Lectura 12 h solo con inicio de
+    // 12 h: si s <= 12 y el fin no pasa del inicio, el fin es de
+    // tarde («9 to 6» es 9–18; «11 a 11» es 11–23). (2) Un inicio
+    // de 24 h (13–23) se mantiene como se parseó: con el fin
+    // mayor es el turno del día (13 a 21) y con el fin menor
+    // cruza medianoche (22 a 6, que el título sirve como
+    // «22:00–6:00»). (3) El par fuera de 0–23 o de longitud cero
+    // en 24 h devuelve null: nunca un plan inventado con la
+    // plantilla (la forma vieja caía al defecto 9–18 EN
+    // SILENCIO contra su propio comentario M7c).
+    if (s <= 12 && e <= s) e += 12;
+    if (s >= 0 && s <= 23 && e >= 0 && e <= 23 && e !== s) {
       workStart = s;
       workEnd = e;
+    } else {
+      return null;
     }
-    // M7c: si es formato 24h válido (ej: 22 a 6 → e < s después del ajuste),
-    // no hacer fallback silencioso; mantener lo parseado si es razonable.
   }
 
   // Extraer ejercicio: "exercise 3 times", "ejercicio 3 veces"
   let exerciseDays = 3;
   // 0.1.24 (H-6): ramas PT («exercício 3 vezes») — grupos 4 y 5.
-  const exMatch = /exercis\w*\s*(\d+)\s*times?|ejercicio\s*(\d+)\s*veces?|(\d+)\s*(?:times|veces)\s*(?:a\s*la\s*semana|per\s*week)?|exerc[ií]ci\w*\s*(\d+)\s*vezes|(\d+)\s*vezes(?:\s*por\s*semana)?/i.exec(t);
+  // F-PC51 (§5.8): la rama de palabra (grupo 6) con la lista
+  // cerrada 1–7 en los tres idiomas, resuelta por NUMBER_WORDS
+  // (con la apócope «un» por «uno») y aceptada solo en el
+  // dominio 1–7 de la pieza, en simetría con el dígito.
+  const exMatch = /exercis\w*\s*(\d+)\s*times?|ejercicio\s*(\d+)\s*veces?|(\d+)\s*(?:times|veces)\s*(?:a\s*la\s*semana|per\s*week)?|exerc[ií]ci\w*\s*(\d+)\s*vezes|(\d+)\s*vezes(?:\s*por\s*semana)?|(?:ejercicio|exercise|exerc[ií]ci\w*)\s*(uno|un|una|dos|tres|cuatro|cinco|seis|siete|one|two|three|four|five|six|seven|um|uma|dois|duas|tr[eê]s|quatro|cinco|seis|sete)\s*(?:veces|times|vezes)/i.exec(t);
   if (exMatch) {
-    const n = parseInt(exMatch[1] || exMatch[2] || exMatch[3] || exMatch[4] || exMatch[5], 10);
-    if (n >= 1 && n <= 7) exerciseDays = n;
+    const raw = (exMatch[1] || exMatch[2] || exMatch[3] || exMatch[4] || exMatch[5] || exMatch[6] || "").toLowerCase();
+    const n = /^\d+$/.test(raw)
+      ? parseInt(raw, 10)
+      : raw === "un"
+        ? 1
+        : NUMBER_WORDS[raw];
+    if (n !== undefined && n >= 1 && n <= 7) exerciseDays = n;
   }
 
   // 0.1.24 (H-6): /fam[ií]l/ — «família» en PT lleva í acentuada y
