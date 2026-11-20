@@ -450,8 +450,8 @@ const WN_SMALL: Record<string, number> = {
   once: 11, onze: 11, eleven: 11,
   doce: 12, doze: 12, twelve: 12,
   trece: 13, treze: 13, thirteen: 13,
-  catorce: 14, catorze: 14, fourteen: 14,
-  quince: 15, fifteen: 15,
+  catorce: 14, catorze: 14, quatorze: 14, fourteen: 14,
+  quince: 15, quinze: 15, fifteen: 15,
   dieciseis: 16, dezesseis: 16, sixteen: 16,
   diecisiete: 17, dezessete: 17, seventeen: 17,
   dieciocho: 18, dezoito: 18, eighteen: 18,
@@ -460,7 +460,7 @@ const WN_SMALL: Record<string, number> = {
 
 const WN_TENS: Record<string, number> = {
   veinte: 20, vinte: 20, twenty: 20,
-  veintidos: 22, veintitres: 23, veinticuatro: 24, veinticinco: 25,
+  veintiuno: 21, veintidos: 22, veintitres: 23, veinticuatro: 24, veinticinco: 25,
   veintiseis: 26, veintisiete: 27, veintiocho: 28, veintinueve: 29,
   trinta: 30, treinta: 30, thirty: 30,
   cuarenta: 40, quarenta: 40, forty: 40,

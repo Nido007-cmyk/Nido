@@ -290,8 +290,14 @@ export function checkRamBudget(
   // 2026-11-06 (prueba física, tableta de 3,3 GB): la cuenta por la RAM
   // total dejó cargar un modelo que agotó la memoria con otras apps
   // abiertas. Con la lectura en vivo, manda la menor de las dos.
+  // F-PC62 (paquete de arreglos del móvil, §2): la guarda es el
+  // predicado de existencia, no el de positividad. Una lectura en
+  // vivo de 0 (o negativa) EXISTE y manda ella: tratarla como
+  // ausente presupuestaba por la RAM total y daba por cabido un
+  // modelo que no cabe justo en el aparato más justo. El suelo
+  // de availableBytes (Math.max(…, 0)) cobra las negativas.
   const live =
-    snapshot.availBytes !== undefined && snapshot.availBytes > 0
+    snapshot.availBytes !== undefined
       ? opts?.emergencyLive
         ? snapshot.availBytes + releasable
         : snapshot.availBytes + releasable - (snapshot.lowMemThresholdBytes ?? 0) - LIVE_MARGIN_BYTES

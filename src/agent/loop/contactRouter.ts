@@ -162,7 +162,7 @@ const FIND_PATTERNS: Array<{ lang: RouterLang; re: RegExp; group: number | null;
   // pt: "procura o contato Ruben", "mostra meus contatos"
   {
     lang: "pt",
-    re: /^(?:por favor,?\s+)?(?:procura(?:r)?|procure|busca(?:r)?|encontra(?:r)?|encontre|mostra(?:r)?|mostre|me mostra|abre|abra)\s+(?:o|os|meu|meus|um)?\s*contatos?(?:\s+(?:de|do|da|chamado|chamada))?\s*(.*)$/i,
+    re: /^(?:por favor,?\s+)?(?:procura(?:r)?|procure|busca(?:r)?|encontra(?:r)?|encontre|mostra(?:r)?|mostre|me mostra|abre|abra|me d[aá]|d[aá]|pega|pegue)\s+(?:o|os|meu|meus|um)?\s*contatos?(?:\s+(?:de|do|da|chamado|chamada))?\s*(.*)$/i,
     group: 1,
   },
   // pt: "procura a Ana nos meus contatos"
@@ -197,13 +197,13 @@ const CALL_PATTERNS: Array<{ lang: RouterLang; re: RegExp }> = [
   // pt: "liga para a Ana", "ligue pro João", "liga" (solo)
   {
     lang: "pt",
-    re: /^(?:por favor,?\s+)?(?:liga|ligue|ligar|telefona|telefone)(?:\s+(?:para|pra|pro|ao|à|a)\s+(?:o\s+|a\s+)?(.+)|\s+(\+?[\d\s\-().]{6,}))?$/i,
+    re: /^(?:por favor,?\s+)?(?:liga|ligue|ligar|chama|chame|disca|disque|telefona|telefone)(?:\s+(?:para|pra|pro|ao|à|a)\s+(?:o\s+|a\s+)?(.+)|\s+(\+?[\d\s\-().]{6,}))?$/i,
   },
 ];
 
 // ------------------------------------------------------------------- SMS
 
-const SMS_SEP = "(?::|,|\\s+que diga|\\s+que dice|\\s+diciendo|\\s+dici[eé]ndole|\\s+que|\\s+saying|\\s+that|\\s+dizendo|\\s+falando)";
+const SMS_SEP = "(?::|,|\\s+que diga|\\s+que dice|\\s+diciendo|\\s+dici[eé]ndole|\\s+que|\\s+saying|\\s+that|\\s+dizendo que|\\s+dizendo|\\s+falando)";
 
 const SMS_PATTERNS: Array<{ lang: RouterLang; re: RegExp }> = [
   // es: "mándale un sms a Ana que llego tarde", "envía un mensaje de texto a Ana: hola"
@@ -218,7 +218,7 @@ const SMS_PATTERNS: Array<{ lang: RouterLang; re: RegExp }> = [
   {
     lang: "en",
     re: new RegExp(
-      `^(?:please,?\\s+)?(?:send\\s+(?:an?\\s+)?(?:sms|text(?:\\s+message)?)(?:\\s+to\\s+(.+?))?|text\\s+(.+?)|sms\\s+(.+?))(?:${SMS_SEP}\\s*(.+))?$`,
+      `^(?:please,?\\s+)?(?:(?:send|write)\\s+(?:an?\\s+)?(?:sms|text(?:\\s+message)?)(?:\\s+to\\s+(.+?))?|text\\s+(.+?)|sms\\s+(.+?))(?:${SMS_SEP}\\s*(.+))?$`,
       "i",
     ),
   },
@@ -228,7 +228,7 @@ const SMS_PATTERNS: Array<{ lang: RouterLang; re: RegExp }> = [
   {
     lang: "pt",
     re: new RegExp(
-      `^(?:por favor,?\\s+)?(?:manda|mande|envia|envie)\\s+(?:uma?\\s+)?(?:sms|torpedo|mensagem de texto)(?:\\s+(?:para|pra|pro|ao|à)\\s+(?:o\\s+|a\\s+)?(.+?))?(?:${SMS_SEP}\\s*(.+))?$`,
+      `^(?:por favor,?\\s+)?(?:manda|mande|envia|envie|escreve|escreva)\\s+(?:uma?\\s+)?(?:sms|torpedo|mensagem de texto)(?:\\s+(?:para|pra|pro|ao|à)\\s+(?:o\\s+|a\\s+)?(.+?))?(?:${SMS_SEP}\\s*(.+))?$`,
       "i",
     ),
   },

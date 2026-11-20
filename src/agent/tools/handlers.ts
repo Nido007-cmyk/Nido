@@ -235,27 +235,32 @@ const deviceTime: ToolHandler = async () => {
 const saveNoteHandler: ToolHandler = async (args) => {
   const title = String(args.title ?? "").trim();
   const body = String(args.body ?? "");
-  if (!title) return "Error: falta el título de la nota.";
+  if (!title) return L("Error: falta el título de la nota.", "Error: the note title is missing.", "Erro: falta o título da nota.");
   const note = await saveNote({ title, body });
   actionLog.noteUndo("save_note", { kind: "note", id: note.id });
-  return `Nota guardada: «${note.title}» (id ${note.id}).`;
+  return L(
+    `Nota guardada: «${note.title}» (id ${note.id}).`,
+    `Note saved: “${note.title}” (id ${note.id}).`,
+    `Nota guardada: «${note.title}» (id ${note.id}).`,
+  );
 };
 
 const listNotesHandler: ToolHandler = async () => {
   const notes = await listNotes(20);
-  if (notes.length === 0) return "No hay notas guardadas todavía.";
+  if (notes.length === 0) return L("No hay notas guardadas todavía.", "There are no saved notes yet.", "Ainda não há notas guardadas.");
   return (
-    "Notas guardadas:\n" +
+    L("Notas guardadas:", "Saved notes:", "Notas guardadas:") +
+    "\n" +
     notes.map((n) => `- «${n.title}» (id ${n.id}, ${fmtDateTime(n.created_at)})`).join("\n") +
-    "\nUsa read_note con el id para leer una completa."
+    L("\nUsa read_note con el id para leer una completa.", "\nUse read_note with the id to read one in full.", "\nUsa read_note com o id para ler uma completa.")
   );
 };
 
 const readNoteHandler: ToolHandler = async (args) => {
   const id = String(args.id ?? "").trim();
-  if (!id) return "Error: falta el id de la nota.";
+  if (!id) return L("Error: falta el id de la nota.", "Error: the note id is missing.", "Erro: falta o id da nota.");
   const note = await getNote(id);
-  if (!note) return `No encontré ninguna nota con id ${id}.`;
+  if (!note) return L(`No encontré ninguna nota con id ${id}.`, `I couldn't find any note with id ${id}.`, `Não encontrei nenhuma nota com id ${id}.`);
   return `«${note.title}» (${fmtDateTime(note.created_at)}):\n${note.body || L("(sin contenido)", "(empty)", "(sem conteúdo)")}`;
 };
 
@@ -283,14 +288,14 @@ function sameLabel(shown: unknown, stored: string): boolean {
 
 const deleteNoteHandler: ToolHandler = async (args) => {
   const id = String(args.id ?? "").trim();
-  if (!id) return "Error: falta el id de la nota.";
+  if (!id) return L("Error: falta el id de la nota.", "Error: the note id is missing.", "Erro: falta o id da nota.");
   const note = await getNote(id);
-  if (!note) return `No encontré ninguna nota con id ${id}.`;
+  if (!note) return L(`No encontré ninguna nota con id ${id}.`, `I couldn't find any note with id ${id}.`, `Não encontrei nenhuma nota com id ${id}.`);
   if (!sameLabel(args.title, note.title)) {
-    throw new Error("la nota confirmada no coincide con la guardada; no se borró nada");
+    throw new Error(L("la nota confirmada no coincide con la guardada; no se borró nada", "the confirmed note doesn't match the saved one; nothing was deleted", "a nota confirmada não coincide com a guardada; nada foi apagado"));
   }
   await deleteNote(id);
-  return `Nota borrada: «${note.title}».`;
+  return L(`Nota borrada: «${note.title}».`, `Note deleted: “${note.title}”.`, `Nota apagada: «${note.title}».`);
 };
 
 /**
@@ -302,31 +307,31 @@ const deleteNoteHandler: ToolHandler = async (args) => {
 const deleteMemoryHandler: ToolHandler = async (args) => {
   const id = String(args.id ?? "").trim();
   const kind = args.kind === "person" ? "person" : "fact";
-  if (!id) return "Error: falta el id del recuerdo.";
+  if (!id) return L("Error: falta el id del recuerdo.", "Error: the memory id is missing.", "Erro: falta o id da lembrança.");
   const store = await import("../memory/memoryStore");
   if (kind === "person") {
     const person = (await store.getPeople()).find((p) => p.id === id);
-    if (!person) return `No encontré ese recuerdo (id ${id}).`;
+    if (!person) return L(`No encontré ese recuerdo (id ${id}).`, `I couldn't find that memory (id ${id}).`, `Não encontrei essa lembrança (id ${id}).`);
     const label = person.relationship ? `${person.name} (${person.relationship})` : person.name;
-    if (!sameLabel(args.content, label)) throw new Error("el recuerdo confirmado no coincide con el guardado; no se borró nada");
+    if (!sameLabel(args.content, label)) throw new Error(L("el recuerdo confirmado no coincide con el guardado; no se borró nada", "the confirmed memory doesn't match the saved one; nothing was deleted", "a lembrança confirmada não coincide com a guardada; nada foi apagado"));
     await store.deletePerson(id);
-    return `Recuerdo borrado: «${label}».`;
+    return L(`Recuerdo borrado: «${label}».`, `Memory deleted: “${label}”.`, `Lembrança apagada: «${label}».`);
   }
   const fact = (await store.getFacts(500)).find((f) => f.id === id);
-  if (!fact) return `No encontré ese recuerdo (id ${id}).`;
-  if (!sameLabel(args.content, fact.content)) throw new Error("el recuerdo confirmado no coincide con el guardado; no se borró nada");
+  if (!fact) return L(`No encontré ese recuerdo (id ${id}).`, `I couldn't find that memory (id ${id}).`, `Não encontrei essa lembrança (id ${id}).`);
+  if (!sameLabel(args.content, fact.content)) throw new Error(L("el recuerdo confirmado no coincide con el guardado; no se borró nada", "the confirmed memory doesn't match the saved one; nothing was deleted", "a lembrança confirmada não coincide com a guardada; nada foi apagado"));
   await store.deleteFact(id);
-  return `Recuerdo borrado: «${fact.content}».`;
+  return L(`Recuerdo borrado: «${fact.content}».`, `Memory deleted: “${fact.content}”.`, `Lembrança apagada: «${fact.content}».`);
 };
 
 const deleteReminderHandler: ToolHandler = async (args) => {
   const id = String(args.id ?? "").trim();
-  if (!id) return "Error: falta el id del recordatorio.";
+  if (!id) return L("Error: falta el id del recordatorio.", "Error: the reminder id is missing.", "Erro: falta o id do lembrete.");
   const { listReminders } = await import("../memory/memoryStore");
   const reminder = (await listReminders(200)).find((r) => r.id === id);
-  if (!reminder) return `No encontré ningún recordatorio con id ${id}.`;
+  if (!reminder) return L(`No encontré ningún recordatorio con id ${id}.`, `I couldn't find any reminder with id ${id}.`, `Não encontrei nenhum lembrete com id ${id}.`);
   if (!sameLabel(args.text, reminder.text)) {
-    throw new Error("el recordatorio confirmado no coincide con el guardado; no se borró nada");
+    throw new Error(L("el recordatorio confirmado no coincide con el guardado; no se borró nada", "the confirmed reminder doesn't match the saved one; nothing was deleted", "o lembrete confirmado não coincide com o guardado; nada foi apagado"));
   }
   // Cancelar el aviso del sistema ANTES de borrar: si quedara programado,
   // sonaría para un recordatorio que ya no existe.
@@ -337,12 +342,12 @@ const deleteReminderHandler: ToolHandler = async (args) => {
     // Sin módulo de notificaciones disponible: el borrado sigue.
   }
   await deleteReminder(id);
-  return `Recordatorio borrado: «${reminder.text}».`;
+  return L(`Recordatorio borrado: «${reminder.text}».`, `Reminder deleted: “${reminder.text}”.`, `Lembrete apagado: «${reminder.text}».`);
 };
 
 const createReminderHandler: ToolHandler = async (args) => {
   const text = String(args.text ?? "").trim();
-  if (!text) return "Error: falta el texto del recordatorio.";
+  if (!text) return L("Error: falta el texto del recordatorio.", "Error: the reminder text is missing.", "Erro: falta o texto do lembrete.");
   let dueAt: string | null = null;
   const at = args.at != null ? String(args.at).trim() : "";
   if (at) {
@@ -370,19 +375,25 @@ const createReminderHandler: ToolHandler = async (args) => {
   }
   const reminder = await saveReminder({ text, dueAt });
   actionLog.noteUndo("create_reminder", { kind: "reminder", id: reminder.id });
-  const cuando = dueAt ? ` para ${fmtDateTime(dueAt)}` : " (sin fecha)";
-  let aviso = "Te avisaré al abrir NIDO cuando llegue la hora.";
+  const cuando = dueAt
+    ? L(` para ${fmtDateTime(dueAt)}`, ` for ${fmtDateTime(dueAt)}`, ` para ${fmtDateTime(dueAt)}`)
+    : L(" (sin fecha)", " (no date)", " (sem data)");
+  let aviso = L("Te avisaré al abrir NIDO cuando llegue la hora.", "I'll remind you when you open NIDO once it's time.", "Aviso você ao abrir o NIDO quando chegar a hora.");
   if (dueAt) {
     // Aviso real del sistema, programado en el dispositivo (Fase C).
     try {
       const { scheduleReminderNotification } = await import("../../notify/notifications");
       const ok = await scheduleReminderNotification(reminder.id, reminder.text, new Date(dueAt));
-      if (ok) aviso = "Te llegará un aviso del sistema a esa hora, aunque NIDO esté cerrado.";
+      if (ok) aviso = L("Te llegará un aviso del sistema a esa hora, aunque NIDO esté cerrado.", "You'll get a system notification at that time, even if NIDO is closed.", "Você receberá um aviso do sistema nessa hora, mesmo com o NIDO fechado.");
     } catch {
       // Sin notificaciones: el recordatorio sigue guardado y se muestra al abrir.
     }
   }
-  return `Recordatorio guardado${cuando}: «${reminder.text}». ${aviso}`;
+  return L(
+    `Recordatorio guardado${cuando}: «${reminder.text}». ${aviso}`,
+    `Reminder saved${cuando}: “${reminder.text}”. ${aviso}`,
+    `Lembrete guardado${cuando}: «${reminder.text}». ${aviso}`,
+  );
 };
 
 /**
@@ -407,7 +418,7 @@ export function containsDatePattern(text: string): boolean {
 
 const rememberFactHandler: ToolHandler = async (args) => {
   const content = String(args.content ?? "").trim();
-  if (!content) return "Error: falta el contenido del hecho.";
+  if (!content) return L("Error: falta el contenido del hecho.", "Error: the fact content is missing.", "Erro: falta o conteúdo do fato.");
   // M1-2026-10-06 (track 2): allowlist de categorías. El LLM puede enviar
   // cualquier string; sin validación se almacenan categorías bogus.
   const VALID_CATEGORIES = ["general", "preference", "goal", "event"] as const;
@@ -421,7 +432,11 @@ const rememberFactHandler: ToolHandler = async (args) => {
   // completo como si se hubiera guardado entero: el usuario creía
   // guardado lo que se perdió. Si la entrada superó el tope, se avisa.
   const saved = await saveFact({ content, category: category as "general", source: "user" });
-  let result = `Guardado en mi memoria: «${saved.content}» (categoría: ${category}).`;
+  let result = L(
+    `Guardado en mi memoria: «${saved.content}» (categoría: ${category}).`,
+    `Saved in my memory: “${saved.content}” (category: ${category}).`,
+    `Guardado na minha memória: «${saved.content}» (categoria: ${category}).`,
+  );
   if (content.length > MAX_FACT_CONTENT_CHARS) {
     result += L(
       ` Aviso: el texto superaba el máximo de ${MAX_FACT_CONTENT_CHARS} caracteres y se guardó recortado.`,
@@ -431,7 +446,11 @@ const rememberFactHandler: ToolHandler = async (args) => {
   }
   // H11: puente memoria→notificación. Si hay una fecha, sugerir recordatorio.
   if (containsDatePattern(saved.content)) {
-    result += ` Veo que menciona una fecha — si quieres que te avise con tiempo, pídeme "créame un recordatorio para..."`;
+    result += L(
+      ` Veo que menciona una fecha — si quieres que te avise con tiempo, pídeme "créame un recordatorio para..."`,
+      ` I see it mentions a date — if you want me to warn you ahead of time, ask me "create a reminder for..."`,
+      ` Vejo que menciona uma data — se você quiser que eu avise com antecedência, peça "crie um lembrete para..."`,
+    );
   }
   return result;
 };
@@ -443,12 +462,16 @@ const rememberFactHandler: ToolHandler = async (args) => {
 const savePersonHandler: ToolHandler = async (args) => {
   const { savePerson } = await import("../memory/memoryStore");
   const name = String(args.name ?? "").trim();
-  if (!name) return "Error: falta el nombre de la persona.";
+  if (!name) return L("Error: falta el nombre de la persona.", "Error: the person's name is missing.", "Erro: falta o nome da pessoa.");
   const relationship = args.relationship ? String(args.relationship).trim() : undefined;
   const notes = args.notes ? String(args.notes).trim() : undefined;
   const person = await savePerson({ name, relationship, notes });
   const rel = person.relationship ? ` (${person.relationship})` : "";
-  let result = `Persona guardada: «${person.name}»${rel}.`;
+  let result = L(
+    `Persona guardada: «${person.name}»${rel}.`,
+    `Person saved: “${person.name}”${rel}.`,
+    `Pessoa guardada: «${person.name}»${rel}.`,
+  );
   // T-11 (m-15): mismo patrón que remember_fact — si las notas superaron
   // el tope del almacén, se avisa del recorte en vez de callarlo.
   if (notes && notes.length > MAX_PERSON_NOTES_CHARS) {
@@ -474,9 +497,9 @@ const openAppHandler: ToolHandler = async (args) => {
   try {
     const { Linking } = await import("react-native");
     await Linking.openURL(c.normalized);
-    return `Abriendo ${c.normalized}…`;
+    return L(`Abriendo ${c.normalized}…`, `Opening ${c.normalized}…`, `Abrindo ${c.normalized}…`);
   } catch {
-    return `No pude abrir ${c.normalized} desde NIDO.`;
+    return L(`No pude abrir ${c.normalized} desde NIDO.`, `I couldn't open ${c.normalized} from NIDO.`, `Não consegui abrir ${c.normalized} do NIDO.`);
   }
 };
 
@@ -841,12 +864,12 @@ export function buildToolHandlers(opts?: {
 
 const calculateHandler: ToolHandler = async (args) => {
   const expr = String(args.expression ?? "").trim();
-  if (!expr) return "Error: falta la expresión a calcular.";
+  if (!expr) return L("Error: falta la expresión a calcular.", "Error: the expression to calculate is missing.", "Erro: falta a expressão a calcular.");
   try {
     const value = evaluateExpression(expr);
     return `${expr} ${isApproximate(value) ? "≈" : "="} ${formatNumber(value)}`;
   } catch (e) {
-    return `No pude calcular eso: ${e instanceof Error ? e.message : String(e)}`;
+    return `${L("No pude calcular eso: ", "I couldn't calculate that: ", "Não consegui calcular isso: ")}${e instanceof Error ? e.message : String(e)}`;
   }
 };
 
@@ -854,8 +877,8 @@ const convertUnitsHandler: ToolHandler = async (args) => {
   const value = Number(args.value);
   const from = String(args.from ?? "").trim();
   const to = String(args.to ?? "").trim();
-  if (!Number.isFinite(value)) return "Error: el valor a convertir debe ser un número.";
-  if (!from || !to) return "Error: indica la unidad de origen y la de destino.";
+  if (!Number.isFinite(value)) return L("Error: el valor a convertir debe ser un número.", "Error: the value to convert must be a number.", "Erro: o valor a converter deve ser um número.");
+  if (!from || !to) return L("Error: indica la unidad de origen y la de destino.", "Error: give the source unit and the target unit.", "Erro: indica a unidade de origem e a de destino.");
   try {
     const r = convertUnits(value, from, to);
     // 0.1.31 (auditoría del loop): «5 km = 3.1068559612 mi» → «3.1069 mi».
@@ -927,7 +950,7 @@ const createCalendarEventHandler: ToolHandler = async (args) => {
   const access = await ensureCalendarAccess();
   if (!access.ok) return access.reason!;
   const title = String(args.title ?? "").trim();
-  if (!title) return "Error: falta el título del evento.";
+  if (!title) return L("Error: falta el título del evento.", "Error: the event title is missing.", "Erro: falta o título do evento.");
   const start = new Date(String(args.start ?? ""));
   if (Number.isNaN(start.getTime())) {
     return L("Error: la fecha de inicio no es válida. Usa formato ISO, p.ej. 2026-09-27T10:00:00.", "Error: the start date isn't valid. Use ISO format, e.g. 2026-09-27T10:00:00.", "Erro: a data de início não é válida. Use o formato ISO, p.ex. 2026-09-27T10:00:00.");
@@ -947,9 +970,13 @@ const createCalendarEventHandler: ToolHandler = async (args) => {
       notes: args.notes != null ? String(args.notes) : undefined,
       location: args.location != null ? String(args.location) : undefined,
     });
-    return `Evento creado: «${title}», ${fmtDateTime(start.toISOString())}.`;
+    return L(
+      `Evento creado: «${title}», ${fmtDateTime(start.toISOString())}.`,
+      `Event created: “${title}”, ${fmtDateTime(start.toISOString())}.`,
+      `Evento criado: «${title}», ${fmtDateTime(start.toISOString())}.`,
+    );
   } catch (e) {
-    return `No pude crear el evento: ${e instanceof Error ? e.message : String(e)}`;
+    return `${L("No pude crear el evento: ", "I couldn't create the event: ", "Não consegui criar o evento: ")}${e instanceof Error ? e.message : String(e)}`;
   }
 };
 
@@ -1014,19 +1041,33 @@ export const listCalendarEventsHandler: ToolHandler = async (args) => {
         const s = e.startDate ? new Date(e.startDate) : null;
         return `- «${e.title ?? L("(sin título)", "(untitled)", "(sem título)")}»${s ? ` — ${fmtDateTime(s.toISOString())}` : ""}${e.location ? ` @ ${e.location}` : ""}`;
       });
-    if (upcoming.length === 0) return "No hay eventos en ese rango.";
+    if (upcoming.length === 0) return L("No hay eventos en ese rango.", "There are no events in that range.", "Não há eventos nesse intervalo.");
     const more = hidden > 0 ? `\n${L(`… y ${hidden} más.`, `… and ${hidden} more.`, `… e mais ${hidden}.`)}` : "";
-    return `Próximos eventos:\n${upcoming.join("\n")}${more}`;
+    return `${L("Próximos eventos:", "Upcoming events:", "Próximos eventos:")}\n${upcoming.join("\n")}${more}`;
   } catch (e) {
     return `${L("No pude leer el calendario", "I couldn't read the calendar", "Não consegui ler o calendário")}: ${e instanceof Error ? e.message : String(e)}`;
   }
 };
 
-const CONTACTS_PERMISSION_TEXT: Record<"denied" | "blocked" | "unavailable", string> = {
-  denied: "No diste permiso de contactos, así que no puedo buscar. Puedes volver a pedírmelo cuando quieras.",
-  blocked:
-    "El permiso de contactos está bloqueado para NIDO. Actívalo en Ajustes del teléfono → Apps → NIDO → Permisos → Contactos.",
-  unavailable: "No pude acceder a los contactos del teléfono.",
+const CONTACTS_PERMISSION_TEXT: Record<"denied" | "blocked" | "unavailable", () => string> = {
+  denied: () =>
+    L(
+      "No diste permiso de contactos, así que no puedo buscar. Puedes volver a pedírmelo cuando quieras.",
+      "You didn't give contacts permission, so I can't search. You can ask me again whenever you want.",
+      "Você não deu permissão de contatos, então não posso buscar. Pode me pedir de novo quando quiser.",
+    ),
+  blocked: () =>
+    L(
+      "El permiso de contactos está bloqueado para NIDO. Actívalo en Ajustes del teléfono → Apps → NIDO → Permisos → Contactos.",
+      "Contacts permission is blocked for NIDO. Turn it on in phone Settings → Apps → NIDO → Permissions → Contacts.",
+      "A permissão de contatos está bloqueada para o NIDO. Ative em Configurações do telefone → Apps → NIDO → Permissões → Contatos.",
+    ),
+  unavailable: () =>
+    L(
+      "No pude acceder a los contactos del teléfono.",
+      "I couldn't access the phone contacts.",
+      "Não consegui acessar os contatos do telefone.",
+    ),
 };
 
 /**
@@ -1035,18 +1076,18 @@ const CONTACTS_PERMISSION_TEXT: Record<"denied" | "blocked" | "unavailable", str
  */
 export async function searchPhoneContacts(query: string): Promise<ContactSearchResult> {
   const q = String(query ?? "").trim();
-  if (!q) return { ok: false, message: "Error: falta el nombre a buscar." };
+  if (!q) return { ok: false, message: L("Error: falta el nombre a buscar.", "Error: the name to search for is missing.", "Erro: falta o nome a buscar.") };
   let Contacts: typeof import("expo-contacts");
   try {
     Contacts = await import("expo-contacts");
   } catch {
-    return { ok: false, message: CONTACTS_PERMISSION_TEXT.unavailable, reason: "unavailable" };
+    return { ok: false, message: CONTACTS_PERMISSION_TEXT.unavailable(), reason: "unavailable" };
   }
   const perm = await ensureRuntimePermission({
     get: () => Contacts.getPermissionsAsync(),
     request: () => Contacts.requestPermissionsAsync(),
   });
-  if (!perm.ok) return { ok: false, message: CONTACTS_PERMISSION_TEXT[perm.reason], reason: perm.reason };
+  if (!perm.ok) return { ok: false, message: CONTACTS_PERMISSION_TEXT[perm.reason](), reason: perm.reason };
   try {
     // TOOLS-AUDIT 2026-10-11 (causa raíz de find_contact roto en Android):
     // el código usaba `Contacts.Container.getDefault()`, que en expo-contacts
@@ -1069,17 +1110,18 @@ export async function searchPhoneContacts(query: string): Promise<ContactSearchR
     }
     return { ok: true, matches };
   } catch (e) {
-    return { ok: false, message: `No pude buscar contactos: ${e instanceof Error ? e.message : String(e)}` };
+    return { ok: false, message: `${L("No pude buscar contactos: ", "I couldn't search contacts: ", "Não consegui buscar contatos: ")}${e instanceof Error ? e.message : String(e)}` };
   }
 }
 
 const findContactHandler: ToolHandler = async (args) => {
   const res = await searchPhoneContacts(String(args.query ?? ""));
   if (!res.ok) return res.message;
-  if (res.matches.length === 0) return `No encontré ningún contacto que coincida con «${args.query}».`;
+  if (res.matches.length === 0) return L(`No encontré ningún contacto que coincida con «${args.query}».`, `I couldn't find any contact matching “${args.query}”.`, `Não encontrei nenhum contato que corresponda a «${args.query}».`);
   return (
-    "Contactos encontrados:\n" +
-    res.matches.map((c) => `- ${c.name} — ${c.phones[0] ?? "sin teléfono"}`).join("\n")
+    L("Contactos encontrados:", "Contacts found:", "Contatos encontrados:") +
+    "\n" +
+    res.matches.map((c) => `- ${c.name} — ${c.phones[0] ?? L("sin teléfono", "no phone", "sem telefone")}`).join("\n")
   );
 };
 
@@ -1089,11 +1131,11 @@ function cleanPhone(raw: string): string {
 
 const placeCallHandler: ToolHandler = async (args) => {
   const phone = cleanPhone(String(args.phone ?? ""));
-  if (!phone) return "Error: falta un número de teléfono válido.";
+  if (!phone) return L("Error: falta un número de teléfono válido.", "Error: a valid phone number is missing.", "Erro: falta um número de telefone válido.");
   try {
     const { Linking } = await import("react-native");
     await Linking.openURL(`tel:${phone}`);
-    return `Abriendo el marcador con ${phone}… confírmame tú la llamada.`;
+    return L(`Abriendo el marcador con ${phone}… confírmame tú la llamada.`, `Opening the dialer with ${phone}… you confirm the call.`, `Abrindo o discador com ${phone}… confirme você a chamada.`);
   } catch {
     return L("No pude abrir el marcador del teléfono.", "I couldn't open the phone dialer.", "Não consegui abrir o discador do telefone.");
   }
@@ -1102,13 +1144,13 @@ const placeCallHandler: ToolHandler = async (args) => {
 const sendSmsHandler: ToolHandler = async (args) => {
   const phone = cleanPhone(String(args.phone ?? ""));
   const message = String(args.message ?? "").trim();
-  if (!phone) return "Error: falta un número de teléfono válido.";
-  if (!message) return "Error: falta el texto del mensaje.";
+  if (!phone) return L("Error: falta un número de teléfono válido.", "Error: a valid phone number is missing.", "Erro: falta um número de telefone válido.");
+  if (!message) return L("Error: falta el texto del mensaje.", "Error: the message text is missing.", "Erro: falta o texto da mensagem.");
   try {
     const RN = await import("react-native");
     const sep = RN.Platform.OS === "ios" ? "&" : "?";
     await RN.Linking.openURL(`sms:${phone}${sep}body=${encodeURIComponent(message)}`);
-    return `Abriendo mensajes para ${phone} con el texto listo… envíalo tú cuando quieras.`;
+    return L(`Abriendo mensajes para ${phone} con el texto listo… envíalo tú cuando quieras.`, `Opening messages for ${phone} with the text ready… send it yourself whenever you want.`, `Abrindo mensagens para ${phone} com o texto pronto… envie você quando quiser.`);
   } catch {
     return L("No pude abrir la app de mensajes.", "I couldn't open the messages app.", "Não consegui abrir o app de mensagens.");
   }
@@ -1129,23 +1171,33 @@ const readPickedFileHandler: ToolHandler = async () => {
       }),
     );
     if (picked.canceled || !picked.assets?.length) {
-      return "No elegiste ningún archivo.";
+      return L("No elegiste ningún archivo.", "You didn't choose any file.", "Você não escolheu nenhum arquivo.");
     }
     const asset = picked.assets[0];
+    const fallbackName = asset.name ?? L("archivo", "file", "arquivo");
     if (asset.size != null && asset.size > MAX_PICKED_FILE_BYTES) {
-      return `«${asset.name ?? "archivo"}» pesa más de 200 KB; elige un archivo de texto más pequeño.`;
+      return L(
+        `«${fallbackName}» pesa más de 200 KB; elige un archivo de texto más pequeño.`,
+        `“${fallbackName}” is over 200 KB; choose a smaller text file.`,
+        `«${fallbackName}» pesa mais de 200 KB; escolha um arquivo de texto menor.`,
+      );
     }
     const FS = await import("expo-file-system");
     const buf = await new FS.File(asset.uri).arrayBuffer();
     if (buf.byteLength > MAX_PICKED_FILE_BYTES) {
-      return `«${asset.name ?? "archivo"}» es demasiado grande para leerlo aquí (máx. 200 KB).`;
+      return L(
+        `«${fallbackName}» es demasiado grande para leerlo aquí (máx. 200 KB).`,
+        `“${fallbackName}” is too large to read here (max. 200 KB).`,
+        `«${fallbackName}» é grande demais para ler aqui (máx. 200 KB).`,
+      );
     }
     const text = new TextDecoder("utf-8", { fatal: false }).decode(buf);
-    if (!text.trim()) return `«${asset.name ?? "archivo"}» está vacío o no es texto legible.`;
+    if (!text.trim()) return L(`«${fallbackName}» está vacío o no es texto legible.`, `“${fallbackName}” is empty or isn't readable text.`, `«${fallbackName}» está vazio ou não é texto legível.`);
     const shown = text.slice(0, 8000);
-    return `Archivo «${asset.name ?? "sin nombre"}» (${Math.round(buf.byteLength / 1024)} KB):\n${shown}${text.length > shown.length ? "\n…(recortado)" : ""}`;
+    const shownName = asset.name ?? L("sin nombre", "unnamed", "sem nome");
+    return `${L(`Archivo «${shownName}»`, `File “${shownName}”`, `Arquivo «${shownName}»`)} (${Math.round(buf.byteLength / 1024)} KB):\n${shown}${text.length > shown.length ? L("\n…(recortado)", "\n…(trimmed)", "\n…(cortado)") : ""}`;
   } catch (e) {
-    return `No pude leer el archivo: ${e instanceof Error ? e.message : String(e)}`;
+    return `${L("No pude leer el archivo: ", "I couldn't read the file: ", "Não consegui ler o arquivo: ")}${e instanceof Error ? e.message : String(e)}`;
   }
 };
 
@@ -1156,12 +1208,12 @@ const useSkillHandler: ToolHandler = async (args) => {
   const name = String(args.name ?? "").trim();
   if (!name) {
     const available = listSkills().map((s) => s.name).join(", ");
-    return `Indica el nombre de la skill. Disponibles: ${available}.`;
+    return L(`Indica el nombre de la skill. Disponibles: ${available}.`, `Give the skill name. Available: ${available}.`, `Indica o nome da skill. Disponíveis: ${available}.`);
   }
   const skill = loadSkill(name);
   if (!skill) {
     const available = listSkills().map((s) => s.name).join(", ");
-    return `No conozco la skill «${name}». Disponibles: ${available}.`;
+    return L(`No conozco la skill «${name}». Disponibles: ${available}.`, `I don't know the skill “${name}”. Available: ${available}.`, `Não conheço a skill «${name}». Disponíveis: ${available}.`);
   }
   // T-11 (0.1.99, P-11): el resultado se presentaba con un imperativo
   // («Sigue estas instrucciones:») que el bucle envuelve en un bloque
@@ -1170,14 +1222,18 @@ const useSkillHandler: ToolHandler = async (args) => {
   // contenido se presenta como lo que es — el documento de
   // procedimiento de la skill — sin moverlo a un canal confiable: el
   // envoltorio del bucle no cambia.
-  return `Skill «${skill.name}» cargada. Este es su procedimiento:\n\n${skill.instructions}`;
+  return L(
+    `Skill «${skill.name}» cargada. Este es su procedimiento:\n\n${skill.instructions}`,
+    `Skill “${skill.name}” loaded. Here is its procedure:\n\n${skill.instructions}`,
+    `Skill «${skill.name}» carregada. Este é o seu procedimento:\n\n${skill.instructions}`,
+  );
 };
 
 const analyzeTableHandler: ToolHandler = async (args) => {
   const text = String(args.text ?? "");
-  if (!text.trim()) return "Error: falta el texto de la tabla a analizar.";
+  if (!text.trim()) return L("Error: falta el texto de la tabla a analizar.", "Error: the table text to analyze is missing.", "Erro: falta o texto da tabela a analisar.");
   if (text.length > 200 * 1024) {
-    return "Error: la tabla supera los 200 KB. Pide al usuario un archivo más pequeño.";
+    return L("Error: la tabla supera los 200 KB. Pide al usuario un archivo más pequeño.", "Error: the table exceeds 200 KB. Ask the user for a smaller file.", "Erro: a tabela ultrapassa os 200 KB. Peça ao usuário um arquivo menor.");
   }
   try {
     return analyzeTable(text, {
@@ -1186,7 +1242,7 @@ const analyzeTableHandler: ToolHandler = async (args) => {
       topN: args.top_n != null ? Number(args.top_n) : undefined,
     });
   } catch (e) {
-    return `No pude analizar la tabla: ${e instanceof Error ? e.message : String(e)}`;
+    return `${L("No pude analizar la tabla: ", "I couldn't analyze the table: ", "Não consegui analisar a tabela: ")}${e instanceof Error ? e.message : String(e)}`;
   }
 };
 
@@ -1225,17 +1281,25 @@ const nidoSendMessageHandler: ToolHandler = async (args) => {
   // N2: la MISMA derivación canónica que el diálogo de confirmación
   // mostró al usuario. Lo aprobado === lo transmitido.
   const { to, text } = nidoSendMessagePayload(args);
-  if (!to) return "Error: indica el nombre del contacto NIDO.";
-  if (!text) return "Error: el mensaje está vacío.";
+  if (!to) return L("Error: indica el nombre del contacto NIDO.", "Error: give the NIDO contact name.", "Erro: indica o nome do contato NIDO.");
+  if (!text) return L("Error: el mensaje está vacío.", "Error: the message is empty.", "Erro: a mensagem está vazia.");
   try {
     const m = getNidoMessenger();
     await m.ensureIdentity();
     const { queued } = await m.sendChat(to, text);
     return queued
-      ? `Mensaje para «${to}» guardado cifrado en la cola de salida: se entregará cuando su NIDO esté al alcance.`
-      : `Mensaje enviado a «${to}» por NIDO (cifrado de extremo a extremo).`;
+      ? L(
+          `Mensaje para «${to}» guardado cifrado en la cola de salida: se entregará cuando su NIDO esté al alcance.`,
+          `Message for “${to}” saved encrypted in the outbox: it will be delivered when their NIDO is in range.`,
+          `Mensagem para “${to}” guardada criptografada na fila de saída: será entregue quando o NIDO dessa pessoa estiver ao alcance.`,
+        )
+      : L(
+          `Mensaje enviado a «${to}» por NIDO (cifrado de extremo a extremo).`,
+          `Message sent to “${to}” over NIDO (end-to-end encrypted).`,
+          `Mensagem enviada a “${to}” pelo NIDO (criptografia de ponta a ponta).`,
+        );
   } catch (e) {
-    return `No pude enviar el mensaje NIDO: ${e instanceof Error ? e.message : String(e)}`;
+    return `${L("No pude enviar el mensaje NIDO: ", "I couldn't send the NIDO message: ", "Não consegui enviar a mensagem NIDO: ")}${e instanceof Error ? e.message : String(e)}`;
   }
 };
 
@@ -1256,7 +1320,7 @@ const nidoReadInboxHandler: ToolHandler = async () => {
             `Há ${hiddenTemporal} mensagem(ns) temporária(s) não lida(s): abra-as no chat NIDO.`,
           )
         : "";
-    if (unread.length === 0) return temporalNote || "No tienes mensajes NIDO sin leer.";
+    if (unread.length === 0) return temporalNote || L("No tienes mensajes NIDO sin leer.", "You have no unread NIDO messages.", "Você não tem mensagens NIDO não lidas.");
     return unread
       .map((msg) => {
         const who = names.get(msg.peerPk.toLowerCase()) ?? L("Contacto NIDO", "NIDO contact", "Contato NIDO");
@@ -1266,7 +1330,11 @@ const nidoReadInboxHandler: ToolHandler = async () => {
         if (msg.type === "agent_task" && msg.status === "queued") {
           return (
             `• ${who} (${when}): ${msg.text}\n` +
-            `  Pendiente de tu aprobación — revísala con nido_review_tasks (id ${msg.id}).`
+            L(
+              `  Pendiente de tu aprobación — revísala con nido_review_tasks (id ${msg.id}).`,
+              `  Pending your approval — review it with nido_review_tasks (id ${msg.id}).`,
+              `  Pendente da sua aprovação — revise com nido_review_tasks (id ${msg.id}).`,
+            )
           );
         }
         return `• ${who} (${when}): ${msg.text}`;
@@ -1282,18 +1350,19 @@ const nidoMyCodeHandler: ToolHandler = async () => {
     const m = getNidoMessenger();
     const { fingerprint: fp } = await m.ensureIdentity();
     const code = await m.myPairingCode();
-    return (
-      "Tu código de emparejamiento NIDO (muéstralo como QR para que el otro teléfono lo escanee):\n" +
-      `${code}\nHuella para verificar en persona: ${fp}`
+    return L(
+      `Tu código de emparejamiento NIDO (muéstralo como QR para que el otro teléfono lo escanee):\n${code}\nHuella para verificar en persona: ${fp}`,
+      `Your NIDO pairing code (show it as a QR so the other phone can scan it):\n${code}\nFingerprint to verify in person: ${fp}`,
+      `Seu código de emparelhamento NIDO (mostre-o como QR para que o outro telefone o escaneie):\n${code}\nImpressão digital para verificar em pessoa: ${fp}`,
     );
   } catch (e) {
-    return `No pude generar tu código: ${e instanceof Error ? e.message : String(e)}`;
+    return `${L("No pude generar tu código: ", "I couldn't generate your code: ", "Não consegui gerar seu código: ")}${e instanceof Error ? e.message : String(e)}`;
   }
 };
 
 const nidoPairHandler: ToolHandler = async (args) => {
   const code = String(args.code ?? "").trim();
-  if (!code) return "Error: falta el código del otro NIDO.";
+  if (!code) return L("Error: falta el código del otro NIDO.", "Error: the other NIDO's code is missing.", "Erro: falta o código do outro NIDO.");
   const t = agentConfirmT();
   // UNIT B (R2): la elección de desambiguación forma parte de los args
   // confirmados. Sin elección explícita ante una colisión de nombre,
@@ -1340,19 +1409,26 @@ const nidoPairHandler: ToolHandler = async (args) => {
     if (!contact) return t("agentConfirm.pairCancelled");
     const replacedNote =
       disambiguation === "replace"
-        ? " La identidad anterior quedó retirada en todas partes: murieron sus rutas, sesiones y mensajes pendientes; los mensajes antiguos siguen legibles."
+        ? L(
+            " La identidad anterior quedó retirada en todas partes: murieron sus rutas, sesiones y mensajes pendientes; los mensajes antiguos siguen legibles.",
+            " The previous identity was retired everywhere: its routes, sessions and pending messages are gone; old messages stay readable.",
+            " A identidade anterior foi retirada de todos os lugares: suas rotas, sessões e mensagens pendentes deixaram de existir; as mensagens antigas continuam legíveis.",
+          )
         : "";
-    return `Contacto «${contact.name}» emparejado, sin verificar todavía. Ya pueden enviarse mensajes cifrados de NIDO a NIDO, sin internet. Para verificarlo, comparen la huella en persona y pulsa «Verificar» en NIDO › Contactos.${replacedNote}`;
+    return L(
+      `Contacto «${contact.name}» emparejado, sin verificar todavía. Ya pueden enviarse mensajes cifrados de NIDO a NIDO, sin internet. Para verificarlo, comparen la huella en persona y pulsa «Verificar» en NIDO › Contactos.${replacedNote}`,
+      `Contact “${contact.name}” paired, not verified yet. You can now send encrypted NIDO-to-NIDO messages, with no internet. To verify it, compare the fingerprint in person and tap “Verify” in NIDO › Contacts.${replacedNote}`,
+      `Contato “${contact.name}” emparelhado, ainda sem verificar. Já podem enviar mensagens criptografadas de NIDO a NIDO, sem internet. Para verificar, compare a impressão digital pessoalmente e toque em «Verificar» em NIDO › Contatos.${replacedNote}`,
+    );
   } catch (e) {
     if (e instanceof StaleReplaceConflictError) {
       // UNIT B concurrency closure: otro Replace retiró ya la identidad
       // que se pretendía reemplazar. Nada se escribió (rollback); el
       // usuario debe decidir con el estado actual, no reintentar a ciegas.
-      return (
-        "No pude emparejar: la identidad que se pretendía reemplazar ya fue " +
-        "retirada por otro emparejamiento. Nada se escribió. Revisa tus " +
-        "contactos y, si aún quieres emparejar este código, hazlo de nuevo " +
-        "con la información actualizada."
+      return L(
+        "No pude emparejar: la identidad que se pretendía reemplazar ya fue retirada por otro emparejamiento. Nada se escribió. Revisa tus contactos y, si aún quieres emparejar este código, hazlo de nuevo con la información actualizada.",
+        "I couldn't pair: the identity that was to be replaced was already retired by another pairing. Nothing was written. Check your contacts and, if you still want to pair this code, do it again with the updated information.",
+        "Não consegui emparelhar: a identidade que se pretendia substituir já foi retirada por outro emparelhamento. Nada foi escrito. Verifique seus contatos e, se ainda quiser emparelhar este código, faça de novo com as informações atualizadas.",
       );
     }
     if (e instanceof PairingDisambiguationRequiredError) {
@@ -1365,7 +1441,7 @@ const nidoPairHandler: ToolHandler = async (args) => {
       } catch {
         // Si el QR ni siquiera decodifica, el mensaje de abajo ya no
         // aplica; se devuelve el error original.
-        return `No pude emparejar: ${e instanceof Error ? e.message : String(e)}`;
+        return `${L("No pude emparejar: ", "I couldn't pair: ", "Não consegui emparelhar: ")}${e instanceof Error ? e.message : String(e)}`;
       }
       const candidates = e.candidates.map((c) => `«${c.name}»`).join(", ");
       return t("agentConfirm.pairAmbiguousAsk", {
@@ -1375,6 +1451,6 @@ const nidoPairHandler: ToolHandler = async (args) => {
         candidates,
       });
     }
-    return `No pude emparejar: ${e instanceof Error ? e.message : String(e)}`;
+    return `${L("No pude emparejar: ", "I couldn't pair: ", "Não consegui emparelhar: ")}${e instanceof Error ? e.message : String(e)}`;
   }
 };

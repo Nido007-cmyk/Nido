@@ -26,6 +26,21 @@ Builds an offline knowledge pack from Wikipedia article introductions.
   --edition FILE     edition-card descriptor (default: edition.json in the guides dir, if any)
   -h, --help         show this help`;
 
+/** True only for a YYYY-MM-DD string that names a day that exists
+ * (round-trip through its components: 2026-02-30 does not pass). */
+function isRealDate(value) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(typeof value === "string" ? value : "");
+  if (!m) return false;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return false;
+  const dt = new Date(0);
+  dt.setUTCFullYear(y, mo - 1, d);
+  dt.setUTCHours(0, 0, 0, 0);
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d;
+}
+
 export function parseArgs(argv) {
   const opts = { level: 5, titlesFile: undefined, limit: undefined, id: undefined, name: undefined, out: "build/knowledge-pack", chunkChars: 600, maxChunks: 3, threads: 4, embedding: "bge", builtAt: undefined, guidesDir: undefined, editionFile: undefined, help: false };
   const num = (v, flag) => {
@@ -53,7 +68,7 @@ export function parseArgs(argv) {
       case "--max-chunks": opts.maxChunks = num(needs(), a); break;
       case "--threads": opts.threads = num(needs(), a); break;
       case "--embedding": opts.embedding = needs(); if (!["bge", "e5"].includes(opts.embedding)) throw new Error("--embedding must be bge or e5"); break;
-      case "--built-at": opts.builtAt = needs(); if (Number.isNaN(Date.parse(opts.builtAt))) throw new Error("--built-at must be an ISO date"); break;
+      case "--built-at": opts.builtAt = needs(); if (!isRealDate(opts.builtAt.slice(0, 10)) || Number.isNaN(Date.parse(opts.builtAt))) throw new Error("--built-at must be an ISO date"); break;
       case "--edition": opts.editionFile = needs(); break;
       case "-h":
       case "--help": opts.help = true; break;
@@ -106,11 +121,25 @@ export function chunkIntro(text, target = 600, maxChunks = 3) {
     }
   }
   if (cur && chunks.length < maxChunks) chunks.push(cur);
-  return chunks.filter((c) => c.length >= 40);
+  // The 40-char floor drops residual middle chunks; the last chunk
+  // always survives, so a short introduction (or a short closing
+  // sentence) is never lost in silence.
+  return chunks.filter((c, i) => c.length >= 40 || i === chunks.length - 1);
 }
 
 /** Per-vector symmetric int8 quantization: v ≈ data * scale. */
 export function quantizeInt8(vectors, dims) {
+  if (!Number.isInteger(dims) || dims <= 0) {
+    throw new Error(`quantizeInt8: dims must be a positive whole number, got ${dims}`);
+  }
+  if (vectors.length % dims !== 0) {
+    throw new Error(`quantizeInt8: ${vectors.length} components do not make a whole number of ${dims}-dimension vectors`);
+  }
+  for (let i = 0; i < vectors.length; i++) {
+    if (!Number.isFinite(vectors[i])) {
+      throw new Error(`quantizeInt8: non-finite component at index ${i} (${vectors[i]})`);
+    }
+  }
   const count = vectors.length / dims;
   const data = new Int8Array(vectors.length);
   const scales = new Float32Array(count);
@@ -148,9 +177,14 @@ export function parseGuide(markdown, file = "guide") {
   const meta = {};
   for (const line of m[1].split("\n")) {
     const i = line.indexOf(":");
-    if (i > 0) meta[line.slice(0, i).trim()] = line.slice(i + 1).trim();
+    if (i > 0) {
+      const key = line.slice(0, i).trim();
+      if (Object.hasOwn(meta, key)) throw new Error(`${file}: duplicated front matter key "${key}"`);
+      meta[key] = line.slice(i + 1).trim();
+    }
   }
   for (const k of ["title", "lang", "sources"]) if (!meta[k]) throw new Error(`${file}: front matter needs "${k}"`);
+  if (!["es", "en", "pt"].includes(meta.lang)) throw new Error(`${file}: lang must be "es", "en" or "pt"`);
   const sections = [];
   let heading = "";
   let buf = [];
@@ -158,7 +192,7 @@ export function parseGuide(markdown, file = "guide") {
   const flush = () => {
     const text = buf.join("\n").trim();
     if (text) sections.push({ heading, text, questions: sectionQuestions });
-    else if (sectionQuestions.length && sections.length) sections[sections.length - 1].questions.push(...sectionQuestions);
+    else if (sectionQuestions.length) throw new Error(`${file}: section "${heading}" declares questions but has no text`);
     buf = [];
     sectionQuestions = [];
   };
@@ -179,7 +213,8 @@ export function parseGuide(markdown, file = "guide") {
   flush();
   if (sections.length === 0) throw new Error(`${file}: empty guide`);
   if (meta.region && !/^[A-Z]{2}$/.test(meta.region)) throw new Error(`${file}: region must be an ISO 3166-1 alpha-2 code`);
-  if (meta.verified && !/^\d{4}-\d{2}-\d{2}$/.test(meta.verified)) throw new Error(`${file}: verified must be YYYY-MM-DD`);
+  if (meta.verified && !isRealDate(meta.verified)) throw new Error(`${file}: verified must be a real YYYY-MM-DD date`);
+  if (meta.id && !/^[a-z0-9][a-z0-9-]*$/.test(meta.id)) throw new Error(`${file}: id must be lowercase letters, digits or dashes`);
   return {
     title: meta.title,
     category: meta.category ?? "",
@@ -259,25 +294,33 @@ export function splitQuestions(text) {
  * anything missing, so an unsourced fact can never reach a pack.
  */
 export function validateFacts(doc, file = "facts.json") {
-  if (!doc || typeof doc !== "object") throw new Error(`${file}: not an object`);
+  if (!doc || typeof doc !== "object" || Array.isArray(doc)) throw new Error(`${file}: not an object`);
+  const isText = (v) => typeof v === "string" && v.trim().length > 0;
   const regions = doc.regions ?? {};
+  if (typeof regions !== "object" || regions === null || Array.isArray(regions)) throw new Error(`${file}: regions must be an object`);
   for (const [code, r] of Object.entries(regions)) {
     if (!/^[A-Z]{2}$/.test(code)) throw new Error(`${file}: region ${code} is not an ISO 3166-1 alpha-2 code`);
-    for (const l of ["es", "en", "pt"]) if (!r?.names?.[l]) throw new Error(`${file}: region ${code} needs names.${l}`);
-    if (!Array.isArray(r.aliases) || r.aliases.length === 0) throw new Error(`${file}: region ${code} needs aliases`);
-    if (r.in !== undefined) for (const l of ["es", "en", "pt"]) if (!r.in?.[l]) throw new Error(`${file}: region ${code} needs in.${l}`);
+    for (const l of ["es", "en", "pt"]) if (!isText(r?.names?.[l])) throw new Error(`${file}: region ${code} needs names.${l}`);
+    if (!Array.isArray(r.aliases) || r.aliases.length === 0 || !r.aliases.every(isText)) throw new Error(`${file}: region ${code} needs aliases`);
+    if (r.in !== undefined) for (const l of ["es", "en", "pt"]) if (!isText(r.in?.[l])) throw new Error(`${file}: region ${code} needs in.${l}`);
   }
-  const facts = Array.isArray(doc.facts) ? doc.facts : [];
+  if (!Array.isArray(doc.facts)) throw new Error(`${file}: facts must be an array`);
+  const facts = doc.facts;
   const seen = new Set();
   for (const f of facts) {
     const where = `${file}: fact ${f?.key ?? "?"}/${f?.region ?? "?"}`;
     if (!f?.key || !/^[a-z]+(\.[a-z0-9-]+)+$/.test(f.key)) throw new Error(`${where}: bad key`);
     if (!regions[f.region]) throw new Error(`${where}: unknown region`);
-    if (!f.value || typeof f.value !== "string") throw new Error(`${where}: needs a value`);
-    for (const l of ["es", "en", "pt"]) if (!f.label?.[l]) throw new Error(`${where}: needs label.${l}`);
-    if (f.note !== undefined) for (const l of ["es", "en", "pt"]) if (!f.note?.[l]) throw new Error(`${where}: needs note.${l}`);
+    if (!isText(f.value)) throw new Error(`${where}: needs a value`);
+    for (const l of ["es", "en", "pt"]) if (!isText(f.label?.[l])) throw new Error(`${where}: needs label.${l}`);
+    if (f.note !== undefined) for (const l of ["es", "en", "pt"]) if (!isText(f.note?.[l])) throw new Error(`${where}: needs note.${l}`);
     const s = f.source ?? {};
-    if (!s.title || !/^https:\/\//.test(s.url ?? "") || !s.quote || !/^\d{4}-\d{2}-\d{2}$/.test(s.checked ?? "")) {
+    let urlOk = false;
+    try {
+      const u = new URL(typeof s.url === "string" ? s.url : "");
+      urlOk = u.protocol === "https:" && u.hostname.length > 0;
+    } catch { urlOk = false; }
+    if (!isText(s.title) || !urlOk || !isText(s.quote) || !normalizeForQuote(s.quote) || !isRealDate(s.checked ?? "")) {
       throw new Error(`${where}: needs source.title, an https source.url, source.quote and source.checked (YYYY-MM-DD)`);
     }
     const id = `${f.region}|${f.key}`;
@@ -308,24 +351,31 @@ export function normalizeForQuote(text) {
 
 const ENTITIES = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
 
+const codePointOrReplacement = (n) =>
+  Number.isInteger(n) && n >= 0 && n <= 0x10ffff ? String.fromCodePoint(n) : "\uFFFD";
+
 /** Visible text of an HTML page (scripts and styles dropped, entities decoded). */
 export function htmlToText(html) {
   return String(html)
     .replace(/<(script|style|noscript)\b[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<(script|style|noscript)\b[\s\S]*$/gi, " ")
     .replace(/<!--[\s\S]*?-->/g, " ")
     .replace(/<[^>]+>/g, " ")
-    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
-    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => codePointOrReplacement(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => codePointOrReplacement(Number(d)))
     .replace(/&([a-z]+);/gi, (m, n) => ENTITIES[n.toLowerCase()] ?? (/^[a-z](acute|grave|tilde|uml|circ|cedil)$/i.test(n) ? n[0] : m));
 }
 
 /** True when the quote (normalized) appears in the page text (normalized). */
 export function quoteIsPresent(pageText, quote) {
-  return normalizeForQuote(pageText).includes(normalizeForQuote(quote));
+  const needle = normalizeForQuote(quote);
+  if (!needle) return false;
+  return ` ${normalizeForQuote(pageText)} `.includes(` ${needle} `);
 }
 
 /** Days between a YYYY-MM-DD check date and `today` (a Date). */
 export function daysSince(checked, today = new Date()) {
+  if (!isRealDate(checked)) throw new Error(`daysSince: "${checked}" is not a real YYYY-MM-DD date`);
   return Math.floor((today.getTime() - Date.parse(`${checked}T00:00:00Z`)) / 86_400_000);
 }
 

@@ -116,7 +116,16 @@ export function checkFormatVersion(check: FormatVersionCheck): number {
   const { found, supportedMajor, ErrorClass, allowMissingAs } = check;
 
   if (found === undefined || found === null) {
-    if (allowMissingAs !== undefined) return allowMissingAs;
+    if (allowMissingAs !== undefined) {
+      // F-PC65 (paquete de arreglos del móvil, §3): el
+      // grandfathering se contrasta con el major soportado; un
+      // allowMissingAs distinto es un error de configuración de
+      // la puerta, no un dato, y no se sirve como si lo fuera.
+      if (allowMissingAs !== supportedMajor) {
+        throw new ErrorClass(found, "allowMissingAs does not match the supported major");
+      }
+      return allowMissingAs;
+    }
     throw new ErrorClass(found, "missing version field");
   }
 
@@ -126,6 +135,11 @@ export function checkFormatVersion(check: FormatVersionCheck): number {
   } else if (typeof found === "string") {
     const trimmed = found.trim();
     if (trimmed === "") throw new ErrorClass(found, "corrupt version value");
+    // F-PC65: la representación ha de ser el entero decimal que
+    // la propia app escribe; Number() aceptaba "0x1", "1e0" y
+    // "1.0" como el major 1 sin ser esa representación. "01" y
+    // " 1 " siguen aceptadas a propósito.
+    if (!/^\d+$/.test(trimmed)) throw new ErrorClass(found, "corrupt version value");
     const n = Number(trimmed);
     if (!Number.isInteger(n)) throw new ErrorClass(found, "corrupt version value");
     major = n;

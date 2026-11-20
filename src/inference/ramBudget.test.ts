@@ -523,3 +523,38 @@ describe("lectura real de memoria (0.1.85): la foto es fresca en cada intento y 
     mockAvail = null;
   });
 });
+
+describe("F-PC62 · la lectura en vivo en cero existe y manda (paquete de arreglos, §2)", () => {
+  it("availBytes 0 en la rama normal: availableBytes cae al suelo, no a la cuenta por el total", () => {
+    const v = checkRamBudget(DEFAULT_MODEL, {
+      totalRamBytes: 12 * GiB,
+      rssBytes: 1 * GiB,
+      availBytes: 0,
+      lowMemThresholdBytes: 0,
+    })!;
+    expect(v.availableBytes).toBe(0);
+    expect(v.fits).toBe(false);
+  });
+  it("availBytes negativo en la rama normal: el suelo cobra la lectura", () => {
+    const v = checkRamBudget(DEFAULT_MODEL, {
+      totalRamBytes: 12 * GiB,
+      rssBytes: 1 * GiB,
+      availBytes: -5,
+      lowMemThresholdBytes: 0,
+    })!;
+    expect(v.availableBytes).toBe(0);
+    expect(v.fits).toBe(false);
+  });
+  it("availBytes 0 en la rama de emergencia: el vivo es solo el crédito liberable", () => {
+    const v = checkRamBudget(
+      DEFAULT_MODEL,
+      { totalRamBytes: 12 * GiB, rssBytes: 1 * GiB, availBytes: 0, releasableBytes: 300 * MiB },
+      { emergencyLive: true },
+    )!;
+    expect(v.availableBytes).toBe(300 * MiB);
+  });
+  it("sin lectura en vivo (undefined), la cuenta por el total sigue mandando como siempre", () => {
+    const v = checkRamBudget(DEFAULT_MODEL, { totalRamBytes: 12 * GiB, rssBytes: 1 * GiB })!;
+    expect(v.availableBytes).toBeGreaterThan(0);
+  });
+});
