@@ -4,6 +4,58 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.109-alpha - 2026-11-20
+
+This release is a fix package. The desktop version of
+NIDO went through a long audit, and every finding was
+then checked against this app, line by line. What lived
+here too is fixed here. On top of that, the Spanish and
+Portuguese interface went through a full language pass,
+so both read the way people actually speak.
+
+Reminders understand more of how people talk. "Don't
+forget to call Ana", "no se te olvide comprar pan" and
+"não esqueça de ligar para a mãe" now create the
+reminder, in the three languages, instead of being
+filed away as a fact about you. And a turn that carries
+an order no longer gets quietly swallowed by the quick
+reply path.
+
+Memory answers more, and answers it in your language.
+You can ask how many children you have, how many people
+NIDO keeps, and what it knows about you; when the list
+is cut short, it now says there is more. Names are
+matched whole, so asking about Ana no longer finds
+Anabel. When you dictate several people in one sentence
+("my mum is called Ana and my dad José"), all of them
+are saved, not just the first.
+
+Tools answer in the language you are using. Notes,
+reminders, calendar, contacts, calls and messages no
+longer slip into English mid-sentence in Spanish or
+Portuguese, and the chat suggestions in Portuguese now
+work when you tap them: "guarde uma nota" and "envie
+uma mensagem" are understood like their typed forms.
+
+Emergencies are safer. Telling NIDO about something
+that already happened ("yesterday I called 911") no
+longer triggers the emergency answer, and more ways of
+describing heavy bleeding, fainting and carbon monoxide
+reach the fixed, correct answer in the three languages.
+
+Knowledge packs are stricter about what they accept.
+The library that builds them now rejects malformed data
+(impossible dates, quotes that do not match their
+source, damaged vectors) instead of letting it through
+in silence.
+
+And the words themselves: one name per thing across the
+whole interface. Backups are "respaldo" everywhere in
+Spanish, the vault speaks of your "clave", packs are
+"paquetes", and Portuguese speaks to you as você from
+the first screen to the last, with "transferência" for
+the downloads you start.
+
 ## 0.1.108-alpha - 2026-11-16
 
 The tablet pass of 0.1.107 closed complete and approved:

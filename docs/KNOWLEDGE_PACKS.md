@@ -221,6 +221,14 @@ A v2 pack (`meta.formatVersion = 2`) adds the tables `guides`, `regions`,
 `facts` and the column `chunks.keys`; older app versions keep reading it as
 before.
 
+Since 0.1.109 the builder library validates as it reads: a manifest with a
+missing or malformed field, an impossible `verified` or `checked` date, a
+fact whose quote does not match its source text, a chunk vector with the
+wrong length or damaged values, and a guide whose declared counts disagree
+with its content are all refused with an error that names the problem,
+instead of being packed in silence. A very short introduction still yields
+its chunk: a section is never dropped just for being short.
+
 ## Putting a pack on your phone
 
 **For testing, over USB** (a development build of NIDO, USB debugging on):
