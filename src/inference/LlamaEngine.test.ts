@@ -2043,7 +2043,12 @@ describe("T-07: el diagnóstico dice lo que corrió (M-41/P-32)", () => {
   const readSession = (): NativeSessionRecord =>
     JSON.parse(fsStore.get(SESSION_PATH)!) as NativeSessionRecord;
 
-  it("con GPU «disponible» el registro dice ejecución CPU y dispositivos vistos", async () => {
+  it("con GPU capaz (Adreno 750) el registro dice lo que ejecutó: la GPU, y los dispositivos vistos", async () => {
+    // M-41 sigue mandando — el resumen dice lo que EJECUTÓ — pero
+    // desde VEL-5 (0.1.110) lo que ejecuta una carga con la puerta
+    // abierta ES el acelerador: la frase «ejecución CPU» era el
+    // hecho de la era de n_gpu_layers: 0 universal, no la ley. La
+    // ley es la correspondencia con el perfil que cargó.
     mockAndroidLib = "libggml-opencl.so";
     mockBackendDevices = [
       { backend: "OpenCL", type: "gpu", deviceName: "Adreno 750" },
@@ -2056,7 +2061,7 @@ describe("T-07: el diagnóstico dice lo que corrió (M-41/P-32)", () => {
     await new Promise((r) => setTimeout(r, 40));
     const backend = readSession().backend ?? "";
     expect(backend).toContain("lib libggml-opencl.so");
-    expect(backend).toContain("ejecución CPU");
+    expect(backend).toContain("ejecución GPU (Adreno 750)");
     expect(backend).toContain("vistos: OpenCL/gpu/Adreno 750");
     expect(backend).not.toMatch(/^OpenCL/);
   });
@@ -2092,6 +2097,102 @@ describe("T-07: el diagnóstico dice lo que corrió (M-41/P-32)", () => {
     for (const entry of vistosPart.split(", ")) {
       expect(entry).toMatch(/^OpenCL\/gpu\/DispositivoConUnNombreLargo\d+$/);
     }
+  });
+});
+
+describe("T-07: VEL-5 acto 2 — la puerta de aceleración y el perfil «accel»", () => {
+  it("con Adreno 750 y RAM amplia, la primera llamada es «accel» con su matriz entera", async () => {
+    mockBackendDevices = [
+      { backend: "OpenCL", type: "gpu", deviceName: "Adreno 750" },
+      { backend: "CPU", type: "cpu", deviceName: "Probe" },
+    ];
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls).toHaveLength(1);
+    // La matriz sellada del perfil: dispositivo elegido, capas por
+    // presupuesto (el fichero de 1 MB del arnés cabe entero: 28),
+    // FA 'off', K q8_0, V f16.
+    expect(initCalls[0]).toMatchObject({
+      devices: ["Adreno 750"],
+      n_gpu_layers: 28,
+      flash_attn_type: "off",
+      cache_type_k: "q8_0",
+      cache_type_v: "f16",
+    });
+    expect(engine.getModelInfo()?.memoryProfile).toBe("accel");
+    expect(engine.getModelInfo()?.accelDevice).toBe("Adreno 750");
+  });
+
+  it("declarado: en la Tab A9+ del dueño (Adreno 619) la puerta NO abre y la carga es la CPU de siempre", async () => {
+    mockBackendDevices = [
+      { backend: "OpenCL", type: "gpu", deviceName: "Adreno 619" },
+      { backend: "CPU", type: "cpu", deviceName: "Probe" },
+    ];
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls).toHaveLength(1);
+    expect(initCalls[0].n_gpu_layers).toBe(0);
+    expect(initCalls[0].devices).toBeUndefined();
+    expect(engine.getModelInfo()?.memoryProfile).toBe("kv-q8");
+    expect(engine.getModelInfo()?.accelDevice).toBeUndefined();
+  });
+
+  it("un HTP presente no se auto-elige en este acto: encenderlo es la opción del acto 3", async () => {
+    mockBackendDevices = [
+      { backend: "Hexagon", type: "accel", deviceName: "HTP0" },
+      { backend: "CPU", type: "cpu", deviceName: "Probe" },
+    ];
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls[0].n_gpu_layers).toBe(0);
+    expect(initCalls[0].devices).toBeUndefined();
+    expect(engine.getModelInfo()?.memoryProfile).toBe("kv-q8");
+  });
+
+  it("si la creación acelerada falla, la cascada sigue a kv-q8 intacta (la cascada que PocketPal no tiene)", async () => {
+    mockBackendDevices = [
+      { backend: "OpenCL", type: "gpu", deviceName: "Adreno 750" },
+      { backend: "CPU", type: "cpu", deviceName: "Probe" },
+    ];
+    rejectInit = (p) => Array.isArray(p.devices);
+    mockInitErrorFor = () => "ggml-opencl: failed to create context";
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls).toHaveLength(2);
+    expect(initCalls[0].devices).toEqual(["Adreno 750"]);
+    expect(initCalls[1].devices).toBeUndefined();
+    expect(initCalls[1].cache_type_k).toBe("q8_0");
+    expect(initCalls[1].cache_type_v).toBe("q8_0");
+    expect(engine.getModelInfo()?.memoryProfile).toBe("kv-q8");
+  });
+
+  it("con presión (batería baja) la puerta se cierra en esa carga aunque el aparato sea capaz", async () => {
+    mockBackendDevices = [
+      { backend: "OpenCL", type: "gpu", deviceName: "Adreno 750" },
+      { backend: "CPU", type: "cpu", deviceName: "Probe" },
+    ];
+    mockBattery = { levelPct: 10, charging: false, powerSave: false };
+    refreshDevicePressure();
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls[0].n_gpu_layers).toBe(0);
+    expect(initCalls[0].devices).toBeUndefined();
+    expect(engine.getModelInfo()?.memoryProfile).toBe("kv-q8");
+    mockBattery = null;
+    refreshDevicePressure();
+  });
+
+  it("sin lectura de RAM no hay presupuesto y no hay aceleración: la carga va en CPU", async () => {
+    mockBackendDevices = [
+      { backend: "OpenCL", type: "gpu", deviceName: "Adreno 750" },
+      { backend: "CPU", type: "cpu", deviceName: "Probe" },
+    ];
+    mockTotalRamBytes = 0;
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls[0].n_gpu_layers).toBe(0);
+    expect(initCalls[0].devices).toBeUndefined();
+    expect(engine.getModelInfo()?.memoryProfile).toBe("kv-q8");
   });
 });
 

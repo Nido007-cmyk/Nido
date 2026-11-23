@@ -141,6 +141,16 @@ const DEFAULT_ARCH = { nLayer: 28, nKvHeads: 2, headDim: 128 };
 export const KV_Q8_BYTES_PER_ELEMENT = 1;
 
 /**
+ * VEL-5 (0.1.110): la KV del perfil acelerado — K en q8_0 (1 byte) y
+ * V en f16 (2 bytes). La fórmula del estimador multiplica por 2 (K y
+ * V) el coste por elemento, así que el valor que la representa es la
+ * media de los dos tipos: 1,5 bytes. Cobrarla a f16 entera (2)
+ * sobre-cargaría el perfil; cobrarla a q8_0 (1) lo infra-cargaría —
+ * la dirección peligrosa para un pre-flight.
+ */
+export const KV_ACCEL_BYTES_PER_ELEMENT = 1.5;
+
+/**
  * Conservative allowance for llama.cpp's per-context compute/graph buffers
  * at n_ctx 4096, scaled linearly with context length. Deliberately an
  * over-estimate: for a pre-flight, firing early is annoying, firing late is

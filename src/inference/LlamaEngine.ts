@@ -7,7 +7,13 @@
 import * as FileSystem from "expo-file-system/legacy";
 import { initLlama, LlamaContext, type CompletionResponseFormat } from "llama.rn";
 import * as RamMonitor from "ram-monitor";
-import { batchForRam, checkRamBudget, defaultThreadsForCores, estimateContextBytes, KV_Q8_BYTES_PER_ELEMENT, RamBudgetError, readProcessorCount, readRamSnapshot, toGb } from "./ramBudget";
+import { batchForRam, checkRamBudget, defaultThreadsForCores, estimateContextBytes, KV_ACCEL_BYTES_PER_ELEMENT, KV_Q8_BYTES_PER_ELEMENT, RamBudgetError, readProcessorCount, readRamSnapshot, toGb } from "./ramBudget";
+import {
+  accelLayerBudget,
+  evaluateAccelGate,
+  resolveAccelSelection,
+  type BackendDeviceLike,
+} from "./accelGate";
 import {
   crossNativeSessionRecord,
   holdBackgroundIndexingForSession,
@@ -327,6 +333,10 @@ export interface LoadedModelInfo {
   nThreads: number;
   /** RAM-2026-10-11: qué perfil de memoria aceptó llama.cpp (diagnóstico). */
   memoryProfile?: LlmMemoryProfile;
+  /** VEL-5 (0.1.110): el dispositivo acelerador que ejecutó la carga
+   *  cuando el perfil aceptado fue «accel» (su deviceName de
+   *  getBackendDevicesInfo); ausente en toda carga CPU. */
+  accelDevice?: string;
   /** Qwen3 lane: el modelo cargado pide enable_thinking=false (catálogo). */
   noThink?: boolean;
   /** Estudio de modelos: receta de muestreo del fabricante (catálogo). */
@@ -355,15 +365,33 @@ export interface LoadedModelInfo {
  *   cuantizada exige flash attention; con flash_attn_type en "auto" (por
  *   defecto) llama.cpp la activa en CPU si el modelo la soporta, y si no,
  *   falla la creación del contexto y se pasa al siguiente perfil.
+ *
+ * VEL-5 (0.1.110, acto 2): el perfil «accel» nace AL FRENTE de la
+ * cascada, pero solo entra en la lista de una carga cuando la puerta
+ * de accelGate.ts abrió para esa carga (GPU Adreno 700+ presente,
+ * sin presión, con presupuesto de capas por RAM). Su matriz es la
+ * que la física de llama.cpp manda en acelerador — la misma que
+ * PocketPal aplica y que nuestra propia nota de arriba anticipa:
+ * flash attention 'off' (OpenCL/Hexagon no cargan otra), K q8_0 y
+ * V **f16** (la V cuantizada sin flash attention no crea contexto:
+ * con FA apagada, la V va sin cuantizar). Si la creación acelerada
+ * falla, la cascada sigue a los perfiles CPU de siempre, intactos.
  */
-export type LlmMemoryProfile = "kv-q8" | "small-batch" | "default";
+export type LlmMemoryProfile = "accel" | "kv-q8" | "small-batch" | "default";
 export const LLM_N_BATCH = 512;
 export const LLM_N_UBATCH = 256;
+
+/** La elección acelerada de una carga: dispositivo y capas juzgadas. */
+export interface AccelInitPick {
+  device: string;
+  nGpuLayers: number;
+}
 
 export function llmInitParamsForProfile(
   profile: LlmMemoryProfile,
   base: { model: string; n_ctx: number; n_threads: number },
   batch: { nBatch: number; nUbatch: number } = { nBatch: LLM_N_BATCH, nUbatch: LLM_N_UBATCH },
+  accel?: AccelInitPick,
 ): Record<string, unknown> {
   const common = {
     model: base.model,
@@ -380,10 +408,29 @@ export function llmInitParamsForProfile(
   // exactamente como antes.
   const smallBatch = { ...common, n_batch: batch.nBatch, n_ubatch: batch.nUbatch };
   if (profile === "small-batch") return smallBatch;
+  if (profile === "accel") {
+    // Sin elección juzgada no hay perfil acelerado que construir: el
+    // motor solo pone «accel» en la lista cuando la puerta abrió con
+    // su pick. Si aun así llegara aquí sin pick, la forma devuelta es
+    // la de kv-q8 — nunca un acelerado inventado sin dispositivo.
+    if (!accel) return { ...smallBatch, cache_type_k: "q8_0", cache_type_v: "q8_0" };
+    return {
+      ...smallBatch,
+      devices: [accel.device],
+      n_gpu_layers: accel.nGpuLayers,
+      flash_attn_type: "off",
+      cache_type_k: "q8_0",
+      cache_type_v: "f16",
+    };
+  }
   return { ...smallBatch, cache_type_k: "q8_0", cache_type_v: "q8_0" };
 }
 
-export const LLM_MEMORY_PROFILES: readonly LlmMemoryProfile[] = ["kv-q8", "small-batch", "default"];
+/** La cascada CPU de siempre, en su orden histórico exacto. */
+export const LLM_CPU_MEMORY_PROFILES: readonly LlmMemoryProfile[] = ["kv-q8", "small-batch", "default"];
+
+/** La cascada entera con la puerta abierta: «accel» al frente. */
+export const LLM_MEMORY_PROFILES: readonly LlmMemoryProfile[] = ["accel", ...LLM_CPU_MEMORY_PROFILES];
 
 /**
  * m-73 (auditoría 2026-11-13, F2-m2): ¿el error de initLlama nombra el
@@ -430,11 +477,17 @@ export const MAX_GENERATION_WAIT_MS = 15 * 60_000;
 
 /**
  * M-41 (auditoría 2026-11-13, F2-M6): el resumen de backend dice lo que
- * EJECUTÓ, no lo que había. La ejecución es CPU siempre — todos los
- * perfiles de carga fijan n_gpu_layers: 0 (llmInitParamsForProfile) —
- * así que el resumen la declara como hecho y los dispositivos de
- * getBackendDevicesInfo van etiquetados como VISTOS: que el aparato
- * tenga una GPU OpenCL no significa que la inferencia la usara.
+ * EJECUTÓ, no lo que había. Los dispositivos de getBackendDevicesInfo
+ * van etiquetados como VISTOS: que el aparato tenga una GPU OpenCL no
+ * significa que la inferencia la usara.
+ *
+ * VEL-5 (0.1.110): la ejecución ya no es CPU por ley — cuando la carga
+ * aceptó el perfil «accel», lo ejecutado es el acelerador y el resumen
+ * lo nombra («ejecución GPU (Adreno 750)»), porque la ley de M-41 es
+ * decir lo que corrió, no una frase fija. En toda carga CPU el
+ * ejecutado sigue siendo «ejecución CPU», como hecho del perfil que
+ * cargó (n_gpu_layers: 0). El llamador compone la etiqueta desde
+ * modelInfo; aquí solo se recibe.
  *
  * P-32 (F2-p1): la composición respeta un tope de 200 caracteres SIN
  * cortar una entrada por la mitad — el corte a ciegas de antes podía
@@ -442,9 +495,13 @@ export const MAX_GENERATION_WAIT_MS = 15 * 60_000;
  * dispositivos que no caben se cuentan («+N más»), no se truncan.
  * Puro — testeado.
  */
-export function composeBackendSummary(lib: string | null, deviceLabels: string[]): string {
+export function composeBackendSummary(
+  lib: string | null,
+  deviceLabels: string[],
+  executed: string = "ejecución CPU",
+): string {
   const MAX = 200;
-  const head = lib ? `lib ${lib} · ejecución CPU` : "ejecución CPU";
+  const head = lib ? `lib ${lib} · ${executed}` : executed;
   if (deviceLabels.length === 0) return head.length <= MAX ? head : head.slice(0, MAX);
   let vistos = "";
   let used = 0;
@@ -463,6 +520,14 @@ export function composeBackendSummary(lib: string | null, deviceLabels: string[]
   }
   return out;
 }
+
+/**
+ * VEL-5 (0.1.110): plazo de la sonda de dispositivos en el camino de
+ * carga. La enumeración de backends es una llamada local que responde
+ * en milisegundos en un aparato sano; el plazo solo existe para que
+ * una sonda atascada nunca sea la razón de que un modelo no cargue.
+ */
+const ACCEL_PROBE_TIMEOUT_MS = 1000;
 
 /**
  * Thin wrapper around llama.rn. Loads a GGUF model with mmap so weights
@@ -747,44 +812,88 @@ export class LlamaEngine {
 
   /**
    * La variante nativa cargada y lo que la sesión ejecutó, una vez por
-   * proceso, en segundo plano: «lib <variante> · ejecución CPU ·
-   * vistos: <dispositivos>».
+   * proceso, en segundo plano: «lib <variante> · ejecución <la que
+   * corrió> · vistos: <dispositivos>».
    *
    * La variante sale de context.androidLib, que llama.rn rellena al cargar
    * con la librería que eligió (RNLlamaJSI.cpp, g_android_loaded_library;
    * existe al menos desde rc.7). La librería se carga una vez por proceso,
    * así que basta con leerla una vez.
    *
-   * M-41: la ejecución se declara desde lo que el motor fijó
-   * (n_gpu_layers: 0 en todos los perfiles), no desde los dispositivos
-   * que la sonda ve — ver composeBackendSummary. P-32: un intento que no
+   * M-41: la ejecución se declara desde lo que el motor fijó — el
+   * perfil que la carga aceptó (CPU con n_gpu_layers: 0, o «accel»
+   * con su dispositivo) — no desde los dispositivos que la sonda ve:
+   * ver composeBackendSummary. P-32: un intento que no
    * produce resumen NO se cachea (antes, un primer fallo dejaba el
    * diagnóstico vacío para todo el proceso); y la parte que puede fallar
    * (la sonda de dispositivos) ya no puede vaciar el resumen entero,
    * porque lo ejecutado se sabe sin ella.
    */
+  /**
+   * La lista real de dispositivos de llama.rn, leída sin lanzar
+   * nunca: build sin la sonda, sonda que falla o respuesta que no es
+   * una lista → lista vacía (sin dispositivos que juzgar ni que
+   * enseñar). La comparten la puerta de aceleración de la carga y el
+   * resumen de diagnóstico.
+   */
+  private async probeBackendDevices(): Promise<BackendDeviceLike[]> {
+    try {
+      const mod = (await import("llama.rn")) as { getBackendDevicesInfo?: unknown };
+      if (typeof mod.getBackendDevicesInfo !== "function") return [];
+      const devices = await (
+        mod.getBackendDevicesInfo as () => Promise<BackendDeviceLike[]>
+      )();
+      return Array.isArray(devices) ? devices : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * La lectura de la puerta, con plazo: una enumeración nativa
+   * atascada no puede colgar la carga de un modelo. Si la lista no
+   * llega dentro del plazo, la puerta juzga sin lista — cerrada — y
+   * la carga sigue en CPU, la conducta de siempre. La lectura de
+   * fondo continúa y su resultado tardío simplemente no se usa.
+   */
+  private async probeBackendDevicesForGate(): Promise<BackendDeviceLike[]> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const deadline = new Promise<BackendDeviceLike[]>((resolve) => {
+      timer = setTimeout(() => resolve([]), ACCEL_PROBE_TIMEOUT_MS);
+    });
+    try {
+      return await Promise.race([this.probeBackendDevices(), deadline]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
   private refreshBackendSummary(): Promise<void> {
     if (!this.backendSummaryPromise) {
       const attempt = (async () => {
         try {
           const lib = (this.context as unknown as { androidLib?: unknown } | null)?.androidLib;
-          let labels: string[] = [];
-          try {
-            const mod = (await import("llama.rn")) as { getBackendDevicesInfo?: unknown };
-            if (typeof mod.getBackendDevicesInfo === "function") {
-              const devices = await (
-                mod.getBackendDevicesInfo as () => Promise<
-                  Array<{ backend: string; type: string; deviceName: string }>
-                >
-              )();
-              if (Array.isArray(devices)) {
-                labels = devices.map((d) => `${d.backend}/${d.type}/${d.deviceName}`);
-              }
-            }
-          } catch {
-            // Best-effort: lo ejecutado se declara sin los dispositivos.
-          }
-          this.backendSummary = composeBackendSummary(typeof lib === "string" && lib ? lib : null, labels);
+          // Best-effort: lo ejecutado se declara sin los dispositivos
+          // si la sonda no responde (la lista sale vacía, no un error).
+          const devices = await this.probeBackendDevices();
+          const labels = devices.map((d) => `${d.backend}/${d.type}/${d.deviceName}`);
+          // M-41/VEL-5: lo ejecutado sale de la carga en curso — el
+          // perfil que llama.cpp aceptó y, si fue «accel», en qué
+          // dispositivo. El resumen se compone una vez por proceso
+          // (como la variante, que también se lee una vez): declara
+          // la ejecución de la carga que lo pidió primero.
+          const info = this.modelInfo;
+          const executed =
+            info?.memoryProfile === "accel" && info.accelDevice
+              ? info.accelDevice.startsWith("HTP")
+                ? `ejecución NPU (${info.accelDevice})`
+                : `ejecución GPU (${info.accelDevice})`
+              : "ejecución CPU";
+          this.backendSummary = composeBackendSummary(
+            typeof lib === "string" && lib ? lib : null,
+            labels,
+            executed,
+          );
         } catch {
           // Ni siquiera la composición: el resumen queda vacío y el
           // intento no se cachea (P-32), para reintentar en la siguiente.
@@ -939,7 +1048,11 @@ export class LlamaEngine {
               nKvHeads: loaded.arch?.nKvHeads,
               headDim: loaded.arch?.headDim,
               kvBytesPerElement:
-                this.modelInfo.memoryProfile === "kv-q8" ? KV_Q8_BYTES_PER_ELEMENT : undefined,
+                this.modelInfo.memoryProfile === "kv-q8"
+                  ? KV_Q8_BYTES_PER_ELEMENT
+                  : this.modelInfo.memoryProfile === "accel"
+                    ? KV_ACCEL_BYTES_PER_ELEMENT
+                    : undefined,
               nUbatch: loadBatch.nUbatch,
             }).totalBytes,
           }
@@ -1066,13 +1179,38 @@ export class LlamaEngine {
     // cuenta. Se confirma en la primera generación que termina bien.
     await this.crashGuardMarkPending(modelFilename, nCtx);
 
+    // VEL-5 (0.1.110, acto 2): la puerta de aceleración se juzga por
+    // carga, con la lista real de dispositivos de ESTA carga y la
+    // foto de presión de ESTA carga (accelGate.ts). La elección nace
+    // saneada: se re-resuelve contra la lista recién leída, así que
+    // un dispositivo que ya no está cae a CPU en silencio. Sin
+    // plan fijado de emergencia — ese plan cobró una KV concreta y
+    // la acelerada no es ella — y sin presupuesto de capas no hay
+    // pick: la cascada es la CPU de siempre, sin tocar.
+    let accelPick: AccelInitPick | null = null;
+    if (!pinnedProfile) {
+      const devices = await this.probeBackendDevicesForGate();
+      const gate = evaluateAccelGate(devices, pressure);
+      const candidate = gate.gpu ? resolveAccelSelection(gate.gpu.deviceName, devices) : null;
+      if (candidate) {
+        const layers = accelLayerBudget({ ...specBase, nCtx }, snapshot);
+        if (layers > 0) accelPick = { device: candidate, nGpuLayers: layers };
+      }
+    }
+
     try {
       // RAM-2026-10-11: primer perfil que llama.cpp acepte (ver
       // LLM_MEMORY_PROFILES). El último es exactamente la llamada original.
       // Si el plan fijó kv-q8 (solo cupo en el peldaño de emergencia con
       // su KV), la lista es ese perfil solo: cargar con otro sería
-      // gastar una KV que el pre-flight no aprobó.
-      const profilesToTry = pinnedProfile ? [pinnedProfile] : LLM_MEMORY_PROFILES;
+      // gastar una KV que el pre-flight no aprobó. Con pick acelerado
+      // la lista es la cascada entera («accel» al frente y la CPU
+      // detrás, intacta); sin pick, solo la CPU de siempre.
+      const profilesToTry = pinnedProfile
+        ? [pinnedProfile]
+        : accelPick
+          ? LLM_MEMORY_PROFILES
+          : LLM_CPU_MEMORY_PROFILES;
       let lastErr: unknown = null;
       let firstErr: unknown = null;
       let loadedProfile: LlmMemoryProfile | null = null;
@@ -1080,7 +1218,12 @@ export class LlamaEngine {
         try {
           this.context = await withStage("initLlama", () =>
             initLlama(
-              llmInitParamsForProfile(profile, { model: modelPath, n_ctx: nCtx, n_threads: nThreads }, loadBatch) as never,
+              llmInitParamsForProfile(
+                profile,
+                { model: modelPath, n_ctx: nCtx, n_threads: nThreads },
+                loadBatch,
+                profile === "accel" && accelPick ? accelPick : undefined,
+              ) as never,
             )
           );
           loadedProfile = profile;
@@ -1112,6 +1255,7 @@ export class LlamaEngine {
         nCtx,
         nThreads,
         memoryProfile: loadedProfile,
+        ...(loadedProfile === "accel" && accelPick ? { accelDevice: accelPick.device } : {}),
         ...(contextNote ? { contextNote } : {}),
         noThink: catalogEntry?.capabilities?.noThink,
         sampling: catalogEntry?.capabilities?.sampling,
