@@ -49,6 +49,19 @@ jest.mock("../services/haptics", () => ({
   ImpactFeedbackStyle: { Light: "light" },
 }));
 
+// KnowledgeBaseScreen es la cáscara (cabecera + cierre) sobre
+// PersonalDocumentsManager, que tiene su propio test de componente
+// (PersonalDocumentsManager.component.test.tsx) con la maquinaria de
+// expo que necesita. Aquí el gestor va sustituido por un marcador:
+// lo que se prueba es la cáscara, sin perder cobertura del gestor.
+jest.mock("./PersonalDocumentsManager", () => {
+  const React = require("react");
+  const { Text } = require("react-native");
+  return {
+    PersonalDocumentsManager: () => React.createElement(Text, { testID: "personal-documents-manager" }, "personal-documents-manager"),
+  };
+});
+
 describe("Calm-migrated screens", () => {
   it("AboutScreen renders with accessibility", async () => {
     const { AboutScreen } = require("./AboutScreen");
@@ -90,6 +103,16 @@ describe("Calm-migrated screens", () => {
     }
   });
 
-  // KnowledgeBaseScreen requires mocking expo modules (documentImporter)
-  // Skipped: needs more elaborate mock setup
+  // 0.1.111 (auditoría de la 0.1.110 §6.3): la deuda «Skipped: needs
+  // more elaborate mock setup» se cierra sustituyendo el gestor,
+  // que ya tiene su propio test de componente.
+  it("KnowledgeBaseScreen renders with accessibility and closes", async () => {
+    const { KnowledgeBaseScreen } = require("./KnowledgeBaseScreen");
+    const onClose = jest.fn();
+    await render(<KnowledgeBaseScreen onClose={onClose} />);
+    expect(screen.getByText("knowledgeBaseScreen.title")).toBeTruthy();
+    expect(screen.getByTestId("personal-documents-manager")).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText("common.done"));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });
