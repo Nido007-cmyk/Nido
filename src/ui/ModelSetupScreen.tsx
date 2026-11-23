@@ -830,8 +830,14 @@ export function ModelSetupScreen(props: Props) {
           </AccordionSection>
         )}
         {!searching && <Text style={styles.groupHeading} accessibilityRole="header">{t("settingsGroups.models")}</Text>}
-        {match(t("modelSetupScreen.sections.models"), t("modelSetupScreen.installedModels"), t("settings.npuAccelTitle"), t("modelSetupScreen.benchTitle")) && (
+        {match(t("modelSetupScreen.sections.models"), t("modelSetupScreen.installedModels"), t("settings.gpuAccelTitle"), t("settings.npuAccelTitle"), t("modelSetupScreen.benchTitle")) && (
           <AccordionSection key={`4-${searchKey}`} defaultOpen={searching} icon="models" title={t("modelSetupScreen.sections.models")}>
+            <View style={styles.hapticRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.hapticRowLabel}>{t("settings.gpuAccelTitle")}</Text>
+                <Text style={styles.hapticRowValue}>{t("settings.gpuAccelDesc")}</Text>
+              </View>
+            </View>
             {npuDevice !== null && (
               <>
                 <View style={styles.hapticRow}>

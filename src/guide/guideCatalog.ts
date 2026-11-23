@@ -93,7 +93,7 @@ export const GUIDE_MODULES: GuideModuleSpec[] = [
   },
   {
     id: "personalize",
-    lessons: [{ id: "models" }, { id: "tone" }, { id: "problems" }],
+    lessons: [{ id: "models" }, { id: "accel" }, { id: "tone" }, { id: "problems" }],
   },
 ];
 

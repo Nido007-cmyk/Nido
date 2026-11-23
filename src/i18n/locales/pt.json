@@ -1214,6 +1214,8 @@
     "npuAccelDesc": "Passa o modelo de conversa para o chip de IA do seu telefone (o NPU Hexagon) em vez do processador comum. É experimental: pode falhar, e se falhar o app continua no processador de sempre sem cortar a sua conversa. Só aparece em telefones que têm esse chip.",
     "npuAccelModels": "Com este chip, acelera de verdade: {{models}}.",
     "npuAccelOthers": "Os outros modelos do catálogo ({{models}}) usam um formato que esse chip não aproveita (Q4_K_M): com eles nem é tentado e tudo segue como sempre.",
+    "gpuAccelTitle": "Aceleração por GPU (automática)",
+    "gpuAccelDesc": "Se o seu telefone tem um chip gráfico Adreno 700 ou mais novo e o modelo usa um formato que esse chip aproveita (Q4_0), o NIDO passa parte do modelo para a GPU sem você tocar em nada. Se o telefone ou o formato não se encaixam, tudo roda no processador de sempre: não há nada para ativar. Com muito calor ou bateria baixa, a GPU fica de fora dessa carga para cuidar do telefone.",
     "delegationDesc": "Um NIDO pareado pode pedir para você executar tarefas. Cada tarefa requer sua aprovação.",
     "delegationTitle": "Tarefas delegadas (experimental)",
     "sealedHelloTitle": "Saudação privada",
@@ -1840,6 +1842,17 @@
               "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.models)."
             ],
             "tip": "Se as respostas demoram muito ou o app fecha, tente um modelo menor."
+          },
+          {
+            "id": "accel",
+            "title": "Aceleração: GPU e NPU",
+            "what": "Seu telefone pode dividir o trabalho do modelo entre três lugares: o processador de sempre, o chip gráfico (a GPU) e, em alguns telefones, um chip de IA (o NPU). A GPU entra sozinha quando pode: não tem botão. A NPU é um interruptor experimental que só aparece se o seu telefone tiver esse chip.",
+            "steps": [
+              "Na GPU você não toca: se o seu telefone tem um chip gráfico Adreno 700 ou mais novo e o modelo usa o formato Q4_0, o NIDO usa a GPU ao carregar o modelo. Se não, tudo roda no processador, como sempre.",
+              "A NPU fica em $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.models): se o seu telefone tem um chip Hexagon da série v73 ou mais novo, você verá ali o interruptor «Aceleração por NPU (experimental)», desligado de fábrica. Se você não o vê, seu telefone não tem esse chip.",
+              "Se você ligar a NPU e algo falhar, o NIDO continua no processador sem cortar a sua conversa."
+            ],
+            "tip": "Com muito calor ou bateria baixa, o NIDO deixa a GPU e a NPU de fora nessa carga para cuidar do telefone: é normal que nesse momento tudo rode no processador."
           },
           {
             "id": "tone",

@@ -1018,6 +1018,54 @@ const FALL_INJURY_PREFIXES = [
 ];
 
 /**
+ * El lugar de la caída como contexto (0.1.112, resto de la
+ * verificación de la 0.1.111): «se cayó en el baño» escrito tal
+ * cual, sin sujeto en la frase, es un parte — la forma
+ * impersonal con «se» y un lugar de la casa no la dice un objeto
+ * (el objeto que cae trae su nombre pegado: «se cayó el precio»,
+ * «se me cayó el móvil»). La guarda es la construcción entera:
+ * solo las formas impersonales («se cayo»/«se callo», el «caiu»
+ * portugués, el «fell» inglés) seguidas de la preposición de
+ * lugar y un lugar de esta lista. Las formas con «se me» quedan
+ * fuera (son la caída DE un objeto) y la narración y la negación
+ * vetan la ocurrencia antes, como en el resto de la cara.
+ */
+const FALL_PLACES_ES = new Set([
+  "bano", "cocina", "ducha", "regadera", "tina", "cuarto", "habitacion",
+  "dormitorio", "recamara", "sala", "comedor", "pasillo", "patio",
+  "jardin", "terraza", "balcon", "azotea", "sotano", "garaje", "cochera",
+  "entrada", "escalera", "escaleras", "calle", "acera", "banqueta",
+  "vereda", "piscina", "alberca", "suelo", "piso",
+]);
+const FALL_PLACES_PT = new Set([
+  "banheiro", "cozinha", "chuveiro", "banho", "quarto", "sala",
+  "corredor", "patio", "terraco", "varanda", "sotao", "garagem",
+  "entrada", "escada", "escadas", "rua", "calcada", "piscina", "chao",
+]);
+const FALL_PLACES_EN = new Set([
+  "bathroom", "kitchen", "shower", "bedroom", "hallway", "patio",
+  "garden", "terrace", "balcony", "basement", "garage", "stairs",
+  "street", "sidewalk", "pool", "floor",
+]);
+const FALL_PLACE_ARTICLES = new Set([
+  "el", "la", "los", "las", "un", "una", "o", "a", "os", "as", "um", "uma", "the",
+]);
+
+/** ¿Sigue a la caída (que acaba en `end`) su lugar? Preposición
+ * en la posición `end + 1`, artículo opcional y el lugar. */
+function fallPlaceFollows(
+  words: string[],
+  end: number,
+  preps: string[],
+  places: Set<string>,
+): boolean {
+  if (!preps.includes(words[end + 1] ?? "")) return false;
+  let j = end + 2;
+  if (FALL_PLACE_ARTICLES.has(words[j] ?? "")) j++;
+  return places.has(words[j] ?? "");
+}
+
+/**
  * El marco de NARRACIÓN de la caída (guardas de bateriaA2Movil,
  * doctrina desde la 0.1.109: una historia de una emergencia pasada
  * no dispara la respuesta de emergencia). La caída con víctima
@@ -1088,6 +1136,19 @@ function fallDeclares(words: string[], folded: string): boolean {
       for (let j = i; j <= Math.min(words.length - 1, end + 4); j++) {
         if (FALL_INJURY_PREFIXES.some((p) => words[j].startsWith(p))) return true;
       }
+      // 0.1.112: la caída impersonal con su lugar («se cayó en el
+      // baño» sin sujeto) es contexto bastante: ver FALL_PLACES_*.
+      if (
+        (phrase === "se cayo" || phrase === "se callo") &&
+        fallPlaceFollows(words, end, ["en"], FALL_PLACES_ES)
+      ) return true;
+      if (phrase === "caiu" && fallPlaceFollows(words, end, ["no", "na", "em"], FALL_PLACES_PT)) return true;
+      if (
+        phrase === "fell" &&
+        words[end + 1] === "in" &&
+        words[end + 2] === "the" &&
+        FALL_PLACES_EN.has(words[end + 3] ?? "")
+      ) return true;
     }
   }
   return false;
@@ -1216,6 +1277,56 @@ const IMMOBILITY_BODY_PARTS = [
 ];
 const IMMOBILITY_PLACES = ["suelo", "piso", "chao", "floor"];
 
+/**
+ * La familia «levantar» de `IMMOBILITY_SIGNS` (0.1.112, resto de
+ * la verificación de la 0.1.111): su guarda de contexto dejaba
+ * fuera el parte más desnudo de la familia, «No se puede
+ * levantar» como mensaje entero, que el CHANGELOG de la 0.1.111
+ * prometía sin matiz. A secas sí declara, con un borde estrecho
+ * y medido: el signo ABRE el mensaje (sin sujeto delante: «El
+ * embargo no se puede levantar» no entra) y detrás no trae un
+ * objeto (ni artículo que lo abra — «No se puede levantar el
+ * embargo» — ni un sustantivo suelto — «No se puede levantar
+ * pesas»): lo que puede seguir es el fin del mensaje o una
+ * continuación que no nombra cosa alguna (preposición,
+ * conjunción, adverbio: «todavía», «del suelo», «sin ayuda»).
+ * Con cuerpo o lugar cerca manda la cara de contexto de siempre;
+ * esta es solo la red del mensaje desnudo.
+ */
+const LEVANTAR_SIGNS = [
+  "no se puede levantar", "no puede levantarse", "can t get up",
+  "nao consegue se levantar", "nao se pode levantar",
+];
+const LEVANTAR_OBJECT_INTRODUCERS = new Set([
+  "el", "la", "los", "las", "un", "una", "unos", "unas",
+  "o", "a", "os", "as", "um", "uma", "the", "an", "su", "sus",
+]);
+const LEVANTAR_BARE_CONTINUATIONS = new Set([
+  "de", "del", "en", "desde", "do", "da", "dos", "das", "from",
+  "y", "e", "ni", "o", "pero", "mas", "and", "but", "or",
+  "aun", "todavia", "ya", "solo", "so", "apenas", "sin", "con",
+  "still", "yet", "without", "with",
+]);
+
+function immobilityBareLevantarDeclares(folded: string): boolean {
+  const words = folded
+    .trim()
+    .split(/\s+/)
+    .map((w) => w.replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, ""))
+    .filter((w) => w.length > 0);
+  for (const phrase of LEVANTAR_SIGNS) {
+    const pw = phrase.split(" ");
+    if (words.length < pw.length) continue;
+    if (!pw.every((w, k) => words[k] === w)) continue;
+    const next = words[pw.length];
+    if (next === undefined) return true;
+    if (LEVANTAR_OBJECT_INTRODUCERS.has(next)) return false;
+    if (LEVANTAR_BARE_CONTINUATIONS.has(next)) return true;
+    return false;
+  }
+  return false;
+}
+
 function immobilityHasContext(folded: string): boolean {
   if (FALL_TOLD_SIGNS.some((t) => folded.includes(` ${t}`))) return true;
   const words = folded
@@ -1314,6 +1425,7 @@ export function isEmergencySituation(text: string): boolean {
     signDeclares(words) ||
     stemDeclares(words) ||
     (IMMOBILITY_SIGNS.some((t) => folded.includes(` ${t}`)) && immobilityHasContext(folded)) ||
+    immobilityBareLevantarDeclares(folded) ||
     fallDeclares(words, folded) ||
     stemHitIsTelegraphic(folded, /[?¿]/.test(text))
   );
