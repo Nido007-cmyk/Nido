@@ -230,7 +230,18 @@ jobs:
           # 0.1.47: si falla, el motivo sale como anotación (los logs de CI
           # no siempre se pueden abrir).
           set -o pipefail
-          ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --stacktrace 2>&1 | tee "$RUNNER_TEMP/gradle.log" || {
+          # 0.1.110 (cura del juez VEL-5): -PrnllamaBuildFromSource=false.
+          # Sin el Hexagon SDK de Qualcomm en el runner, recompilar las
+          # variantes de llama.rn desde el código deja la variante
+          # hexagon_opencl SIN el backend Hexagon dentro (el símbolo
+          # ggml_backend_hexagon_reg no queda definido: la clase del
+          # #858 de PocketPal, cazada en vivo por el juez de recortes
+          # en la corrida 45125706352). Con la propiedad en false el
+          # build empaqueta las variantes precompiladas del paquete
+          # (las que sus autores compilaron con el SDK y el postinstall
+          # descarga de la release fijada) y CMake compila solo el
+          # puente JNI enlazado contra ellas. El juez no se toca.
+          ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a -PrnllamaBuildFromSource=false --stacktrace 2>&1 | tee "$RUNNER_TEMP/gradle.log" || {
             grep -A12 "What went wrong" "$RUNNER_TEMP/gradle.log" | head -40 | while IFS= read -r l; do echo "::error title=gradle::$l"; done
             grep -iE "^e: |error:|ERROR:|FAILURE" "$RUNNER_TEMP/gradle.log" | head -20 | while IFS= read -r l; do echo "::error title=gradle::$l"; done
             exit 1
@@ -369,7 +380,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          ./gradlew bundleRelease -PreactNativeArchitectures=arm64-v8a --stacktrace 2>&1 | tee "$RUNNER_TEMP/gradle-bundle.log" || {
+          ./gradlew bundleRelease -PreactNativeArchitectures=arm64-v8a -PrnllamaBuildFromSource=false --stacktrace 2>&1 | tee "$RUNNER_TEMP/gradle-bundle.log" || {
             grep -A12 "What went wrong" "$RUNNER_TEMP/gradle-bundle.log" | head -40 | while IFS= read -r l; do echo "::error title=gradle bundle::$l"; done
             exit 1
           }
