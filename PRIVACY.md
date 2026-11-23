@@ -2,7 +2,7 @@
 
 *Política de privacidad — versión en español más abajo.*
 
-Last updated: 2026-11-03 (after 0.1.70). Applies to the NIDO Android app built from this repository.
+Last updated: 2026-11-23 (with 0.1.111). Applies to the NIDO Android app built from this repository.
 
 ## Summary
 
@@ -28,9 +28,11 @@ NIDO never uses the internet except when you start a download:
 
 Those services see your IP address and which file you requested, as with any download, and apply their own privacy policies. NIDO sends no account, identifier or content with the request. Every connection is recorded in the network log inside the app (Settings › Security and privacy › Security check and network log), so you can check this yourself. The log is kept in the encrypted database and survives restarts (the latest 500 entries); up to 0.1.61 it was only kept until the app closed. It never contains your content: only the server and path, size, time and result.
 
+A download you started can also resume without a new tap from you. If the connection drops, NIDO retries a few times on its own, with pauses in between, and continues from the bytes it already has; and while the setup wizard is on screen, coming back to the app retries a download that had failed. It is always the same file, from the same pinned address, inside the download you started: nothing ever starts downloading on its own, and every one of those connections is in the network log too.
+
 ## Phone-to-phone (Bluetooth and local Wi-Fi)
 
-When you pair with another NIDO, messages travel directly between the two phones, end-to-end encrypted. Nothing passes through a server or the internet. The other person receives what you send them and can keep it.
+When you pair with another NIDO, messages travel between the two phones, end-to-end encrypted: directly, or through a friend you both know when there is no direct route (see **Friend to friend** below). Nothing passes through a server or the internet. The other person receives what you send them and can keep it.
 
 - **Bluetooth.** While NIDO is running, it listens for your paired contacts over Bluetooth, also in the background. A nearby device that probes yours could learn that NIDO is installed. The phone that receives a connection does not reveal who it is until the other side proves it is one of your contacts. If you make your phone discoverable so another phone can find it for pairing — through Android's own dialog, or while you sit in Android's Bluetooth settings to pair the phones there — nearby Bluetooth scanners can see your phone's Bluetooth name (the one set in Android Settings, which can be a personal name) for as long as it stays discoverable, up to 5 minutes. Android's dialog does not mention the name travels too. If your Bluetooth name identifies you, change it in Android Settings before pairing.
 - **Local Wi-Fi (backup route).** While you are looking for or connecting to another NIDO, it also uses your Wi-Fi network or hotspot. It announces itself on that network with a random name that changes on every start and a fixed service type, so other devices on the same network can see that a NIDO is there, but not who you are. It only accepts connections from local network addresses, never from the internet. When you leave that screen it stops announcing itself; connections already open stay.
@@ -38,6 +40,8 @@ When you pair with another NIDO, messages travel directly between the two phones
 - **Message size.** Messages are padded to fixed sizes before encryption, so their length does not reveal the length of what you wrote.
 - **Disappearing messages.** If you set a timer in a chat, new messages are deleted from both phones when it runs out (for the sender, counted from sending; for the receiver, from when they see it). Deleted messages are overwritten inside the encrypted database. A timer cannot stop someone from photographing the screen with another camera, and an older NIDO on the other side ignores it.
 - **New key per message (on by default since 0.1.49).** When both phones have it, each message uses its own key and each connection also uses ML-KEM-768, a quantum-resistant algorithm.
+- **Friend to friend (message relay).** If one of your messages cannot reach its contact directly, NIDO can hand it to another contact you both have, who carries it in a sealed envelope until it can be passed on. The envelope is encrypted end to end: whoever carries it cannot read it or change it, and it is deleted when it is delivered or after 72 hours at the most. A phone that carries envelopes holds at most 200 of them, and 2 MB in total. Disappearing messages never travel this way. Carrying other people's envelopes is off by default: you turn it on in the "Friend to friend" card in the NIDO tab. Sending your own messages this way is on by default, and the same card turns it off; off, your messages only travel directly, and one that cannot get through stays on your phone.
+- **Sharing packs with a contact.** From the Packs tab you can send a knowledge pack you already have to one of your contacts, over the same encrypted phone-to-phone channel. The receiving phone checks the pack's SHA-256 hash before importing it. It only happens when you tap to share, and it never uses the internet.
 
 Every local Wi-Fi connection also appears in the network log.
 
@@ -48,7 +52,8 @@ By default, voice dictation only works with a speech recognizer that runs on you
 ## Permissions
 
 - **Bluetooth and nearby devices**: pairing and messaging between phones.
-- **Network (local Wi-Fi)**: the backup route between two NIDOs on the same Wi-Fi or hotspot, and the downloads you start. No permission dialog is shown for this; Android grants it at install.
+- **Internet**: the downloads you start (AI models and knowledge packs). This is the permission that lets NIDO reach the internet at all, and those downloads are the only thing it is used for. Android grants it at install, with no dialog.
+- **Network state and local Wi-Fi**: reading the state of the network and joining the local multicast group, so two NIDOs on the same Wi-Fi or hotspot can find each other for the backup route above. Android grants these at install too, with no dialog.
 - **Display over other apps is blocked**: on Android 12 and later NIDO asks the system to hide other apps' overlays while it is on screen, so nobody can draw a fake button over a confirmation.
 - **Location** (on older Android versions): required by Android to scan for Bluetooth devices. NIDO does not read your location.
 - **Microphone**: voice input, only while you hold dictation open.
@@ -65,6 +70,7 @@ By default, voice dictation only works with a speech recognizer that runs on you
 ## Your controls
 
 - Delete any chat, memory, document or contact from inside the app.
+- Four exports can leave through Android's share sheet, always because you tap Export or Share and pick the destination yourself: your encrypted backup file, a document collection exported as JSON, the Execution Telemetry export (timings and routes only, no message text) and the model evaluation results. NIDO never sends them anywhere itself.
 - Erase everything from Settings → Danger zone, or by uninstalling the app. This also deletes the local backups made from Settings; copies you saved elsewhere (Downloads, another app) are outside NIDO and stay. Text you copied to the system clipboard (for example the pairing code, which carries your name and public keys) is also outside NIDO: erasing does not clear the clipboard. The backup key is the exception: NIDO wipes it from the clipboard itself, 60 seconds after copying it, while the app is still running. If NIDO is closed first, or on Android versions before 13, a copy can remain in the keyboard's clipboard history.
 - Optional panic button (Settings → Security): holding it for 3 seconds erases all NIDO data at once, without asking for a fingerprint.
 - NIDO asks your keyboard not to learn from what you type in it (incognito keyboard). Major keyboards respect this; NIDO cannot force one that ignores it.
@@ -82,7 +88,7 @@ Changes to this policy are made in this file and recorded in the repository hist
 
 # Política de privacidad
 
-Última actualización: 2026-11-03 (después de 0.1.70). Aplica a la app NIDO para Android compilada desde este repositorio.
+Última actualización: 2026-11-23 (con la 0.1.111). Aplica a la app NIDO para Android compilada desde este repositorio.
 
 ## Resumen
 
@@ -108,9 +114,11 @@ NIDO nunca usa internet salvo cuando tú inicias una descarga:
 
 Esos servicios ven tu dirección IP y qué archivo pediste, como en cualquier descarga, y aplican sus propias políticas de privacidad. NIDO no envía ninguna cuenta, identificador ni contenido con la petición. Cada conexión queda anotada en el registro de red dentro de la app (Ajustes › Seguridad y privacidad › Comprobación de seguridad y registro de red), para que puedas comprobarlo. El registro se guarda en la base cifrada y sobrevive a los reinicios (las últimas 500 entradas); hasta 0.1.61 solo duraba hasta cerrar la app. Nunca contiene tu contenido: solo el servidor y la ruta, el tamaño, la hora y el resultado.
 
+Una descarga que iniciaste también puede reanudarse sin que toques nada. Si la conexión se corta, NIDO lo reintenta solo unas cuantas veces, con pausas entre intento e intento, y sigue desde los bytes que ya tiene; y mientras el asistente de configuración está en pantalla, volver a la app reintenta una descarga que había fallado. Es siempre el mismo archivo y la misma dirección fijada, dentro de la descarga que tú iniciaste: nada empieza a descargarse solo, y cada una de esas conexiones queda también en el registro de red.
+
 ## De teléfono a teléfono (Bluetooth y Wi-Fi local)
 
-Cuando te emparejas con otro NIDO, los mensajes viajan directamente entre los dos teléfonos, cifrados de extremo a extremo. Nada pasa por un servidor ni por internet. La otra persona recibe lo que le envías y puede conservarlo.
+Cuando te emparejas con otro NIDO, los mensajes viajan entre los dos teléfonos, cifrados de extremo a extremo: directamente, o por un amigo que los dos tengan cuando no haya ruta directa (ver **De amigo en amigo**, más abajo). Nada pasa por un servidor ni por internet. La otra persona recibe lo que le envías y puede conservarlo.
 
 - **Bluetooth.** Mientras NIDO está en marcha, espera a tus contactos emparejados por Bluetooth, también en segundo plano. Un dispositivo cercano que consulte el tuyo podría saber que tienes NIDO instalado. El teléfono que recibe una conexión no dice quién es hasta que el otro demuestra ser uno de tus contactos. Si haces tu teléfono descubrible para que otro pueda encontrarlo al emparejar —con el diálogo del propio Android, o mientras estás en los ajustes de Bluetooth de Android para emparejar allí los teléfonos—, cualquier escáner Bluetooth cercano puede ver el nombre Bluetooth de tu teléfono (el que tengas en Ajustes de Android, que puede ser un nombre personal) mientras siga descubrible, hasta 5 minutos. El diálogo de Android no dice que el nombre también viaja. Si tu nombre Bluetooth te identifica, cámbialo en Ajustes de Android antes de emparejar.
 - **Wi-Fi local (ruta de respaldo).** Mientras buscas o te conectas a otro NIDO, también usa tu red Wi-Fi o el punto de acceso. Se anuncia en esa red con un nombre aleatorio que cambia en cada arranque y un tipo de servicio fijo: otros dispositivos de la misma red pueden ver que hay un NIDO, pero no quién eres. Solo acepta conexiones de direcciones de la red local, nunca de internet. Al salir de esa pantalla deja de anunciarse; las conexiones ya abiertas siguen.
@@ -118,6 +126,8 @@ Cuando te emparejas con otro NIDO, los mensajes viajan directamente entre los do
 - **Tamaño de los mensajes.** Los mensajes se rellenan hasta tamaños fijos antes de cifrarse, así su longitud no revela la de lo que escribiste.
 - **Mensajes temporales.** Si pones un temporizador en un chat, los mensajes nuevos se borran de los dos teléfonos al vencer (para quien envía, desde que lo envía; para quien recibe, desde que lo ve). Los mensajes borrados se sobrescriben dentro de la base cifrada. Un temporizador no impide que alguien fotografíe la pantalla con otra cámara, y un NIDO anterior del otro lado lo ignora.
 - **Clave nueva por mensaje (activada por defecto desde 0.1.49).** Cuando los dos teléfonos la tienen, cada mensaje usa su propia clave y cada conexión usa además ML-KEM-768, un algoritmo resistente a ordenadores cuánticos.
+- **De amigo en amigo (relevo de mensajes).** Si un mensaje tuyo no puede llegar directamente a su contacto, NIDO puede entregarlo a otro contacto que los dos tengan, que lo lleva en un sobre sellado hasta poder pasarlo. El sobre va cifrado de extremo a extremo: quien lo lleva no puede leerlo ni cambiarlo, y se borra al entregarse o a las 72 horas como mucho. Un teléfono que lleva sobres guarda como máximo 200, y 2 MB en total. Los mensajes temporales nunca viajan así. Llevar sobres de otros viene apagado: lo activas en la tarjeta «De amigo en amigo» de la pestaña NIDO. Enviar tus mensajes así viene activado, y la misma tarjeta lo apaga; apagado, tus mensajes solo viajan directos, y el que no pueda salir se queda en tu teléfono.
+- **Compartir packs con un contacto.** Desde la pestaña de Packs puedes enviar un paquete de conocimiento que ya tienes a uno de tus contactos, por el mismo canal cifrado de teléfono a teléfono. El teléfono que lo recibe comprueba el hash SHA-256 del paquete antes de importarlo. Solo ocurre cuando tocas para compartir, y nunca usa internet.
 
 Cada conexión por Wi-Fi local también aparece en el registro de red.
 
@@ -128,7 +138,8 @@ Por defecto, el dictado solo funciona con un reconocedor de voz que trabaja en t
 ## Permisos
 
 - **Bluetooth y dispositivos cercanos**: emparejar y enviar mensajes entre teléfonos.
-- **Red (Wi-Fi local)**: la ruta de respaldo entre dos NIDO en el mismo Wi-Fi o punto de acceso, y las descargas que inicias. Android lo concede al instalar, sin diálogo.
+- **Internet**: las descargas que inicias (modelos de IA y paquetes de conocimiento). Es el permiso que permite a NIDO llegar a internet, y solo se usa para esas descargas. Android lo concede al instalar, sin diálogo.
+- **Estado de la red y Wi-Fi local**: leer el estado de la red y unirse al grupo multicast local, para que dos NIDO en el mismo Wi-Fi o punto de acceso puedan encontrarse por la ruta de respaldo. Android también los concede al instalar, sin diálogo.
 - **Superposiciones bloqueadas**: en Android 12 y posteriores NIDO pide al sistema ocultar las capas de otras apps mientras está en pantalla, para que nadie pueda dibujar un botón falso sobre una confirmación.
 - **Ubicación** (en versiones antiguas de Android): Android la exige para buscar dispositivos Bluetooth. NIDO no lee tu ubicación.
 - **Micrófono**: entrada por voz, solo mientras dictas.
@@ -145,6 +156,7 @@ Por defecto, el dictado solo funciona con un reconocedor de voz que trabaja en t
 ## Tus controles
 
 - Borra cualquier chat, memoria, documento o contacto desde la app.
+- Cuatro exportaciones pueden salir por la hoja de compartir de Android, siempre porque tocas Exportar o Compartir y eliges tú el destino: tu archivo de respaldo cifrado, una colección de documentos exportada como JSON, la exportación de la Telemetría de ejecución (solo tiempos y rutas, sin texto de mensajes) y los resultados de la evaluación de modelos. NIDO nunca los envía por su cuenta.
 - Borra todo desde Ajustes → Zona de peligro, o desinstalando la app. Eso borra también los respaldos locales hechos desde Ajustes; las copias que guardaste fuera (Descargas, otra app) quedan fuera de NIDO y siguen ahí. El texto que copiaste al portapapeles del sistema (por ejemplo el código de emparejamiento, que lleva tu nombre y tus claves públicas) también queda fuera de NIDO: el borrado no limpia el portapapeles. La llave del respaldo es la excepción: NIDO la borra del portapapeles por sí mismo, 60 segundos después de copiarla, mientras la app siga abierta. Si NIDO se cierra antes, o en versiones de Android anteriores a la 13, puede quedar una copia en el historial del teclado.
 - Botón de pánico opcional (Ajustes → Seguridad): mantenerlo 3 segundos borra todos los datos de NIDO de una vez, sin pedir huella.
 - NIDO pide a tu teclado que no aprenda de lo que escribes en la app (teclado incógnito). Los teclados principales lo respetan; NIDO no puede obligar a uno que lo ignore.

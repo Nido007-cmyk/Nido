@@ -143,7 +143,7 @@
     "toneChanged": "Tono: {{tone}}",
     "emptyTitle": "Hola, soy NIDO",
     "emptySubtitle": "Tu agente privado. NIDO solo se conecta cuando tú se lo pides.",
-    "privacyHint": "Privado · nada sale de este dispositivo",
+    "privacyHint": "Privado · NIDO solo se conecta cuando tú se lo pides",
     "suggestions": {
       "reminder": {
         "title": "Recuérdame algo",

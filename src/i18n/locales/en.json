@@ -530,7 +530,7 @@
     "interruptedMemory": "Answer cut off: NIDO was closed because the device ran out of memory. Close other apps or choose a lighter model in Settings, then ask again.",
     "emptyTitle": "Hi, I'm NIDO",
     "emptySubtitle": "Your private agent. NIDO only connects when you ask it to.",
-    "privacyHint": "Private · nothing leaves this device",
+    "privacyHint": "Private · NIDO only connects when you ask it to",
     "suggestions": {
       "reminder": {
         "title": "Remind me of something",
