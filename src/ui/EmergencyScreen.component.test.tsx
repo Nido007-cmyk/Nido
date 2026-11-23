@@ -110,7 +110,7 @@ describe("EmergencyScreen sin chat (asistente, 0.1.95)", () => {
     await render(<EmergencyScreen onAsk={onAsk} onOpenLibrary={onOpenLibrary} />);
     expect(await screen.findByTestId("emergency-describe-card")).toBeTruthy();
     fireEvent.press(screen.getByText("emergency.guides.cpr"));
-    expect(onAsk).toHaveBeenCalledWith("emergency.questions.cpr");
+    expect(onAsk).toHaveBeenCalledWith("emergency.questions.cpr", "esencial-rcp-adultos");
     expect(onOpenLibrary).not.toHaveBeenCalled();
   });
 

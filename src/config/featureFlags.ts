@@ -24,6 +24,7 @@
 
 export type FeatureFlag =
   | "delegation.enabled"
+  | "inference.npuAccel"
   | "p2p.sealedHandshake"
   | "p2p.ratchetV5"
   | "p2p.privateHelloOnly"
@@ -34,6 +35,16 @@ export type FeatureFlag =
 const DEFAULTS: Record<FeatureFlag, boolean> = {
   /** Delegated task execution NIDO-A -> NIDO-B. Default OFF. */
   "delegation.enabled": false,
+  /**
+   * VEL-5 (0.1.110, acto 3): aceleración por NPU (Hexagon) del modelo
+   * de conversación. EXPERIMENTAL y OFF por defecto: solo tiene
+   * efecto si la puerta de accelGate detecta un dispositivo HTP en
+   * este teléfono y el modelo cargado declara un formato que el HTP
+   * descarga de verdad (Q4_0/Q8_0, dato del catálogo). Encenderla no
+   * promete velocidad: si la carga acelerada falla, la cascada de
+   * LlamaEngine cae a CPU sin tocar la conversación.
+   */
+  "inference.npuAccel": false,
   /**
    * P2P v4 (2026-10-21): saludo sellado, sin identidad en claro. Solo cambia
    * lo que ENVÍA este teléfono al llamar a un contacto que ya dijo soportarlo.

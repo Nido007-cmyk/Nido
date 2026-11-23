@@ -148,6 +148,15 @@
       "recovery": "Backups & recovery"
     },
     "installedModels": "Installed models",
+    "benchTitle": "Measure speed on this phone",
+    "benchDesc": "Measures the model that is currently loaded, exactly as it is running now: two short passes, one reading and one generating. The result belongs to this phone only and never leaves it.",
+    "benchRun": "Measure now",
+    "benchRunning": "Measuring…",
+    "benchNoModel": "No model is loaded yet. Open a conversation to load one, then measure again.",
+    "benchFailed": "The measurement failed on this phone. The model is still loaded and your conversation was not touched.",
+    "benchExecuted": "Measured: {{model}} · {{device}}",
+    "benchRunResult": "Pass {{pp}}/{{tg}}: reads at {{speedPp}} tok/s and generates at {{speedTg}} tok/s",
+    "benchPeak": "Peak memory during the measurement: {{mb}} MB",
     "toasts": {
       "indexed": "Indexed \"{{name}}\" in offline knowledge base",
       "removed": "Removed \"{{name}}\"",
@@ -285,7 +294,8 @@
       "noText": "No text found in the files (a PDF scanned as an image?).",
       "scannedNoOcr": "“{{name}}” looks like a scanned PDF (its pages are images) and this build of NIDO has no text recognition (OCR), so it couldn't be imported. Try the original PDF with selectable text, or a text file.",
       "imageNoOcr": "“{{name}}” is an image and this build of NIDO has no text recognition (OCR), so it couldn't be imported.",
-      "ocrFailed": "“{{name}}” could not be read even with text recognition (OCR)."
+      "ocrFailed": "“{{name}}” could not be read even with text recognition (OCR).",
+      "unsupported": "“{{name}}” is a file type NIDO can't import: archives and Office documents can't be read as text."
     },
     "hint": "Import your own .txt, .md, .csv, .json, or .pdf notes, or images of printed text — indexed on this device only, never uploaded anywhere. Scanned PDF pages and images are read with on-device text recognition (OCR), and password-protected PDFs aren't supported.",
     "nameRequiredTitle": "Name required",
@@ -302,6 +312,8 @@
     "stageEmbedding": "Embedding {{current}}/{{total}}…",
     "noTextWarning_one": "{{count}} document added no text: {{names}}",
     "noTextWarning_other": "{{count}} documents added no text: {{names}}",
+    "warningUnsupported_one": "{{count}} document wasn't imported because of its file type: {{names}}",
+    "warningUnsupported_other": "{{count}} documents weren't imported because of their file type: {{names}}",
     "warningOcrFailed_one": "{{count}} document couldn't be read even with text recognition (OCR): {{names}}",
     "warningOcrFailed_other": "{{count}} documents couldn't be read even with text recognition (OCR): {{names}}",
     "warningOcrEmpty_one": "{{count}} document: recognition found no text on its scanned pages: {{names}}",
@@ -606,7 +618,7 @@
     "items": [
       {
         "category": "Private memory",
-        "prompt": "Remember that my mom's birthday is March 15th and she loves orchids. Save it so you can remind me in time."
+        "prompt": "Remember that my friend Laura's birthday is June 8th and she loves tulips. Save it so you can remind me in time."
       },
       {
         "category": "No internet",
@@ -1198,6 +1210,10 @@
     "screenCaptureDesc": "Off, NIDO blocks screenshots and screen recording, and hides its preview in Recents. On, any app with access to your screen can see it. Your backup key and your pairing code stay protected either way.",
     "screenCaptureOn": "Screenshots allowed. Your backup key and pairing code stay protected.",
     "screenCaptureOff": "Screenshots blocked again.",
+    "npuAccelTitle": "NPU acceleration (experimental)",
+    "npuAccelDesc": "Runs the chat model on your phone's AI chip (the Hexagon NPU) instead of the regular processor. It is experimental: it can fail, and if it does the app carries on with the regular processor without cutting your conversation. It only appears on phones that have that chip.",
+    "npuAccelModels": "This chip genuinely speeds up: {{models}}.",
+    "npuAccelOthers": "The other models in the catalog ({{models}}) use a format this chip cannot take advantage of (Q4_K_M): with them it is not even tried and they run as always.",
     "delegationTitle": "Delegated tasks (experimental)",
     "delegationDesc": "A paired NIDO can ask you to run tasks. Every task requires your explicit approval.",
     "sealedHelloTitle": "Private hello",
@@ -1616,11 +1632,11 @@
             "title": "Memory",
             "what": "Your memory works like this. What you tell me is kept in four drawers: Facts holds things about you, like your name, where you live or your favorite color. People holds everyone else: your mom, your partner, your friends. Notes holds what you ask me to write down, word for word. And Reminders holds anything with a date or a time. You can also ask me back in your own words: “What's my mom's name?”, “What's my favorite color?”. I answer from what you told me. Everything lives on this device, encrypted. Nothing is uploaded to any server, and whatever you want deleted, gets deleted.",
             "examples": [
-              "My mom's name is Marta",
+              "My mom's name is Carmen",
               "What's my mom's name?",
               "My favorite color is green",
               "What's my favorite color?",
-              "I live in Tucson",
+              "I live in Valencia",
               "Where do I live?",
               "My birthday is May 5"
             ],
@@ -1675,7 +1691,7 @@
             ],
             "examples": [
               "why do hurricanes form and how does a hurricane move across the ocean?",
-              "compare summer weather in Tucson and Phoenix"
+              "compare summer weather in Valencia and Seville"
             ],
             "tip": "Use it for complex questions or comparisons. For a single fact, ask without the chip: the normal chat answers sooner."
           },

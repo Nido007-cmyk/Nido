@@ -31,7 +31,7 @@ interface Props {
    * what's happening" box is hidden and the quick guides open the guide
    * library, which reads the guides with no model.
    */
-  onAsk?: (question: string) => void;
+  onAsk?: (question: string, guideKey?: string) => void;
   /** Opens the Library tab (where NIDO Local is downloaded). */
   onOpenLibrary: () => void;
 }
@@ -90,11 +90,11 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
   }, []);
 
   const ask = useCallback(
-    (text: string) => {
+    (text: string, guideKey?: string) => {
       const q = text.trim();
       if (!q) return;
       setQuestion("");
-      onAsk?.(q);
+      onAsk?.(q, guideKey);
     },
     [onAsk]
   );
@@ -278,7 +278,7 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
           {QUICK_GUIDES.map((g) => (
             <Pressable
               key={g.key}
-              onPress={() => (onAsk ? ask(t(`emergency.questions.${g.key}`)) : onOpenLibrary())}
+              onPress={() => (onAsk ? ask(t(`emergency.questions.${g.key}`), g.guideKey) : onOpenLibrary())}
               style={styles.guide}
               accessibilityRole="button"
             >

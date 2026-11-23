@@ -201,6 +201,62 @@ export async function readPackGuide(packId: string, guideId: number): Promise<Pa
   };
 }
 
+/** Lo que la resolución por clave devuelve: la guía y un fragmento real suyo. */
+export interface PackGuideByKey {
+  guideId: number;
+  title: string;
+  /**
+   * chunkId de la primera fila de la guía: `readPackSource` lee la
+   * guía entera desde él (reconstruye por el título, como con
+   * cualquier fragmento), y la respuesta forzada lo enseña como
+   * su fuente.
+   */
+  chunkId: string;
+  /** Ese primer fragmento, para construir la fuente de la respuesta. */
+  chunk: { title: string; body: string; source: string };
+}
+
+/**
+ * La guía de un pack v2 por su CLAVE (`guides.key`, p. ej.
+ * `esencial-rcp-adultos`), sin pasar por ninguna búsqueda ni
+ * elección: es la resolución que el botón de Emergencia pide
+ * cuando trae la clave de su tema (espejo §1, pieza A). null si
+ * el pack no está, no es v2, no trae esa clave o la guía no tiene
+ * filas — el llamante degrada a su camino normal, sin servir
+ * nada a medias. Solo lectura, como `listPackGuides`.
+ */
+export async function resolvePackGuideByKey(packId: string, guideKey: string): Promise<PackGuideByKey | null> {
+  const pack = (await knowledgePacks()).find((p) => p.id === packId);
+  if (!pack) return null;
+  const open = await openPack(pack);
+  if (!open || open.formatVersion < 2) return null;
+  const entry = await open.db
+    .getFirstAsync<{ id: number; title: string }>("SELECT id, title FROM guides WHERE key = ?", [guideKey])
+    .catch(() => null);
+  if (!entry) return null;
+  type ChunkRow = { id: number; title: string; body: string; source: string };
+  let row = await open.db
+    .getFirstAsync<ChunkRow>("SELECT id, title, body, source FROM chunks WHERE guide = ? ORDER BY id LIMIT 1", [entry.id])
+    .catch(() => null);
+  if (!row) {
+    // El mismo emparejamiento por título que readPackGuide cuando
+    // el pack no enlaza guía→trozo en los chunks.
+    row = await open.db
+      .getFirstAsync<ChunkRow>(
+        "SELECT id, title, body, source FROM chunks WHERE title = ? OR title LIKE ? ESCAPE '\\' ORDER BY id LIMIT 1",
+        [entry.title, sectionLikePattern(entry.title)],
+      )
+      .catch(() => null);
+  }
+  if (!row) return null;
+  return {
+    guideId: entry.id,
+    title: entry.title,
+    chunkId: `pack:${packId}:${row.id}`,
+    chunk: { title: row.title, body: row.body, source: row.source ?? "" },
+  };
+}
+
 export async function closePack(id: string): Promise<void> {
   const open = openPacks.get(id);
   openPacks.delete(id);

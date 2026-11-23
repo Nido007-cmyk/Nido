@@ -4,6 +4,71 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.110-alpha - 2026-11-22
+
+This release is for two kinds of phones at once. If yours
+is powerful, NIDO now uses hardware it used to leave idle.
+If yours is modest, nothing changes: the same path as
+before, and nothing new attempted on it.
+
+On phones with a strong graphics chip (Adreno 700 or
+better), the model now runs on the GPU, with as many
+layers as the phone's memory can honestly hold. The
+number of layers is budgeted from the memory your phone
+actually has, not fixed for everyone. If the accelerated
+start fails for any reason, NIDO falls back to the usual
+CPU path on its own and the conversation is untouched.
+The APK grows by about 18 MB, because the acceleration
+libraries now travel inside it instead of being left out.
+
+Some phones carry a second accelerator, the Hexagon NPU.
+On those (Hexagon v73 or newer), Settings gains an
+experimental switch for it. It is off by default, and it
+only appears on phones that have the hardware. The switch
+says plainly what it can and cannot do: the NPU only
+speeds up models stored in the formats it accepts, and
+the catalog now declares the format of every model, so
+Settings lists which of your models it would accelerate
+and which it would not. Today that is the Gemma 4 E4B in
+its Q4_0 edition. If the NPU start fails, the answer
+still comes from the CPU, with no error in your face.
+
+The model manager can also measure your own phone now: a
+benchmark button times the model you have loaded, on the
+device that is actually running it, and says what
+executed it (GPU, NPU or CPU).
+
+First aid got more exact. The Emergency button now
+serves its guide by the guide's own key, so the CPR,
+bleeding, choking and burns answers are the guide's
+words, not a nearby text. And after the grounding judge
+reads an answer, one that drifted to a different guide
+is replaced by the matching guide's own text before you
+see it.
+
+Telling a fall now reaches the emergency answer. "My
+neighbour fell off a ladder and can't move", and the
+same story in Spanish and Portuguese, is treated as the
+emergency it is. A price that fell, or a phone that fell
+and will not turn on, is not.
+
+A ZIP file you attach is no longer swallowed in silence:
+NIDO now tells you that the format is not supported
+instead of failing without a word.
+
+And the examples in the guide and the carousel now use
+invented people, the same ones as the desktop version,
+so no example anywhere in NIDO carries a real family's
+data.
+
+The honest limit, written down on purpose: on a phone
+whose graphics chip is below Adreno 700, or whose NPU is
+older than Hexagon v73, the new options do not appear
+and nothing is attempted. The speed gain of the
+accelerators has not been measured yet on a phone that
+can open the gate, so this release claims no number
+for it.
+
 ## 0.1.109-alpha - 2026-11-20
 
 This release is a fix package. The desktop version of

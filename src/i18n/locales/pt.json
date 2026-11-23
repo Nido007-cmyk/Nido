@@ -148,6 +148,15 @@
       "recovery": "Backups e recuperação"
     },
     "installedModels": "Modelos instalados",
+    "benchTitle": "Medir a velocidade neste telefone",
+    "benchDesc": "Mede o modelo que está carregado, do jeito que ele está rodando agora: duas passagens curtas, uma de leitura e uma de geração. O resultado é só deste telefone e não sai dele.",
+    "benchRun": "Medir agora",
+    "benchRunning": "Medindo…",
+    "benchNoModel": "Ainda não há um modelo carregado. Abra uma conversa para carregá-lo e meça de novo.",
+    "benchFailed": "A medição falhou neste telefone. O modelo continua carregado e a sua conversa não foi mexida.",
+    "benchExecuted": "Medido: {{model}} · {{device}}",
+    "benchRunResult": "Passagem {{pp}}/{{tg}}: lê a {{speedPp}} tok/s e gera a {{speedTg}} tok/s",
+    "benchPeak": "Pico de memória durante a medição: {{mb}} MB",
     "toasts": {
       "indexed": "\"{{name}}\" indexado na base de conhecimento sem conexão",
       "removed": "\"{{name}}\" removido",
@@ -285,7 +294,8 @@
       "noText": "Nenhum texto encontrado nos arquivos (um PDF escaneado como imagem?).",
       "scannedNoOcr": "“{{name}}” parece um PDF digitalizado (as páginas são imagens) e esta versão do NIDO não traz reconhecimento de texto (OCR), por isso não foi possível importar. Tente o PDF original com texto selecionável ou um arquivo de texto.",
       "imageNoOcr": "“{{name}}” é uma imagem e esta versão do NIDO não traz reconhecimento de texto (OCR), por isso não foi possível importar.",
-      "ocrFailed": "“{{name}}” não pôde ser lido nem com o reconhecimento de texto (OCR)."
+      "ocrFailed": "“{{name}}” não pôde ser lido nem com o reconhecimento de texto (OCR).",
+      "unsupported": "“{{name}}” é um tipo de arquivo que o NIDO não consegue importar: arquivos compactados e documentos do Office não podem ser lidos como texto."
     },
     "hint": "Importe suas próprias notas em .txt, .md, .csv, .json ou .pdf, ou imagens de texto impresso — indexadas apenas neste aparelho, nunca enviadas a lugar nenhum. As páginas digitalizadas dos PDFs e as imagens são lidas com reconhecimento de texto (OCR) no próprio aparelho, e PDFs protegidos por senha não são aceitos.",
     "nameRequiredTitle": "Nome obrigatório",
@@ -302,6 +312,8 @@
     "stageEmbedding": "Gerando embeddings {{current}}/{{total}}…",
     "noTextWarning_one": "{{count}} documento não trouxe texto: {{names}}",
     "noTextWarning_other": "{{count}} documentos não trouxeram texto: {{names}}",
+    "warningUnsupported_one": "{{count}} documento não foi importado pelo tipo de arquivo: {{names}}",
+    "warningUnsupported_other": "{{count}} documentos não foram importados pelo tipo de arquivo: {{names}}",
     "warningOcrFailed_one": "{{count}} documento não pôde ser lido nem com o reconhecimento de texto (OCR): {{names}}",
     "warningOcrFailed_other": "{{count}} documentos não puderam ser lidos nem com o reconhecimento de texto (OCR): {{names}}",
     "warningOcrEmpty_one": "{{count}} documento: o reconhecimento não encontrou texto nas suas páginas digitalizadas: {{names}}",
@@ -606,7 +618,7 @@
     "items": [
       {
         "category": "Memória privada",
-        "prompt": "Lembre-se de que o aniversário da minha mãe é 15 de março e ela adora orquídeas. Guarde para me avisar com antecedência."
+        "prompt": "Lembre-se de que o aniversário da minha amiga Laura é 8 de junho e ela adora tulipas. Guarde para me avisar com antecedência."
       },
       {
         "category": "Sem internet",
@@ -1198,6 +1210,10 @@
     "screenCaptureDesc": "Desligado, o NIDO não deixa fazer capturas nem gravar a tela, e esconde a prévia em Recentes. Ligado, qualquer app com acesso à sua tela pode vê-la. A chave do backup e o seu código de pareamento continuam sempre protegidos.",
     "screenCaptureOn": "Capturas permitidas. A chave do backup e o código de pareamento continuam protegidos.",
     "screenCaptureOff": "Capturas bloqueadas de novo.",
+    "npuAccelTitle": "Aceleração por NPU (experimental)",
+    "npuAccelDesc": "Passa o modelo de conversa para o chip de IA do seu telefone (o NPU Hexagon) em vez do processador comum. É experimental: pode falhar, e se falhar o app continua no processador de sempre sem cortar a sua conversa. Só aparece em telefones que têm esse chip.",
+    "npuAccelModels": "Com este chip, acelera de verdade: {{models}}.",
+    "npuAccelOthers": "Os outros modelos do catálogo ({{models}}) usam um formato que esse chip não aproveita (Q4_K_M): com eles nem é tentado e tudo segue como sempre.",
     "delegationDesc": "Um NIDO pareado pode pedir para você executar tarefas. Cada tarefa requer sua aprovação.",
     "delegationTitle": "Tarefas delegadas (experimental)",
     "sealedHelloTitle": "Saudação privada",
@@ -1616,11 +1632,11 @@
             "title": "Memória",
             "what": "Sua memória funciona assim. O que você me conta fica em quatro gavetas: em Dados ficam os fatos sobre você, como seu nome, onde você mora ou sua cor favorita. Em Pessoas ficam os outros: sua mãe, seu parceiro, seus amigos. Em Notas fica o que você me pede para anotar, palavra por palavra. E em Lembretes, o que tem data ou hora. Você também pode me perguntar de volta com suas palavras: “como se chama minha mãe?”, “qual é minha cor favorita?”. Eu respondo a partir do que você me contou. Tudo vive neste dispositivo, criptografado. Nada é enviado para servidor nenhum, e o que você quiser apagar, é apagado.",
             "examples": [
-              "Minha mãe se chama Marta",
+              "Minha mãe se chama Carmen",
               "Como se chama minha mãe?",
               "Minha cor favorita é verde",
               "Qual é minha cor favorita?",
-              "Moro em Tucson",
+              "Moro em Valência",
               "Onde eu moro?",
               "Meu aniversário é 5 de maio"
             ],
@@ -1675,7 +1691,7 @@
             ],
             "examples": [
               "por que se formam os furacões e como um furacão se move pelo oceano?",
-              "compara o clima de Tucson com o de Phoenix no verão"
+              "compara o clima de Valência com o de Sevilha no verão"
             ],
             "tip": "Use para perguntas complexas ou com comparações. Para um dado solto, pergunte sem o chip: o chat normal responde antes."
           },

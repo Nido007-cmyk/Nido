@@ -31,6 +31,30 @@ import { DownloadFailure } from "./downloadErrors";
 export type AssetKind = "llm" | "embedding" | "corpus";
 export type SetupTier = "minimum" | "standard" | "full" | "encyclopedia";
 
+/**
+ * VEL-5 (0.1.110, acto 3): la cuantización GGUF de una entrada,
+ * declarada como DATO del catálogo (no parseada del nombre de
+ * fichero en tiempo de ejecución, que es la forma de PocketPal para
+ * ficheros ajenos; este catálogo es cerrado y firmado y sabe lo que
+ * sirve). La consume la opción de NPU: el HTP de Hexagon solo
+ * descarga de verdad los formatos de HTP_ACCELERATED_QUANTS (la
+ * lista del upstream que PREP-VELOCIDAD §5 cobró), así que una
+ * entrada Q4_K_M no se acelera aunque la opción esté encendida — y
+ * la letra de Ajustes lo dice antes, no después. Un test de
+ * integridad cruza esta declaración contra el token de cuantización
+ * del propio fichero fijado, para que el dato no pueda pudrirse en
+ * silencio.
+ */
+export type ModelQuant = "Q4_K_M" | "Q5_K_M" | "Q4_0" | "Q8_0";
+
+/** Los formatos que el backend Hexagon (HTP) descarga de verdad. */
+export const HTP_ACCELERATED_QUANTS: readonly ModelQuant[] = ["Q4_0", "Q8_0"];
+
+/** ¿El HTP acelera de verdad una entrada con esta cuantización? */
+export function htpAcceleratesQuant(quant: ModelQuant | undefined): boolean {
+  return quant !== undefined && HTP_ACCELERATED_QUANTS.includes(quant);
+}
+
 export interface CatalogModel {
   id: string;
   kind: AssetKind;
@@ -78,6 +102,14 @@ export interface CatalogModel {
    * model that can become the active default MUST declare it.
    */
   arch?: { nLayer: number; nKvHeads: number; headDim: number };
+  /**
+   * VEL-5 (0.1.110, acto 3): la cuantización GGUF declarada de la
+   * entrada (ver ModelQuant). La declaran las entradas que son un
+   * modelo GGUF (llm y embedding); los paquetes de corpus no la
+   * llevan. Sin declaración, la opción de NPU no intenta acelerar la
+   * entrada: lo no declarado no se promete.
+   */
+  quant?: ModelQuant;
   /**
    * Recommended llama.cpp context length for this model. The engine uses it
    * when the caller doesn't pass an explicit nCtx (see LlamaEngine.load).
@@ -342,6 +374,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     id: "phi-3.5-mini-instruct-q4km",
     kind: "llm",
     label: "Phi-3.5-mini-instruct (Q4_K_M)",
+    quant: "Q4_K_M",
     filename: "models/primary-llm.gguf",
     sizeBytes: 2393232672,
     sha256: "e4165e3a71af97f1b4820da61079826d8752a2088e313af0c7d346796c38eff5",
@@ -373,6 +406,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     id: "bge-small-en-v1.5-q8",
     kind: "embedding",
     label: "bge-small-en-v1.5 (Q8_0)",
+    quant: "Q8_0",
     filename: "models/embedding.gguf",
     sizeBytes: 36806944,
     sha256: "ec38e8da142596baa913124ae50550de284b6916bf59577ef2f0cb9660c2f514",
@@ -396,6 +430,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     id: "multilingual-e5-small-q8",
     kind: "embedding",
     label: "multilingual-e5-small (Q8_0)",
+    quant: "Q8_0",
     filename: "models/embedding-multilingual.gguf",
     sizeBytes: 132441664,
     sha256: "802c868f57ccddd2e0c80645c3db1cb96a1aa50986a057cbaee2526f6e474cde",
@@ -410,6 +445,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     id: "qwen2.5-1.5b-instruct-q4km",
     kind: "llm",
     label: "Qwen2.5-1.5B-Instruct (Q4_K_M)",
+    quant: "Q4_K_M",
     filename: "models/qwen2.5-1.5b-instruct-q4km.gguf",
     sizeBytes: 986048768,
     sha256: "1adf0b11065d8ad2e8123ea110d1ec956dab4ab038eab665614adba04b6c3370",
@@ -436,6 +472,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     id: "qwen2.5-0.5b-instruct-q4km",
     kind: "llm",
     label: "Qwen2.5-0.5B-Instruct (Q4_K_M)",
+    quant: "Q4_K_M",
     filename: "models/qwen2.5-0.5b-instruct-q4km.gguf",
     sizeBytes: 397808192,
     sha256: "6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653",
@@ -474,6 +511,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     id: "qwen2.5-0.5b-instruct-q5km",
     kind: "llm",
     label: "Qwen2.5-0.5B-Instruct (Q5_K_M) [A/B]",
+    quant: "Q5_K_M",
     filename: "models/qwen2.5-0.5b-instruct-q5km.gguf",
     sizeBytes: 420086336,
     sha256: "a0a413dcbb4676f21d4c951b98a393324694edb1a20a4f9547d1de8d2919ff3b",
@@ -515,6 +553,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     id: "qwen3-0.6b-q4km",
     kind: "llm",
     label: "Qwen3-0.6B (Q4_K_M)",
+    quant: "Q4_K_M",
     filename: "models/qwen3-0.6b-q4km.gguf",
     sizeBytes: 396705472,
     sha256: "ac2d97712095a558e31573f62f466a3f9d93990898b0ec79d7c974c1780d524a",
@@ -535,6 +574,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     id: "qwen2.5-7b-instruct-q4km",
     kind: "llm",
     label: "Qwen2.5-7B-Instruct (Q4_K_M)",
+    quant: "Q4_K_M",
     filename: "models/qwen2.5-7b-instruct-q4km.gguf",
     sizeBytes: 4683074240,
     sha256: "65b8fcd92af6b4fefa935c625d1ac27ea29dcb6ee14589c55a8f115ceaaa1423",
@@ -563,6 +603,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     id: "lfm2.5-8b-a1b-q4km",
     kind: "llm",
     label: "LFM2.5-8B-A1B (Q4_K_M)",
+    quant: "Q4_K_M",
     filename: "models/hf-liquidai-lfm2-5-8b-a1b-gguf-lfm2-5-8b-a1b-q4-k-m-gguf.gguf",
     sizeBytes: 5155564768,
     sha256: "4923ec14f06b968b74d663e5949867d2d9c3bf13a20b8be1a9f9af39989b2bb0",
@@ -602,6 +643,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     id: "gemma-4-e4b-it-q4_0",
     kind: "llm",
     label: "Gemma 4 E4B (QAT Q4_0)",
+    quant: "Q4_0",
     filename: "models/hf-google-gemma-4-e4b-it-qat-q4-0-gguf-gemma-4-e4b-q4-0-it-gguf.gguf",
     sizeBytes: 5154941280,
     sha256: "676c35070db6dbe52f93e9c864ee0fba4eddea94b9c875d9cb10daff453fbaee",

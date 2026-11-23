@@ -10,7 +10,7 @@
 Un asistente de IA privado que funciona por completo en tu teléfono Android.</p>
 
 <p align="center">
-  <a href="https://github.com/Nido007-cmyk/Nido/releases"><img alt="Última versión" src="https://img.shields.io/github/v/release/Nido007-cmyk/Nido?include_prereleases&label=descargar"></a>
+  <a href="https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.110-alpha"><img alt="Versión: 0.1.110-alpha" src="https://img.shields.io/badge/versi%C3%B3n-0.1.110--alpha-3A563F"></a>
   <a href="https://github.com/Nido007-cmyk/Nido/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Nido007-cmyk/Nido/actions/workflows/ci.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="Licencia: MIT" src="https://img.shields.io/badge/licencia-MIT-green"></a>
   <img alt="Plataforma: Android" src="https://img.shields.io/badge/plataforma-Android-3A563F">
@@ -36,6 +36,12 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
 
 - **Conversa sin conexión** con un modelo de lenguaje pequeño que corre en
   el teléfono (llama.cpp mediante `llama.rn`).
+- **Usa el teléfono entero, cuando el teléfono lo tiene**: en aparatos con
+  un chip gráfico potente el modelo corre en la GPU, con las capas
+  presupuestadas desde la memoria real del aparato, y los teléfonos cuyo
+  NPU Hexagon puede acelerar los formatos del catálogo que lo declaran
+  ganan una opción de NPU experimental, apagada por defecto. En cualquier
+  otro teléfono no cambia nada ni se intenta nada más.
 - **Recuerda por ti**: datos, notas y recordatorios, guardados en una base
   cifrada con SQLCipher. La clave vive en el Keystore de Android. Los
   cumpleaños que le cuentas tienen recordatorio cada año. Si lo activas,

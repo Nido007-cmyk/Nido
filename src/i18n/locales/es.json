@@ -525,6 +525,15 @@
       "title": "Ajustes"
     },
     "installedModels": "Modelos instalados",
+    "benchTitle": "Medir la velocidad en este teléfono",
+    "benchDesc": "Mide el modelo que está cargado, tal como está corriendo ahora: dos pasadas cortas, una de lectura y una de generación. El resultado es solo de este teléfono y no sale de él.",
+    "benchRun": "Medir ahora",
+    "benchRunning": "Midiendo…",
+    "benchNoModel": "Todavía no hay un modelo cargado. Abre una conversación para cargarlo y vuelve a medir.",
+    "benchFailed": "La medición falló en este teléfono. El modelo sigue cargado y tu conversación no se tocó.",
+    "benchExecuted": "Medido: {{model}} · {{device}}",
+    "benchRunResult": "Pasada {{pp}}/{{tg}}: lee a {{speedPp}} tok/s y genera a {{speedTg}} tok/s",
+    "benchPeak": "Pico de memoria durante la medición: {{mb}} MB",
     "recovery": {
       "dangerBadge": "Zona de peligro",
       "dangerButton": "Eliminar todos los datos y restablecer",
@@ -564,12 +573,15 @@
       "noText": "No se encontró texto en los archivos (¿un PDF escaneado como imagen?).",
       "scannedNoOcr": "«{{name}}» parece un PDF escaneado (las páginas son imágenes) y esta versión de NIDO no trae reconocimiento de texto (OCR), así que no se pudo importar. Prueba con el PDF original con texto seleccionable o con un archivo de texto.",
       "imageNoOcr": "«{{name}}» es una imagen y esta versión de NIDO no trae reconocimiento de texto (OCR), así que no se pudo importar.",
-      "ocrFailed": "«{{name}}» no se pudo leer ni con el reconocimiento de texto (OCR)."
+      "ocrFailed": "«{{name}}» no se pudo leer ni con el reconocimiento de texto (OCR).",
+      "unsupported": "«{{name}}» es de un tipo que NIDO no puede importar: los archivos comprimidos y los documentos de Office no se pueden leer como texto."
     },
     "chunkCount_one": "{{count}} fragmento",
     "chunkCount_other": "{{count}} fragmentos",
     "noTextWarning_one": "{{count}} documento no aportó texto: {{names}}",
     "noTextWarning_other": "{{count}} documentos no aportaron texto: {{names}}",
+    "warningUnsupported_one": "{{count}} documento no se importó por su tipo de archivo: {{names}}",
+    "warningUnsupported_other": "{{count}} documentos no se importaron por su tipo de archivo: {{names}}",
     "warningOcrFailed_one": "{{count}} documento no se pudo leer ni con el reconocimiento de texto (OCR): {{names}}",
     "warningOcrFailed_other": "{{count}} documentos no se pudieron leer ni con el reconocimiento de texto (OCR): {{names}}",
     "warningOcrEmpty_one": "{{count}} documento: el reconocimiento no encontró texto en sus páginas escaneadas: {{names}}",
@@ -654,7 +666,7 @@
     "items": [
       {
         "category": "Memoria privada",
-        "prompt": "Recuérdame que el cumpleaños de mi mamá es el 15 de marzo y que le gustan las orquídeas. Guárdalo en tu memoria para que me avises con tiempo."
+        "prompt": "Recuérdame que el cumpleaños de mi amiga Laura es el 8 de junio y que le gustan los tulipanes. Guárdalo en tu memoria para que me avises con tiempo."
       },
       {
         "category": "Sin internet",
@@ -1198,6 +1210,10 @@
     "screenCaptureDesc": "Apagado, NIDO no deja hacer capturas ni grabar la pantalla, y oculta su vista en Recientes. Encendido, cualquier app con acceso a tu pantalla puede verla. La clave del respaldo y tu código para emparejar siguen protegidos siempre.",
     "screenCaptureOn": "Capturas permitidas. La clave del respaldo y el código para emparejar siguen protegidos.",
     "screenCaptureOff": "Capturas bloqueadas otra vez.",
+    "npuAccelTitle": "Aceleración por NPU (experimental)",
+    "npuAccelDesc": "Pasa el modelo de conversación al chip de IA de tu teléfono (el NPU Hexagon) en vez del procesador normal. Es experimental: puede fallar, y si falla la app sigue en el procesador de siempre sin cortar tu conversación. Solo aparece en teléfonos con ese chip.",
+    "npuAccelModels": "Con este chip sí se acelera de verdad: {{models}}.",
+    "npuAccelOthers": "Los demás modelos del catálogo ({{models}}) usan un formato que ese chip no aprovecha (Q4_K_M): con ellos ni se intenta y siguen como siempre.",
     "delegationTitle": "Tareas delegadas (experimental)",
     "delegationDesc": "Otro NIDO emparejado puede pedirte ejecutar tareas. Cada tarea requiere tu aprobación explícita.",
     "sealedHelloTitle": "Saludo privado",
@@ -1616,11 +1632,11 @@
             "title": "Memoria",
             "what": "Tu memoria funciona así. Lo que me cuentas se guarda en cuatro cajones: en Datos quedan los hechos sobre ti, como tu nombre, dónde vives o tu color favorito. En Personas quedan los demás: tu mamá, tu pareja, tus amigos. En Notas queda lo que me pides apuntar tal cual. Y en Recordatorios, lo que lleva fecha u hora. También puedes preguntarme de vuelta con tus palabras: «¿cómo se llama mi mamá?», «¿cuál es mi color favorito?». Te respondo desde lo que me contaste. Todo vive en este dispositivo, cifrado. Nada se sube a ningún servidor, y lo que quieras borrar, se borra.",
             "examples": [
-              "Mi mamá se llama Marta",
+              "Mi mamá se llama Carmen",
               "¿Cómo se llama mi mamá?",
               "Mi color favorito es el verde",
               "¿Cuál es mi color favorito?",
-              "Vivo en Tucson",
+              "Vivo en Valencia",
               "¿Dónde vivo?",
               "Mi cumpleaños es el 5 de mayo"
             ],
@@ -1675,7 +1691,7 @@
             ],
             "examples": [
               "¿por qué se forman los huracanes y cómo se mueve un huracán por el océano?",
-              "compara el clima de Tucson con el de Phoenix en verano"
+              "compara el clima de Valencia con el de Sevilla en verano"
             ],
             "tip": "Úsalo para preguntas complejas o con comparaciones. Para un dato suelto, pregunta sin el chip: el chat normal responde antes."
           },

@@ -3,15 +3,18 @@
 // See LICENSE file for details.
 
 /**
- * withLlamaTrim.test.js — P-02 (auditoría de rendimiento 2026-11-01).
+ * withLlamaTrim.test.js — P-02 (auditoría de rendimiento 2026-11-01)
+ * y su reverso en VEL-5 (2026-11-22).
  *
  * El peligro de una lista de exclusiones es el error tipográfico: la
  * escalera de RNLlama degrada en silencio y un nombre mal escrito
  * recortaría la variante equivocada (o ninguna) sin que nadie lo
  * notara en el aparato. Estos tests juzgan las listas del plugin
- * contra el censo real de nombres del APK publicado de la 0.1.68:
- * la pareja hexagon_opencl sale, las otras seis parejas y la
- * genérica se quedan, y los 5 assets HTP (v85 desde llama.rn rc.9) salen por su patrón.
+ * contra el censo real de nombres del APK publicado de la 0.1.68.
+ * Desde VEL-5 la pareja hexagon_opencl y los 5 assets HTP (v85 desde
+ * llama.rn rc.9) se QUEDAN dentro: los tests de P-02 juzgan ahora
+ * que ninguna exclusión los toca, que el bloque gradle no los nombra
+ * y que la poda del intermedio ya no borra ggml-hexagon/.
  */
 import { describe, expect, it } from "vitest";
 import { createRequire } from "node:module";
@@ -28,7 +31,6 @@ const {
   PACKAGING_EXCLUDES,
   PACKAGING_PROPERTY_KEY,
   CMAP_KEPT,
-  HTP_MERGED_DIR,
   CMAP_MERGED_DIR,
 } = withLlamaTrim;
 
@@ -55,37 +57,39 @@ const LLAMA_LIBS = [
 
 const HTP_ASSETS = ["v73", "v75", "v79", "v81", "v85"].map((v) => `assets/ggml-hexagon/libggml-htp-${v}.so`);
 
-describe("withLlamaTrim · P-02", () => {
-  it("excluye exactamente la pareja hexagon_opencl de las 14 del censo", () => {
+describe("withLlamaTrim · VEL-5 (la pareja vuelve)", () => {
+  it("no excluye ninguna de las 14 del censo: la pareja hexagon_opencl se queda", () => {
+    expect(TRIMMED_JNI_LIBS).toEqual([]);
     const excluded = LLAMA_LIBS.filter((p) => isExcluded(TRIMMED_JNI_LIBS, p));
-    expect(excluded).toEqual([
-      "lib/arm64-v8a/librnllama_v8_2_dotprod_i8mm_hexagon_opencl.so",
-      "lib/arm64-v8a/librnllama_jni_v8_2_dotprod_i8mm_hexagon_opencl.so",
-    ]);
+    expect(excluded).toEqual([]);
+    const keptCount = LLAMA_LIBS.filter((p) => !isExcluded(TRIMMED_JNI_LIBS, p)).length;
+    expect(keptCount).toBe(14);
+    for (const p of LLAMA_LIBS) expect(isExcluded(PACKAGING_EXCLUDES, p)).toBe(false);
   });
 
   it("no excluye la pareja genérica ni ninguna otra variante", () => {
     for (const kept of KEPT_LLAMA_LIBS) {
       expect(isExcluded(TRIMMED_JNI_LIBS, `lib/arm64-v8a/${kept}`)).toBe(false);
     }
-    const keptCount = LLAMA_LIBS.filter((p) => !isExcluded(TRIMMED_JNI_LIBS, p)).length;
-    expect(keptCount).toBe(12);
   });
 
-  it("el patrón HTP casa los 5 assets y nada fuera de ggml-hexagon/", () => {
+  it("el patrón HTP sigue casando los 5 assets, pero ya no está en las exclusiones", () => {
     for (const p of HTP_ASSETS) expect(isExcluded([HTP_ASSET_PATTERN], p)).toBe(true);
     expect(isExcluded([HTP_ASSET_PATTERN], "assets/ggml-hexagon2/libggml-htp-v73.so")).toBe(false);
     expect(isExcluded([HTP_ASSET_PATTERN], "assets/models/embedding.gguf")).toBe(false);
     expect(isExcluded([HTP_ASSET_PATTERN], "lib/arm64-v8a/libggml-htp-v73.so")).toBe(false);
+    expect(PACKAGING_EXCLUDES).not.toContain(HTP_ASSET_PATTERN);
+    for (const p of HTP_ASSETS) expect(isExcluded(PACKAGING_EXCLUDES, p)).toBe(false);
   });
 
-  it("el bloque gradle lleva la pareja, los HTP y el suelo genérico fuera", () => {
+  it("el bloque gradle no nombra la pareja ni el patrón HTP ni excluye ggml-hexagon", () => {
     const gradle = "android {\n    buildTypes {}\n}\n";
     const out = applyLlamaTrimBlock(gradle);
     expect(out.startsWith(gradle)).toBe(true); // el original queda intacto
-    for (const p of TRIMMED_JNI_LIBS) expect(out).toContain(`"${p}"`);
-    expect(out).toContain(`"${HTP_ASSET_PATTERN}"`);
-    expect(out).toContain('exclude "ggml-hexagon/**"');
+    expect(out).not.toContain("hexagon_opencl");
+    expect(out).not.toContain(HTP_ASSET_PATTERN);
+    expect(out).not.toContain('exclude "ggml-hexagon');
+    expect(out).not.toContain("ggml-hexagon");
     for (const kept of KEPT_LLAMA_LIBS) expect(out).not.toContain(kept);
   });
 
@@ -249,17 +253,16 @@ describe("withLlamaTrim · P-04/P-05", () => {
   });
 });
 
-// La cuarta capa nace del fuego real de la corrida 41375422202: las
-// capas 2 y 3 no alcanzan a los assets fusionados (AAR de fontbox +
-// la copia de syncRNLlamaHtpAssets), así que el bloque poda el
-// intermedio de merge<Variant>Assets. Estos tests fijan el asiento
-// (las dos variantes), el nunca-al-día que garantiza que el doLast
-// corre, y que las rutas y la lista de supervivientes del Groovy
-// generado son las mismas constantes que juzga el resto del fichero.
+// La poda del intermedio nace del fuego real de la corrida
+// 41375422202: las exclusiones de recursos no alcanzan a los assets
+// fusionados (AAR de fontbox), así que el bloque poda el intermedio
+// de merge<Variant>Assets. Estos tests fijan el asiento (las dos
+// variantes), el nunca-al-día que garantiza que el doLast corre, y
+// que las rutas y la lista de supervivientes del Groovy generado son
+// las mismas constantes que juzga el resto del fichero. Desde VEL-5
+// la poda ya no toca ggml-hexagon/: los assets HTP se quedan.
 describe("withLlamaTrim · poda del intermedio fusionado", () => {
-  it("las rutas fusionadas derivan de las del APK quitando assets/", () => {
-    expect(HTP_ASSET_PATTERN).toBe(`assets/${HTP_MERGED_DIR}/**`);
-    expect(HTP_MERGED_DIR).toBe("ggml-hexagon");
+  it("la ruta fusionada de cmap deriva de la del APK quitando assets/", () => {
     expect(CMAP_DIR).toBe(`assets/${CMAP_MERGED_DIR}`);
     expect(CMAP_MERGED_DIR).toBe("com/tom_roush/fontbox/resources/cmap");
   });
@@ -270,14 +273,16 @@ describe("withLlamaTrim · poda del intermedio fusionado", () => {
     expect(out).toContain('"mergeDebugAssets"');
     expect(out).toContain("upToDateWhen { false }");
     expect(out).toContain("doLast");
-    expect(out).toContain("deleteDir()");
+    // VEL-5: ya no hay borrado de directorio (era el de ggml-hexagon).
+    expect(out).not.toContain("deleteDir()");
+    expect(out).not.toContain("ggml-hexagon");
     // Fail-closed: sin asiento o con un borrado fallido, la build cae.
     expect(out).toContain("GradleException");
   });
 
-  it("el Groovy generado poda el directorio HTP entero y cmap/ salvo los 4", () => {
+  it("el Groovy generado poda cmap/ salvo los 4 y no nombra ggml-hexagon", () => {
     const out = applyLlamaTrimBlock("android {\n}\n");
-    expect(out).toContain(`new File(mergedAssetsDir, "${HTP_MERGED_DIR}")`);
+    expect(out).not.toContain("ggml-hexagon");
     expect(out).toContain(`new File(mergedAssetsDir, "${CMAP_MERGED_DIR}")`);
     // La lista de supervivientes del Groovy es CMAP_KEPT, en su orden.
     const keptLine = out.split("\n").find((l) => l.includes("def cmapKept"));

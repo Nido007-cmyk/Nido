@@ -9,7 +9,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import { extractPdfTextCapped, PdfTextError } from "./pdfText";
 import { isOcrAvailable, recognizeImageText, recognizeScannedPdfText, OCR_PROVENANCE_NOTE, OcrError, OcrLang } from "./ocr";
-import { attachmentKind, KIND_SAMPLE_BYTES } from "./attachmentPolicy";
+import { attachmentKind, KIND_SAMPLE_BYTES, type UnsupportedReason } from "./attachmentPolicy";
 import { embeddingEngine } from "../rag/embed";
 import {
   getDbEpoch,
@@ -108,7 +108,9 @@ export type DocImportErrorCode =
   | "noText"
   | "scannedNoOcr"
   | "imageNoOcr"
-  | "ocrFailed";
+  | "ocrFailed"
+  /** Cura del ZIP: todo el lote era de un tipo que no se importa. */
+  | "unsupported";
 
 /** Error with a code the screen shows in the app language (message: for logs). */
 export class DocImportError extends Error {
@@ -203,6 +205,14 @@ interface ImportSink {
    * el mensaje sobrevivían a ninguna superficie.
    */
   ocrErrorByName: Map<string, { code: string; message: string }>;
+  /**
+   * Cura del ZIP: el veredicto «unsupported» del clasificador,
+   * cobrado por fin — cada fichero que el despacho rechazó por
+   * su tipo, con su razón, para que el aviso por fichero y el
+   * error de lote vacío lo nombren en vez de dejarlo caer a la
+   * lectura como texto, que era la caída hasta esta cura.
+   */
+  rejectedUnsupportedByName: Map<string, UnsupportedReason>;
 }
 
 /** Tope del mensaje de error de OCR que se conserva: el del módulo nativo, sin contenido del usuario. */
@@ -228,6 +238,8 @@ function noteOcrFailure(sink: ImportSink | undefined, filename: string, e: unkno
  * texto; `imageNoOcr`, una imagen en una versión sin el módulo.
  */
 export type ImportWarningReason =
+  /** Cura del ZIP: el despacho lo rechazó por su tipo; no se leyó. */
+  | "unsupported"
   | "ocrFailed"
   | "ocrEmpty"
   | "imageNoOcr"
@@ -280,6 +292,9 @@ export interface ImportDocumentsOptions {
 
 /** El aviso de un fichero, leído de los sumideros de su importación. */
 function importWarningFor(name: string, sink: ImportSink): ImportWarning {
+  // El rechazo por tipo va primero: ese fichero no pasó por OCR
+  // ni por PDF, así que no puede estar en ninguna lista vieja.
+  if (sink.rejectedUnsupportedByName.has(name)) return { name, reason: "unsupported" };
   if (sink.ocrFailedNames.includes(name)) {
     const detail = sink.ocrErrorByName.get(name);
     return {
@@ -617,7 +632,11 @@ async function parseFileContent(
   // HEIF) manda siempre; sin ella, la extensión conocida, y si no,
   // la clasificación entera de los bytes.
   const sample = await readKindSample(file.uri);
-  const byBytes = sample ? attachmentKind(filename, sample).kind : null;
+  // Cura del ZIP: la decisión ENTERA del clasificador (tipo y
+  // razón), no solo el tipo — la razón del veredicto
+  // «unsupported» viaja hasta el aviso y el error.
+  const decision = sample ? attachmentKind(filename, sample) : null;
+  const byBytes = decision?.kind ?? null;
   let kind: "pdf" | "image" | "text" | "unsupported" | null = null;
   if (byBytes === "pdf" || byBytes === "image") kind = byBytes;
   else if (ext === "pdf") kind = "pdf";
@@ -707,6 +726,19 @@ async function parseFileContent(
       }
     }
     return docs;
+  }
+
+  // Cura del ZIP: el veredicto «unsupported» se cobra AQUÍ, tras
+  // la rama de PDF y antes de la lectura como texto (que era la
+  // caída: un ZIP o una hoja de cálculo entraban indexados como
+  // texto). La colocación deja el tope de tamaño mandando
+  // antes — un no soportado gigante sigue muriendo como
+  // «tooLarge» — y devuelve el documento vacío de siempre, para
+  // que la maquinaria de avisos, el lote mixto y el error de
+  // vacío funcionen sin tocarlos, como con la imagen sin OCR.
+  if (kind === "unsupported") {
+    sink?.rejectedUnsupportedByName.set(filename, decision?.reason ?? "unknown");
+    return [{ title: fallbackTitle, source: filename, body: "" }];
   }
 
   const raw = await FileSystem.readAsStringAsync(file.uri);
@@ -845,6 +877,7 @@ async function importDocumentsSerial(
       ocrEmptyNames: [],
       noOcrImageNames: [],
       ocrErrorByName: new Map(),
+      rejectedUnsupportedByName: new Map(),
     };
     const docs = await parseFileContent(file, fallbackTitle, MAX_IMPORT_CHUNKS - estimatedChunks, sink, env);
     // Se corta en cuanto la suma pasa del tope, sin leer los archivos que
@@ -1092,6 +1125,20 @@ async function importDocumentsSerial(
         "ocrFailed",
         `"${name}" couldn't be read even with OCR${detail ? ` (${detail.code}: ${detail.message})` : ""}.`,
         detail ? { name, ocrCode: detail.code, ocrMessage: detail.message } : { name }
+      );
+    }
+    // Cura del ZIP: si el ÚNICO motivo de vacío del lote es el
+    // rechazo por tipo no soportado, el error lo nombra con su
+    // código. Si el rechazo convive con otra causa (un PDF
+    // vacío, un texto sin nada), manda el código de siempre de
+    // emptyImportErrorCode, como hoy.
+    const firstRejected = outcomes.find((o) => o.sink.rejectedUnsupportedByName.size > 0);
+    if (firstRejected && outcomes.every((o) => o.sink.rejectedUnsupportedByName.has(o.name))) {
+      const name = firstRejected.sink.rejectedUnsupportedByName.keys().next().value as string;
+      throw new DocImportError(
+        "unsupported",
+        `"${name}" is a file type NIDO can't import (archives and Office documents aren't documents it can read).`,
+        { name }
       );
     }
     const emptyPdfNames = outcomes.flatMap((o) => o.sink.emptyPdfNames);
