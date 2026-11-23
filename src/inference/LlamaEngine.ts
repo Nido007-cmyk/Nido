@@ -42,7 +42,7 @@ import {
   type LadderPlan,
 } from "./memoryLadder";
 import { assertTrustedModelFileByName } from "../models/modelTrust";
-import { htpAcceleratesQuant, MODEL_CATALOG, type CatalogModel } from "../models/manifest";
+import { htpAcceleratesQuant, MODEL_CATALOG, openClAcceleratesQuant, type CatalogModel } from "../models/manifest";
 import { contextCeilingForDevice } from "../models/defaultModel";
 import { currentDevicePressure } from "./devicePressure";
 import { withStage } from "../utils/stageError";
@@ -1222,6 +1222,10 @@ export class LlamaEngine {
       const candidate = pickAccelDevice(gate, devices, {
         npuEnabled: isFeatureEnabled("inference.npuAccel"),
         npuQuantOk: htpAcceleratesQuant(catalogEntry?.quant),
+        // 0.1.111 (auditoría §7b.4): la GPU también se condiciona por
+        // formato, como el NPU desde el acto 3 — OpenCL solo
+        // descarga de verdad los formatos de OPENCL_ACCELERATED_QUANTS.
+        gpuQuantOk: openClAcceleratesQuant(catalogEntry?.quant),
       });
       if (candidate) {
         const layers = accelLayerBudget({ ...specBase, nCtx }, snapshot);

@@ -155,7 +155,14 @@ export function resolveAccelSelection(
  *   se descubre por el fracaso — y la carga sigue por la vía
  *   automática de la GPU, como si la opción no estuviera.
  * - Sin elección de NPU aplicable, manda la vía del acto 2: la GPU
- *   que pasa la puerta (Adreno 700+), automática.
+ *   que pasa la puerta (Adreno 700+), automática — y desde la
+ *   0.1.111 (auditoría de la 0.1.110, §7b.4) también condicionada
+ *   por formato, como la del NPU: gpuQuantOk (del mismo dato
+ *   `quant` del catálogo, openClAcceleratesQuant) dice si el
+ *   backend OpenCL descarga de verdad ese formato; con uno que no
+ *   descarga (Q4_K_M), la GPU no se elige y la carga va en CPU,
+ *   que es donde ese formato correría de todos modos, pero sin
+ *   decir «GPU». La cascada de CPU queda intacta.
  * - Toda candidatura pasa por resolveAccelSelection contra la lista
  *   recién leída: lo que ya no está o ya no califica cae en
  *   silencio, y la presión ya cerró la puerta dentro de
@@ -164,13 +171,13 @@ export function resolveAccelSelection(
 export function pickAccelDevice(
   gate: AccelGateResult,
   devices: readonly BackendDeviceLike[],
-  opts: { npuEnabled: boolean; npuQuantOk: boolean },
+  opts: { npuEnabled: boolean; npuQuantOk: boolean; gpuQuantOk: boolean },
 ): string | null {
   if (opts.npuEnabled && opts.npuQuantOk && gate.npu) {
     const npu = resolveAccelSelection(gate.npu.deviceName, devices);
     if (npu) return npu;
   }
-  if (gate.gpu) return resolveAccelSelection(gate.gpu.deviceName, devices);
+  if (opts.gpuQuantOk && gate.gpu) return resolveAccelSelection(gate.gpu.deviceName, devices);
   return null;
 }
 
