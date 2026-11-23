@@ -1,0 +1,52 @@
+name: Upload Vital assets
+
+# Manual, one-shot: download the two re-edited Wikipedia Vital packs
+# from their Drive staging copies, verify size and sha256 against the
+# pins recorded in the re-edition seat, and attach them, base first,
+# to the DRAFT release knowledge-packs-v17. The release stays a draft;
+# publishing happens from the house after read-back verification.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  upload-vital:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download the two packs from Drive and verify them
+        env:
+          BASE_ID: 1CK-lpbjJ10Mx0wmi0q_F05WpigjyeQvs
+          E5_ID: 19Zd1KbzCtVYOzOP2409gUxw6ev28tBAZ
+          BASE_SHA: c5f32a6ed86aa5d0ec7211ae53ac52811b8b63f74ba52232d1aea97ac98d2996
+          E5_SHA: 15cd1b2a2b5e3ec141778a1b5fe943f0f1bbe91bcf5131df86ab36274b74e4d2
+        run: |
+          set -euo pipefail
+          pip install gdown
+          gdown "https://drive.google.com/uc?id=${BASE_ID}" -O wiki-vital5.sqlite
+          gdown "https://drive.google.com/uc?id=${E5_ID}" -O wiki-vital5-e5.sqlite
+          test "$(stat -c%s wiki-vital5.sqlite)" = "163647488"
+          test "$(stat -c%s wiki-vital5-e5.sqlite)" = "163647488"
+          echo "${BASE_SHA}  wiki-vital5.sqlite" | sha256sum -c -
+          echo "${E5_SHA}  wiki-vital5-e5.sqlite" | sha256sum -c -
+
+      - name: Upload to the draft release, base first, and list what landed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_ID: "451556720"
+        run: |
+          set -euo pipefail
+          for f in wiki-vital5.sqlite wiki-vital5-e5.sqlite; do
+            curl -sf -X POST \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary "@${f}" \
+              "https://uploads.github.com/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets?name=${f}" \
+              | python3 -c "import json,sys; a=json.load(sys.stdin); print(a['name'], a['size'], a['state'])"
+          done
+          curl -sf \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets" \
+            | python3 -c "import json,sys; [print(a['name'], a['size']) for a in json.load(sys.stdin)]"
