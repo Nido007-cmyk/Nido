@@ -677,7 +677,12 @@ describe("isEmergencySituation · la caída narrada y la inmovilidad (espejo §4
   // contenido en «no se puede mover»), y el turno salía como
   // chat corriente y respondía sin sentido. Los tres casos de
   // idioma nacen en rojo; las dos guardas de objeto nacen en
-  // verde esperado y fijan la cara de los signos nuevos.
+  // verde esperado y fijan la cara de los signos nuevos. La
+  // tercera guarda (la puerta) la nombra el censo cruzado en
+  // su §X-3 y la revisión de cierre de X-3 la cobra aquí: la
+  // cara portada la cubría por construcción (sin caída narrada
+  // ni cuerpo cerca, la inmovilidad no declara), sin caso
+  // propio en ninguna de las dos baterías.
   it("la frase viva, en español: la caída de la escalera con inmovilidad es situación", () => {
     expect(isEmergencySituation("Mi vecino se cayó de una escalera y no se puede mover")).toBe(true);
   });
@@ -696,5 +701,9 @@ describe("isEmergencySituation · la caída narrada y la inmovilidad (espejo §4
 
   it("guarda de objeto: el móvil que se cae y no se puede encender tampoco", () => {
     expect(isEmergencySituation("Se me cayó el móvil y no se puede encender")).toBe(false);
+  });
+
+  it("guarda de objeto del censo: la puerta que no se puede mover tampoco declara", () => {
+    expect(isEmergencySituation("La puerta no se puede mover")).toBe(false);
   });
 });
