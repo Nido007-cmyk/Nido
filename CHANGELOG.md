@@ -4,6 +4,54 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.111-alpha - 2026-11-23
+
+This release fixes what a professional audit of 0.1.110
+and the owner's own pass on his tablet found. The
+emergency help comes first.
+
+Saying that you fell and cannot move now reaches the
+emergency answer in the words people actually use, in
+Spanish, English and Portuguese: "me caí y no me puedo
+mover", "I fell and I can't get up", "eu caí e não
+consigo me mover". The same goes for a fall of someone
+in the family ("se cayó", "se cayó en el baño", "no se
+puede levantar"). Telling the story of an old fall does
+not trigger it: a fall from yesterday, or one that was
+just a scare and is fine now, stays normal conversation.
+Asking what choking is, or saying that someone is NOT
+choking, does not declare an emergency either.
+
+When an emergency is declared, the guide served is the
+adults' guide, unless the question names a child.
+Before, the children's guide could win the search and
+answer an adult's fall with guidance written for
+children.
+
+The grounding judge now also stops four dangerous
+instructions when an answer is drawn from a guide in
+another language: putting butter or toothpaste on a
+burn, going to the town hall before calling the
+emergency number, using the lift during a fire, and
+running outside during an earthquake.
+
+The line under the empty chat no longer says that
+nothing leaves this device. It says what is true: "NIDO
+only connects when you ask it to." The privacy policy
+(PRIVACY.md) now describes what it used to leave out:
+friend-to-friend messages, where a contact you both
+know can carry your message in a sealed envelope for
+up to 72 hours; sharing a knowledge pack with a
+contact; and a download you started resuming on its
+own. It also names the Internet permission.
+
+On phones with a strong graphics chip, GPU acceleration
+is now attempted only for models in the formats the GPU
+backend is documented to accelerate (today the Gemma 4
+E4B in its Q4_0 edition), the same rule the NPU option
+already followed. Other models run on the CPU exactly
+as before.
+
 ## 0.1.110-alpha - 2026-11-22
 
 This release is for two kinds of phones at once. If yours
