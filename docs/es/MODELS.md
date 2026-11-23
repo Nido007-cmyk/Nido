@@ -291,6 +291,32 @@ Dos situaciones distintas, dos mecanismos distintos:
   manifest antes de empujar, ya que un archivo re-subido o cuantizado de forma
   distinta desde Hugging Face puede diferir en tamaño silenciosamente.
 
+## Aceleración por hardware (desde 0.1.110)
+
+La inferencia sigue corriendo con llama.cpp (`llama.rn`), en la CPU
+por defecto. Una puerta (`src/inference/accelGate.ts`) lee la lista
+de dispositivos del backend al cargar: un dispositivo GPU solo se
+usa si declara un Adreno 700 o más nuevo, y el perfil acelerado
+presupuesta sus capas descargadas desde la memoria real del aparato
+(la misma guarda de presupuesto de RAM que los perfiles de CPU, con
+la caché KV cobrada a 1,5 bytes por elemento por su disposición
+K q8_0 / V f16 y el flash attention apagado). Si la creación del
+contexto acelerado falla, corre la cascada de CPU de siempre y la
+conversación queda intacta. Un NPU Hexagon (v73 o más nuevo) nunca
+se elige solo: una opción experimental de Ajustes, apagada por
+defecto y visible solo cuando hay un dispositivo HTP, le deja ganar
+para los modelos cuyo formato declarado en el catálogo sí puede
+acelerar (Q4_0 o Q8_0; el campo `quant` de cada entrada de
+`src/models/manifest.ts`). El botón de medición del gestor cronometra
+el modelo cargado en el dispositivo que lo ejecutó. Todavía no se
+afirma ninguna cifra de aceleración: ningún aparato del proyecto
+alcanza hoy el suelo de la puerta (la Tab A9+ del dueño es Adreno
+619 / Hexagon v66), así que la ganancia está sin medir. El APK vuelve
+a llevar los backends OpenCL y Hexagon, unos 18 MB más;
+`scripts/check-apk-trims.py` tumba la compilación de release si
+faltan la pareja o los activos HTP, o si el símbolo del backend
+Hexagon no está definido en la librería construida.
+
 ## Verificación
 
 Cada entrada del catálogo se declara en `src/models/manifest.ts` con un `sha256` y

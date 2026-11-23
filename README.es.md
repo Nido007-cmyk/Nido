@@ -36,6 +36,12 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
 
 - **Conversa sin conexión** con un modelo de lenguaje pequeño que corre en
   el teléfono (llama.cpp mediante `llama.rn`).
+- **Usa el teléfono entero, cuando el teléfono lo tiene**: en aparatos con
+  un chip gráfico potente el modelo corre en la GPU, con las capas
+  presupuestadas desde la memoria real del aparato, y los teléfonos cuyo
+  NPU Hexagon puede acelerar los formatos del catálogo que lo declaran
+  ganan una opción de NPU experimental, apagada por defecto. En cualquier
+  otro teléfono no cambia nada ni se intenta nada más.
 - **Recuerda por ti**: datos, notas y recordatorios, guardados en una base
   cifrada con SQLCipher. La clave vive en el Keystore de Android. Los
   cumpleaños que le cuentas tienen recordatorio cada año. Si lo activas,

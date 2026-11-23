@@ -312,6 +312,31 @@ Two different situations, two different mechanisms:
   manifest before pushing, since a re-uploaded or differently-quantized
   file from Hugging Face can silently differ in size.
 
+## Hardware acceleration (since 0.1.110)
+
+Inference still runs through llama.cpp (`llama.rn`), on the CPU by
+default. A gate (`src/inference/accelGate.ts`) reads the backend
+device list at load time: a GPU device is used only when it reports
+an Adreno 700 or newer, and the accelerated profile budgets its
+offloaded layers from the device's real memory (the same RAM budget
+guard as the CPU profiles, with the KV cache charged at 1.5 bytes
+per element for its K q8_0 / V f16 layout and flash attention off).
+If creating the accelerated context fails, the usual CPU cascade
+runs and the conversation is untouched. A Hexagon NPU (v73 or
+newer) is never chosen on its own: an experimental Settings switch,
+off by default and shown only when an HTP device is present, lets
+it win for the models whose declared catalog format it can
+accelerate (Q4_0 or Q8_0; the `quant` field of each entry in
+`src/models/manifest.ts`). The model manager's benchmark button
+times the loaded model on the device that ran it. No acceleration
+figure is claimed yet: no device in the project reaches the gate's
+floor today (the owner's Tab A9+ is Adreno 619 / Hexagon v66), so
+the gain is unmeasured. The APK carries the OpenCL and Hexagon
+backends again, about 18 MB more; `scripts/check-apk-trims.py`
+fails the release build if the pair or the HTP assets go missing,
+or if the Hexagon backend symbol is not defined in the built
+library.
+
 ## Verification
 
 Every catalog entry is declared in `src/models/manifest.ts` with a `sha256` and

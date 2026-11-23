@@ -35,6 +35,12 @@ device, encrypted. There are no accounts, no cloud and no analytics.
 
 - **Chats offline** with a small language model that runs on the phone
   (llama.cpp through `llama.rn`).
+- **Uses the whole phone, when the phone has it**: on devices with a
+  strong graphics chip the model runs on the GPU, with layers budgeted
+  from the device's real memory, and phones whose Hexagon NPU can
+  accelerate the catalog formats that declare it gain an experimental
+  NPU option, off by default. On any other phone nothing changes and
+  nothing extra is attempted.
 - **Remembers for you**: facts, notes and reminders, stored in a database
   encrypted with SQLCipher. The key lives in the Android Keystore.
   Birthdays you tell it get a reminder every year. An 8:00 daily summary is
