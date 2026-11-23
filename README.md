@@ -27,6 +27,8 @@ NIDO is a personal assistant that thinks on your phone, not on someone else's
 server. The language model, your memory and your documents all stay on the
 device, encrypted. There are no accounts, no cloud and no analytics.
 
+**The model is for conversation. The help is not.**
+
 > **Alpha software.** NIDO is an early alpha for testing and feedback. It has
 > not had an independent security audit. Do not rely on it for high-stakes
 > secrets yet. See [known limitations](docs/ALPHA_RELEASE_NOTES.md#known-limitations).

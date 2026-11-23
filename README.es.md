@@ -27,6 +27,8 @@ NIDO es un asistente personal que piensa en tu teléfono, no en el servidor
 de otra persona. El modelo de lenguaje, tu memoria y tus documentos se quedan
 en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
 
+**El modelo es para conversar. La ayuda no.**
+
 > **Software en alfa.** NIDO es una alfa temprana para pruebas y comentarios.
 > No ha pasado una auditoría de seguridad independiente. Todavía no confíes
 > en él para secretos importantes. Consulta las
