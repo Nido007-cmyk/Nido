@@ -111,8 +111,46 @@ const RESULTADOS: ResultadoCaza[] = [];
  * secos…»), así que se conserva entero y no se re-pina nada.
  * Medido en esta batería con el fixture activo: 513 y 514 no
  * se mueven.
+ *
+ * Reducción medida en la cadena de curas de la 0.1.111
+ * (auditoría profesional de la 0.1.110): los ÚLTIMOS 4 casos de
+ * esta lista salen el 2026-11-23 y el residuo con contexto
+ * queda VACÍO. Cada uno con su puerta, todas dentro del
+ * régimen semántico (sin contexto los cuatro siguen en
+ * RESIDUO_SIN_CONTEXTO_0197, como manda su doctrina):
+ * - 081, por TIE2 leyendo la negación GOBERNANTE de la frase
+ *   fuente (sentNeg): el troceo partía la prohibición («Do not
+ *   apply butter» / «toothpaste to the burn») y el fragmento
+ *   huérfano contaba como lectura positiva (mp 0,8981) que
+ *   vetaba a la gemela negada (mn 0,8229). Con la frase entera
+ *   bajo su negación, mn es 0,8981 y la puerta dispara.
+ * - 186, por la vara de dos raíces de TIE2 contra la
+ *   prohibición estricta: «Uses el ascensor durante un
+ *   incendio» (2 raíces) era invisible con el suelo de 3; su
+ *   gemela negPos mide 0,8335. La cláusula que abre con
+ *   preposición queda fuera de la vara (es circunstancial, no
+ *   instrucción): sin esa guarda, la fiel 288 caía por su
+ *   fragmento «Com os pneus frios» (0,8208 topical).
+ * - 246, por el eje cerca/lejos nuevo de la cirugía de polos
+ *   («stand next to windows» contra «mantente lejos de
+ *   ventanas», 0,8739) y su desenlace: cortada una principal
+ *   sin que quede ninguna principal fiel, la frase entera cae
+ *   — lo que quedaba («Run outside», «heavy furniture») era la
+ *   inversión misma en fragmentos.
+ * - 126, por la puerta del DATO sin cifra (la quinta de
+ *   semGateFire): la pregunta pide el número, ninguna frase de
+ *   la respuesta lo trae, y su cláusula es la casi-gemela de
+ *   las frases portadoras del dato (0,8367/0,8752 contra
+ *   «llama al 112…»). La familia portadora incluye el 112/911,
+ *   que carriesDatumOfType no reconoce (su forma no es la de
+ *   un teléfono de ≥7 dígitos) y que la elección tipada de la
+ *   regla no elige (cae en el 800-555-0106 de información).
+ * Medido en esta batería tras la cura: 531/531 en verde con
+ * los cuatro ya como `it` estrictos, y ninguna otra baja (la
+ * única regresión de la tanda, 288, quedó curada con la guarda
+ * de la preposición y consta arriba).
  */
-const RESIDUO_0197 = new Set(["matriz-a-081", "matriz-a-126", "matriz-a-186", "matriz-a-246"]);
+const RESIDUO_0197 = new Set<string>([]);
 
 /**
  * T-21 (0.1.99, núcleo del juez): el residuo del régimen SIN
