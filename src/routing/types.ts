@@ -48,9 +48,11 @@ export type TaskType =
 export type ModelRole = "fast" | "general" | "reasoning" | "verifier" | "embedding";
 
 /**
- * A named routing configuration a user picks (or customizes). Maps to
- * `settings.ts`'s persisted `routingPreset` field once Phase 2 adds it -
- * same JSON-settings pattern already used for theme/personality/language.
+ * A named routing configuration for the routing engine. Production
+ * runs the constant from `settings.ts`'s `getRoutingPreset()`; the
+ * persisted field a picker would have written was retired in 0.1.111
+ * (audit §2.1: it had readers but no writer anywhere). The engine
+ * still takes any preset as an input, and its tests exercise them.
  */
 export type RoutingPreset = "simple" | "balanced" | "research" | "custom";
 

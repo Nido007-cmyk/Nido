@@ -23,6 +23,7 @@ import { detectTextLang, splitSentences, type GroundingLang } from "./grounding"
 import type { SentenceProvenance } from "./provenance";
 import { BGE_SMALL_EN_PROFILE, guideMinScore, type EmbeddingProfile } from "./embeddingProfile";
 import { buildLexicalQuery, countMatchedTerms, requiredTermMatches } from "./pure";
+import { isEmergencySituation } from "../routing/emergencyGate";
 
 /**
  * Packs whose guides are shown word for word (both embedding variants),
@@ -369,6 +370,28 @@ export function pickIsSignDenied(candidates: RetrievedChunk[], pick: RetrievedCh
     .some((c) => [...senses].some((s) => textDeniesSense(chunkSenseText(c), s)));
 }
 
+/** ¿Es este fragmento de la guía de niños (NIDO Niños, con su variante de embeddings)? */
+function isKidsGuideChunk(chunkId: string | undefined): boolean {
+  const ref = parsePackChunkId(chunkId);
+  return !!ref && basePackId(ref.packId) === "nido-ninos";
+}
+
+/**
+ * Las palabras con las que un texto nombra a un niño, ya plegadas:
+ * la señal de audiencia de la capa B. El casado es por palabra, con
+ * la regla del resto de la casa (la palabra, o la palabra + s/es).
+ */
+const CHILD_MENTION_WORDS = [
+  "bebe", "nino", "nina", "crianca", "baby", "babies", "toddler", "child", "children", "kid",
+  "lactante", "infant", "newborn", "hijo", "hija", "filho", "filha",
+  "son", "daughter", "menino", "menina", "boy", "girl", "nene", "nena", "nenem",
+];
+
+function queryNamesChild(query: string): boolean {
+  const words = foldForSense(query).split(/[^a-z0-9]+/).filter(Boolean);
+  return words.some((w) => CHILD_MENTION_WORDS.some((s) => w === s || w === `${s}s` || w === `${s}es`));
+}
+
 export function pickGuideChunk(
   chunks: RetrievedChunk[],
   lang: GroundingLang,
@@ -383,7 +406,25 @@ export function pickGuideChunk(
       !isOtherNidoGuideIntro(c, route),
   );
   if (scored.length === 0) return pickLexicalGuideChunk(chunks, lang, route, opts?.query ?? "");
-  const globalBest = Math.max(...scored.map((c) => c.rawScore as number));
+  // 0.1.111 (capa B de la auditoría profesional de la 0.1.110):
+  // bajo una emergencia DECLARADA por la puerta sobre la pregunta
+  // tal cual, la elección entre los packs integrados se juzga
+  // primero en el de adultos — los fragmentos de NIDO Niños no
+  // compiten, porque el coseno no trae señal de audiencia y su
+  // audiencia es otra (pasada del dueño en la 0.1.110: «Me caí y
+  // no me puedo mover» sirvió la guía de caídas de niños).
+  // Vuelven a competir si el texto nombra a un niño. La vara no
+  // se toca: el de adultos ha de ser el mejor de su competencia y
+  // valer GUIDE_MIN_SCORE, como siempre; si ninguno lo vale, no
+  // se sirve guía literal y el turno sigue su ruta con la puerta
+  // declarada. Los packs importados no son de esta capa: su regla
+  // es la de su dirimen y no cambia.
+  const query = opts?.query ?? "";
+  const inScope =
+    query !== "" && isEmergencySituation(query) && !queryNamesChild(query)
+      ? scored.filter((c) => !isKidsGuideChunk(c.chunkId))
+      : scored;
+  const globalBest = inScope.length > 0 ? Math.max(...inScope.map((c) => c.rawScore as number)) : Number.NEGATIVE_INFINITY;
   // 0.1.87 (dirimen del turno del gas): la guía IMPORTADA se juzga
   // contra su vara, no contra la exigencia de ser la mejor global.
   // Hasta la 0.1.86 el fragmento literal tenía que ser a la vez el
@@ -401,17 +442,19 @@ export function pickGuideChunk(
   // como hasta ahora: la cercanía en su propia escala sigue
   // decidiendo entre clases, y la preferencia de idioma corre sobre
   // los cercanos del ganador, como siempre.
-  const globalBestChunk = scored.reduce((a, b) => ((b.rawScore as number) > (a.rawScore as number) ? b : a));
-  const eligible = scored.filter((c) => {
+  const globalBestChunk =
+    inScope.length > 0 ? inScope.reduce((a, b) => ((b.rawScore as number) > (a.rawScore as number) ? b : a)) : null;
+  const eligible = inScope.filter((c) => {
     if (!isLiteralGuideChunk(c.chunkId, route)) return false;
     if (isEssentialsChunk(c.chunkId)) {
       // Regla sellada de los integrados: el candidato ES el mejor
       // global con su vara, o está en la banda de cercanía histórica
       // (0,03, la de la preferencia de idioma) del mejor cuando el
-      // mejor también es literal. Fuera de eso, no compite.
+      // mejor también es literal. Fuera de eso, no compite. (Con la
+      // capa B, «el mejor» es el mejor de la competencia en curso.)
       if ((c.rawScore as number) < GUIDE_MIN_SCORE) return false;
       if (c === globalBestChunk) return true;
-      return isLiteralGuideChunk(globalBestChunk.chunkId, route) && globalBest - (c.rawScore as number) <= 0.03;
+      return globalBestChunk !== null && isLiteralGuideChunk(globalBestChunk.chunkId, route) && globalBest - (c.rawScore as number) <= 0.03;
     }
     return (c.rawScore as number) >= guideMinScore(profile, opts?.query ?? "") && globalBest - (c.rawScore as number) <= profile.guidePickMargin;
   });

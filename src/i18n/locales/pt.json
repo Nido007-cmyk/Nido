@@ -530,7 +530,7 @@
     "interruptedMemory": "Resposta cortada: o NIDO foi fechado por falta de memória. Feche outros apps ou escolha um modelo mais leve em Ajustes e pergunte de novo.",
     "emptyTitle": "Olá, sou NIDO",
     "emptySubtitle": "Seu agente privado. O NIDO só se conecta quando você pedir.",
-    "privacyHint": "Privado · nada sai deste dispositivo",
+    "privacyHint": "Privado · O NIDO só se conecta quando você pedir",
     "suggestions": {
       "reminder": {
         "title": "Lembre-me de algo",

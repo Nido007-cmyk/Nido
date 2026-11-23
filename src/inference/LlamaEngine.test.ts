@@ -2078,7 +2078,9 @@ describe("T-07: el diagnóstico dice lo que corrió (M-41/P-32)", () => {
     ];
     mockStopVerdict = { stopped_eos: true };
     const engine = new LlamaEngine();
-    await engine.load("models/a.gguf");
+    // 0.1.111: la puerta de GPU se condiciona por formato — el
+    // escenario carga el Q4_0 del catálogo, el que OpenCL acelera.
+    await engine.load("models/hf-google-gemma-4-e4b-it-qat-q4-0-gguf-gemma-4-e4b-q4-0-it-gguf.gguf");
     await engine.generate({ prompt: "hola" });
     await new Promise((r) => setTimeout(r, 40));
     const backend = readSession().backend ?? "";
@@ -2129,14 +2131,16 @@ describe("T-07: VEL-5 acto 2 — la puerta de aceleración y el perfil «accel»
       { backend: "CPU", type: "cpu", deviceName: "Probe" },
     ];
     const engine = new LlamaEngine();
-    await engine.load("models/a.gguf");
+    // 0.1.111: el escenario carga el Q4_0 del catálogo (42 capas),
+    // el formato que la puerta de GPU condicionada deja pasar.
+    await engine.load("models/hf-google-gemma-4-e4b-it-qat-q4-0-gguf-gemma-4-e4b-q4-0-it-gguf.gguf");
     expect(initCalls).toHaveLength(1);
     // La matriz sellada del perfil: dispositivo elegido, capas por
-    // presupuesto (el fichero de 1 MB del arnés cabe entero: 28),
+    // presupuesto (el fichero de 1 MB del arnés cabe entero: 42),
     // FA 'off', K q8_0, V f16.
     expect(initCalls[0]).toMatchObject({
       devices: ["Adreno 750"],
-      n_gpu_layers: 28,
+      n_gpu_layers: 42,
       flash_attn_type: "off",
       cache_type_k: "q8_0",
       cache_type_v: "f16",
@@ -2179,7 +2183,8 @@ describe("T-07: VEL-5 acto 2 — la puerta de aceleración y el perfil «accel»
     rejectInit = (p) => Array.isArray(p.devices);
     mockInitErrorFor = () => "ggml-opencl: failed to create context";
     const engine = new LlamaEngine();
-    await engine.load("models/a.gguf");
+    // 0.1.111: Q4_0 del catálogo, para que el pick de GPU exista.
+    await engine.load("models/hf-google-gemma-4-e4b-it-qat-q4-0-gguf-gemma-4-e4b-q4-0-it-gguf.gguf");
     expect(initCalls).toHaveLength(2);
     expect(initCalls[0].devices).toEqual(["Adreno 750"]);
     expect(initCalls[1].devices).toBeUndefined();
@@ -2196,7 +2201,9 @@ describe("T-07: VEL-5 acto 2 — la puerta de aceleración y el perfil «accel»
     mockBattery = { levelPct: 10, charging: false, powerSave: false };
     refreshDevicePressure();
     const engine = new LlamaEngine();
-    await engine.load("models/a.gguf");
+    // 0.1.111: Q4_0 del catálogo, para que sea la PRESIÓN (y no la
+    // puerta de formato) la que cierra esta carga.
+    await engine.load("models/hf-google-gemma-4-e4b-it-qat-q4-0-gguf-gemma-4-e4b-q4-0-it-gguf.gguf");
     expect(initCalls[0].n_gpu_layers).toBe(0);
     expect(initCalls[0].devices).toBeUndefined();
     expect(engine.getModelInfo()?.memoryProfile).toBe("kv-q8");
@@ -2211,7 +2218,9 @@ describe("T-07: VEL-5 acto 2 — la puerta de aceleración y el perfil «accel»
     ];
     mockTotalRamBytes = 0;
     const engine = new LlamaEngine();
-    await engine.load("models/a.gguf");
+    // 0.1.111: Q4_0 del catálogo, para que sea la falta de RAM (y no
+    // la puerta de formato) la que deje esta carga sin presupuesto.
+    await engine.load("models/hf-google-gemma-4-e4b-it-qat-q4-0-gguf-gemma-4-e4b-q4-0-it-gguf.gguf");
     expect(initCalls[0].n_gpu_layers).toBe(0);
     expect(initCalls[0].devices).toBeUndefined();
     expect(engine.getModelInfo()?.memoryProfile).toBe("kv-q8");
@@ -2258,7 +2267,13 @@ describe("T-07: VEL-5 acto 3 — la opción de NPU y la medición con bench()", 
     expect(engine.getModelInfo()?.memoryProfile).toBe("kv-q8");
   });
 
-  it("con la opción encendida, un Q4_K_M y una GPU capaz, el pick es la GPU: el formato manda sobre el NPU", async () => {
+  it("con la opción encendida, un Q4_K_M y una GPU capaz, ningún acelerador lo descarga de verdad: la carga es la CPU de siempre", async () => {
+    // 0.1.111 (auditoría §7b.4): hasta la 0.1.110 este escenario
+    // esperaba el pick de GPU, porque su puerta no condicionaba por
+    // formato. Con la puerta condicionada como la del NPU, el
+    // Q4_K_M no lo descarga de verdad ni el HTP ni OpenCL (que lo
+    // degradaría a CPU en silencio): no hay pick, y la cascada de
+    // CPU corre intacta y diciendo la verdad.
     setFeatureOverrideForTests("inference.npuAccel", true);
     mockBackendDevices = [
       { backend: "Hexagon", type: "accel", deviceName: "HTP0" },
@@ -2267,9 +2282,10 @@ describe("T-07: VEL-5 acto 3 — la opción de NPU y la medición con bench()", 
     ];
     const engine = new LlamaEngine();
     await engine.load(QWEN_Q4KM);
-    expect(initCalls[0].devices).toEqual(["Adreno 750"]);
-    expect(engine.getModelInfo()?.memoryProfile).toBe("accel");
-    expect(engine.getModelInfo()?.accelDevice).toBe("Adreno 750");
+    expect(initCalls).toHaveLength(1);
+    expect(initCalls[0].devices).toBeUndefined();
+    expect(initCalls[0].n_gpu_layers).toBe(0);
+    expect(engine.getModelInfo()?.memoryProfile).toBe("kv-q8");
   });
 
   it("si la creación en el NPU falla, la cascada sigue a kv-q8 sin tocar la conversación", async () => {

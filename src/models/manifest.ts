@@ -55,6 +55,25 @@ export function htpAcceleratesQuant(quant: ModelQuant | undefined): boolean {
   return quant !== undefined && HTP_ACCELERATED_QUANTS.includes(quant);
 }
 
+/**
+ * 0.1.111 (auditoría de la 0.1.110, §7b.4): la misma condición para
+ * la GPU. PocketPal documentó que en OpenCL solo Q4_0 y Q6_K
+ * aceleran, y que con otros formatos la ejecución cae a CPU EN
+ * SILENCIO: la carga diría «GPU» y correría en CPU. La puerta de
+ * GPU de VEL-5 no condicionaba por formato (la del NPU sí, desde el
+ * acto 3), así que una entrada Q4_K_M se intentaba en GPU sin
+ * saber si el backend la descarga de verdad. Q6_K no es hoy un
+ * formato del catálogo (ModelQuant no lo declara): si una entrada
+ * Q6_K llega algún día, el tipo y esta lista crecen juntos, y el
+ * test de integridad del dato `quant` guarda la declaración.
+ */
+export const OPENCL_ACCELERATED_QUANTS: readonly ModelQuant[] = ["Q4_0"];
+
+/** ¿El backend OpenCL acelera de verdad una entrada con esta cuantización? */
+export function openClAcceleratesQuant(quant: ModelQuant | undefined): boolean {
+  return quant !== undefined && OPENCL_ACCELERATED_QUANTS.includes(quant);
+}
+
 export interface CatalogModel {
   id: string;
   kind: AssetKind;

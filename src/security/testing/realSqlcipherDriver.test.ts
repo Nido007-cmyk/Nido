@@ -33,6 +33,12 @@ import { cleanupFreshDirs, freshDir } from "./b01Utils";
 import { makeRealSqlcipherDriver, sqlcipherEngineAvailable } from "./realSqlcipherDriver";
 
 const ENGINE_OK = await sqlcipherEngineAvailable();
+if (!ENGINE_OK && process.env.CI) {
+  // B-03 (0.1.111, auditoría de la 0.1.110 §6.2): bajo CI la ausencia
+  // del motor es un FALLO, no un salto silencioso. Esta era la única
+  // suite de motor real sin la guarda que sus hermanas ya llevan.
+  throw new Error("B-03: python3/sqlcipher3 no disponible bajo CI — la cobertura real no puede saltarse.");
+}
 const describeEngine = ENGINE_OK ? describe : describe.skip;
 
 const DEATH = /puente\.py terminó/;

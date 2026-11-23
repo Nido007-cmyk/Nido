@@ -13,6 +13,7 @@ import {
   STORAGE_BUDGET_BYTES,
   totalManifestBytes,
   htpAcceleratesQuant,
+  openClAcceleratesQuant,
   type ModelQuant,
 } from "./manifest";
 
@@ -104,6 +105,18 @@ describe("VEL-5 acto 3: la cuantización declarada por entrada (el dato de la op
     expect(htpAcceleratesQuant("Q4_K_M")).toBe(false);
     expect(htpAcceleratesQuant("Q5_K_M")).toBe(false);
     expect(htpAcceleratesQuant(undefined)).toBe(false);
+  });
+
+  it("0.1.111: en OpenCL solo el Q4_0 del catálogo acelera de verdad (la lista de PocketPal es Q4_0/Q6_K y Q6_K no es formato del catálogo)", () => {
+    const llms = MODEL_CATALOG.filter((m) => m.kind === "llm");
+    const accelerated = llms.filter((m) => openClAcceleratesQuant(m.quant)).map((m) => m.id);
+    expect(accelerated).toEqual(["gemma-4-e4b-it-q4_0"]);
+    // La tabla de la política, entera:
+    expect(openClAcceleratesQuant("Q4_0")).toBe(true);
+    expect(openClAcceleratesQuant("Q8_0")).toBe(false);
+    expect(openClAcceleratesQuant("Q4_K_M")).toBe(false);
+    expect(openClAcceleratesQuant("Q5_K_M")).toBe(false);
+    expect(openClAcceleratesQuant(undefined)).toBe(false);
   });
 });
 

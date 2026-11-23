@@ -30,6 +30,7 @@ import {
 } from "./accelGate";
 import type { DevicePressureCaps } from "./devicePressure";
 import type { RamSnapshot } from "./ramBudget";
+import { openClAcceleratesQuant } from "../models/manifest";
 
 const GiB = 1024 ** 3;
 const NO_CAPS: DevicePressureCaps = { threadCap: null, ubatchCap: null };
@@ -125,37 +126,63 @@ describe("VEL-5 acto 3: la elección entera — la opción de NPU manda, con su 
 
   it("con la opción apagada manda la vía automática del acto 2: la GPU", () => {
     const gate = evaluateAccelGate(both, NO_CAPS);
-    expect(pickAccelDevice(gate, both, { npuEnabled: false, npuQuantOk: true })).toBe("Adreno 750");
-    expect(pickAccelDevice(gate, both, { npuEnabled: false, npuQuantOk: false })).toBe("Adreno 750");
+    expect(pickAccelDevice(gate, both, { npuEnabled: false, npuQuantOk: true, gpuQuantOk: true })).toBe("Adreno 750");
+    expect(pickAccelDevice(gate, both, { npuEnabled: false, npuQuantOk: false, gpuQuantOk: true })).toBe("Adreno 750");
   });
 
   it("con la opción encendida y un formato que el HTP come, la elección expresa gana: el NPU", () => {
     const gate = evaluateAccelGate(both, NO_CAPS);
-    expect(pickAccelDevice(gate, both, { npuEnabled: true, npuQuantOk: true })).toBe("HTP0");
+    expect(pickAccelDevice(gate, both, { npuEnabled: true, npuQuantOk: true, gpuQuantOk: true })).toBe("HTP0");
   });
 
   it("con la opción encendida pero formato Q4_K_M, el NPU ni se intenta: sigue la GPU", () => {
     const gate = evaluateAccelGate(both, NO_CAPS);
-    expect(pickAccelDevice(gate, both, { npuEnabled: true, npuQuantOk: false })).toBe("Adreno 750");
+    expect(pickAccelDevice(gate, both, { npuEnabled: true, npuQuantOk: false, gpuQuantOk: true })).toBe("Adreno 750");
   });
 
   it("sin GPU, la opción encendida con formato bueno elige el NPU; con formato malo, CPU", () => {
     const onlyHtp = [htp("HTP0"), cpu];
     const gate = evaluateAccelGate(onlyHtp, NO_CAPS);
-    expect(pickAccelDevice(gate, onlyHtp, { npuEnabled: true, npuQuantOk: true })).toBe("HTP0");
-    expect(pickAccelDevice(gate, onlyHtp, { npuEnabled: true, npuQuantOk: false })).toBeNull();
-    expect(pickAccelDevice(gate, onlyHtp, { npuEnabled: false, npuQuantOk: true })).toBeNull();
+    expect(pickAccelDevice(gate, onlyHtp, { npuEnabled: true, npuQuantOk: true, gpuQuantOk: true })).toBe("HTP0");
+    expect(pickAccelDevice(gate, onlyHtp, { npuEnabled: true, npuQuantOk: false, gpuQuantOk: true })).toBeNull();
+    expect(pickAccelDevice(gate, onlyHtp, { npuEnabled: false, npuQuantOk: true, gpuQuantOk: true })).toBeNull();
   });
 
   it("con presión la puerta ya viene cerrada del veredicto: no hay elección", () => {
     const gate = evaluateAccelGate(both, { threadCap: 3, ubatchCap: null });
-    expect(pickAccelDevice(gate, both, { npuEnabled: true, npuQuantOk: true })).toBeNull();
+    expect(pickAccelDevice(gate, both, { npuEnabled: true, npuQuantOk: true, gpuQuantOk: true })).toBeNull();
   });
 
   it("declarado: en la Tab A9+ (Adreno 619, sin HTP) no hay elección ni con la opción encendida", () => {
     const a9 = [gpu("Adreno 619"), cpu];
     const gate = evaluateAccelGate(a9, NO_CAPS);
-    expect(pickAccelDevice(gate, a9, { npuEnabled: true, npuQuantOk: true })).toBeNull();
+    expect(pickAccelDevice(gate, a9, { npuEnabled: true, npuQuantOk: true, gpuQuantOk: true })).toBeNull();
+  });
+});
+
+describe("0.1.111 (auditoría §7b.4): la puerta de GPU también se condiciona por formato", () => {
+  const both = [gpu("Adreno 750"), htp("HTP0"), cpu];
+
+  it("con formato que OpenCL no descarga (Q4_K_M), la GPU no se elige: CPU, sin decir «GPU»", () => {
+    const gate = evaluateAccelGate(both, NO_CAPS);
+    expect(pickAccelDevice(gate, both, { npuEnabled: false, npuQuantOk: false, gpuQuantOk: false })).toBeNull();
+  });
+
+  it("con formato que OpenCL sí descarga (Q4_0), la vía automática sigue eligiendo la GPU", () => {
+    const gate = evaluateAccelGate(both, NO_CAPS);
+    expect(pickAccelDevice(gate, both, { npuEnabled: false, npuQuantOk: true, gpuQuantOk: true })).toBe("Adreno 750");
+  });
+
+  it("la puerta de formato de la GPU no toca la elección expresa del NPU", () => {
+    const gate = evaluateAccelGate(both, NO_CAPS);
+    expect(pickAccelDevice(gate, both, { npuEnabled: true, npuQuantOk: true, gpuQuantOk: false })).toBe("HTP0");
+  });
+
+  it("sin formato declarado (undefined), la GPU tampoco se elige: a ciegas no se acelera", () => {
+    const gate = evaluateAccelGate(both, NO_CAPS);
+    // openClAcceleratesQuant(undefined) es false en el manifiesto; aquí
+    // la elección recibe ese false tal como LlamaEngine lo pasa.
+    expect(pickAccelDevice(gate, both, { npuEnabled: false, npuQuantOk: false, gpuQuantOk: openClAcceleratesQuant(undefined) })).toBeNull();
   });
 });
 

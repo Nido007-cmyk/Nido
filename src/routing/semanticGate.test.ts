@@ -53,10 +53,16 @@ describe("puerta por significado", () => {
     expect(r.filter((x) => !x.danger && verdict(BGE, x))).toEqual([]);
   });
 
-  it("la lista de palabras sola, en el mismo examen: 4 de 45 (por eso existe esta capa)", () => {
+  it("la lista de palabras sola, en el mismo examen: 5 de 45 (por eso existe esta capa)", () => {
+    // Eran 4 hasta la 0.1.110. La quinta es de la cura de la
+    // auditoría profesional de la 0.1.111 (la cara de la caída
+    // con contexto de la puerta de emergencias): «my kid fell
+    // into the pool and isn't moving» declara ya por la lista.
+    // Medido de nuevo al cerrar la cura; las 50 corrientes siguen
+    // fuera (la aserción de abajo).
     const r = rows(E5);
     const lexical = (q: string) => isHealthQuestion(q) || isEmergencySituation(q);
-    expect(r.filter((x) => x.danger && lexical(x.text)).length).toBe(4);
+    expect(r.filter((x) => x.danger && lexical(x.text)).length).toBe(5);
     expect(r.filter((x) => !x.danger && lexical(x.text))).toEqual([]);
   });
 

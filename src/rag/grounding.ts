@@ -2950,6 +2950,21 @@ interface SemSourceClause {
   stems: Set<string>;
   negPos: boolean;
   negGov: boolean;
+  /**
+   * 0.1.111 (auditoría profesional, matriz-a-081): la negación
+   * GOBERNANTE de su frase — la primera cláusula de la frase es
+   * negPos, así que la negación manda sobre la frase entera
+   * («Do not apply butter or toothpaste to the burn»: el troceo
+   * parte la prohibición en «Do not apply butter» y «toothpaste
+   * to the burn», y el segundo fragmento, huérfano de su
+   * negación, se leía como lectura positiva). El adjunto
+   * posverbal de una frase afirmativa («…, without using ice»)
+   * no gobierna: su primera cláusula no es negPos y la frase no
+   * se marca.
+   */
+  sentNeg: boolean;
+  /** La frase fuente a la que la cláusula pertenece (contador global): la puerta del dato la usa para reunir las cláusulas de la frase del dato. */
+  sentId: number;
   poles: Set<string>;
   vec: Float32Array;
 }
@@ -2982,6 +2997,23 @@ interface SemGateData {
   chunkLangs: (GroundingLang | null)[];
   /** El idioma detectado de la respuesta (el ámbito cruzado de TIE2). */
   answerLang: GroundingLang | null;
+  /**
+   * 0.1.111 (matriz-a-126): las cláusulas de las frases fuente
+   * PORTADORAS del dato que la pregunta pide, y las cifras de
+   * todas ellas. La portadora es una familia, no la frase que la
+   * regla del dato elige: medido en 126, la elección tipada cae
+   * en el teléfono de información (800-555-0106, la única con
+   * forma telefónica de ≥7 dígitos) mientras la respuesta imita
+   * a la frase del 112 — y el 112 ni siquiera es «portador» para
+   * carriesDatumOfType, porque su forma no es la de un teléfono
+   * largo: la familia de esta puerta suma los números de
+   * emergencia (112/911, los que phoneAttributions ya trata como
+   * dato con dueño «emergen»). Vacío si la pregunta no pide un
+   * dato tipado o las fuentes no traen portadoras: la puerta del
+   * dato no se arma.
+   */
+  datumVecs: Float32Array[];
+  datumNums: Set<number>;
 }
 
 /**
@@ -3003,15 +3035,21 @@ function prepareSemGates(
 ): SemGateData | null {
   const ptRegime = answerLang === "pt" || sourceLang === "pt";
   const sources: SemSourceClause[] = [];
+  let sentCounter = 0;
   for (let i = 0; i < chunks.length; i++) {
     let k = 0;
     for (const s of chunkSentences[i]!) {
-      for (const cl of splitClausesWithSep(s)) {
+      const cls = splitClausesWithSep(s);
+      const sentNeg = cls.length > 0 && semNegPos(cls[0]!.text, ptRegime);
+      const sentId = sentCounter++;
+      for (const cl of cls) {
         sources.push({
           chunk: i,
           stems: new Set(contentStems(cl.text)),
           negPos: semNegPos(cl.text, ptRegime),
           negGov: semNegGov(cl.text, ptRegime),
+          sentNeg,
+          sentId,
           poles: clausePoles(cl.text),
           vec: ctx.chunkClauseVectors[i]![k++]!,
         });
@@ -3066,6 +3104,37 @@ function prepareSemGates(
     for (const st of questionStems) if (bodyStems.has(st)) n++;
     if (n > topicOverlap) topicOverlap = n;
   });
+  // 0.1.111 (matriz-a-126): las frases portadoras del dato
+  // pedido, si la pregunta pide un dato tipado (ver datumVecs).
+  // Los recs se construyen en el mismo orden en que sentId
+  // numera las frases: el índice del rec ES el sentId. La
+  // familia portadora es LA DE LA REGLA (la de
+  // pickDatumSentence: carriesDatumOfType, sin la vara de
+  // hasJudgedDigit — la dosis de un dígito, «5 ml», es dato
+  // portador para la regla vía su doctrina singleTyped, y
+  // excluirla aquí dejaba fuera justo la frase fiel: medido en
+  // matriz-b-112, donde solo contaba «Não ultrapasse 4 doses…»
+  // y la gemela del 5 caía como sustitución), más la extensión
+  // de los números de emergencia para el tipo teléfono.
+  let datumVecs: Float32Array[] = [];
+  let datumNums = new Set<number>();
+  const askedDatumType = datumTypeOfText(query ?? "");
+  if (askedDatumType !== null) {
+    const recs: SourceSentenceRec[] = [];
+    chunkSentences.forEach((ss, i) => {
+      for (const text of ss) recs.push({ text, chunk: i });
+    });
+    const carrierIds = new Set<number>();
+    recs.forEach((r, idx) => {
+      const carries =
+        carriesDatumOfType(r.text, askedDatumType) ||
+        (askedDatumType === "phone" && datumValueKeys(r.text).some((k) => k === "112" || k === "911"));
+      if (!carries) return;
+      carrierIds.add(idx);
+      for (const v of numberValueSet(r.text)) datumNums.add(v);
+    });
+    datumVecs = sources.filter((s) => carrierIds.has(s.sentId)).map((s) => s.vec);
+  }
   return {
     sources,
     answerClauses,
@@ -3077,6 +3146,8 @@ function prepareSemGates(
     topicOverlap,
     chunkLangs: chunkTexts.map((t) => detectTextLang(t)),
     answerLang,
+    datumVecs,
+    datumNums,
   };
 }
 
@@ -3090,7 +3161,18 @@ function semMaxSim(vec: Float32Array, data: SemGateData): number {
   return mx;
 }
 
-type SemGateName = "suelo" | "tie2" | "n8" | "tras";
+type SemGateName = "suelo" | "tie2" | "n8" | "tras" | "dato";
+
+/**
+ * Las preposiciones con las que un fragmento circunstancial abre
+ * (es/en/pt, plegadas): la cláusula corta que abre con una de
+ * ellas cuelga de su principal y no sostiene sola la vara de dos
+ * raíces de TIE2 (ver la nota junto a su uso, matriz-a-288).
+ */
+const ADJUNCT_OPENERS = new Set([
+  "con", "com", "sin", "sem", "without", "en", "em", "in", "on", "at",
+  "durante", "during", "bajo", "sob", "under", "sobre", "desde", "tras",
+]);
 
 /**
  * Las cuatro puertas sobre UNA frase que el juicio léxico
@@ -3138,20 +3220,53 @@ function semGateFire(
   // la protección de b-099: su gemela vive en el chunk de su mismo
   // idioma y TIE2 no la toca (la caza TRAS-tema).
   for (const c of clauses) {
-    if (c.stems.size < 3 || c.subordinate || c.preamble || c.negPos) continue;
+    if (c.stems.size < 2 || c.subordinate || c.preamble || c.negPos) continue;
     let mn = -1;
     let mnChunk = -1;
+    let mnStrict = -1;
+    let mnStrictChunk = -1;
     let mp = 0;
     for (const src of data.sources) {
       const v = cosineSimilarity(c.vec, src.vec);
-      if (src.negPos) {
+      // 0.1.111 (matriz-a-081): la gemela negada también es el
+      // fragmento de una frase cuya negación GOBIERNA la frase
+      // entera (sentNeg): el objeto de la prohibición, partido
+      // por el troceo, no es una lectura positiva independiente
+      // de su prohibición. La lectura positiva es la de las
+      // frases que no están bajo una negación gobernante.
+      if (src.negPos || src.sentNeg) {
         if (v > mn) { mn = v; mnChunk = src.chunk; }
       } else if (v > mp) {
         mp = v;
       }
+      if (src.negPos && v > mnStrict) { mnStrict = v; mnStrictChunk = src.chunk; }
     }
-    if (mn < SEM_TIE_TAU || mn < mp - SEM_TIE_EPS) continue;
-    const ownerLang = data.chunkLangs[mnChunk];
+    if (c.stems.size >= 3) {
+      if (mn < SEM_TIE_TAU || mn < mp - SEM_TIE_EPS) continue;
+      const ownerLang = data.chunkLangs[mnChunk];
+      if (ownerLang === null || data.answerLang === null || ownerLang === data.answerLang) continue;
+      return "tie2";
+    }
+    // 0.1.111 (matriz-a-186): la cláusula corta de DOS raíces era
+    // invisible para la puerta (el suelo de 3), y la imperativa
+    // peligrosa es justo esa («Uses el ascensor durante un
+    // incendio» → {ascensor, incendi}, gemela de «Never use the
+    // lift during a fire» a 0,8335). Con dos raíces la vara es la
+    // prohibición ESTRICTA: solo la gemela negPos (no la de la
+    // frase gobernada) y con el mismo tau, el mismo eps contra la
+    // mejor lectura positiva y el mismo ámbito cruzado. Y la
+    // cláusula no puede ABRIR con preposición: la que abre así
+    // («Com os pneus frios») es el circunstancial de su principal,
+    // no una instrucción, y su cercanía a una prohibición del
+    // mismo tema es topical, no gemela — medido en matriz-a-288:
+    // ese fragmento (2 raíces) rozaba a «Do not drive with a
+    // visibly flat tyre» a 0,8208 y la traducción fiel entera
+    // caía por esta puerta. La instrucción abre con su verbo
+    // («Uses el ascensor…»), aunque el verbo sea ligero y el
+    // troceo de raíces lo descarte.
+    if (ADJUNCT_OPENERS.has(words(c.text)[0] ?? "")) continue;
+    if (mnStrict < SEM_TIE_TAU || mnStrict < mp - SEM_TIE_EPS) continue;
+    const ownerLang = data.chunkLangs[mnStrictChunk];
     if (ownerLang === null || data.answerLang === null || ownerLang === data.answerLang) continue;
     return "tie2";
   }
@@ -3195,6 +3310,53 @@ function semGateFire(
       }
     }
   }
+  // 5 · DATO sin cifra (0.1.111, matriz-a-126): la pregunta pide
+  // un dato tipado (el número de emergencias), las fuentes lo
+  // entregan, y ninguna frase de la respuesta lo trae — pero una
+  // cláusula de ESTA frase es la casi-gemela semántica de la
+  // frase del dato sin traer su cifra: es el procedimiento
+  // inventado que ocupa el sitio del dato («Call the town hall
+  // office first» contra «llama al 112 para cualquier
+  // emergencia», 0,8367/0,8752 medidos). La falsedad sin cifras
+  // que R-05 ya perseguía por la vía de la identidad, leída por
+  // significado: la frase cae y la regla del dato, sobre lo que
+  // quede, hace su desenlace de siempre. La cláusula con cifras
+  // no es de esta puerta (la juzgan las piernas de cifras), y si
+  // alguna frase de la respuesta SÍ entrega el dato, la puerta
+  // no se arma. La entrega se lee también en LETRAS, con la
+  // simetría dígito↔letra de la casa (wordNumberValue): «cinco
+  // mililitros» entrega el 5 de la guía; sin esa lectura la
+  // puerta condenaba a la gemela fiel escrita en letras
+  // (matriz-b-112, medido en la misma tanda).
+  if (data.datumVecs.length > 0) {
+    let delivered = false;
+    for (const cls of data.answerClauses) {
+      for (const c of cls) {
+        for (const v of numberValueSet(c.text)) {
+          if (data.datumNums.has(v)) { delivered = true; break; }
+        }
+        if (!delivered) {
+          for (const w of words(c.text)) {
+            const v = wordNumberValue(w);
+            if (v !== null && data.datumNums.has(v)) { delivered = true; break; }
+          }
+        }
+        if (delivered) break;
+      }
+      if (delivered) break;
+    }
+    if (!delivered) {
+      for (const c of clauses) {
+        if (c.stems.size < 2 || c.preamble || /\d/.test(c.text)) continue;
+        let mx = 0;
+        for (const dv of data.datumVecs) {
+          const v = cosineSimilarity(c.vec, dv);
+          if (v > mx) mx = v;
+        }
+        if (mx >= SEM_TIE_TAU) return "dato";
+      }
+    }
+  }
   return null;
 }
 
@@ -3227,6 +3389,11 @@ const POLE_AXES_RAW: ReadonlyArray<readonly [readonly string[], readonly string[
    ["parar", "detener", "stop", "pare"]],
   [["dar", "give"], ["quitar", "retirar", "remove", "tirar", "quita", "retira"]],
   [["lleno", "llena", "cheio", "cheia", "full"], ["vacío", "vacía", "vazio", "vazia", "empty"]],
+  // 0.1.111 (matriz-a-246): el eje cerca/lejos — «stand next to
+  // windows» contra «mantente lejos de ventanas» es una inversión
+  // de polo sin negación que contar, y ningún eje la veía.
+  [["cerca", "cercano", "cercana", "junto", "near", "next", "perto", "proximo", "proxima"],
+   ["lejos", "alejado", "alejada", "far", "away", "distante", "longe", "afastado", "afastada"]],
 ];
 const POLE_AXES: ReadonlyArray<readonly [ReadonlySet<string>, ReadonlySet<string>]> = POLE_AXES_RAW.map(
   ([a, b]) =>
@@ -3431,6 +3598,17 @@ function dropOpposedClauses(
     (c, j) => !drop.has(j) && c.stems.size >= 3 && semMaxSim(c.vec, data) >= SEM_FLOOR,
   );
   if (drop.has(0) && !quedaFiel) return { text: "", dropped: drop.size };
+  // 0.1.111 (matriz-a-246): el mismo desenlace cuando la cláusula
+  // cortada es una principal que no abre la frase. Si la cirugía
+  // cortó una principal y no queda ninguna principal fiel, lo que
+  // queda son fragmentos cuya espina era la invertida: en 246,
+  // cortada «stand next to windows» (el polo cerca contra el
+  // «lejos» de la guía), quedaban «Run outside» y «heavy
+  // furniture» — la inversión misma repartida en fragmentos
+  // cortos que ninguna puerta alcanza por separado. Con una
+  // principal fiel en pie manda lo de siempre: lo fiel se queda.
+  const dropPrincipal = [...drop].some((j) => !semClauses[j]!.subordinate);
+  if (dropPrincipal && !quedaFiel) return { text: "", dropped: drop.size };
   const kill = new Set<number>();
   for (const j of drop) {
     const i = segIdx[j]!;

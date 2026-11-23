@@ -19,8 +19,9 @@
  */
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { homedir, tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { inflateRawSync } from "node:zlib";
 import { DatabaseSync } from "node:sqlite";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -180,18 +181,33 @@ import { importPackFromFile, listImportedPacks, removeImportedPack } from "./pac
 // Real store fixtures
 // ---------------------------------------------------------------------------
 
-const PACKS_DIR = join(homedir(), "workspace/your_files/salvora-packs");
-const SALVORA_ZIP =
-  process.env.SALVORA_PACK1_ZIP ?? join(PACKS_DIR, "salvora-emergencias-casa-edicion-2026-11.zip");
-const ESENCIAL_ZIP = join(PACKS_DIR, "salvora-esencial-edicion-2026-11.zip");
+const STORE_DIR = join(homedir(), "workspace/your_files/salvora-packs");
+const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "../models/fixtures");
+/** Env override → store zip (the real paid bytes, local only) → repo fixture. */
+function resolvePackZip(envValue: string | undefined, name: string): { path: string; fromStore: boolean } {
+  if (envValue) return { path: envValue, fromStore: false };
+  const store = join(STORE_DIR, name);
+  if (existsSync(store)) return { path: store, fromStore: true };
+  return { path: join(FIXTURES_DIR, name), fromStore: false };
+}
+const SALVORA_RES = resolvePackZip(process.env.SALVORA_PACK1_ZIP, "salvora-emergencias-casa-edicion-2026-11.zip");
+const ESENCIAL_RES = resolvePackZip(process.env.NIDO_ESENCIAL_ZIP, "salvora-esencial-edicion-2026-11.zip");
+const SALVORA_ZIP = SALVORA_RES.path;
+const ESENCIAL_ZIP = ESENCIAL_RES.path;
 const REAL_ZIPS_PRESENT = existsSync(SALVORA_ZIP) && existsSync(ESENCIAL_ZIP);
 if (!REAL_ZIPS_PRESENT) {
   // Declared skip, never a failure: the real-bytes suite below is
   // skipped by describe.runIf and this line is the visible notice.
   console.warn(
-    `[packImporter.test] real store zips NOT found (pack 1: ${SALVORA_ZIP}; esencial: ${ESENCIAL_ZIP})` +
-      " — real-bytes cases SKIPPED. Set SALVORA_PACK1_ZIP to the pack-1 zip to run them."
+    `[packImporter.test] real pack zips NOT found (pack 1: ${SALVORA_ZIP}; esencial: ${ESENCIAL_ZIP})` +
+      " — real-bytes cases SKIPPED. Set SALVORA_PACK1_ZIP / NIDO_ESENCIAL_ZIP to run them."
   );
+} else if (!SALVORA_RES.fromStore || !ESENCIAL_RES.fromStore) {
+  // Visible notice, not a skip: in CI the suite runs against the
+  // committed fixtures (scripts/build-pack-fixtures.mjs; 0.1.111,
+  // audit §6.1) — the SALVORA one signed with the real store key,
+  // the Esencial one the real free bytes.
+  console.warn("[packImporter.test] real-bytes suite running against the repo fixtures (store zips not present here).");
 }
 
 function zipEntries(zipPath: string): Map<string, Buffer> {
@@ -224,7 +240,7 @@ function zipEntries(zipPath: string): Map<string, Buffer> {
 }
 
 function realMeta(sqliteBytes: Buffer): Record<string, string> {
-  const tmp = join(PACKS_DIR, `.packimporter-test-${process.pid}.sqlite`);
+  const tmp = join(tmpdir(), `.packimporter-test-${process.pid}.sqlite`);
   const fs = require("node:fs") as typeof import("node:fs");
   fs.writeFileSync(tmp, sqliteBytes);
   try {

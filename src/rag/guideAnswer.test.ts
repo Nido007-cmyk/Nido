@@ -329,3 +329,47 @@ describe("búsqueda por palabras de las guías rápidas (0.1.59)", () => {
     expect(pt.terms.map((t) => t.forms[0])).toEqual(["queimadura"]);
   });
 });
+
+describe("capa B (0.1.111 · auditoría profesional): la audiencia manda bajo declaración", () => {
+  const adult = chunk(
+    "pack:nido-esencial-e5:101",
+    "Caídas en adultos — Qué hacer",
+    "Qué hacer\n- No muevas a la persona si sospechas una lesión en la espalda o en el cuello.\n- Llama al número de emergencias si no se puede mover.",
+    0.85,
+  );
+  const kid = chunk(
+    "pack:nido-ninos-e5:7",
+    "Caídas en niños — Qué hacer",
+    "Qué hacer\n- Revisa si el niño respira y está consciente.\n- Consuela al niño y observa si se puede mover.",
+    0.95,
+  );
+
+  it("la frase del dueño: declarada y sin niño nombrado, sirve la de adultos aunque el coseno prefiera la de niños", () => {
+    const got = pickGuideChunk([kid, adult], "es", undefined, { query: "Me caí y no me puedo mover" });
+    expect(got?.chunkId).toBe(adult.chunkId);
+  });
+
+  it("si el texto nombra a un niño, la de niños compite como siempre y puede ganar", () => {
+    const got = pickGuideChunk([kid, adult], "es", undefined, { query: "Mi hijo se cayó y no se puede mover" });
+    expect(got?.chunkId).toBe(kid.chunkId);
+  });
+
+  it("sin declaración no hay capa: el coseno decide como hasta ahora", () => {
+    const got = pickGuideChunk([kid, adult], "es", undefined, { query: "¿Qué temperatura debe tener el agua del baño?" });
+    expect(got?.chunkId).toBe(kid.chunkId);
+  });
+
+  it("declarada, sin niño y con solo la de niños sobre la vara: no se sirve guía literal", () => {
+    expect(pickGuideChunk([kid], "es", undefined, { query: "Me caí y no me puedo mover" })).toBeNull();
+  });
+
+  it("la vara de los integrados no se toca: la de adultos bajo GUIDE_MIN_SCORE no entra por la capa", () => {
+    const weakAdult = chunk(
+      "pack:nido-esencial-e5:102",
+      "Caídas en adultos — Qué hacer",
+      "Qué hacer\n- No muevas a la persona si sospechas una lesión en la espalda o en el cuello.",
+      0.7,
+    );
+    expect(pickGuideChunk([kid, weakAdult], "es", undefined, { query: "Me caí y no me puedo mover" })).toBeNull();
+  });
+});

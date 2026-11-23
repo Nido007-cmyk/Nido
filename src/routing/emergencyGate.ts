@@ -104,7 +104,7 @@
  *    porque «chok» casa por principio de palabra y el sujeto
  *    genérico de la metáfora no se distingue de una víctima por la
  *    raíz sola. Desde este arreglo la raíz exige CONTEXTO DE
- *    CUERPO (ver `stemHitHasBodyContext`): la construcción del
+ *    CUERPO (ver `stemOccurrenceHasBodyContext`): la construcción del
  *    suceso en curso (auxiliar ante la palabra-signo, enclítico
  *    reflexivo) o una víctima o petición de ayuda cerca de la
  *    palabra-signo. Las formas dictadas medidas en la ronda —
@@ -173,6 +173,30 @@
  *    docs/BLIND_EVAL.md), no contra la batería que la destapó
  *    (regla del sello); las doce frases de la auditoría quedan
  *    fixturadas como regresión en las pruebas de esta puerta.
+ *
+ * 11. LA PRIMERA PERSONA TAMBIÉN SE CAE (0.1.111, pasada del dueño
+ *    sobre la 0.1.110 y auditoría profesional). La pieza §4 fijó la
+ *    caída narrada y la inmovilidad solo en tercera persona, y la
+ *    frase viva de la pasada («Me caí y no me puedo mover», en la
+ *    tableta del dueño) no casó signo, inmovilidad ni contexto: la
+ *    puerta devolvió false en todas sus caras y ganó una guía de
+ *    niños. La cura es la de la casa, en las listas y en las caras:
+ *    las formas de primera persona de la caída y de la inmovilidad
+ *    en es/pt (el inglés ya no llevaba sujeto), la familia ancha
+ *    («se cayó en el baño», «se cayó» con golpe, la familia
+ *    «levantar», la inmovilidad con la parte del cuerpo nombrada),
+ *    una cara propia para la caída contada a secas con su contexto,
+ *    el veto de marcos de definición y prevención al abrir el texto
+ *    (la pregunta de tema no es un parte; el parte con «¿qué hago?»
+ *    detrás sigue declarando), la interrogación de la cara
+ *    telegráfica leída sobre el texto CRUDO (foldText elimina el
+ *    «?» y el veto viejo nunca disparaba) y la ventana de negación
+ *    ante el signo y la raíz («no se está ahogando, está actuando»
+ *    no declara; la negación DENTRO del signo —«no puedo
+ *    respirar», «no se puede mover»— es el signo afirmativo y no
+ *    se veta). Las guardas de objeto y de metáfora quedan en pie:
+ *    «se cayó el precio», «la puerta no se puede mover» y «se me
+ *    cayó el móvil» siguen fuera.
  *
  * Puro, sin dependencias de UI, 100% testeable.
  */
@@ -488,7 +512,7 @@ export function isHealthQuestion(text: string): boolean {
         p.some((t) => t !== "chok" && folded.includes(` ${t}`)),
     );
   const hasTerm = chokOnlyHit
-    ? stemHitHasBodyContext(folded) || CHOKE_FIRST_PERSON_CUES.some((c) => folded.includes(c))
+    ? anyStemHasBodyContext(folded) || CHOKE_FIRST_PERSON_CUES.some((c) => folded.includes(c))
     : ALL_TERMS.some(
         ({ w, p }) => w.some((t) => hasWord(folded, t)) || p.some((t) => folded.includes(` ${t}`)),
       );
@@ -583,6 +607,16 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     // «se cayo de»), como la batería de la pieza cobra en su
     // guarda.
     "se cayo de", "se callo de", "cayo de una",
+    // 0.1.111 (punto 11 de la cabecera): la caída y la inmovilidad
+    // en PRIMERA persona. «me cai de» es la gemela de «se cayo de»
+    // y declara sola, como ella; las formas de inmovilidad con
+    // «me» solo las dice un cuerpo de sí mismo, así que también
+    // son signos y no contexto: la guarda de objeto vive en la
+    // tercera persona («la puerta no se puede mover»), que sigue
+    // en su cara con contexto.
+    "me cai de",
+    "no me puedo mover", "no puedo moverme",
+    "no me puedo levantar", "no puedo levantarme",
     "tratando de entrar a mi casa", "intentan entrar a mi casa", "entraron a mi casa",
     "hay un choque", "hubo un choque", "hay heridos", "se volco",
     "atrapado en el elevador", "atrapada en el elevador", "atrapado en el ascensor", "atrapada en el ascensor",
@@ -635,6 +669,11 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "there was an earthquake", "earthquake just", "car crash", "car accident",
     // H-LOOP-4: the fall, as told («fell off a ladder»).
     "fell off a", "fell down the stairs", "fell from a",
+    // 0.1.111 (header point 11): the first person of the fall and
+    // of immobility. «can t move» in IMMOBILITY_SIGNS carries no
+    // subject and stays context-bound; with the «i» it is a body
+    // speaking of itself and is a sign, like the Spanish forms.
+    "fell off the", "i fell down", "i can t move", "i can t get up",
     "i m trapped", "i am trapped", "is trapped",
     "smoke alarm", "i see smoke", "collapsed", "is sinking",
   ],
@@ -679,6 +718,13 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "tentando entrar na minha casa", "arrombando a porta", "houve um acidente",
     // H-LOOP-4: a queda contada («caiu de uma escada»).
     "caiu de", "caiu da escada",
+    // 0.1.111 (ponto 11 do cabeçalho): a primeira pessoa da queda
+    // e da imobilidade. «eu cai de/da» com o seu complemento: o
+    // «caí» português solto é fortemente metafórico («caí na
+    // tentação») e fica na cara da queda com contexto. As formas
+    // de imobilidade com «me» só as diz um corpo de si mesmo.
+    "eu cai de", "eu cai da",
+    "nao consigo me mover", "nao consigo me levantar",
     "estou preso", "estou presa",
   ],
 };
@@ -749,7 +795,7 @@ const RESOLVED_CLAUSES = [
  * y el marco histórico se aplican ANTES, igual que con las frases —
  * el pasado y la ficción siguen sin disparar. Desde H-05 la raíz
  * tampoco dispara sola: exige el contexto de cuerpo de
- * `stemHitHasBodyContext` (punto 7 de la cabecera), porque «chok»
+ * `stemOccurrenceHasBodyContext` (punto 7 de la cabecera), porque «chok»
  * sí comparte principio con una metáfora cotidiana. ADV-E1 añade
  * los tallos de los otros eventos del parte (desmayo, ahogamiento,
  * inconsciencia — es/en/pt), que heredan la misma disciplina: sin
@@ -814,6 +860,9 @@ const STEM_BODY_SIGNALS = [
   // Fuera, como desde H-05: los sustantivos de clase que son el
   // sujeto natural de la metáfora de rendimiento (golfers, players,
   // students) y los pronombres sueltos.
+  // 0.1.111: las formas corrientes inglesas de la familia cercana
+  // («my dad can't get up»): el mismo criterio que papa/mama.
+  "dad", "mom", "grandpa", "grandma",
   "senor", "senora", "vecino", "vecina", "cliente", "paciente", "patient", "customer",
   "encargado", "encargada", "conductor", "conductora", "pasajero", "pasajera",
   "huesped", "companero", "companera",
@@ -840,21 +889,205 @@ const STEM_BODY_SIGNALS = [
  * «she choked on stage», «se me atragantan las matemáticas») no
  * trae ninguna de las tres y la raíz, sola, ya no basta.
  */
-function stemHitHasBodyContext(folded: string): boolean {
+function stemOccurrenceHasBodyContext(words: string[], i: number): boolean {
+  if (i > 0 && STEM_AUX_WORDS.has(words[i - 1])) return true;
+  if (words[i].endsWith("ndose") || words[i].endsWith("ndome") || words[i].endsWith("ndonos")) return true;
+  if (words[i + 1] === "se") return true;
+  const from = Math.max(0, i - 3);
+  const to = Math.min(words.length - 1, i + 3);
+  for (let j = from; j <= to; j++) {
+    // La palabra sin su puntuación pegada («hijo.» cuenta como
+    // «hijo», como contaba con el casado por principio) y la
+    // regla del resto de ADV2-08: la señal, o la señal + s/es.
+    const w = words[j].replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, "");
+    if (STEM_BODY_SIGNALS.some((s) => w === s || w === `${s}s` || w === `${s}es`)) return true;
+  }
+  return false;
+}
+
+/**
+ * La pregunta «¿alguna palabra-signo trae contexto de cuerpo?»
+ * sobre el texto ya plegado: la forma que la puerta de salud
+ * (isHealthQuestion, vía del «chok») viene usando desde H-05.
+ * Sin ventana de negación: esa vía pregunta por el tema, no por
+ * la declaración, y su disciplina es la de siempre.
+ */
+function anyStemHasBodyContext(folded: string): boolean {
   const words = folded.trim().split(/\s+/).filter((w) => w.length > 0);
   for (let i = 0; i < words.length; i++) {
     if (!ALL_STEMS.some((s) => words[i].startsWith(s))) continue;
-    if (i > 0 && STEM_AUX_WORDS.has(words[i - 1])) return true;
-    if (words[i].endsWith("ndose") || words[i].endsWith("ndome") || words[i].endsWith("ndonos")) return true;
-    if (words[i + 1] === "se") return true;
-    const from = Math.max(0, i - 3);
-    const to = Math.min(words.length - 1, i + 3);
-    for (let j = from; j <= to; j++) {
-      // La palabra sin su puntuación pegada («hijo.» cuenta como
-      // «hijo», como contaba con el casado por principio) y la
-      // regla del resto de ADV2-08: la señal, o la señal + s/es.
-      const w = words[j].replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, "");
-      if (STEM_BODY_SIGNALS.some((s) => w === s || w === `${s}s` || w === `${s}es`)) return true;
+    if (stemOccurrenceHasBodyContext(words, i)) return true;
+  }
+  return false;
+}
+
+/**
+ * Palabras que niegan la forma que las sigue (0.1.111, punto 11
+ * de la cabecera): «no se está ahogando, está actuando», «nadie
+ * se está ahogando», «nobody is choking», «ya no se está
+ * ahogando». La ventana es la palabra pegada a la forma, saltando
+ * los auxiliares de la construcción en curso (en «no se está
+ * ahogando» el «no» queda dos palabras antes de «ahogando»
+ * porque «se está» es la construcción). La negación DENTRO de la
+ * forma no se mira nunca: «no puedo respirar» y «no se puede
+ * mover» son signos afirmativos de esta puerta, y su «no» va
+ * dentro, no delante.
+ */
+const NEGATION_WORDS = new Set([
+  "no", "nao", "not", "never", "nobody", "nadie", "ningun", "ninguna",
+  "ninguem", "nunca", "jamais", "tampoco", "nem",
+]);
+
+/** ¿La ocurrencia de la palabra-signo en el índice i viene
+ *  negada? (la negación pegada, saltando auxiliares). */
+function occurrenceNegated(words: string[], i: number): boolean {
+  let j = i - 1;
+  while (j >= 0 && STEM_AUX_WORDS.has(words[j])) j--;
+  return j >= 0 && NEGATION_WORDS.has(words[j]);
+}
+
+const SIGNS_BY_FIRST_WORD = new Map<string, string[][]>();
+for (const sign of ALL_SIGNS) {
+  const pw = sign.split(" ");
+  const arr = SIGNS_BY_FIRST_WORD.get(pw[0]) ?? [];
+  arr.push(pw);
+  SIGNS_BY_FIRST_WORD.set(pw[0], arr);
+}
+
+/**
+ * La cara de signos, por ocurrencia (0.1.111): el mismo casado
+ * por palabras de siempre, pero una ocurrencia negada no declara
+ * («no se está ahogando» trae el signo «se esta ahogando» con el
+ * «no» delante). Otra ocurrencia del mismo u otro signo sin
+ * negar sigue declarando: «no respira, se está ahogando» declara
+ * dos veces.
+ */
+function signDeclares(words: string[]): boolean {
+  for (let i = 0; i < words.length; i++) {
+    const candidates = SIGNS_BY_FIRST_WORD.get(words[i]);
+    if (!candidates) continue;
+    for (const pw of candidates) {
+      if (i + pw.length > words.length) continue;
+      if (!pw.every((w, k) => words[i + k] === w)) continue;
+      if (occurrenceNegated(words, i)) continue;
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * La cara por raíz, por ocurrencia (H-05 con la ventana de
+ * negación de la 0.1.111): una palabra-signo con contexto de
+ * cuerpo y sin negación pegada declara; la negada («no está
+ * inconsciente, está dormido», vía su raíz) no.
+ */
+function stemDeclares(words: string[]): boolean {
+  for (let i = 0; i < words.length; i++) {
+    if (!ALL_STEMS.some((s) => words[i].startsWith(s))) continue;
+    if (occurrenceNegated(words, i)) continue;
+    if (stemOccurrenceHasBodyContext(words, i)) return true;
+  }
+  return false;
+}
+
+/**
+ * La caída contada a secas (0.1.111, punto 11): «se cayó» sin
+ * complemento no es un signo de la lista — la misma forma la
+ * dice el precio o el sistema, y su guarda («se cayó el precio
+ * de la casa») es batería viva. Su cara es la de las raíces: la
+ * forma declara con su contexto. El contexto es la víctima o la
+ * ayuda a tres palabras, la lesión contada a cuatro (golpe,
+ * sangre, fractura: «se cayó y se golpeó la cabeza»), una frase
+ * de inmovilidad en el mismo texto, o el parte a secas abriendo
+ * el mensaje («Se cayó.», tres palabras o menos en total). La
+ * primera persona española con «me» es contexto bastante por sí
+ * misma: «me caí» solo lo dice un cuerpo de sí mismo, y la
+ * metáfora corriente del caer («caer en la tentación») no lleva
+ * el «me». La portuguesa con «eu» no hereda ese atajo: «eu caí
+ * na tentação» es metáfora y su «caí» exige el contexto común.
+ * La negación pegada veta la ocurrencia («mi hijo no se cayó»).
+ */
+const FALL_PHRASES = [
+  "se cayo", "se callo", "se me cayo", "se me callo", "me cai",
+  "caiu", "eu cai", "fell",
+];
+const FALL_INJURY_PREFIXES = [
+  "golpe", "cabez", "sangr", "herid", "fractur", "romp", "quebr",
+  "machuc", "ferid", "fratur", "hurt", "injur", "bleed",
+];
+
+/**
+ * El marco de NARRACIÓN de la caída (guardas de bateriaA2Movil,
+ * doctrina desde la 0.1.109: una historia de una emergencia pasada
+ * no dispara la respuesta de emergencia). La caída con víctima
+ * declara («mi vecino se cayó» es un parte), pero la misma frase
+ * contada a distancia no es un parte: trae su marcador de tiempo
+ * pegado a la caída («ayer», «hace años», «la semana pasada»,
+ * «desde entonces») o su desenlace resuelto («fue solo un susto,
+ * ya está bien»). La exención manda sobre el veto: si el texto
+ * trae un signo de inmovilidad EN PRESENTE, el caído sigue en el
+ * suelo aunque la caída fuera ayer, y la cara declara igual.
+ */
+const FALL_DISTANCE_TOKENS = new Set(["ayer", "anoche", "anteayer", "yesterday"]);
+const FALL_TIME_UNITS = new Set([
+  "anos", "ano", "meses", "mes", "semanas", "semana", "dias", "dia", "mucho",
+]);
+const FALL_COUNT_WORDS = new Set([
+  "un", "una", "uno", "um", "uma", "dos", "dois", "duas", "tres", "cuatro",
+  "cinco", "seis", "siete", "ocho", "nueve", "diez", "dez",
+]);
+const FALL_DISTANCE_BIGRAMS = new Set([
+  "semana pasada", "semana passada", "mes pasado", "mes passado",
+  "ano pasado", "anos atras", "years ago", "months ago", "weeks ago",
+  "days ago", "desde entonces", "desde entao", "otro dia",
+]);
+const FALL_RESOLUTION_PHRASES = new Set([
+  "ya esta bien", "ya esta mejor", "esta bien ahora",
+  "fue solo un susto", "solo fue un susto", "foi so um susto",
+  "ya se recupero", "ya se recuperou", "he is fine", "she is fine",
+]);
+
+function fallOccurrenceNarrated(words: string[], i: number, end: number): boolean {
+  const lo = Math.max(0, i - 4);
+  const hi = Math.min(words.length - 1, end + 4);
+  for (let j = lo; j <= hi; j++) {
+    if (FALL_DISTANCE_TOKENS.has(words[j])) return true;
+    if (j < hi && FALL_DISTANCE_BIGRAMS.has(`${words[j]} ${words[j + 1]}`)) return true;
+    if (words[j] === "hace") {
+      if (FALL_TIME_UNITS.has(words[j + 1] ?? "")) return true;
+      if (FALL_COUNT_WORDS.has(words[j + 1] ?? "") && FALL_TIME_UNITS.has(words[j + 2] ?? "")) return true;
+    }
+  }
+  // El desenlace resuelto se busca desde la caída hasta el final:
+  // es el cierre del relato («…, pero fue solo un susto»).
+  for (let j = i; j < words.length; j++) {
+    for (const n of [4, 3, 2]) {
+      if (j + n <= words.length && FALL_RESOLUTION_PHRASES.has(words.slice(j, j + n).join(" "))) return true;
+    }
+  }
+  return false;
+}
+
+function fallDeclares(words: string[], folded: string): boolean {
+  const immobilityPresent = IMMOBILITY_SIGNS.some((t) => folded.includes(` ${t}`));
+  for (const phrase of FALL_PHRASES) {
+    const pw = phrase.split(" ");
+    for (let i = 0; i + pw.length <= words.length; i++) {
+      if (!pw.every((w, k) => words[i + k] === w)) continue;
+      if (occurrenceNegated(words, i)) continue;
+      if (!immobilityPresent && fallOccurrenceNarrated(words, i, i + pw.length - 1)) continue;
+      if (phrase === "me cai") return true;
+      if (i === 0 && words.length <= 3) return true;
+      if (immobilityPresent) return true;
+      const end = i + pw.length - 1;
+      for (let j = Math.max(0, i - 3); j <= Math.min(words.length - 1, end + 3); j++) {
+        const w = words[j];
+        if (STEM_BODY_SIGNALS.some((s) => w === s || w === `${s}s` || w === `${s}es`)) return true;
+      }
+      for (let j = i; j <= Math.min(words.length - 1, end + 4); j++) {
+        if (FALL_INJURY_PREFIXES.some((p) => words[j].startsWith(p))) return true;
+      }
     }
   }
   return false;
@@ -890,7 +1123,14 @@ const TELEGRAPHIC_STATE_WORDS = new Set(["inconsciente", "inconscientes", "uncon
  * fragmento telegráfico que sea título o pie («Choking.»,
  * «Drowning.») cae hacia la emergencia, en la dirección aceptada.
  */
-function stemHitIsTelegraphic(folded: string): boolean {
+function stemHitIsTelegraphic(folded: string, rawHasQuestion = false): boolean {
+  // 0.1.111: la interrogación se lee sobre el texto CRUDO, no
+  // sobre el plegado — foldText convierte «?» y «¿» en espacios
+  // y el veto, buscándolos en el plegado, nunca disparaba (la
+  // auditoría lo probó: foldText("¿Qué?") no contiene «?»). El
+  // casado sobre el plegado se queda como red por si un llamante
+  // futuro pliega distinto.
+  if (rawHasQuestion) return false;
   if (folded.includes("?") || folded.includes("¿")) return false;
   const words = folded
     .trim()
@@ -899,11 +1139,17 @@ function stemHitIsTelegraphic(folded: string): boolean {
     .filter((w) => w.length > 0);
   if (words.length === 0 || words.length > 5) return false;
   if (words.some((w) => TELEGRAPHIC_TOPIC_MARKERS.includes(w))) return false;
-  return words.some(
-    (w) =>
-      ALL_STEMS.some((s) => w.startsWith(s)) &&
-      (TELEGRAPHIC_FORM_ENDINGS.some((e) => w.endsWith(e)) || TELEGRAPHIC_STATE_WORDS.has(w)),
-  );
+  // 0.1.111: la ventana de negación también manda aquí — el
+  // estado negado («no está inconsciente, está dormido») no es
+  // un parte telegráfico, como no lo es ante el signo ni la raíz.
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i];
+    if (!ALL_STEMS.some((s) => w.startsWith(s))) continue;
+    if (!(TELEGRAPHIC_FORM_ENDINGS.some((e) => w.endsWith(e)) || TELEGRAPHIC_STATE_WORDS.has(w))) continue;
+    if (occurrenceNegated(words, i)) continue;
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -927,6 +1173,16 @@ const IMMOBILITY_SIGNS = [
   "no se puede mover", "no puede moverse", "no se pueden mover",
   "can t move", "cannot move", "cant move",
   "nao se pode mover", "nao consegue se mover",
+  // 0.1.111 (punto 11): la familia «levantar» — el caído que no se
+  // levanta es la misma inmovilidad con otro verbo — y el «mover»
+  // con la parte del cuerpo como objeto («no puedo mover las
+  // piernas»: el contexto lo da la parte nombrada, ver
+  // immobilityHasContext). Las formas de primera persona con «me»
+  // no viven aquí: son signos (EMERGENCY_SIGNS), porque solo las
+  // dice un cuerpo de sí mismo.
+  "no se puede levantar", "no puede levantarse", "no puedo mover",
+  "can t get up",
+  "nao consegue se levantar", "nao se pode levantar", "nao consigo mover",
 ];
 
 /** Las formas de caída narrada de `EMERGENCY_SIGNS`, en las
@@ -937,7 +1193,28 @@ const FALL_TOLD_SIGNS = [
   "se cayo de", "se callo de", "cayo de una",
   "fell off a", "fell down the stairs", "fell from a",
   "caiu de", "caiu da escada",
+  // 0.1.111: las formas a secas como CONTEXTO de la inmovilidad
+  // (nunca declaran solas desde esta lista: «se cayó el precio y
+  // no se puede mover» no es una frase que nadie escriba, y la
+  // caída a secas tiene su propia cara con su contexto, abajo).
+  "se cayo", "se callo", "me cai", "caiu", "fell",
 ];
+
+/**
+ * Partes del cuerpo y lugares del cuerpo en el suelo que, CERCA
+ * de la frase de inmovilidad, la atan a un cuerpo (0.1.111):
+ * «no puedo mover las piernas» trae su contexto en el objeto, y
+ * «no se puede levantar del suelo» en el lugar. Fuera los objetos
+ * que se mueven o se levantan sin cuerpo («no puedo mover el
+ * coche» sigue sin declarar: ni parte ni lugar en su ventana).
+ */
+const IMMOBILITY_BODY_PARTS = [
+  "pierna", "piernas", "brazo", "brazos", "mano", "manos", "pie", "pies",
+  "cuello", "espalda", "cabeza",
+  "perna", "pernas", "braco", "bracos", "mao", "maos", "pes", "pescoco", "costas",
+  "leg", "legs", "arm", "arms", "hand", "hands", "foot", "feet", "neck", "back",
+];
+const IMMOBILITY_PLACES = ["suelo", "piso", "chao", "floor"];
 
 function immobilityHasContext(folded: string): boolean {
   if (FALL_TOLD_SIGNS.some((t) => folded.includes(` ${t}`))) return true;
@@ -955,6 +1232,7 @@ function immobilityHasContext(folded: string): boolean {
       for (let j = from; j <= to; j++) {
         const w = words[j];
         if (STEM_BODY_SIGNALS.some((s) => w === s || w === `${s}s` || w === `${s}es`)) return true;
+        if (IMMOBILITY_BODY_PARTS.includes(w) || IMMOBILITY_PLACES.includes(w)) return true;
       }
     }
   }
@@ -975,18 +1253,35 @@ const CHOKE_FIRST_PERSON_CUES = [
 ];
 
 /**
+ * Marcos de TEMA que, abriendo el texto, lo sacan de la cara de
+ * situación (0.1.111): la definición y la prevención se preguntan
+ * («what is…», «¿cómo evitar…?») o se titulan («significado
+ * de…»); el parte se cuenta. Solo mandan en posición de apertura:
+ * el mismo marco a mitad de un parte contado no veta nada.
+ */
+const SITUATION_TOPIC_FRAMES = [
+  "what is", "what are", "what does", "que es", "que significa",
+  "o que e", "o que significa", "como evitar", "como prevenir",
+  "how to prevent", "significado de", "meaning of",
+];
+
+/**
  * ¿Cuenta el texto una emergencia viva en curso? Léxico puro de
  * signos: basta UN signo (el suceso ES la situación; no se exige
  * señal de pregunta) y ningún veto de contexto. La cara por raíz,
  * en cambio, exige además el contexto de cuerpo de
- * `stemHitHasBodyContext` (H-05, punto 7 de la cabecera): la raíz
- * nació para el ruido de dictado DENTRO de un suceso contado, no
- * como detector de tema. La cara de la inmovilidad (espejo §4,
- * H-LOOP-4) hereda esa misma disciplina: su frase solo declara
- * con una caída narrada o un cuerpo cerca
- * (`immobilityHasContext`). Ver la cabecera, punto 3: donde manda la
- * puerta de salud manda también esta cara, con el mismo texto
- * seguro.
+ * `stemOccurrenceHasBodyContext` (H-05, punto 7 de la cabecera):
+ * la raíz nació para el ruido de dictado DENTRO de un suceso
+ * contado, no como detector de tema. La cara de la inmovilidad
+ * (espejo §4, H-LOOP-4) hereda esa misma disciplina: su frase
+ * solo declara con una caída narrada o un cuerpo cerca
+ * (`immobilityHasContext`). Desde la 0.1.111 (punto 11) las
+ * caras de signos y de raíz miran además la negación pegada a
+ * cada ocurrencia, la caída a secas tiene su cara con contexto
+ * (`fallDeclares`) y los marcos de tema de
+ * `SITUATION_TOPIC_FRAMES` vetan la cara entera al abrir el
+ * texto. Ver la cabecera, punto 3: donde manda la puerta de
+ * salud manda también esta cara, con el mismo texto seguro.
  */
 export function isEmergencySituation(text: string): boolean {
   if (!text) return false;
@@ -1005,11 +1300,22 @@ export function isEmergencySituation(text: string): boolean {
   // situación viva. La cláusula ha de venir tras el conector
   // adversativo: un «ya está bien» suelto no veta nada.
   if (RESOLVED_CLAUSES.some((x) => vetoHay.includes(` ${x}`))) return false;
+  const trimmed = folded.trim();
+  // 0.1.111 (punto 11): el marco de definición o de prevención
+  // ABRIENDO el texto es un tema, no un parte («What is
+  // choking?», «¿Cómo evitar que un niño se ahogue en la
+  // piscina?», «Significado de atragantamiento»): esta cara no
+  // declara y responde la puerta de salud. El parte con la
+  // petición detrás («Sale humo por la ventana, ¿qué hago?») no
+  // abre con estos marcos y sigue declarando.
+  if (SITUATION_TOPIC_FRAMES.some((f) => trimmed.startsWith(f))) return false;
+  const words = trimmed.split(/\s+/).filter((w) => w.length > 0);
   return (
-    ALL_SIGNS.some((t) => folded.includes(` ${t} `) || folded.includes(` ${t}`)) ||
-    (ALL_STEMS.some((t) => folded.includes(` ${t}`)) && stemHitHasBodyContext(folded)) ||
+    signDeclares(words) ||
+    stemDeclares(words) ||
     (IMMOBILITY_SIGNS.some((t) => folded.includes(` ${t}`)) && immobilityHasContext(folded)) ||
-    stemHitIsTelegraphic(folded)
+    fallDeclares(words, folded) ||
+    stemHitIsTelegraphic(folded, /[?¿]/.test(text))
   );
 }
 
