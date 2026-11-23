@@ -817,3 +817,56 @@ describe("0.1.111 · auditoría profesional: la primera persona, la familia anch
     expect(isEmergencySituation("Eu caí na tentação")).toBe(false);
   });
 });
+
+describe("0.1.112 · resto de la familia ancha: la caída con lugar sin sujeto y el «levantar» a secas", () => {
+  // La verificación independiente de la 0.1.111 midió el resto que
+  // el CHANGELOG de la 0.1.111 prometía sin matiz: «se cayó en el
+  // baño» escrito tal cual, sin sujeto en la frase, no declaraba
+  // (con sujeto sí, por la señal de cuerpo en la ventana), y «no
+  // se puede levantar» a secas tampoco (la guarda de contexto de
+  // la inmovilidad de tercera persona lo dejaba fuera). La
+  // dirección del error es la peligrosa en esta puerta.
+  it("la caída impersonal con lugar declara sin sujeto en la frase, en las tres lenguas", () => {
+    expect(isEmergencySituation("Se cayó en el baño")).toBe(true);
+    expect(isEmergencySituation("Se cayó en la cocina")).toBe(true);
+    expect(isEmergencySituation("se cayo en el bano")).toBe(true);
+    expect(isEmergencySituation("Se cayó en la ducha")).toBe(true);
+    expect(isEmergencySituation("Se cayó en las escaleras")).toBe(true);
+    expect(isEmergencySituation("Caiu no banheiro")).toBe(true);
+    expect(isEmergencySituation("Fell in the bathroom")).toBe(true);
+    expect(isEmergencyText("Se cayó en el baño", "es")).toBe(true);
+  });
+
+  it("el «levantar» de tercera persona a secas declara: el mensaje entero es el signo", () => {
+    expect(isEmergencySituation("No se puede levantar")).toBe(true);
+    expect(isEmergencySituation("No puede levantarse")).toBe(true);
+    expect(isEmergencySituation("Não consegue se levantar")).toBe(true);
+    expect(isEmergencySituation("No se puede levantar todavía")).toBe(true);
+    expect(isEmergencyText("No se puede levantar", "es")).toBe(true);
+  });
+
+  it("las guardas de la familia nueva: objeto, pregunta, negación y pasado narrado siguen sin declarar", () => {
+    // El objeto que cae, con su artículo pegado, no es un cuerpo:
+    expect(isEmergencySituation("Se cayó el precio de la casa")).toBe(false);
+    expect(isEmergencySituation("Se me cayó el móvil en el baño")).toBe(false);
+    // La pregunta de prevención SOBRE la forma no es un parte:
+    expect(isEmergencySituation("¿Cómo evitar que alguien se caiga en el baño?")).toBe(false);
+    // La negación pegada a la caída con lugar veta la ocurrencia:
+    expect(isEmergencySituation("Mi hijo no se cayó en el baño")).toBe(false);
+    // El pasado narrado sin inmovilidad presente no declara:
+    expect(isEmergencySituation("Mi vecino se cayó ayer")).toBe(false);
+    expect(isEmergencySituation("Se cayó en el baño ayer, pero ya está bien")).toBe(false);
+    // El «levantar» con objeto no es un cuerpo en el suelo: ni con
+    // el objeto detrás ni con el sujeto-objeto delante.
+    expect(isEmergencySituation("No se puede levantar el embargo")).toBe(false);
+    expect(isEmergencySituation("El embargo no se puede levantar")).toBe(false);
+    expect(isEmergencySituation("No se puede levantar pesas en este gimnasio")).toBe(false);
+    // La metáfora inglesa del «fell in» sigue fuera:
+    expect(isEmergencySituation("I fell in love with her")).toBe(false);
+  });
+
+  it("la exención de inmovilidad en presente sigue mandando sobre la narración", () => {
+    expect(isEmergencySituation("Se cayó ayer y no se puede mover")).toBe(true);
+    expect(isEmergencySituation("Se cayó ayer y no se puede levantar")).toBe(true);
+  });
+});
