@@ -6,7 +6,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { answerFromPackFacts, packCountryNames } from "../rag/packs";
-import { answerFromGuide, answerFromGuideKey } from "../rag/guideAnswerRun";
+import { answerFromGuide, answerFromGuideKey, coherenceSubstitute } from "../rag/guideAnswerRun";
 import { verifiedImportedPacks } from "../services/packImporter";
 import {
   View,
@@ -2263,6 +2263,12 @@ export function ChatScreen({
       // recuperada (pure.ts, judgeChunkList) — sin esto, el turno de la
       // foto del dueño se sirvió sin que el juez viera la guía.
       const judgeChunks = judgeChunkList(chunks, retrievedChunks);
+      // Espejo §1, pieza B: las fuentes que la tarjeta y las citas
+      // enseñan. Son las del juez, salvo que la puerta de
+      // coherencia sustituya la respuesta por la guía ganadora:
+      // entonces son los fragmentos de esa guía, como en la ruta
+      // literal.
+      let cardChunks = judgeChunks;
       if (!wasStopped) {
         // 0.1.34: si el modelo entró en bucle, queda solo la primera vez.
         // Bounty tanda 8: una generación cortada (el usuario detuvo o
@@ -2351,6 +2357,34 @@ export function ChatScreen({
           ) {
             finalText = healthSafeText(uiLang);
             provenance = healthSafeProvenance(finalText);
+          }
+        }
+        // Espejo §1, pieza B (H-LOOP-1/3): la puerta de coherencia
+        // de guía, tras el juez y junto a la sustitución de texto
+        // seguro de abajo (las dos nunca coinciden: esta solo
+        // gobierna lo que el juez dejó «grounded» o «partial», y
+        // aquella solo toca lo no verificado o abstenido). El juez
+        // dejó pasar una composición hecha entera de OTRA guía
+        // literal — cada frase con respaldo verdadero, pero en la
+        // vecina (la aspirina del dolor de pecho para la pregunta
+        // de RCP; la nariz para la del sangrado) — y la sustitución
+        // de texto seguro no se arma porque el respaldo es
+        // evidencia de salud de verdad. Si la pregunta tiene guía
+        // ganadora por su identidad y ninguna frase citada
+        // descansa en ella, se sirve la ganadora tal cual, con sus
+        // fragmentos como fuentes y la tarjeta rehecha sobre ellos.
+        if (!deepTurn && (grounding === "grounded" || grounding === "partial") && provenance) {
+          const coherence = await coherenceSubstitute({
+            query,
+            lang: uiLang,
+            sources: judgeChunks,
+            sentences: provenance,
+            status: grounding,
+          }).catch(() => null);
+          if (coherence) {
+            finalText = coherence.text;
+            provenance = guideAnswerProvenance(finalText);
+            cardChunks = coherence.chunks;
           }
         }
         // Programa bounty, tanda 2 (puerta de salud, segunda salida):
@@ -2442,8 +2476,8 @@ export function ChatScreen({
       // la [2] y la tarjeta enseñaba la [1] (la crecida), y «Leer la
       // guía entera» abría la guía equivocada en plena emergencia.
       const evidenceFirst =
-        judgeChunks.length > 0
-          ? buildEvidenceCard(judgeChunks, query, servedSourceIndex(provenance, judgeChunks), {
+        cardChunks.length > 0
+          ? buildEvidenceCard(cardChunks, query, servedSourceIndex(provenance, cardChunks), {
               // 0.1.106 (Defecto B): lo servido es el texto seguro de
               // salud, un texto fijo de la casa: no tiene fuente
               // principal, y la tarjeta no corona sobre él la guía de
@@ -2483,7 +2517,7 @@ export function ChatScreen({
           m.id === assistantId
             ? {
                 ...m,
-                citations: judgeChunks,
+                citations: cardChunks,
                 stopped: wasStopped,
                 noSourcesFound,
                 grounding,

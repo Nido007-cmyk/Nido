@@ -10,11 +10,12 @@
 import { retrieve, activeRetrievalProfile } from "./retrieve";
 import { knowledgePacks, readPackSource, resolvePackGuideByKey } from "./packs";
 import { guideTitleOf, parsePackChunkId } from "./packSource";
-import { ANSWER_CONTEXT_CHUNKS } from "./pure";
+import { ANSWER_CONTEXT_CHUNKS, buildLexicalQuery, countMatchedTerms, requiredTermMatches } from "./pure";
 import { GUIDE_PICK_CHUNKS, buildGuidePickCandidates } from "./guidePickCandidates";
 import type { RetrievedChunk } from "./retrieve.types";
-import type { GroundingLang } from "./grounding";
-import { composeGuideAnswer, isLiteralGuidePack, pickGuideChunk, pickIsSignDenied, stripShortRequest, wantsShortGuide, type LiteralRouteContext } from "./guideAnswer";
+import type { GroundingLang, GroundingResult } from "./grounding";
+import type { SentenceProvenance } from "./provenance";
+import { composeGuideAnswer, isLiteralGuideChunk, isLiteralGuidePack, pickGuideChunk, pickIsSignDenied, stripShortRequest, wantsShortGuide, type LiteralRouteContext } from "./guideAnswer";
 import { verifiedImportedPacks } from "../services/packImporter";
 
 export interface GuideAnswer {
@@ -212,5 +213,131 @@ export async function answerFromGuide(
   } catch (e) {
     console.warn("[guideAnswer]", e instanceof Error ? e.message : String(e));
     return { answer: null, retrieved };
+  }
+}
+
+/**
+ * La puerta de coherencia de guía (espejo §1, pieza B —
+ * H-LOOP-1/3, la forma verificada de PC trasplantada tal cual).
+ *
+ * La elección no eligió (sin pata semántica no puede) y el modelo
+ * compuso su respuesta DESDE LA GUÍA VECINA: cada frase descansa
+ * en una fuente de verdad, pero en la guía equivocada, y el juez
+ * la deja pasar porque su vara es el respaldo, no la pertinencia
+ * (la pasada en vivo: la aspirina del dolor de pecho servida para
+ * la pregunta de RCP; la nariz para la del sangrado). Esta puerta
+ * corre tras el juez, sobre su procedencia, y solo cuando el
+ * texto servido es exactamente la composición que el juez dejó
+ * («grounded» o «partial»):
+ *
+ * - La pregunta tiene guía ganadora por su IDENTIDAD: el título
+ *   de la guía más las preguntas que sus claves v2 declaran
+ *   responder, con la cobertura de pure.ts sobre la lista ancha
+ *   de candidatas (la cobertura por fragmento de la elección
+ *   empata en este clúster — el título de la vecina ES la palabra
+ *   de la pregunta — y el rango prefiere a la vecina: medido en
+ *   la apertura de la pieza). Máximo único estricto sobre el
+ *   umbral de requiredTermMatches, con la cobertura por
+ *   fragmento como desempate; empate final = sin ganadora clara.
+ * - TODAS las frases que el juez dejó con origen «source»
+ *   descansan en fragmentos de guía literal (integrada o
+ *   importada verificada), y ninguna en la ganadora.
+ *
+ * Cumplido eso, se sirve la ganadora tal cual, con la composición
+ * del paso 6 y sus propios fragmentos como fuentes. En cualquier
+ * otro caso devuelve null y el turno sirve lo que el modelo y el
+ * juez dejaron. Nunca lanza, como answerFromGuide.
+ */
+export async function coherenceSubstitute(input: {
+  query: string;
+  lang: GroundingLang;
+  sources: readonly RetrievedChunk[];
+  sentences: readonly SentenceProvenance[];
+  status: GroundingResult["status"];
+}): Promise<GuideAnswer | null> {
+  try {
+    if (input.status !== "grounded" && input.status !== "partial") return null;
+    // Las frases con respaldo y el fragmento que cada una cita
+    // (la misma indexación de shouldSubstituteSafeText: [n] es
+    // sources[n-1]).
+    const cited: RetrievedChunk[] = [];
+    for (const s of input.sentences) {
+      if (s.origin.kind !== "source") continue;
+      const c = input.sources[s.origin.n - 1];
+      if (c) cited.push(c);
+    }
+    if (cited.length === 0) return null;
+
+    const imported = await verifiedImportedPacks().catch(() => null);
+    const route: LiteralRouteContext | undefined = imported && imported.size > 0
+      ? {
+          importedVerifiedPackIds: new Set(imported.keys()),
+          importedPackNames: new Map([...imported].map(([id, v]) => [id, v.name])),
+        }
+      : undefined;
+    // La puerta solo gobierna composiciones hechas enteras de
+    // guías literales: una sola frase apoyada fuera de ellas y
+    // la respuesta ya no es «la vecina servida como la pedida».
+    if (!cited.every((c) => isLiteralGuideChunk(c.chunkId, route))) return null;
+
+    const lexical = buildLexicalQuery(input.query);
+    if (!lexical || lexical.terms.length === 0) return null;
+    const required = requiredTermMatches(lexical.terms.length);
+
+    // Las candidatas de la ganadora: las fuentes del turno más la
+    // lista ancha de la elección (la guía pedida puede no estar
+    // entre las citadas: en la pasada ni siquiera fue citada).
+    const wide = await retrieve(input.query, GUIDE_PICK_CHUNKS).catch(() => null);
+    const candidates = buildGuidePickCandidates([...input.sources], wide ?? []);
+    interface GuideGroup {
+      packId: string;
+      title: string;
+      chunks: RetrievedChunk[];
+      identity: number;
+      chunkCoverage: number;
+      best: RetrievedChunk;
+    }
+    const groups = new Map<string, GuideGroup>();
+    for (const c of candidates) {
+      if (!isLiteralGuideChunk(c.chunkId, route)) continue;
+      const parsed = parsePackChunkId(c.chunkId);
+      if (!parsed) continue;
+      const title = guideTitleOf(c.title);
+      const key = `${parsed.packId}|${title}`;
+      let g = groups.get(key);
+      if (!g) {
+        g = { packId: parsed.packId, title, chunks: [], identity: 0, chunkCoverage: 0, best: c };
+        groups.set(key, g);
+      }
+      g.chunks.push(c);
+      const cov = countMatchedTerms(c.keys ? `${c.title} ${c.body} ${c.keys}` : `${c.title} ${c.body}`, lexical.terms);
+      if (cov > g.chunkCoverage) {
+        g.chunkCoverage = cov;
+        g.best = c;
+      }
+    }
+    if (groups.size === 0) return null;
+    for (const g of groups.values()) {
+      const identityText = `${g.title} ${g.chunks.map((c) => c.keys ?? "").join(" ")}`;
+      g.identity = countMatchedTerms(identityText, lexical.terms);
+    }
+    const ranked = [...groups.values()].sort((a, b) => b.identity - a.identity || b.chunkCoverage - a.chunkCoverage);
+    const winner = ranked[0];
+    if (!winner || winner.identity < required) return null;
+    const runnerUp = ranked[1];
+    if (runnerUp && runnerUp.identity === winner.identity && runnerUp.chunkCoverage === winner.chunkCoverage) return null;
+
+    const guideKeyOf = (c: RetrievedChunk): string => `${parsePackChunkId(c.chunkId)?.packId ?? ""}|${guideTitleOf(c.title)}`;
+    if (cited.some((c) => guideKeyOf(c) === `${winner.packId}|${winner.title}`)) return null;
+
+    const doc = await readPackSource(winner.best.chunkId);
+    if (!doc) return null;
+    return {
+      text: composeGuideAnswer(doc, input.lang, { packId: winner.packId, route }),
+      chunks: winner.chunks,
+    };
+  } catch (e) {
+    console.warn("[guideAnswer]", e instanceof Error ? e.message : String(e));
+    return null;
   }
 }
