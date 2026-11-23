@@ -6,7 +6,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { answerFromPackFacts, packCountryNames } from "../rag/packs";
-import { answerFromGuide } from "../rag/guideAnswerRun";
+import { answerFromGuide, answerFromGuideKey } from "../rag/guideAnswerRun";
 import { verifiedImportedPacks } from "../services/packImporter";
 import {
   View,
@@ -550,6 +550,14 @@ export function ChatScreen({
   // entry before any await; set synchronously so a second tap in the same
   // tick observes the first (batched `setGenerating` cannot do that).
   const sendGuardRef = useRef<SendGuard>(new SendGuard());
+  // Espejo §1, pieza A (H-LOOP-1/3): la clave de guía que el botón
+  // de Emergencia dejó junto a su pregunta fija. La pregunta se
+  // escribe en la caja, no se envía sola (como las ideas y los
+  // ejemplos), así que la clave espera aquí, atada al texto
+  // exacto que la trajo: si la persona edita la pregunta antes de
+  // enviar, el texto ya no casa y la clave se descarta — el turno
+  // corre como siempre. Se consume en el primer envío, case o no.
+  const pendingGuideKeyRef = useRef<{ text: string; guideKey: string } | null>(null);
   const processingRef = useRef<{ messageId: string; status: ProcessingStatus; label?: string } | null>(null);
 
   useEffect(() => {
@@ -1250,6 +1258,13 @@ export function ChatScreen({
       }
       inertRouting = plan.kind === "inert";
     }
+    // Espejo §1, pieza A: la clave de guía del botón de Emergencia
+    // se consume aquí, con el turno ya decidido: solo viaja si el
+    // texto que sale es, palabra por palabra, la pregunta que la
+    // trajo (ver pendingGuideKeyRef).
+    const pendingGuide = pendingGuideKeyRef.current;
+    pendingGuideKeyRef.current = null;
+    const turnGuideKey = pendingGuide && pendingGuide.text === query ? pendingGuide.guideKey : undefined;
     // 0.1.37: los seguimientos («¿qué te recuerdo?», «Haz uno») valen solo
     // para el turno siguiente.
     beginUserTurn();
@@ -1932,7 +1947,16 @@ export function ChatScreen({
         let preRetrieved: RetrievedChunk[] | null = null;
         if (!isRetrievalIrrelevant(classifyTask(query))) {
           setProcessing({ messageId: assistantId, status: "retrieving" });
-          const g = await answerFromGuide(query, uiLang, retrievalQuery);
+          // Espejo §1, pieza A (H-LOOP-1/3): si el turno trae la
+          // clave del botón de Emergencia, su guía se sirve por su
+          // clave, sin pasar por la elección — la guía de la
+          // pregunta es la servida por construcción, también
+          // cuando la elección no puede elegir. Si la clave no
+          // resuelve, la elección de siempre corre igual que hoy.
+          const forcedGuide = turnGuideKey ? await answerFromGuideKey(turnGuideKey, uiLang) : null;
+          const g = forcedGuide
+            ? { answer: forcedGuide, retrieved: null }
+            : await answerFromGuide(query, uiLang, retrievalQuery);
           preRetrieved = g.retrieved;
           if (g.answer) {
             guideAnswered = true;
@@ -2874,10 +2898,11 @@ export function ChatScreen({
   if (activeTab === "emergency") {
     return withTabs(
       <EmergencyScreen
-        onAsk={(question) => {
+        onAsk={(question, guideKey) => {
           // Como las ideas y los ejemplos de la guía: se escribe, no se envía solo.
           selectTab("chat");
           updateInput(question, "example");
+          pendingGuideKeyRef.current = guideKey ? { text: question, guideKey } : null;
           requestAnimationFrame(() => inputRef.current?.focus());
         }}
         onOpenLibrary={onOpenLibrary ?? (() => selectTab("library"))}

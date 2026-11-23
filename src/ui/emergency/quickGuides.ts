@@ -16,13 +16,21 @@ export interface QuickGuide {
   icon: IconName;
   /** Life-threatening right now: shown in red. */
   urgent: boolean;
+  /**
+   * La clave de SU guía en el pack Esencial (`guides.key`), cuando
+   * el tema la tiene: viaja con la pregunta hasta el turno y la
+   * guía servida es esa, sin pasar por la elección (espejo §1,
+   * pieza A — H-LOOP-1/3). Terremoto y huracanes no la traen: su
+   * turno sigue el camino de siempre.
+   */
+  guideKey?: string;
 }
 
 export const QUICK_GUIDES: readonly QuickGuide[] = [
-  { key: "cpr", icon: "activity", urgent: true },
-  { key: "bleeding", icon: "warning", urgent: true },
-  { key: "choking", icon: "warning", urgent: true },
-  { key: "burns", icon: "warning", urgent: true },
+  { key: "cpr", icon: "activity", urgent: true, guideKey: "esencial-rcp-adultos" },
+  { key: "bleeding", icon: "warning", urgent: true, guideKey: "esencial-hemorragias-graves" },
+  { key: "choking", icon: "warning", urgent: true, guideKey: "esencial-atragantamiento" },
+  { key: "burns", icon: "warning", urgent: true, guideKey: "esencial-quemaduras" },
   { key: "earthquake", icon: "compass", urgent: false },
   { key: "hurricane", icon: "compass", urgent: false },
 ];

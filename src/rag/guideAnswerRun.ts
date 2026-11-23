@@ -8,19 +8,65 @@
  * unrelated section never appears as source 1). Never throws.
  */
 import { retrieve, activeRetrievalProfile } from "./retrieve";
-import { readPackSource } from "./packs";
+import { knowledgePacks, readPackSource, resolvePackGuideByKey } from "./packs";
 import { guideTitleOf, parsePackChunkId } from "./packSource";
 import { ANSWER_CONTEXT_CHUNKS } from "./pure";
 import { GUIDE_PICK_CHUNKS, buildGuidePickCandidates } from "./guidePickCandidates";
 import type { RetrievedChunk } from "./retrieve.types";
 import type { GroundingLang } from "./grounding";
-import { composeGuideAnswer, pickGuideChunk, pickIsSignDenied, stripShortRequest, wantsShortGuide, type LiteralRouteContext } from "./guideAnswer";
+import { composeGuideAnswer, isLiteralGuidePack, pickGuideChunk, pickIsSignDenied, stripShortRequest, wantsShortGuide, type LiteralRouteContext } from "./guideAnswer";
 import { verifiedImportedPacks } from "../services/packImporter";
 
 export interface GuideAnswer {
   text: string;
   /** Sources to show: the parts of the guide that matched. */
   chunks: RetrievedChunk[];
+}
+
+/**
+ * La guía de una clave, servida tal cual, SIN pasar por la
+ * elección (espejo §1, pieza A — H-LOOP-1/3): el botón de
+ * Emergencia trae la clave de su tema (`esencial-rcp-adultos`, …)
+ * y la guía de la pregunta es la que se sirve por construcción,
+ * también en los estados donde la elección no puede elegir (la
+ * pata semántica sin puntuar de la pasada en vivo: paso 0 del
+ * espejo, medido — con cosenos el pick elige bien; sin ellos no
+ * elige, y el turno caía a la ruta del modelo). La búsqueda se
+ * limita a los packs de la ruta literal instalados, en su orden
+ * de catálogo. Si la clave no resuelve en ninguno (pack ausente,
+ * clave desconocida, guía ilegible), null: el turno sigue su
+ * camino normal — degradación honesta, sin decir nada falso.
+ * Nunca lanza.
+ */
+export async function answerFromGuideKey(guideKey: string, lang: GroundingLang): Promise<GuideAnswer | null> {
+  try {
+    const packs = await knowledgePacks().catch(() => []);
+    for (const pack of packs) {
+      if (!isLiteralGuidePack(pack.id)) continue;
+      const hit = await resolvePackGuideByKey(pack.id, guideKey).catch(() => null);
+      if (!hit) continue;
+      const doc = await readPackSource(hit.chunkId);
+      if (!doc) continue;
+      const chunk: RetrievedChunk = {
+        chunkId: hit.chunkId,
+        docId: `pack:${pack.id}:${hit.chunk.title}`,
+        title: hit.chunk.title,
+        body: hit.chunk.body,
+        source: hit.chunk.source,
+        score: 1,
+        matchType: "lexical",
+        sourceKind: "pack",
+      };
+      return {
+        text: composeGuideAnswer(doc, lang, { short: false, packId: pack.id }),
+        chunks: [chunk],
+      };
+    }
+    return null;
+  } catch (e) {
+    console.warn("[guideAnswerKey]", e instanceof Error ? e.message : String(e));
+    return null;
+  }
 }
 
 /**

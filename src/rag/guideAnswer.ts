@@ -50,6 +50,17 @@ export function isEssentialsChunk(chunkId: string | undefined): boolean {
 }
 
 /**
+ * ¿Es este pack (por su id, con su variante de embeddings) uno de
+ * la ruta literal? La cara por pack de `isEssentialsChunk`: la
+ * resolución por clave de guía (guideAnswerRun.answerFromGuideKey)
+ * solo busca en estos packs, que son los de primeros auxilios
+ * cuya letra se sirve tal cual.
+ */
+export function isLiteralGuidePack(packId: string | undefined): boolean {
+  return !!packId && !!LITERAL_GUIDE_PACKS[basePackId(packId)];
+}
+
+/**
  * 0.1.86 — the literal route also covers packs imported through the signed
  * pack door (services/packImporter.ts) whose origin the door verified
  * (SALVORA signature or NIDO catalog pin): the registry the door writes is
