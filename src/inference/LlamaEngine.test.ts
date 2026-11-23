@@ -4,7 +4,7 @@
  * See LICENSE file for details.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 type FakeContext = {
   // m-80 (auditoría 2026-11-13, F2-m9): en llama.rn real, context.model
@@ -21,6 +21,13 @@ type FakeContext = {
   stopCompletion: () => Promise<void>;
   releasedWhileGenerating: boolean;
   lastParams: unknown;
+  // VEL-5 acto 3: el bench() del upstream, alimentado por mockBenchResults.
+  bench: (
+    pp: number,
+    tg: number,
+    pl: number,
+    nr: number,
+  ) => Promise<{ speedPp: number; speedTg: number; nGpuLayers: number; nThreads: number; nBatch: number; nUBatch: number; flashAttn: number }>;
 };
 const created: FakeContext[] = [];
 let inFlightInits = 0;
@@ -52,6 +59,10 @@ let mockInitErrorFor: ((p: Record<string, unknown>, attempt: number) => string) 
 // siempre. mockBackendDevicesError lo hace lanzar (P-32).
 let mockBackendDevices: Array<{ backend: string; type: string; deviceName: string }> | null = null;
 let mockBackendDevicesError: Error | null = null;
+// VEL-5 acto 3: resultados del bench() falso, por orden de llamada, y
+// el registro de sus argumentos (la forma de la medición se cobra).
+let mockBenchResults: Array<{ speedPp: number; speedTg: number; nGpuLayers: number; nThreads: number; nBatch: number; nUBatch: number; flashAttn: number }> | null = null;
+const mockBenchCalls: Array<[number, number, number, number]> = [];
 // T-07: stopCompletion lanza (m-76: la envoltura defensiva del motor).
 let mockStopCompletionThrows = false;
 // T-07: el contexto falso nace SIN isJinjaSupported (builds viejos, P-33).
@@ -109,6 +120,13 @@ vi.mock("llama.rn", () => ({
       stopCompletion: async () => {
         if (mockStopCompletionThrows) throw new Error("native stop failed");
         finishes.splice(0).forEach((f) => f());
+      },
+      bench: async (pp: number, tg: number, pl: number, nr: number) => {
+        mockBenchCalls.push([pp, tg, pl, nr]);
+        const r = mockBenchResults?.[mockBenchCalls.length - 1];
+        return (
+          r ?? { speedPp: 100, speedTg: 10, nGpuLayers: 0, nThreads: 4, nBatch: 512, nUBatch: 256, flashAttn: 0 }
+        );
       },
     };
     if (mockOmitJinja) delete (ctx as { isJinjaSupported?: unknown }).isJinjaSupported;
@@ -223,6 +241,7 @@ vi.mock("../models/modelTrust", () => ({
 }));
 
 import { LlamaEngine, resolveSampling, SAMPLING_PRESETS, loadTimeSampling, LLAMA_CPP_SAMPLING_DEFAULTS } from "./LlamaEngine";
+import { setFeatureOverrideForTests, resetFeatureFlagsForTests } from "../config/featureFlags";
 import { isNativeGateTaken } from "./nativeGate";
 import { refreshDevicePressure } from "./devicePressure";
 import {
@@ -261,6 +280,9 @@ beforeEach(() => {
   mockBackendDevicesError = null;
   mockStopCompletionThrows = false;
   mockOmitJinja = false;
+  mockBenchResults = null;
+  mockBenchCalls.length = 0;
+  resetFeatureFlagsForTests();
   resetBackgroundIndexingHold();
 });
 
@@ -2137,7 +2159,7 @@ describe("T-07: VEL-5 acto 2 — la puerta de aceleración y el perfil «accel»
     expect(engine.getModelInfo()?.accelDevice).toBeUndefined();
   });
 
-  it("un HTP presente no se auto-elige en este acto: encenderlo es la opción del acto 3", async () => {
+  it("un HTP presente no se auto-elige con la opción de NPU apagada (su defecto): encenderlo es la elección expresa del acto 3", async () => {
     mockBackendDevices = [
       { backend: "Hexagon", type: "accel", deviceName: "HTP0" },
       { backend: "CPU", type: "cpu", deviceName: "Probe" },
@@ -2193,6 +2215,111 @@ describe("T-07: VEL-5 acto 2 — la puerta de aceleración y el perfil «accel»
     expect(initCalls[0].n_gpu_layers).toBe(0);
     expect(initCalls[0].devices).toBeUndefined();
     expect(engine.getModelInfo()?.memoryProfile).toBe("kv-q8");
+  });
+});
+
+describe("T-07: VEL-5 acto 3 — la opción de NPU y la medición con bench()", () => {
+  const GEMMA_Q4_0 = "models/hf-google-gemma-4-e4b-it-qat-q4-0-gguf-gemma-4-e4b-q4-0-it-gguf.gguf";
+  const QWEN_Q4KM = "models/qwen2.5-1.5b-instruct-q4km.gguf";
+  const HTP_AND_CPU = [
+    { backend: "Hexagon", type: "accel", deviceName: "HTP0" },
+    { backend: "CPU", type: "cpu", deviceName: "Probe" },
+  ];
+
+  afterEach(() => {
+    resetFeatureFlagsForTests();
+  });
+
+  it("con la opción encendida y un formato que el HTP sí descarga (Q4_0 del catálogo), la carga elige el NPU", async () => {
+    setFeatureOverrideForTests("inference.npuAccel", true);
+    mockBackendDevices = HTP_AND_CPU;
+    const engine = new LlamaEngine();
+    await engine.load(GEMMA_Q4_0);
+    expect(initCalls).toHaveLength(1);
+    expect(initCalls[0]).toMatchObject({
+      devices: ["HTP0"],
+      flash_attn_type: "off",
+      cache_type_k: "q8_0",
+      cache_type_v: "f16",
+    });
+    expect((initCalls[0].n_gpu_layers as number) ?? 0).toBeGreaterThan(0);
+    expect(engine.getModelInfo()?.memoryProfile).toBe("accel");
+    expect(engine.getModelInfo()?.accelDevice).toBe("HTP0");
+  });
+
+  it("con la opción encendida pero un Q4_K_M, el NPU ni se intenta: la carga es la CPU de siempre sin GPU", async () => {
+    setFeatureOverrideForTests("inference.npuAccel", true);
+    mockBackendDevices = HTP_AND_CPU;
+    const engine = new LlamaEngine();
+    await engine.load(QWEN_Q4KM);
+    expect(initCalls).toHaveLength(1);
+    expect(initCalls[0].devices).toBeUndefined();
+    expect(initCalls[0].n_gpu_layers).toBe(0);
+    expect(engine.getModelInfo()?.memoryProfile).toBe("kv-q8");
+  });
+
+  it("con la opción encendida, un Q4_K_M y una GPU capaz, el pick es la GPU: el formato manda sobre el NPU", async () => {
+    setFeatureOverrideForTests("inference.npuAccel", true);
+    mockBackendDevices = [
+      { backend: "Hexagon", type: "accel", deviceName: "HTP0" },
+      { backend: "OpenCL", type: "gpu", deviceName: "Adreno 750" },
+      { backend: "CPU", type: "cpu", deviceName: "Probe" },
+    ];
+    const engine = new LlamaEngine();
+    await engine.load(QWEN_Q4KM);
+    expect(initCalls[0].devices).toEqual(["Adreno 750"]);
+    expect(engine.getModelInfo()?.memoryProfile).toBe("accel");
+    expect(engine.getModelInfo()?.accelDevice).toBe("Adreno 750");
+  });
+
+  it("si la creación en el NPU falla, la cascada sigue a kv-q8 sin tocar la conversación", async () => {
+    setFeatureOverrideForTests("inference.npuAccel", true);
+    mockBackendDevices = HTP_AND_CPU;
+    rejectInit = (p) => Array.isArray(p.devices);
+    mockInitErrorFor = () => "ggml-hexagon: failed to create context";
+    const engine = new LlamaEngine();
+    await engine.load(GEMMA_Q4_0);
+    expect(initCalls).toHaveLength(2);
+    expect(initCalls[0].devices).toEqual(["HTP0"]);
+    expect(initCalls[1].devices).toBeUndefined();
+    expect(initCalls[1].cache_type_v).toBe("q8_0");
+    expect(engine.getModelInfo()?.memoryProfile).toBe("kv-q8");
+  });
+
+  it("probeNpuDevice: nombra el HTP cuando lo hay y devuelve null en la Tab A9+ (sin HTP)", async () => {
+    mockBackendDevices = HTP_AND_CPU;
+    await expect(new LlamaEngine().probeNpuDevice()).resolves.toBe("HTP0");
+    mockBackendDevices = [
+      { backend: "OpenCL", type: "gpu", deviceName: "Adreno 619" },
+      { backend: "CPU", type: "cpu", deviceName: "Probe" },
+    ];
+    await expect(new LlamaEngine().probeNpuDevice()).resolves.toBeNull();
+  });
+
+  it("benchLoadedModel sin modelo residente devuelve null: no se inventa una medición", async () => {
+    await expect(new LlamaEngine().benchLoadedModel()).resolves.toBeNull();
+    expect(mockBenchCalls).toHaveLength(0);
+  });
+
+  it("benchLoadedModel mide el contexto residente en la forma del estudio: (512,128,1,3) y (128,32,1,3), con su foto", async () => {
+    mockBenchResults = [
+      { speedPp: 210.5, speedTg: 21.25, nGpuLayers: 0, nThreads: 4, nBatch: 512, nUBatch: 256, flashAttn: 0 },
+      { speedPp: 320.75, speedTg: 24.5, nGpuLayers: 0, nThreads: 4, nBatch: 512, nUBatch: 256, flashAttn: 0 },
+    ];
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    const report = await engine.benchLoadedModel();
+    expect(mockBenchCalls).toEqual([
+      [512, 128, 1, 3],
+      [128, 32, 1, 3],
+    ]);
+    expect(report).not.toBeNull();
+    expect(report?.modelFilename).toBe("models/a.gguf");
+    expect(report?.executed).toBe("CPU");
+    expect(report?.runs).toHaveLength(2);
+    expect(report?.runs[0]).toMatchObject({ pp: 512, tg: 128, pl: 1, nr: 3, speedPp: 210.5, speedTg: 21.25 });
+    expect(report?.runs[1]).toMatchObject({ pp: 128, tg: 32, pl: 1, nr: 3, speedPp: 320.75, speedTg: 24.5 });
+    expect(report?.peakRssBytes).toBe(1024 ** 3);
   });
 });
 

@@ -12,6 +12,8 @@ import {
   TIERS,
   STORAGE_BUDGET_BYTES,
   totalManifestBytes,
+  htpAcceleratesQuant,
+  type ModelQuant,
 } from "./manifest";
 
 describe("totalManifestBytes", () => {
@@ -57,6 +59,51 @@ describe("MODEL_CATALOG", () => {
       expect(m.sizeBytes).toBeGreaterThan(0);
       expect(m.sourceUrl).toMatch(/^https:\/\//);
     }
+  });
+});
+
+describe("VEL-5 acto 3: la cuantización declarada por entrada (el dato de la opción de NPU)", () => {
+  // Los tokens con los que cada cuantización se reconoce en el
+  // nombre del fichero fijado o en su URL de origen: la declaración
+  // se cruza contra el artefacto real para que no pueda pudrirse.
+  const TOKENS: Record<ModelQuant, string[]> = {
+    Q4_K_M: ["q4_k_m", "q4km"],
+    Q5_K_M: ["q5_k_m", "q5km"],
+    Q4_0: ["q4_0", "q4-0"],
+    Q8_0: ["q8_0", "q8"],
+  };
+
+  it("toda entrada GGUF (llm y embedding) declara su cuantización; el corpus no", () => {
+    for (const m of MODEL_CATALOG) {
+      if (m.kind === "corpus") {
+        expect(m.quant, m.id).toBeUndefined();
+      } else {
+        expect(m.quant, m.id).toBeDefined();
+      }
+    }
+  });
+
+  it("la declaración casa con el token del fichero fijado o de su URL", () => {
+    for (const m of MODEL_CATALOG) {
+      if (!m.quant) continue;
+      const hay = `${m.filename} ${m.sourceUrl}`.toLowerCase();
+      expect(
+        TOKENS[m.quant].some((tok) => hay.includes(tok)),
+        `${m.id}: declara ${m.quant} pero ni su fichero ni su URL lo nombran`,
+      ).toBe(true);
+    }
+  });
+
+  it("la verdad de la tanda: de los modelos de conversación, solo el Q4_0 se acelera en el HTP", () => {
+    const llms = MODEL_CATALOG.filter((m) => m.kind === "llm");
+    const accelerated = llms.filter((m) => htpAcceleratesQuant(m.quant)).map((m) => m.id);
+    expect(accelerated).toEqual(["gemma-4-e4b-it-q4_0"]);
+    // Y la tabla de la política, entera:
+    expect(htpAcceleratesQuant("Q4_0")).toBe(true);
+    expect(htpAcceleratesQuant("Q8_0")).toBe(true);
+    expect(htpAcceleratesQuant("Q4_K_M")).toBe(false);
+    expect(htpAcceleratesQuant("Q5_K_M")).toBe(false);
+    expect(htpAcceleratesQuant(undefined)).toBe(false);
   });
 });
 

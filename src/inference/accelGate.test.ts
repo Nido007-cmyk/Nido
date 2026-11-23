@@ -22,6 +22,7 @@ import {
   accelLayerBudget,
   adrenoModelOf,
   evaluateAccelGate,
+  pickAccelDevice,
   resolveAccelSelection,
   selectGpuDevice,
   selectHexagonDevice,
@@ -116,6 +117,45 @@ describe("VEL-5 acto 2: la selección nace saneada [patrón PP-MIT]", () => {
     expect(resolveAccelSelection("Adreno 750", [])).toBeNull();
     expect(resolveAccelSelection("HTP0", [cpu])).toBeNull();
     expect(resolveAccelSelection(null, [gpu("Adreno 750")])).toBeNull();
+  });
+});
+
+describe("VEL-5 acto 3: la elección entera — la opción de NPU manda, con su puerta de formato", () => {
+  const both = [gpu("Adreno 750"), htp("HTP0"), cpu];
+
+  it("con la opción apagada manda la vía automática del acto 2: la GPU", () => {
+    const gate = evaluateAccelGate(both, NO_CAPS);
+    expect(pickAccelDevice(gate, both, { npuEnabled: false, npuQuantOk: true })).toBe("Adreno 750");
+    expect(pickAccelDevice(gate, both, { npuEnabled: false, npuQuantOk: false })).toBe("Adreno 750");
+  });
+
+  it("con la opción encendida y un formato que el HTP come, la elección expresa gana: el NPU", () => {
+    const gate = evaluateAccelGate(both, NO_CAPS);
+    expect(pickAccelDevice(gate, both, { npuEnabled: true, npuQuantOk: true })).toBe("HTP0");
+  });
+
+  it("con la opción encendida pero formato Q4_K_M, el NPU ni se intenta: sigue la GPU", () => {
+    const gate = evaluateAccelGate(both, NO_CAPS);
+    expect(pickAccelDevice(gate, both, { npuEnabled: true, npuQuantOk: false })).toBe("Adreno 750");
+  });
+
+  it("sin GPU, la opción encendida con formato bueno elige el NPU; con formato malo, CPU", () => {
+    const onlyHtp = [htp("HTP0"), cpu];
+    const gate = evaluateAccelGate(onlyHtp, NO_CAPS);
+    expect(pickAccelDevice(gate, onlyHtp, { npuEnabled: true, npuQuantOk: true })).toBe("HTP0");
+    expect(pickAccelDevice(gate, onlyHtp, { npuEnabled: true, npuQuantOk: false })).toBeNull();
+    expect(pickAccelDevice(gate, onlyHtp, { npuEnabled: false, npuQuantOk: true })).toBeNull();
+  });
+
+  it("con presión la puerta ya viene cerrada del veredicto: no hay elección", () => {
+    const gate = evaluateAccelGate(both, { threadCap: 3, ubatchCap: null });
+    expect(pickAccelDevice(gate, both, { npuEnabled: true, npuQuantOk: true })).toBeNull();
+  });
+
+  it("declarado: en la Tab A9+ (Adreno 619, sin HTP) no hay elección ni con la opción encendida", () => {
+    const a9 = [gpu("Adreno 619"), cpu];
+    const gate = evaluateAccelGate(a9, NO_CAPS);
+    expect(pickAccelDevice(gate, a9, { npuEnabled: true, npuQuantOk: true })).toBeNull();
   });
 });
 

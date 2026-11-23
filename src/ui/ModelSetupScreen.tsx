@@ -23,7 +23,8 @@ import { PrivateTextInput as TextInput } from "./components/PrivateTextInput";
 import { impact, notification, ImpactFeedbackStyle, NotificationFeedbackType, setHapticsEnabledCache } from "../services/haptics";
 import { useTranslation } from "react-i18next";
 import { NidoMascot } from "./components/calm/NidoMascot";
-import { MODEL_CATALOG, CatalogModel, AssetKind, CORPUS_CATALOG } from "../models/manifest";
+import { MODEL_CATALOG, CatalogModel, AssetKind, CORPUS_CATALOG, htpAcceleratesQuant } from "../models/manifest";
+import type { ModelBenchReport } from "../inference/modelBench";
 import { defaultLlmForDevice } from "../models/defaultModel";
 import { llamaEngine } from "../inference/LlamaEngine";
 import { ModelManager } from "../models/ModelManager";
@@ -78,6 +79,17 @@ import { useSecureScreen } from "./useSecureScreen";
 
 const modelManager = new ModelManager();
 const LLM_EMBEDDING_KINDS: AssetKind[] = ["llm", "embedding"];
+
+// VEL-5 (0.1.110, acto 3): las dos mitades de la letra honesta de la
+// opción de NPU, calculadas del DATO del catálogo (su campo quant),
+// nunca escritas a mano: qué modelos de conversación acelera el HTP
+// de verdad y cuáles no, con su nombre comercial.
+const NPU_ACCELERATED_LABELS = MODEL_CATALOG.filter((m) => m.kind === "llm" && htpAcceleratesQuant(m.quant))
+  .map((m) => m.label)
+  .join(", ");
+const NPU_SKIPPED_LABELS = MODEL_CATALOG.filter((m) => m.kind === "llm" && !htpAcceleratesQuant(m.quant))
+  .map((m) => m.label)
+  .join(", ");
 
 type Props =
   | { mode: "required"; onReady: () => void; onKeyLossError?: (e: KeyLossError) => void }
@@ -221,6 +233,15 @@ export function ModelSetupScreen(props: Props) {
   const [ratchetV5Enabled, setRatchetV5EnabledState] = useState(false);
   const [panicEnabled, setPanicEnabledState] = useState(false);
   const [screenCaptureAllowed, setScreenCaptureAllowedState] = useState(false);
+  // VEL-5 (0.1.110, acto 3): la opción de NPU y la medición. npuDevice
+  // es el deviceName del HTP detectado; null = este teléfono no trae
+  // NPU que la puerta reconozca y la opción NI SE VE (la puerta es el
+  // diseño: lo que el aparato no corre bien no se ofrece).
+  const [npuEnabled, setNpuEnabledState] = useState(false);
+  const [npuDevice, setNpuDevice] = useState<string | null>(null);
+  const [benchBusy, setBenchBusy] = useState(false);
+  const [benchReport, setBenchReport] = useState<ModelBenchReport | null>(null);
+  const [benchNote, setBenchNote] = useState<"noModel" | "failed" | null>(null);
 
   useEffect(() => subscribeDownloads(() => forceRender((n) => n + 1)), []);
 
@@ -286,11 +307,66 @@ export function ModelSetupScreen(props: Props) {
       setPrivateHelloOnlyState(isFeatureEnabled("p2p.privateHelloOnly"));
       setRatchetV5EnabledState(isFeatureEnabled("p2p.ratchetV5"));
       setPanicEnabledState(isFeatureEnabled("security.panicButton"));
+      setNpuEnabledState(isFeatureEnabled("inference.npuAccel"));
     }).catch(() => {});
     import("../models/settings")
       .then(({ getScreenCaptureAllowed }) => getScreenCaptureAllowed())
       .then(setScreenCaptureAllowedState)
       .catch(() => {});
+  }, []);
+
+  // VEL-5 (0.1.110, acto 3): sonda de visibilidad de la opción de
+  // NPU. Solo en el modo de Ajustes (el asistente de primera vez no
+  // enseña opciones que el aparato quizá no tenga): si la puerta no
+  // detecta HTP, la opción no existe en la pantalla.
+  useEffect(() => {
+    if (requiredMode) return;
+    let alive = true;
+    llamaEngine
+      .probeNpuDevice()
+      .then((name) => {
+        if (alive) setNpuDevice(name);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [requiredMode]);
+
+  // VEL-5 (0.1.110, acto 3): el interruptor de la NPU, con el patrón
+  // de los demás interruptores de banderas de esta pantalla. Vale
+  // desde la siguiente carga del modelo; la conversación en curso
+  // no se toca.
+  const toggleNpu = useCallback(async (value: boolean) => {
+    setNpuEnabledState(value);
+    try {
+      const { setFeatureEnabled } = await import("../config/featureFlags");
+      await setFeatureEnabled("inference.npuAccel", value);
+    } catch {
+      setNpuEnabledState(!value);
+    }
+  }, []);
+
+  // VEL-5 (0.1.110, acto 3): la medición del modelo residente. El
+  // resultado lleva su foto (modelo y dispositivo que ejecutó la
+  // carga): es la velocidad DE ESTE teléfono, medida, no prometida.
+  const runBench = useCallback(async () => {
+    setBenchBusy(true);
+    setBenchNote(null);
+    try {
+      const report = await llamaEngine.benchLoadedModel();
+      if (report) {
+        setBenchReport(report);
+      } else {
+        setBenchReport(null);
+        setBenchNote("noModel");
+      }
+    } catch {
+      setBenchReport(null);
+      setBenchNote("failed");
+    } finally {
+      setBenchBusy(false);
+    }
   }, []);
 
   // 0.1.79: permitir capturas de pantalla (apagado por defecto). Las
@@ -754,8 +830,27 @@ export function ModelSetupScreen(props: Props) {
           </AccordionSection>
         )}
         {!searching && <Text style={styles.groupHeading} accessibilityRole="header">{t("settingsGroups.models")}</Text>}
-        {match(t("modelSetupScreen.sections.models"), t("modelSetupScreen.installedModels")) && (
+        {match(t("modelSetupScreen.sections.models"), t("modelSetupScreen.installedModels"), t("settings.npuAccelTitle"), t("modelSetupScreen.benchTitle")) && (
           <AccordionSection key={`4-${searchKey}`} defaultOpen={searching} icon="models" title={t("modelSetupScreen.sections.models")}>
+            {npuDevice !== null && (
+              <>
+                <View style={styles.hapticRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.hapticRowLabel}>{t("settings.npuAccelTitle")}</Text>
+                    <Text style={styles.hapticRowValue}>{t("settings.npuAccelDesc")}</Text>
+                  </View>
+                  <Switch
+                    value={npuEnabled}
+                    onValueChange={toggleNpu}
+                    accessibilityLabel={t("settings.npuAccelTitle")}
+                    trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
+                    thumbColor={colors.bg.card}
+                  />
+                </View>
+                <Text style={styles.hapticRowValue}>{t("settings.npuAccelModels", { models: NPU_ACCELERATED_LABELS })}</Text>
+                <Text style={styles.hapticRowValue}>{t("settings.npuAccelOthers", { models: NPU_SKIPPED_LABELS })}</Text>
+              </>
+            )}
             <Text style={styles.sectionHeading}>{t("modelSetupScreen.installedModels")}</Text>
             <FlatList
               data={[
@@ -779,7 +874,44 @@ export function ModelSetupScreen(props: Props) {
                 />
               )}
             />
-
+            <Text style={styles.sectionHeading}>{t("modelSetupScreen.benchTitle")}</Text>
+            <Text style={styles.hapticRowValue}>{t("modelSetupScreen.benchDesc")}</Text>
+            <Pressable
+              style={[styles.wizardBtn, benchBusy && { opacity: 0.4 }]}
+              onPress={() => void runBench()}
+              disabled={benchBusy}
+              accessibilityRole="button"
+              accessibilityLabel={t("modelSetupScreen.benchRun")}
+            >
+              <Text style={styles.wizardBtnText}>{benchBusy ? t("modelSetupScreen.benchRunning") : t("modelSetupScreen.benchRun")}</Text>
+            </Pressable>
+            {benchNote === "noModel" && <Text style={styles.hapticRowValue}>{t("modelSetupScreen.benchNoModel")}</Text>}
+            {benchNote === "failed" && <Text style={styles.hapticRowValue}>{t("modelSetupScreen.benchFailed")}</Text>}
+            {benchReport !== null && (
+              <View>
+                <Text style={styles.hapticRowValue}>
+                  {t("modelSetupScreen.benchExecuted", {
+                    model: benchReport.modelFilename.split("/").pop() ?? benchReport.modelFilename,
+                    device: benchReport.executed,
+                  })}
+                </Text>
+                {benchReport.runs.map((r) => (
+                  <Text key={`${r.pp}-${r.tg}`} style={styles.hapticRowValue}>
+                    {t("modelSetupScreen.benchRunResult", {
+                      pp: r.pp,
+                      tg: r.tg,
+                      speedPp: r.speedPp.toFixed(1),
+                      speedTg: r.speedTg.toFixed(1),
+                    })}
+                  </Text>
+                ))}
+                {benchReport.peakRssBytes !== null && (
+                  <Text style={styles.hapticRowValue}>
+                    {t("modelSetupScreen.benchPeak", { mb: Math.round(benchReport.peakRssBytes / (1024 * 1024)) })}
+                  </Text>
+                )}
+              </View>
+            )}
           </AccordionSection>
         )}
         {match(t("modelSetupScreen.sections.knowledgeBase"), t("corpusSettingsTab.downloadablePacks"), t("multilingual.title"), t("corpusSettingsTab.yourDocuments")) && (

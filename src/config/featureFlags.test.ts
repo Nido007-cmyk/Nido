@@ -51,6 +51,16 @@ describe("featureFlags (Fix 7)", () => {
     expect(isFeatureEnabled("delegation.enabled")).toBe(false);
   });
 
+  it("0.1.110 (VEL-5 acto 3): la aceleración por NPU nace APAGADA y la elección guardada manda", async () => {
+    expect(isFeatureEnabled("inference.npuAccel")).toBe(false);
+    await setFeatureEnabled("inference.npuAccel", true);
+    expect(isFeatureEnabled("inference.npuAccel")).toBe(true);
+    resetFeatureFlagsForTests();
+    expect(isFeatureEnabled("inference.npuAccel")).toBe(false);
+    await loadFeatureFlags();
+    expect(isFeatureEnabled("inference.npuAccel")).toBe(true);
+  });
+
   it("setFeatureEnabled persists and loadFeatureFlags hydrates", async () => {
     await setFeatureEnabled("delegation.enabled", true);
     expect(isFeatureEnabled("delegation.enabled")).toBe(true);

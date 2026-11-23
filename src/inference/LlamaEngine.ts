@@ -11,9 +11,17 @@ import { batchForRam, checkRamBudget, defaultThreadsForCores, estimateContextByt
 import {
   accelLayerBudget,
   evaluateAccelGate,
-  resolveAccelSelection,
+  pickAccelDevice,
+  selectHexagonDevice,
   type BackendDeviceLike,
 } from "./accelGate";
+import {
+  BENCH_CONFIGS,
+  buildBenchReport,
+  type ModelBenchReport,
+  type RawBenchResult,
+} from "./modelBench";
+import { isFeatureEnabled } from "../config/featureFlags";
 import {
   crossNativeSessionRecord,
   holdBackgroundIndexingForSession,
@@ -34,7 +42,7 @@ import {
   type LadderPlan,
 } from "./memoryLadder";
 import { assertTrustedModelFileByName } from "../models/modelTrust";
-import { MODEL_CATALOG, type CatalogModel } from "../models/manifest";
+import { htpAcceleratesQuant, MODEL_CATALOG, type CatalogModel } from "../models/manifest";
 import { contextCeilingForDevice } from "../models/defaultModel";
 import { currentDevicePressure } from "./devicePressure";
 import { withStage } from "../utils/stageError";
@@ -868,6 +876,20 @@ export class LlamaEngine {
     }
   }
 
+  /**
+   * VEL-5 (0.1.110, acto 3): ¿este teléfono ofrece un NPU Hexagon?
+   * Devuelve su deviceName o null. Es la sonda de VISIBILIDAD de la
+   * opción de Ajustes: sin HTP la opción ni se ve ni se intenta. La
+   * presión no entra aquí — cerrar por calor o batería es juicio de
+   * cada carga (evaluateAccelGate), no de si la opción existe. Con
+   * el mismo plazo de la puerta: una enumeración atascada responde
+   * «sin NPU», nunca cuelga la pantalla.
+   */
+  async probeNpuDevice(): Promise<string | null> {
+    const devices = await this.probeBackendDevicesForGate();
+    return selectHexagonDevice(devices)?.deviceName ?? null;
+  }
+
   private refreshBackendSummary(): Promise<void> {
     if (!this.backendSummaryPromise) {
       const attempt = (async () => {
@@ -1179,19 +1201,28 @@ export class LlamaEngine {
     // cuenta. Se confirma en la primera generación que termina bien.
     await this.crashGuardMarkPending(modelFilename, nCtx);
 
-    // VEL-5 (0.1.110, acto 2): la puerta de aceleración se juzga por
-    // carga, con la lista real de dispositivos de ESTA carga y la
-    // foto de presión de ESTA carga (accelGate.ts). La elección nace
-    // saneada: se re-resuelve contra la lista recién leída, así que
-    // un dispositivo que ya no está cae a CPU en silencio. Sin
-    // plan fijado de emergencia — ese plan cobró una KV concreta y
-    // la acelerada no es ella — y sin presupuesto de capas no hay
-    // pick: la cascada es la CPU de siempre, sin tocar.
+    // VEL-5 (0.1.110, actos 2 y 3): la puerta de aceleración se
+    // juzga por carga, con la lista real de dispositivos de ESTA
+    // carga y la foto de presión de ESTA carga (accelGate.ts). La
+    // elección entera la juzga pickAccelDevice: la GPU automática
+    // del acto 2, y con la opción de NPU encendida (acto 3,
+    // experimental y apagada por defecto) el HTP cuando el modelo
+    // declara un formato que el HTP descarga de verdad — con
+    // Q4_K_M ni se intenta, se sabe por el dato del catálogo antes
+    // de cargar. La elección nace saneada: se re-resuelve contra la
+    // lista recién leída, así que un dispositivo que ya no está cae
+    // a CPU en silencio. Sin plan fijado de emergencia — ese plan
+    // cobró una KV concreta y la acelerada no es ella — y sin
+    // presupuesto de capas no hay pick: la cascada es la CPU de
+    // siempre, sin tocar.
     let accelPick: AccelInitPick | null = null;
     if (!pinnedProfile) {
       const devices = await this.probeBackendDevicesForGate();
       const gate = evaluateAccelGate(devices, pressure);
-      const candidate = gate.gpu ? resolveAccelSelection(gate.gpu.deviceName, devices) : null;
+      const candidate = pickAccelDevice(gate, devices, {
+        npuEnabled: isFeatureEnabled("inference.npuAccel"),
+        npuQuantOk: htpAcceleratesQuant(catalogEntry?.quant),
+      });
       if (candidate) {
         const layers = accelLayerBudget({ ...specBase, nCtx }, snapshot);
         if (layers > 0) accelPick = { device: candidate, nGpuLayers: layers };
@@ -1340,6 +1371,65 @@ export class LlamaEngine {
 
   get isLoaded(): boolean {
     return this.context !== null;
+  }
+
+  /**
+   * VEL-5 (0.1.110, acto 3): mide el contexto residente con bench()
+   * del upstream, en la forma de modelBench.ts (las dos
+   * configuraciones prefijadas, pico de memoria muestreado a 1 s y
+   * la foto de la carga pegada al resultado). Mide LO QUE HAY: el
+   * modelo cargado tal como la conversación lo cargó, en el
+   * dispositivo que ejecutó esa carga — por eso es la pieza que
+   * podrá cobrar la ganancia del acelerador donde exista hardware
+   * capaz, y por eso en un aparato sin puerta abierta mide la CPU
+   * de siempre y la llama CPU. Sin contexto residente devuelve
+   * null: no se inventa una medición sin modelo.
+   *
+   * Va por la cola del motor: bench() corre sobre el mismo
+   * contexto que las generaciones, y un contexto de llama.cpp no
+   * admite una medición y una generación a la vez.
+   */
+  benchLoadedModel(): Promise<ModelBenchReport | null> {
+    return this.enqueue(async () => {
+      const context = this.context;
+      const info = this.modelInfo;
+      if (!context || !info) return null;
+      const bench = (context as unknown as { bench?: unknown }).bench;
+      if (typeof bench !== "function") return null;
+      const startedAt = Date.now();
+      let peakRssBytes: number | null = null;
+      const sample = () => {
+        const rss = readRamSnapshot()?.rssBytes;
+        if (typeof rss === "number" && (peakRssBytes === null || rss > peakRssBytes)) {
+          peakRssBytes = rss;
+        }
+      };
+      sample();
+      const timer = setInterval(sample, 1000);
+      try {
+        const raw: RawBenchResult[] = [];
+        for (const cfg of BENCH_CONFIGS) {
+          raw.push(
+            await (bench as (pp: number, tg: number, pl: number, nr: number) => Promise<RawBenchResult>).call(
+              context,
+              cfg.pp,
+              cfg.tg,
+              cfg.pl,
+              cfg.nr,
+            ),
+          );
+        }
+        sample();
+        return buildBenchReport({
+          photo: info,
+          raw,
+          peakRssBytes,
+          wallMs: Date.now() - startedAt,
+        });
+      } finally {
+        clearInterval(timer);
+      }
+    });
   }
 
   /**

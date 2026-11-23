@@ -26,9 +26,10 @@ import type { DevicePressureCaps } from "./devicePressure";
  * - NPU: un nombre que empieza por 'HTP' sin caracteres comodín
  *   [patrón PP-MIT: selectHexagonDevice de PocketPal]. El suelo real
  *   (Hexagon v73) lo ponen los assets HTP del APK, no esta lista: lo
- *   que el binario enumera es lo que hay. En este acto el NPU se
- *   DETECTA pero no se auto-elige: encenderlo es la opción de
- *   Ajustes del acto 3, apagada por defecto.
+ *   que el binario enumera es lo que hay. La puerta lo DETECTA pero
+ *   no lo auto-elige: elegirlo es la opción de Ajustes del acto 3
+ *   (apagada por defecto), y la elección entera la juzga
+ *   pickAccelDevice aquí abajo.
  * - Presión: con calor severo o batería baja (los topes de
  *   devicePressure activos) la puerta se cierra para ESA carga —
  *   ni GPU ni NPU se intentan con el aparato ya apretado.
@@ -137,6 +138,39 @@ export function resolveAccelSelection(
   if (!candidate) return null;
   if (selectGpuDevice(devices)?.deviceName === candidate) return candidate;
   if (selectHexagonDevice(devices)?.deviceName === candidate) return candidate;
+  return null;
+}
+
+/**
+ * VEL-5 (0.1.110, acto 3): la elección de dispositivo de una carga,
+ * entera y pura. Devuelve el deviceName saneado que el perfil
+ * «accel» debe intentar, o null si esta carga va en CPU.
+ *
+ * - Con la opción de NPU ENCENDIDA, un HTP presente y un modelo cuyo
+ *   formato el HTP descarga de verdad (npuQuantOk, del dato `quant`
+ *   del catálogo), manda la elección expresa de la persona: el NPU.
+ *   Es la forma de PocketPal (la opción manual manda sobre el
+ *   defecto), con su aviso convertido en puerta: si el formato no
+ *   come (Q4_K_M), el NPU NO se elige — se sabe antes de cargar, no
+ *   se descubre por el fracaso — y la carga sigue por la vía
+ *   automática de la GPU, como si la opción no estuviera.
+ * - Sin elección de NPU aplicable, manda la vía del acto 2: la GPU
+ *   que pasa la puerta (Adreno 700+), automática.
+ * - Toda candidatura pasa por resolveAccelSelection contra la lista
+ *   recién leída: lo que ya no está o ya no califica cae en
+ *   silencio, y la presión ya cerró la puerta dentro de
+ *   evaluateAccelGate (su veredicto trae gpu/npu a null).
+ */
+export function pickAccelDevice(
+  gate: AccelGateResult,
+  devices: readonly BackendDeviceLike[],
+  opts: { npuEnabled: boolean; npuQuantOk: boolean },
+): string | null {
+  if (opts.npuEnabled && opts.npuQuantOk && gate.npu) {
+    const npu = resolveAccelSelection(gate.npu.deviceName, devices);
+    if (npu) return npu;
+  }
+  if (gate.gpu) return resolveAccelSelection(gate.gpu.deviceName, devices);
   return null;
 }
 
