@@ -12,19 +12,19 @@ import { extractPeople, extractRememberFact, reminderTitleForFact } from "./reme
 describe("ejemplo «Memoria privada» del carrusel", () => {
   it.each([
     [
-      "Recuérdame que el cumpleaños de mi mamá es el 15 de marzo y que le gustan las orquídeas. Guárdalo en tu memoria para que me avises con tiempo.",
-      "el cumpleaños de mi mamá es el 15 de marzo y le gustan las orquídeas",
-      "Cumpleaños de mi mamá",
+      "Recuérdame que el cumpleaños de mi amiga Laura es el 8 de junio y que le gustan los tulipanes. Guárdalo en tu memoria para que me avises con tiempo.",
+      "el cumpleaños de mi amiga Laura es el 8 de junio y le gustan los tulipanes",
+      "Cumpleaños de mi amiga Laura",
     ],
     [
-      "Remember that my mom's birthday is March 15th and she loves orchids. Save it so you can remind me in time.",
-      "my mom's birthday is March 15th and she loves orchids",
-      "My mom's birthday",
+      "Remember that my friend Laura's birthday is June 8th and she loves tulips. Save it so you can remind me in time.",
+      "my friend Laura's birthday is June 8th and she loves tulips",
+      "My friend Laura's birthday",
     ],
     [
-      "Lembre-se de que o aniversário da minha mãe é 15 de março e ela adora orquídeas. Guarde para me avisar com antecedência.",
-      "o aniversário da minha mãe é 15 de março e ela adora orquídeas",
-      "Aniversário da minha mãe",
+      "Lembre-se de que o aniversário da minha amiga Laura é 8 de junho e ela adora tulipas. Guarde para me avisar com antecedência.",
+      "o aniversário da minha amiga Laura é 8 de junho e ela adora tulipas",
+      "Aniversário da minha amiga Laura",
     ],
   ])("%s", (q, content, title) => {
     const f = extractRememberFact(q);

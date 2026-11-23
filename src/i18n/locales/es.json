@@ -666,7 +666,7 @@
     "items": [
       {
         "category": "Memoria privada",
-        "prompt": "Recuérdame que el cumpleaños de mi mamá es el 15 de marzo y que le gustan las orquídeas. Guárdalo en tu memoria para que me avises con tiempo."
+        "prompt": "Recuérdame que el cumpleaños de mi amiga Laura es el 8 de junio y que le gustan los tulipanes. Guárdalo en tu memoria para que me avises con tiempo."
       },
       {
         "category": "Sin internet",
@@ -1632,11 +1632,11 @@
             "title": "Memoria",
             "what": "Tu memoria funciona así. Lo que me cuentas se guarda en cuatro cajones: en Datos quedan los hechos sobre ti, como tu nombre, dónde vives o tu color favorito. En Personas quedan los demás: tu mamá, tu pareja, tus amigos. En Notas queda lo que me pides apuntar tal cual. Y en Recordatorios, lo que lleva fecha u hora. También puedes preguntarme de vuelta con tus palabras: «¿cómo se llama mi mamá?», «¿cuál es mi color favorito?». Te respondo desde lo que me contaste. Todo vive en este dispositivo, cifrado. Nada se sube a ningún servidor, y lo que quieras borrar, se borra.",
             "examples": [
-              "Mi mamá se llama Marta",
+              "Mi mamá se llama Carmen",
               "¿Cómo se llama mi mamá?",
               "Mi color favorito es el verde",
               "¿Cuál es mi color favorito?",
-              "Vivo en Tucson",
+              "Vivo en Valencia",
               "¿Dónde vivo?",
               "Mi cumpleaños es el 5 de mayo"
             ],
@@ -1691,7 +1691,7 @@
             ],
             "examples": [
               "¿por qué se forman los huracanes y cómo se mueve un huracán por el océano?",
-              "compara el clima de Tucson con el de Phoenix en verano"
+              "compara el clima de Valencia con el de Sevilla en verano"
             ],
             "tip": "Úsalo para preguntas complejas o con comparaciones. Para un dato suelto, pregunta sin el chip: el chat normal responde antes."
           },
