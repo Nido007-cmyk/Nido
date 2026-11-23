@@ -574,6 +574,15 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "se esta inundando", "se inunda", "hay una inundacion",
     "hubo un temblor", "esta temblando", "hubo un terremoto", "hubo un sismo",
     "se cayo un cable", "cable caido", "cable de luz caido",
+    // Espejo §4 (H-LOOP-4): la CAÍDA NARRADA — el suceso contado
+    // en pasado («se cayó de una escalera»), que ninguna cara
+    // veía: el único «cayó» de la lista era el del cable. El
+    // sustantivo suelto («caída») no entra, en la forma de la
+    // lista, que caza sucesos y no temas; y la metáfora del
+    // precio no trae estas formas («se cayó el precio» no es
+    // «se cayo de»), como la batería de la pieza cobra en su
+    // guarda.
+    "se cayo de", "se callo de", "cayo de una",
     "tratando de entrar a mi casa", "intentan entrar a mi casa", "entraron a mi casa",
     "hay un choque", "hubo un choque", "hay heridos", "se volco",
     "atrapado en el elevador", "atrapada en el elevador", "atrapado en el ascensor", "atrapada en el ascensor",
@@ -624,6 +633,8 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "breaking into my", "broke into my", "someone is in my house",
     "carbon monoxide alarm", "carbon monoxide detector",
     "there was an earthquake", "earthquake just", "car crash", "car accident",
+    // H-LOOP-4: the fall, as told («fell off a ladder»).
+    "fell off a", "fell down the stairs", "fell from a",
     "i m trapped", "i am trapped", "is trapped",
     "smoke alarm", "i see smoke", "collapsed", "is sinking",
   ],
@@ -666,6 +677,8 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     // Auditoria 0.1.93: eventos em curso que a porta não conhecia.
     "esta inundando", "esta alagando", "houve um terremoto",
     "tentando entrar na minha casa", "arrombando a porta", "houve um acidente",
+    // H-LOOP-4: a queda contada («caiu de uma escada»).
+    "caiu de", "caiu da escada",
     "estou preso", "estou presa",
   ],
 };
@@ -894,6 +907,61 @@ function stemHitIsTelegraphic(folded: string): boolean {
 }
 
 /**
+ * La inmovilidad contada (espejo §4, H-LOOP-4): «no se puede
+ * mover» y sus formas en las tres lenguas. NO es un signo
+ * suelto de la lista de frases: la misma forma la dice una
+ * puerta atrancada o un objeto que no enciende por analogía
+ * de redacción, y la lista de signos declara sin contexto. Su
+ * cara es la de las raíces (H-05): declara cuando el texto la
+ * ata a un cuerpo — una caída narrada en el mismo texto (las
+ * formas de caída de `EMERGENCY_SIGNS`, que ya declaran por sí
+ * solas: esta cara es su cinturón, no su único camino) o una
+ * señal de víctima o ayuda de `STEM_BODY_SIGNALS` a tres
+ * palabras o menos de la frase, con la misma regla del resto
+ * de ADV2-08. «Mi vecino no se puede mover» declara por
+ * «vecino»; «la puerta no se puede mover», sin caída ni cuerpo
+ * cerca, no — el borde honesto que la batería de la pieza fijó
+ * con sus dos guardas de objeto.
+ */
+const IMMOBILITY_SIGNS = [
+  "no se puede mover", "no puede moverse", "no se pueden mover",
+  "can t move", "cannot move", "cant move",
+  "nao se pode mover", "nao consegue se mover",
+];
+
+/** Las formas de caída narrada de `EMERGENCY_SIGNS`, en las
+ * tres lenguas (la lista de signos las mezcla, como ALL_SIGNS):
+ * la caída contada en el mismo texto es contexto de cuerpo
+ * para la inmovilidad. */
+const FALL_TOLD_SIGNS = [
+  "se cayo de", "se callo de", "cayo de una",
+  "fell off a", "fell down the stairs", "fell from a",
+  "caiu de", "caiu da escada",
+];
+
+function immobilityHasContext(folded: string): boolean {
+  if (FALL_TOLD_SIGNS.some((t) => folded.includes(` ${t}`))) return true;
+  const words = folded
+    .trim()
+    .split(/\s+/)
+    .map((w) => w.replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, ""))
+    .filter((w) => w.length > 0);
+  for (const phrase of IMMOBILITY_SIGNS) {
+    const pw = phrase.split(" ");
+    for (let i = 0; i + pw.length <= words.length; i++) {
+      if (!pw.every((w, k) => words[i + k] === w)) continue;
+      const from = Math.max(0, i - 3);
+      const to = Math.min(words.length - 1, i + pw.length - 1 + 3);
+      for (let j = from; j <= to; j++) {
+        const w = words[j];
+        if (STEM_BODY_SIGNALS.some((s) => w === s || w === `${s}s` || w === `${s}es`)) return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
  * Señales de primera persona o de petición de instrucción que
  * corroboran la familia «chok» cuando es el único término que
  * casa en la puerta de salud (ver el uso en `isHealthQuestion`):
@@ -913,7 +981,10 @@ const CHOKE_FIRST_PERSON_CUES = [
  * en cambio, exige además el contexto de cuerpo de
  * `stemHitHasBodyContext` (H-05, punto 7 de la cabecera): la raíz
  * nació para el ruido de dictado DENTRO de un suceso contado, no
- * como detector de tema. Ver la cabecera, punto 3: donde manda la
+ * como detector de tema. La cara de la inmovilidad (espejo §4,
+ * H-LOOP-4) hereda esa misma disciplina: su frase solo declara
+ * con una caída narrada o un cuerpo cerca
+ * (`immobilityHasContext`). Ver la cabecera, punto 3: donde manda la
  * puerta de salud manda también esta cara, con el mismo texto
  * seguro.
  */
@@ -937,6 +1008,7 @@ export function isEmergencySituation(text: string): boolean {
   return (
     ALL_SIGNS.some((t) => folded.includes(` ${t} `) || folded.includes(` ${t}`)) ||
     (ALL_STEMS.some((t) => folded.includes(` ${t}`)) && stemHitHasBodyContext(folded)) ||
+    (IMMOBILITY_SIGNS.some((t) => folded.includes(` ${t}`)) && immobilityHasContext(folded)) ||
     stemHitIsTelegraphic(folded)
   );
 }

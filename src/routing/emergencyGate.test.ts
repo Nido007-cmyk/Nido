@@ -667,3 +667,34 @@ describe("0.1.88 — la red de sustitución con la guía en las fuentes (dirimen
     ).toBe(false);
   });
 });
+
+describe("isEmergencySituation · la caída narrada y la inmovilidad (espejo §4, H-LOOP-4)", () => {
+  // La frase viva de la pasada en vivo, contada en el cuadro
+  // libre de Emergencia: «Mi vecino se cayó de una escalera y
+  // no se puede mover». La puerta no traía signo de caída
+  // narrada («se cayó de…» no estaba; el único «cayó» era «se
+  // cayo un cable») ni de inmovilidad («no se mueve» no está
+  // contenido en «no se puede mover»), y el turno salía como
+  // chat corriente y respondía sin sentido. Los tres casos de
+  // idioma nacen en rojo; las dos guardas de objeto nacen en
+  // verde esperado y fijan la cara de los signos nuevos.
+  it("la frase viva, en español: la caída de la escalera con inmovilidad es situación", () => {
+    expect(isEmergencySituation("Mi vecino se cayó de una escalera y no se puede mover")).toBe(true);
+  });
+
+  it("la frase viva, en inglés: fell off a ladder and can't move", () => {
+    expect(isEmergencySituation("My neighbor fell off a ladder and can't move")).toBe(true);
+  });
+
+  it("la frase viva, en portugués: caiu de uma escada e não se pode mover", () => {
+    expect(isEmergencySituation("O meu vizinho caiu de uma escada e não se pode mover")).toBe(true);
+  });
+
+  it("guarda de objeto: que se caiga el precio de la casa no es una emergencia", () => {
+    expect(isEmergencySituation("Se cayó el precio de la casa")).toBe(false);
+  });
+
+  it("guarda de objeto: el móvil que se cae y no se puede encender tampoco", () => {
+    expect(isEmergencySituation("Se me cayó el móvil y no se puede encender")).toBe(false);
+  });
+});
