@@ -48,8 +48,9 @@ interface Settings {
   themeId?: ThemeId;
   fontScale?: FontScale;
   languageId?: LanguageId;
-  routingPreset?: RoutingPreset;
-  modelRoleAssignments?: Partial<Record<ModelRole, string>>;
+  // 0.1.111: routingPreset / modelRoleAssignments retired from the
+  // store (audit §2.1: read in production, written by nothing). See
+  // the note at getRoutingPreset.
   adaptiveRoutingEnabled?: boolean;
   /** Herramientas del agente que el usuario apagó. */
   disabledTools?: string[];
@@ -588,49 +589,38 @@ export async function setLanguageId(language: LanguageId): Promise<void> {
 }
 
 /**
- * Default preset when nothing's been explicitly set. `getRoutingPreset()`
- * has exactly one caller right now (`src/services/adaptiveChat.ts`'s
- * `runAdaptiveChat`, Phase 9) — it's read only when the separate
- * `adaptiveRoutingEnabled` flag is on (the default), so this is the preset
- * every user gets unless they turn adaptive routing off.
+ * The routing preset every install runs with. Read in production by
+ * `runAdaptiveChat` (Phase 9, only when the separate
+ * `adaptiveRoutingEnabled` flag is on) and by the evaluation surfaces.
  *
- * Temporarily `"balanced"` (not `"simple"`) for real-device Phase 9
- * testing: `"simple"` only ever declares a `general` role slot (see
+ * `"balanced"` (not `"simple"`) for real-device Phase 9 testing:
+ * `"simple"` only ever declares a `general` role slot (see
  * routing/profiles.ts's PRESET_DEFINITIONS), so with it, turning on
- * Adaptive Routing alone — with no preset picker UI yet to change this —
- * would never actually exercise any model switching, just silently
- * resolve to the same single model every time. `"balanced"` is the
- * smallest preset that unlocks the `fast` role, without inventing a new
- * preset or touching the routing rules themselves (router.ts/classify.ts/
- * profiles.ts are unchanged). Revert to `"simple"` (or replace with a real
- * picker UI) once real-device testing no longer needs this.
+ * Adaptive Routing alone would never actually exercise any model
+ * switching, just silently resolve to the same single model every
+ * time. `"balanced"` is the smallest preset that unlocks the `fast`
+ * role, without inventing a new preset or touching the routing rules
+ * themselves (router.ts/classify.ts/profiles.ts are unchanged).
+ *
+ * 0.1.111 (professional audit of 0.1.110, §2.1): this used to be a
+ * persisted setting (`routingPreset` / `modelRoleAssignments`, with
+ * `setRoutingPreset` / `setModelRoleAssignment` as writers). The
+ * audit's caller census found NO writer anywhere: no screen and no
+ * code path ever set them, so every install always ran on these
+ * defaults while the store pretended they were configurable. The
+ * persisted fields and their setters are retired; the getters keep
+ * their exact production values as constants, so behavior is
+ * unchanged by construction. A stale key in an older settings.json
+ * is inert (nothing reads it). If a preset picker is ever built, it
+ * re-adds a writer against these same getters; the routing engine's
+ * preset/role inputs (and their tests) are untouched.
  */
 export async function getRoutingPreset(): Promise<RoutingPreset> {
-  const s = await readSettings();
-  return s.routingPreset ?? "balanced";
-}
-
-export async function setRoutingPreset(preset: RoutingPreset): Promise<void> {
-  return mutateSettings((s) => {
-    s.routingPreset = preset;
-  });
+  return "balanced";
 }
 
 export async function getModelRoleAssignments(): Promise<Partial<Record<ModelRole, string>>> {
-  const s = await readSettings();
-  return s.modelRoleAssignments ?? {};
-}
-
-export async function setModelRoleAssignment(role: ModelRole, modelId: string | undefined): Promise<void> {
-  return mutateSettings((s) => {
-    const assignments = { ...(s.modelRoleAssignments ?? {}) };
-    if (modelId) {
-      assignments[role] = modelId;
-    } else {
-      delete assignments[role];
-    }
-    s.modelRoleAssignments = assignments;
-  });
+  return {};
 }
 
 /**
