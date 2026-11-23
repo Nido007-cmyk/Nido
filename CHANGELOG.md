@@ -4,6 +4,35 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.112-alpha - 2026-11-23
+
+This release corrects two things an independent check
+of 0.1.111 measured after it shipped.
+
+The 0.1.111 notes said that "se cayó en el baño" and
+"no se puede levantar" now reach the emergency answer.
+Written exactly like that, on their own, they did not:
+the fall needed a person named in the sentence, and
+"cannot get up" needed a place or a body part nearby.
+Both forms now declare the emergency as written, in
+Spanish, English and Portuguese ("se cayó en el
+baño", "se cayó en la cocina", "no se puede
+levantar"). The guards around them did not move: a
+fallen price, a dropped phone, a fall told as an old
+story and a "cannot lift" with an object after it
+still stay normal conversation.
+
+Acceleration is now explained where you can see it.
+The models section in Settings says, in plain words,
+that the GPU joins in on its own when the phone and
+the model format qualify, and that there is nothing
+to switch on. The in-app guide gains a lesson,
+"Acceleration: GPU and NPU", that explains both
+accelerators, where the experimental NPU switch
+lives, why it only appears on phones with that chip,
+and why a hot phone or a low battery leaves both
+accelerators out of that load.
+
 ## 0.1.111-alpha - 2026-11-23
 
 This release fixes what a professional audit of 0.1.110
