@@ -294,7 +294,8 @@
       "noText": "No text found in the files (a PDF scanned as an image?).",
       "scannedNoOcr": "“{{name}}” looks like a scanned PDF (its pages are images) and this build of NIDO has no text recognition (OCR), so it couldn't be imported. Try the original PDF with selectable text, or a text file.",
       "imageNoOcr": "“{{name}}” is an image and this build of NIDO has no text recognition (OCR), so it couldn't be imported.",
-      "ocrFailed": "“{{name}}” could not be read even with text recognition (OCR)."
+      "ocrFailed": "“{{name}}” could not be read even with text recognition (OCR).",
+      "unsupported": "“{{name}}” is a file type NIDO can't import: archives and Office documents can't be read as text."
     },
     "hint": "Import your own .txt, .md, .csv, .json, or .pdf notes, or images of printed text — indexed on this device only, never uploaded anywhere. Scanned PDF pages and images are read with on-device text recognition (OCR), and password-protected PDFs aren't supported.",
     "nameRequiredTitle": "Name required",
@@ -311,6 +312,8 @@
     "stageEmbedding": "Embedding {{current}}/{{total}}…",
     "noTextWarning_one": "{{count}} document added no text: {{names}}",
     "noTextWarning_other": "{{count}} documents added no text: {{names}}",
+    "warningUnsupported_one": "{{count}} document wasn't imported because of its file type: {{names}}",
+    "warningUnsupported_other": "{{count}} documents weren't imported because of their file type: {{names}}",
     "warningOcrFailed_one": "{{count}} document couldn't be read even with text recognition (OCR): {{names}}",
     "warningOcrFailed_other": "{{count}} documents couldn't be read even with text recognition (OCR): {{names}}",
     "warningOcrEmpty_one": "{{count}} document: recognition found no text on its scanned pages: {{names}}",

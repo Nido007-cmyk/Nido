@@ -320,3 +320,68 @@ describe("auditoría completa F-2: el tipo lo deciden los bytes, no el nombre", 
     expect(result.importWarnings).toEqual([]);
   });
 });
+
+describe("cura del ZIP: el veredicto «unsupported» se cobra", () => {
+  // El stub cobrado por la prep: una cadena cuyos primeros bytes
+  // llevan la magia PK\x03\x04 y el resto es ASCII con texto
+  // buscable dentro — íntegramente UTF-8, como el fichero que la
+  // pasada dejó entrar como texto.
+  const ZIP_STUB =
+    "PK\u0003\u0004contenido del archivo comprimido, con la palabra ZORROPLATA dentro, " +
+    "y texto de relleno para que parezca un documento de verdad. ".repeat(4);
+  // Oficina con nombre neutro: la misma magia ZIP y un cuerpo
+  // que no es texto limpio, bajo un nombre que no dice nada.
+  const OFFICE_STUB =
+    "PK\u0003\u0004\u0000\u0001\u0002\u0003PLANILLA DE CALCULOS DEL TRIMESTRE con numeros y totales ".repeat(4) +
+    "\u0013\u0014\u0015";
+  // ZIP ordinario con su nombre: magia ZIP y relleno no textual.
+  const PLAIN_ZIP =
+    "PK\u0003\u0004\u0000\u0001relleno\u0002\u0003copia de seguridad de las fotos del viaje ".repeat(4) + "\u0016\u0017";
+  const GOOD_TEXT = "palabra ".repeat(50);
+
+  it("el stub cobrado, solo: rechaza con código «unsupported», sin colección ni trozos", async () => {
+    world.files.set("file:///archivo.zip", ZIP_STUB);
+    const err = await M.importDocuments([asset("archivo.zip", 900)], "Zip").catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(M.DocImportError);
+    expect(err).toMatchObject({ code: "unsupported" });
+    expect(world.created).toEqual([]);
+    expect(world.inserted).toEqual([]);
+  });
+
+  it("el stub en lote mixto: el bueno entra y el aviso es exactamente «unsupported»", async () => {
+    world.files.set("file:///archivo.zip", ZIP_STUB);
+    world.files.set("file:///bueno.txt", GOOD_TEXT);
+    const result = await M.importDocuments([asset("archivo.zip", 900), asset("bueno.txt", 400)], "Mixta");
+    expect(world.created).toHaveLength(1);
+    expect(world.inserted.length).toBeGreaterThan(0);
+    expect(result.importWarnings).toEqual([{ name: "archivo.zip", reason: "unsupported" }]);
+  });
+
+  it("oficina con nombre neutro, sola: rechaza «unsupported», no entra como texto", async () => {
+    world.files.set("file:///datos.bin", OFFICE_STUB);
+    const err = await M.importDocuments([asset("datos.bin", 900)], "Datos").catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(M.DocImportError);
+    expect(err).toMatchObject({ code: "unsupported" });
+    expect(world.created).toEqual([]);
+    expect(world.inserted).toEqual([]);
+  });
+
+  it("oficina con nombre neutro en lote mixto: el aviso es «unsupported»", async () => {
+    world.files.set("file:///datos.bin", OFFICE_STUB);
+    world.files.set("file:///bueno.txt", GOOD_TEXT);
+    const result = await M.importDocuments([asset("datos.bin", 900), asset("bueno.txt", 400)], "Mixta");
+    expect(world.created).toHaveLength(1);
+    expect(result.importWarnings).toEqual([{ name: "datos.bin", reason: "unsupported" }]);
+  });
+
+  it("ZIP ordinario con su nombre: rechazado con el código y el aviso «unsupported»", async () => {
+    world.files.set("file:///copia.zip", PLAIN_ZIP);
+    const err = await M.importDocuments([asset("copia.zip", 900)], "Copia").catch((e: unknown) => e);
+    expect(err).toMatchObject({ code: "unsupported" });
+    expect(world.created).toEqual([]);
+    // Y en lote mixto, el mismo fichero se nombra en los avisos.
+    world.files.set("file:///bueno.txt", GOOD_TEXT);
+    const result = await M.importDocuments([asset("copia.zip", 900), asset("bueno.txt", 400)], "Mixta");
+    expect(result.importWarnings).toEqual([{ name: "copia.zip", reason: "unsupported" }]);
+  });
+});

@@ -573,12 +573,15 @@
       "noText": "No se encontró texto en los archivos (¿un PDF escaneado como imagen?).",
       "scannedNoOcr": "«{{name}}» parece un PDF escaneado (las páginas son imágenes) y esta versión de NIDO no trae reconocimiento de texto (OCR), así que no se pudo importar. Prueba con el PDF original con texto seleccionable o con un archivo de texto.",
       "imageNoOcr": "«{{name}}» es una imagen y esta versión de NIDO no trae reconocimiento de texto (OCR), así que no se pudo importar.",
-      "ocrFailed": "«{{name}}» no se pudo leer ni con el reconocimiento de texto (OCR)."
+      "ocrFailed": "«{{name}}» no se pudo leer ni con el reconocimiento de texto (OCR).",
+      "unsupported": "«{{name}}» es de un tipo que NIDO no puede importar: los archivos comprimidos y los documentos de Office no se pueden leer como texto."
     },
     "chunkCount_one": "{{count}} fragmento",
     "chunkCount_other": "{{count}} fragmentos",
     "noTextWarning_one": "{{count}} documento no aportó texto: {{names}}",
     "noTextWarning_other": "{{count}} documentos no aportaron texto: {{names}}",
+    "warningUnsupported_one": "{{count}} documento no se importó por su tipo de archivo: {{names}}",
+    "warningUnsupported_other": "{{count}} documentos no se importaron por su tipo de archivo: {{names}}",
     "warningOcrFailed_one": "{{count}} documento no se pudo leer ni con el reconocimiento de texto (OCR): {{names}}",
     "warningOcrFailed_other": "{{count}} documentos no se pudieron leer ni con el reconocimiento de texto (OCR): {{names}}",
     "warningOcrEmpty_one": "{{count}} documento: el reconocimiento no encontró texto en sus páginas escaneadas: {{names}}",

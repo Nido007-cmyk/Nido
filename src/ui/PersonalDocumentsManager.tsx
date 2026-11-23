@@ -222,6 +222,8 @@ export function PersonalDocumentsManager() {
         .join(", ");
       const count = group.warnings.length;
       switch (group.reason) {
+        case "unsupported":
+          return t("personalDocumentsManager.warningUnsupported", { count, names });
         case "ocrFailed":
           return t("personalDocumentsManager.warningOcrFailed", { count, names });
         case "ocrEmpty":
