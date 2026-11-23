@@ -1017,6 +1017,58 @@ const FALL_INJURY_PREFIXES = [
   "machuc", "ferid", "fratur", "hurt", "injur", "bleed",
 ];
 
+/**
+ * El marco de NARRACIÓN de la caída (guardas de bateriaA2Movil,
+ * doctrina desde la 0.1.109: una historia de una emergencia pasada
+ * no dispara la respuesta de emergencia). La caída con víctima
+ * declara («mi vecino se cayó» es un parte), pero la misma frase
+ * contada a distancia no es un parte: trae su marcador de tiempo
+ * pegado a la caída («ayer», «hace años», «la semana pasada»,
+ * «desde entonces») o su desenlace resuelto («fue solo un susto,
+ * ya está bien»). La exención manda sobre el veto: si el texto
+ * trae un signo de inmovilidad EN PRESENTE, el caído sigue en el
+ * suelo aunque la caída fuera ayer, y la cara declara igual.
+ */
+const FALL_DISTANCE_TOKENS = new Set(["ayer", "anoche", "anteayer", "yesterday"]);
+const FALL_TIME_UNITS = new Set([
+  "anos", "ano", "meses", "mes", "semanas", "semana", "dias", "dia", "mucho",
+]);
+const FALL_COUNT_WORDS = new Set([
+  "un", "una", "uno", "um", "uma", "dos", "dois", "duas", "tres", "cuatro",
+  "cinco", "seis", "siete", "ocho", "nueve", "diez", "dez",
+]);
+const FALL_DISTANCE_BIGRAMS = new Set([
+  "semana pasada", "semana passada", "mes pasado", "mes passado",
+  "ano pasado", "anos atras", "years ago", "months ago", "weeks ago",
+  "days ago", "desde entonces", "desde entao", "otro dia",
+]);
+const FALL_RESOLUTION_PHRASES = new Set([
+  "ya esta bien", "ya esta mejor", "esta bien ahora",
+  "fue solo un susto", "solo fue un susto", "foi so um susto",
+  "ya se recupero", "ya se recuperou", "he is fine", "she is fine",
+]);
+
+function fallOccurrenceNarrated(words: string[], i: number, end: number): boolean {
+  const lo = Math.max(0, i - 4);
+  const hi = Math.min(words.length - 1, end + 4);
+  for (let j = lo; j <= hi; j++) {
+    if (FALL_DISTANCE_TOKENS.has(words[j])) return true;
+    if (j < hi && FALL_DISTANCE_BIGRAMS.has(`${words[j]} ${words[j + 1]}`)) return true;
+    if (words[j] === "hace") {
+      if (FALL_TIME_UNITS.has(words[j + 1] ?? "")) return true;
+      if (FALL_COUNT_WORDS.has(words[j + 1] ?? "") && FALL_TIME_UNITS.has(words[j + 2] ?? "")) return true;
+    }
+  }
+  // El desenlace resuelto se busca desde la caída hasta el final:
+  // es el cierre del relato («…, pero fue solo un susto»).
+  for (let j = i; j < words.length; j++) {
+    for (const n of [4, 3, 2]) {
+      if (j + n <= words.length && FALL_RESOLUTION_PHRASES.has(words.slice(j, j + n).join(" "))) return true;
+    }
+  }
+  return false;
+}
+
 function fallDeclares(words: string[], folded: string): boolean {
   const immobilityPresent = IMMOBILITY_SIGNS.some((t) => folded.includes(` ${t}`));
   for (const phrase of FALL_PHRASES) {
@@ -1024,6 +1076,7 @@ function fallDeclares(words: string[], folded: string): boolean {
     for (let i = 0; i + pw.length <= words.length; i++) {
       if (!pw.every((w, k) => words[i + k] === w)) continue;
       if (occurrenceNegated(words, i)) continue;
+      if (!immobilityPresent && fallOccurrenceNarrated(words, i, i + pw.length - 1)) continue;
       if (phrase === "me cai") return true;
       if (i === 0 && words.length <= 3) return true;
       if (immobilityPresent) return true;

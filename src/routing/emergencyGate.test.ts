@@ -757,6 +757,22 @@ describe("0.1.111 · auditoría profesional: la primera persona, la familia anch
     expect(isEmergencySituation("I fell down and hurt my back")).toBe(true);
   });
 
+  it("la caída CONTADA en pasado no declara: ni la de ayer, ni la de hace años, ni la resuelta", () => {
+    // Las tres guardas vivas de bateriaA2Movil (la historia de una
+    // emergencia pasada no dispara la respuesta de emergencia):
+    expect(isEmergencySituation("Mi vecino se cayó ayer de una escalera")).toBe(false);
+    expect(isEmergencySituation("Mi abuelo se cayó hace años y desde entonces no puede mover el cuello por la artrosis")).toBe(false);
+    expect(isEmergencySituation("Mi abuelo se cayó ayer de la bici y no podía mover la pierna, pero fue solo un susto y ya está bien")).toBe(false);
+    expect(isEmergencySituation("Ayer se cayó mi padre de la escalera")).toBe(false);
+    expect(isEmergencySituation("Me caí ayer de la bici, fue solo un susto")).toBe(false);
+  });
+
+  it("la narración no veta al caído que SIGUE en el suelo: inmovilidad en presente o caída de hace un momento", () => {
+    expect(isEmergencySituation("Se cayó ayer y no se puede mover")).toBe(true);
+    expect(isEmergencySituation("Se cayó hace un momento y no se puede levantar")).toBe(true);
+    expect(isEmergencySituation("Mi vecino se cayó de una escalera")).toBe(true);
+  });
+
   it("la pregunta de definición o de prevención no declara situación", () => {
     expect(isEmergencySituation("What is choking?")).toBe(false);
     expect(isEmergencySituation("What is drowning?")).toBe(false);
