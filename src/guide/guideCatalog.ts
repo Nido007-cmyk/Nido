@@ -61,15 +61,24 @@ export const GUIDE_MODULES: GuideModuleSpec[] = [
       { id: "notes", tools: ["save_note", "list_notes", "read_note"], routes: ["tool:noteSave", "tool:noteSave", "tool:noteList", "tool:noteRead"] },
       {
         id: "memory",
-        tools: ["remember_fact"],
+        tools: ["remember_fact", "save_person"],
         routes: ["remember", "remember", "remember", "remember", "remember", "remember", "remember"],
+      },
+      // Bloque 5 (auditoría 0.1.112): las tres herramientas de borrar.
+      {
+        id: "forget",
+        tools: ["delete_note", "delete_reminder", "delete_memory"],
+        routes: ["tool:noteDelete", "tool:reminderDelete", "tool:memoryForget"],
       },
       {
         id: "calendar",
         tools: ["list_calendar_events", "create_calendar_event"],
         routes: ["tool:calendarList", "tool:calendarList", "tool:calendarCreate"],
       },
-      { id: "contacts", tools: ["find_contact", "place_call"], routes: ["contact", "contact"] },
+      { id: "contacts", tools: ["find_contact", "place_call", "send_sms"], routes: ["contact", "contact", "contact"] },
+      // Bloque 5: las skills (use_skill) solo con modelo: la lección no
+      // promete ruta determinista, enseña cómo pedirlas.
+      { id: "skills", tools: ["use_skill"] },
     ],
   },
   {
@@ -80,16 +89,37 @@ export const GUIDE_MODULES: GuideModuleSpec[] = [
       { id: "documents", routes: ["knowledge"] },
       { id: "scanned", routes: ["knowledge"] },
       { id: "multilingual" },
-      { id: "linksFiles", tools: ["open_app", "read_picked_file"], routes: ["tool:openLink", "tool:pickFile"] },
+      { id: "linksFiles", tools: ["open_app", "read_picked_file", "analyze_table"], routes: ["tool:openLink", "tool:pickFile"] },
     ],
   },
   {
     id: "connect",
-    lessons: [{ id: "p2p" }, { id: "outside" }, { id: "voice" }],
+    lessons: [
+      { id: "p2p" },
+      // Bloque 5 (auditoría 0.1.112): la vía del agente para los mensajes
+      // NIDO, los mensajes temporales y compartir un paquete.
+      {
+        id: "agentMessages",
+        tools: [
+          "nido_send_message",
+          "nido_read_inbox",
+          "nido_my_code",
+          "nido_pair",
+          "nido_review_tasks",
+          "nido_approve_task",
+          "nido_reject_task",
+        ],
+        routes: ["tool:nidoSend", "tool:nidoInbox", "tool:nidoCode", "tool:nidoTasks"],
+      },
+      { id: "disappearing" },
+      { id: "packShare" },
+      { id: "outside" },
+      { id: "voice" },
+    ],
   },
   {
     id: "privacy",
-    lessons: [{ id: "offline", routes: ["selfKnowledge"] }, { id: "hardware" }, { id: "backup" }, { id: "erase" }],
+    lessons: [{ id: "offline", routes: ["selfKnowledge"] }, { id: "hardware" }, { id: "backup" }, { id: "erase" }, { id: "panic" }],
   },
   {
     id: "personalize",

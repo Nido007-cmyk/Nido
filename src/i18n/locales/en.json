@@ -1645,6 +1645,17 @@
             "tip": "“Remember that…” saves a fact. “Remind me…” sets an alert. See and delete what's saved in the menu → $t(chatScreen.drawerItems.memory)."
           },
           {
+            "id": "forget",
+            "title": "Delete and forget",
+            "what": "Delete a note or a reminder, or forget something you told me. Before deleting I show you what it is and wait for you to confirm.",
+            "examples": [
+              "delete the shopping note",
+              "delete the pharmacy reminder",
+              "forget my favorite color"
+            ],
+            "tip": "Deleting can't be undone. If you don't know the exact name, ask “what notes do I have” or “my reminders” first."
+          },
+          {
             "id": "calendar",
             "title": "Calendar",
             "what": "Check your events and add new ones to your device's calendar.",
@@ -1661,9 +1672,20 @@
             "what": "Search your contacts and call without looking up the number.",
             "examples": [
               "find contact Ana",
-              "call Ana"
+              "call Ana",
+              "send an SMS to Ana saying I'm on my way"
             ],
             "tip": "Before calling NIDO shows you the number and asks you to confirm. Needs contacts permission."
+          },
+          {
+            "id": "skills",
+            "title": "Guided procedures",
+            "what": "With a model loaded, NIDO can follow step-by-step procedures for tasks you repeat: planning your day or your week, analyzing a table or summarizing a file.",
+            "steps": [
+              "Ask in your own words: “plan my day”, “organize my week” or “summarize a file”.",
+              "NIDO loads the procedure and uses what's already on your phone: the time, your calendar, your notes or the file you pick."
+            ],
+            "tip": "It needs the chat model downloaded. Before creating reminders or events from the plan, NIDO asks you."
           }
         ]
       },
@@ -1766,6 +1788,39 @@
             "tip": "If the other NIDO is out of range, the message waits encrypted and is sent when it shows up. If it disconnects after a while with NIDO closed, tap “Allow” on the battery notice in the NIDO screen."
           },
           {
+            "id": "agentMessages",
+            "title": "NIDO messages from the chat",
+            "what": "Ask in the chat to send or read NIDO messages, without leaving the conversation.",
+            "examples": [
+              "send Ana a NIDO message: I'll be there at 8",
+              "do I have any nido messages?",
+              "what is my nido code",
+              "pending nido tasks"
+            ],
+            "tip": "Before sending I show you the whole message and wait for you to confirm. It only reaches contacts you've already paired with; if they're out of range, the message waits encrypted."
+          },
+          {
+            "id": "disappearing",
+            "title": "Disappearing messages",
+            "what": "Make the new messages in a chat delete themselves on both phones.",
+            "steps": [
+              "Menu → NIDO → $t(nido.tabChats) tab, and open the chat with your contact.",
+              "At the top, tap the timer button ($t(nido.disappearTitle)) and choose how long they last."
+            ],
+            "tip": "For you the time counts from sending; for your contact, from when they see it. Nobody can stop someone from photographing the screen with another camera."
+          },
+          {
+            "id": "packShare",
+            "title": "Share a pack",
+            "what": "Pass a knowledge pack to another NIDO with no internet, over Bluetooth or local Wi-Fi.",
+            "steps": [
+              "Connect with the contact first ($t(nido.tabLink) tab).",
+              "Menu → NIDO → $t(nido.tabPacks) tab, pick the pack and tap $t(packshare.share).",
+              "Choose who to send it to; your contact accepts or declines it."
+            ],
+            "tip": "Only NIDO catalog packs can be shared, exactly as they were downloaded. If you haven't compared fingerprints yet, the offer is paused."
+          },
+          {
             "id": "outside",
             "title": "NIDO from any app",
             "what": "Use NIDO without opening it first.",
@@ -1827,6 +1882,16 @@
               "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.recovery) → $t(modelSetupScreen.recovery.dangerBadge)."
             ],
             "tip": "This can't be undone. If you want to keep something, make a backup first."
+          },
+          {
+            "id": "panic",
+            "title": "Panic button",
+            "what": "A button that, held for 3 seconds, erases all of NIDO's data at once.",
+            "steps": [
+              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.security) → turn on $t(panic.settingTitle).",
+              "A red shield appears on the main screen: hold it for 3 seconds to erase everything."
+            ],
+            "tip": "It doesn't ask for your fingerprint or for confirmation, and it can't be undone. If you want to keep something, make a backup first."
           }
         ]
       },
