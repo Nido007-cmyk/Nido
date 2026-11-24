@@ -362,7 +362,7 @@
     "unavailable": "Indisponível neste dispositivo",
     "unavailableNote": "Nenhum serviço de reconhecimento de voz do sistema foi encontrado — comum em builds GrapheneOS / sem Google. Um modelo whisper.cpp embarcado eliminaria essa dependência, mas é um projeto separado do porte da própria integração com o llama.rn; não implementado nesta versão.",
     "readAloudLabel": "Leitura em voz alta",
-    "readAloudValue": "Lê as respostas do assistente usando a voz do sistema (sem internet).",
+    "readAloudValue": "Lê as respostas do assistente com a voz do sistema. O NIDO descarta as vozes que o seu motor de voz marca como de rede e prefere as que funcionam no telefone; se o motor não informar, pode usar uma voz que envia o texto pela internet.",
     "engineOnDevice": "Reconhecedor no telefone: o áudio não sai daqui",
     "engineSystem": "Só o serviço de voz do sistema (do Google ou do fabricante): pode enviar o áudio pela internet",
     "onDeviceOnlyLabel": "Só reconhecimento no telefone",
