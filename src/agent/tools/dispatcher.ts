@@ -27,7 +27,7 @@ import {
   type LabeledContent,
   type PolicyDecision,
 } from "../policy/policyEngine";
-import { SENSITIVE_TOOLS } from "./confirm";
+import { SENSITIVE_TOOLS, confirmCancelledMessage } from "./confirm";
 
 import { actionLog } from "../actionLog";
 import { isToolDisabled } from "./toolPermissions";
@@ -377,7 +377,13 @@ export async function dispatchToolCallDetailed(
     actionLog.record(validated.tool.name, "failed", false, undefined, decision.injectionOrigin);
     return { status: "failed", text: `Error ejecutando "${validated.tool.name}": ${e?.message ?? String(outcome.error)}` };
   }
-  actionLog.record(validated.tool.name, "executed", decision.requiresConfirmation, undefined, decision.injectionOrigin);
+  // CONF-2: si el handler envuelto en withConfirmation devolvió el
+  // mensaje de cancelación, la persona dijo «no» en su diálogo: el
+  // registro asienta "cancelled", no "executed" (antes el rechazo
+  // quedaba asentado como ejecutado). El resultado devuelto (estado y
+  // texto) no cambia, como en la forma de PC.
+  const userCancelled = outcome.result === confirmCancelledMessage();
+  actionLog.record(validated.tool.name, userCancelled ? "cancelled" : "executed", decision.requiresConfirmation, undefined, decision.injectionOrigin);
   return { status: "executed", text: typeof outcome.result === "string" ? outcome.result : JSON.stringify(outcome.result) };
 }
 
