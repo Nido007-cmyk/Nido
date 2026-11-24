@@ -340,37 +340,16 @@ export function unknownCountryText(lang: SafetyLang, asked: boolean, knownNames:
  */
 const SELF_HARM_PATTERNS = [
       // español
-      "(?:ya )?no quiero (?:seguir )?vivi(?:r|endo)",
-      "(?:me )?quiero morir(?:me)?",
-      "quiero matarme",
-      "me quiero matar",
-      "(?:me )?voy a matar(?:me)?",
-      "quitarme la vida",
-      "suicidarme",
-      "(?:pienso|pensando|he pensado) en (?:el )?suicid\\w*",
-      "(?:acabar|terminar) con mi vida",
-      "hacerme dano",
-      "(?:pienso|pensando|he pensado) en (?:lastimarme|herirme)",
       // C1-H1 (barrido 0.1.96): la forma directa con «lastimar»/«herir»,
       // gemela de la portuguesa «quero me machucar / ferir».
-      "(?:quiero|voy a|tengo ganas de) (?:lastimarme|herirme)",
-      "lastimarme a mi mism[oa]",
       // 0.1.99 T-01 (M-07, auditoría 2026-11-14): la familia de
       // «cortar», la forma corriente de decirlo que faltaba en los
       // tres idiomas («quiero cortarme», sonda P-17d). Siempre con
       // el reflexivo: «quiero cortar» a secas también es cortar el
       // pan o cortar con alguien. Los objetos cotidianos que sí
       // llevan el reflexivo (el pelo, las uñas) van a los vetos.
-      "(?:quiero|voy a|tengo ganas de) cortarme",
-      "me (?:quiero|voy a) cortar",
-      "(?:pienso|pensando|he pensado) en cortarme",
       // 0.1.99 T-01 (M-07): «estar vivo / estar muerto», la gemela
       // que el acta nombra: estaba «no quiero vivir», no «estar vivo».
-      "(?:ya )?no quiero estar viv[oa]",
-      "(?:quiero|queria) estar muert[oa]",
-      "no vale la pena (?:seguir )?vivi(?:r|endo)",
-      "(?:estaria|estarian) mejor (?:muert[oa]|sin mi)",
-      "(?:ya )?no (?:le )?encuentro sentido a (?:la vida|nada)",
       // inglés
       "kill(?:ing)? myself",
       "(?:want|wanna) to die",
@@ -431,25 +410,12 @@ const SELF_HARM_PATTERNS = [
       // nunca «voy a tomar mis pastillas». El tratamiento completo
       // («todas las pastillas del tratamiento») va a SELF_HARM_VETO_RE.
       // — es
-      "(?:ya )?no tengo (?:ninguna |ningun |mas )?(?:razon|razones|motivo|motivos) (?:para|por (?:la )?(?:que|cual)) (?:seguir )?vivi(?:r|endo)",
-      "no (?:hay|veo|encuentro) (?:ninguna |ningun )?(?:razon|motivo|sentido) (?:para|en) (?:seguir )?vivi(?:r|endo)",
-      "(?:ya )?no quiero (?:volver a )?despertar(?:me)?(?: (?:manana|nunca mas|mas|jamas))?(?=\\s*(?:$|[.,;:!?]|y |porque |pero ))",
-      "(?:dormir(?:me)?|quedarme dormid[oa]) y no (?:volver a )?despertar(?:me)?",
       // Corrección del bloque 1 (veredicto de la casa): la desiderativa
       // de la familia 1, «quisiera no despertar», con la misma guarda de
       // final de frase que «no quiero despertar».
-      "(?:quisiera|querria|me gustaria) no (?:volver a )?despertar(?:me)?(?: (?:manana|nunca mas|mas|jamas))?(?=\\s*(?:$|[.,;:!?]|y |porque |pero ))",
-      "ojala no (?:despertara|despierte|amaneciera)",
-      "ojala (?:estuviera muert[oa]|me muriera|no hubiera nacido)",
-      "seria mejor (?:si )?(?:no existiera|desapareciera|me muriera|estuviera muert[oa])",
-      "(?:todos|todo el mundo|mi familia) (?:estaria|estarian|viviria|vivirian) mejor sin mi",
-      "(?:voy a|quiero|pienso|tengo ganas de|(?:estoy )?pensando en|he pensado en) (?:tomarme|tomar|beberme|tragarme|meterme) (?:todas (?:las|mis)|un bote de|un frasco de|una caja de|la caja de|el bote de) (?:pastillas|pildoras|medicinas|medicamentos|tabletas|capsulas|somniferos)",
-      "(?:voy a|quiero|pienso) (?:tomarme|tomar|hacerme|provocarme|provocar) una sobredosis",
       // Familia 4, forma telegráfica: la frase ENTERA es «tomarme todas
       // las pastillas», sin verbo de anuncio. Anclada al mensaje completo
       // para no cazar «tengo que tomarme todas las pastillas del…».
-      "^(?:tomarme|tragarme|beberme) todas (?:las|mis) (?:pastillas|pildoras|medicinas|tabletas|capsulas|somniferos)(?=[.!]*$)",
-      "(?:quiero|me gustaria) desaparecer (?:para siempre|del mundo|de este mundo)",
       // — en
       "(?:have|got) no (?:reason|reasons) (?:left )?(?:to live|for living|to go on)",
       "no reason to (?:keep )?(?:living|going on|go on)",
