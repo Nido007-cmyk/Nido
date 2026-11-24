@@ -1222,10 +1222,12 @@ const useSkillHandler: ToolHandler = async (args) => {
   // contenido se presenta como lo que es — el documento de
   // procedimiento de la skill — sin moverlo a un canal confiable: el
   // envoltorio del bucle no cambia.
+  // Bloque 4 (auditoría 0.1.112): el procedimiento en el idioma del
+  // turno; las aprendidas sin gemelas siguen con su texto único.
   return L(
     `Skill «${skill.name}» cargada. Este es su procedimiento:\n\n${skill.instructions}`,
-    `Skill “${skill.name}” loaded. Here is its procedure:\n\n${skill.instructions}`,
-    `Skill «${skill.name}» carregada. Este é o seu procedimento:\n\n${skill.instructions}`,
+    `Skill “${skill.name}” loaded. Here is its procedure:\n\n${skill.instructionsI18n?.en ?? skill.instructions}`,
+    `Skill «${skill.name}» carregada. Este é o seu procedimento:\n\n${skill.instructionsI18n?.pt ?? skill.instructions}`,
   );
 };
 

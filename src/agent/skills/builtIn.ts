@@ -7,7 +7,9 @@
 /**
  * builtIn.ts — NIDO: skills integradas (Fase D).
  *
- * Instrucciones curadas en español para tareas recurrentes. El agente las
+ * Instrucciones curadas para tareas recurrentes, en español con sus gemelas
+ * en inglés y portugués (instructionsI18n, bloque 4 de la auditoría de la
+ * 0.1.112: el turno en otro idioma recibía «responde en español»). El agente las
  * descubre por su descripción y las carga con la herramienta `use_skill`.
  * Todo lo que hacen usa herramientas locales: cero red.
  */
@@ -32,6 +34,36 @@ export const BUILT_IN_SKILLS: Skill[] = [
       "4. Responde con las cifras exactas del análisis y una conclusión breve en español.",
       "5. Nunca inventes números: si el análisis no trae un dato, dilo y sugiere cómo obtenerlo.",
     ].join("\n"),
+    instructionsI18n: {
+      en: [
+      "# Skill: analiza-datos",
+      "",
+      "When the user asks you to analyze tabular data (CSV, TSV or similar):",
+      "",
+      "1. If you don't have the content yet, use `read_picked_file` so the user picks the file (up to 200 KB).",
+      "2. Pass the text to `analyze_table`. It returns the columns, their inferred types, statistics per column and the first rows.",
+      "3. For specific questions use its parameters:",
+      '   - `filter`: "product=bread", "amount>100"; combine with ";" (logical AND).',
+      "   - `sort_by`: a column (use \"-column\" for descending).",
+      "   - `top_n`: how many rows to show.",
+      "4. Answer with the exact figures from the analysis and a short conclusion in English.",
+      "5. Never make up numbers: if the analysis doesn't have a figure, say so and suggest how to get it.",
+    ].join("\n"),
+      pt: [
+      "# Skill: analiza-datos",
+      "",
+      "Quando o usuário pedir para analisar dados em tabela (CSV, TSV ou parecido):",
+      "",
+      "1. Se ainda não tiver o conteúdo, use `read_picked_file` para o usuário escolher o arquivo (até 200 KB).",
+      "2. Passe o texto para `analyze_table`. Ela devolve as colunas, os tipos inferidos, estatísticas por coluna e as primeiras linhas.",
+      "3. Para perguntas específicas use os parâmetros:",
+      '   - `filter`: "produto=pão", "valor>100"; combine com ";" (E lógico).',
+      "   - `sort_by`: uma coluna (use \"-coluna\" para ordem decrescente).",
+      "   - `top_n`: quantas linhas mostrar.",
+      "4. Responda com os números exatos da análise e uma conclusão curta em português.",
+      "5. Nunca invente números: se a análise não trouxer um dado, diga isso e sugira como obtê-lo.",
+    ].join("\n"),
+    },
   },
   {
     name: "planifica-mi-dia",
@@ -48,6 +80,32 @@ export const BUILT_IN_SKILLS: Skill[] = [
       "5. Si falta información clave (p.ej. a qué hora empieza a trabajar), pregunta antes de inventar horarios.",
       "6. Cierra ofreciendo crear recordatorios o eventos con `create_reminder` / `create_calendar_event` si el usuario quiere.",
     ].join("\n"),
+    instructionsI18n: {
+      en: [
+      "# Skill: planifica-mi-dia",
+      "",
+      "When the user asks you to plan or organize their day:",
+      "",
+      "1. Call `device_time` to know the date and time.",
+      "2. Call `list_calendar_events` for today (from/to with today's date).",
+      "3. Call `list_notes` in case there are relevant pending items written down.",
+      "4. Propose a plan in time blocks, in English: fixed events first, then tasks, with breaks.",
+      "5. If key information is missing (e.g. what time they start work), ask before making up times.",
+      "6. Finish by offering to create reminders or events with `create_reminder` / `create_calendar_event` if the user wants.",
+    ].join("\n"),
+      pt: [
+      "# Skill: planifica-mi-dia",
+      "",
+      "Quando o usuário pedir para planejar ou organizar o dia:",
+      "",
+      "1. Chame `device_time` para saber a data e a hora.",
+      "2. Chame `list_calendar_events` para hoje (from/to com a data de hoje).",
+      "3. Chame `list_notes` caso haja pendências anotadas que importem.",
+      "4. Proponha um plano em blocos de horário, em português: compromissos fixos primeiro, depois tarefas, com pausas.",
+      "5. Se faltar uma informação importante (por exemplo, a que horas começa a trabalhar), pergunte antes de inventar horários.",
+      "6. Termine oferecendo criar lembretes ou eventos com `create_reminder` / `create_calendar_event`, se o usuário quiser.",
+    ].join("\n"),
+    },
   },
   {
     name: "planifica-mi-semana",
@@ -68,6 +126,40 @@ export const BUILT_IN_SKILLS: Skill[] = [
       "4. Presenta el plan día por día en español, con bloques horarios.",
       "5. Cierra ofreciendo crear recordatorios con `create_reminder` si el usuario quiere.",
     ].join("\n"),
+    instructionsI18n: {
+      en: [
+      "# Skill: planifica-mi-semana",
+      "",
+      "When the user asks you to plan or organize their week:",
+      "",
+      "1. Call `device_time` to know the date and the day of the week.",
+      "2. Ask if you don't know: working hours (e.g. 9-6), days off, which exercise they prefer.",
+      "3. MANDATORY RULES:",
+      "   - Cover all 7 days (or 5 workdays plus a distinct weekend), NOT just one day.",
+      "   - Spread exercise over several days (e.g. Mon/Wed/Fri), NEVER all piled into one.",
+      "   - No block may overlap another: every activity has a clear start and end.",
+      "   - Respect the full working hours (if they work 9-6, the plan shows 9-6, not 9-12).",
+      "   - Include breaks and free time; don't fill every hour.",
+      "4. Present the plan day by day in English, with time blocks.",
+      "5. Finish by offering to create reminders with `create_reminder` if the user wants.",
+    ].join("\n"),
+      pt: [
+      "# Skill: planifica-mi-semana",
+      "",
+      "Quando o usuário pedir para planejar ou organizar a semana:",
+      "",
+      "1. Chame `device_time` para saber a data e o dia da semana.",
+      "2. Pergunte o que não souber: horário de trabalho (ex.: 9-18), dias de folga, que exercício prefere.",
+      "3. REGRAS OBRIGATÓRIAS:",
+      "   - Cubra os 7 dias (ou 5 dias úteis mais um fim de semana diferente), NÃO só um dia.",
+      "   - Distribua o exercício em vários dias (ex.: seg/qua/sex), NUNCA tudo amontoado num só.",
+      "   - Nenhum bloco pode se sobrepor a outro: cada atividade tem início e fim claros.",
+      "   - Respeite o horário de trabalho inteiro (se trabalha das 9 às 18, o plano mostra 9-18, não 9-12).",
+      "   - Inclua pausas e tempo livre; não ocupe todas as horas.",
+      "4. Apresente o plano dia a dia, em português, com blocos de horário.",
+      "5. Termine oferecendo criar lembretes com `create_reminder`, se o usuário quiser.",
+    ].join("\n"),
+    },
   },
   {
     name: "resume-archivo",
@@ -85,5 +177,33 @@ export const BUILT_IN_SKILLS: Skill[] = [
       "   - Qué acción sugiere, si aplica.",
       "4. No pegues el texto completo: cita fragmentos cortos solo si aportan.",
     ].join("\n"),
+    instructionsI18n: {
+      en: [
+      "# Skill: resume-archivo",
+      "",
+      "When the user asks you to summarize or explain a file:",
+      "",
+      "1. Use `read_picked_file` so they pick the file (up to 200 KB of text).",
+      "2. If it looks like a table (CSV), consider the `analiza-datos` skill instead.",
+      "3. Summarize in English with this structure:",
+      "   - What it's about (1 line).",
+      "   - 3–5 key points.",
+      "   - What action it suggests, if any.",
+      "4. Don't paste the whole text: quote short excerpts only when they add something.",
+    ].join("\n"),
+      pt: [
+      "# Skill: resume-archivo",
+      "",
+      "Quando o usuário pedir para resumir ou explicar um arquivo:",
+      "",
+      "1. Use `read_picked_file` para ele escolher o arquivo (até 200 KB de texto).",
+      "2. Se parecer uma tabela (CSV), considere a skill `analiza-datos` no lugar desta.",
+      "3. Resuma em português com esta estrutura:",
+      "   - Do que se trata (1 linha).",
+      "   - 3 a 5 pontos principais.",
+      "   - Que ação sugere, se for o caso.",
+      "4. Não cole o texto inteiro: cite trechos curtos só quando acrescentarem algo.",
+    ].join("\n"),
+    },
   },
 ];

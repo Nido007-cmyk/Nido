@@ -21,6 +21,7 @@
  */
 
 import { LOCAL_TOOLS, type ToolDefinition } from "./manifest";
+import { TOOL_DESCRIPTIONS_I18N } from "./toolDescriptions";
 import {
   evaluateAction,
   type LabeledContent,
@@ -380,7 +381,9 @@ export async function dispatchToolCallDetailed(
   return { status: "executed", text: typeof outcome.result === "string" ? outcome.result : JSON.stringify(outcome.result) };
 }
 
-/** Describe las herramientas para el system prompt (compacto, en español).
+/** Describe las herramientas para el system prompt (compacto, en el idioma del turno:
+ * español desde el manifiesto, inglés y portugués desde toolDescriptions.ts —
+ * auditoría de la 0.1.112, bloque 4; antes iba siempre en español).
  *
  * Formato por herramienta: `- nombre: descripción (param*:tipo: hint; ...)`.
  * El `*` marca parámetros requeridos. Se conserva TODA la información
@@ -395,9 +398,18 @@ export async function dispatchToolCallDetailed(
  * every turn; most intents need only a few. Pass the agent intent to get
  * the trimmed list; omit it for the full list (backwards compatible).
  */
-export function describeToolsForPrompt(intent?: "recordar" | "actuar" | "conversar"): string {
+export function describeToolsForPrompt(
+  intent?: "recordar" | "actuar" | "conversar",
+  lang: "es" | "en" | "pt" = "es",
+): string {
   const tools = intent ? LOCAL_TOOLS.filter((t) => TOOLS_BY_INTENT[intent].includes(t.name)) : LOCAL_TOOLS;
-  return tools.map(describeToolCompact).join("\n");
+  return tools.map((t) => describeToolCompact(t, lang)).join("\n");
+}
+
+/** La descripción de la herramienta en el idioma del turno (bloque 4, 0.1.112). */
+export function toolDescriptionFor(t: ToolDefinition, lang: "es" | "en" | "pt"): string {
+  if (lang === "es") return t.description;
+  return TOOL_DESCRIPTIONS_I18N[t.name]?.[lang] ?? t.description;
 }
 
 /**
@@ -409,11 +421,11 @@ export function describeToolsForPrompt(intent?: "recordar" | "actuar" | "convers
  * the ~1,790-token old prompt. The dispatcher still validates full args
  * at call time.
  */
-function describeToolCompact(t: ToolDefinition): string {
+function describeToolCompact(t: ToolDefinition, lang: "es" | "en" | "pt" = "es"): string {
   const params = Object.entries(t.parameters)
     .map(([n, p]) => `${n}${p.required ? "*" : ""}:${p.type}`)
     .join(", ");
-  return `- ${t.name}${params ? `(${params})` : ""}: ${t.description}`;
+  return `- ${t.name}${params ? `(${params})` : ""}: ${toolDescriptionFor(t, lang)}`;
 }
 
 /**
