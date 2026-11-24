@@ -40,7 +40,7 @@ describe("F-8 dependency pins", () => {
     const deps = pkg.dependencies;
     expect(deps["llama.rn"]).toBe("0.13.0-rc.9"); // native .so binary — la de la 0.1.98. La reversa de la carga de la 0.1.102 (orden del dueño, 2026-11-15) la bajó desde rc.11: se declara lo que se deja atrás — el arreglo #426 de rc.11 (contexto bloqueado tras un throw) y su sync de llama.cpp a b12292; la sospecha M-38, re-verificada sobre el código de rc.11 en T-22, NO se traslada a rc.9 y queda por rehacer. rc.9 no es imprescindible para nada ajeno a la carga: todos los símbolos que el código usa existen ya en sus declaraciones (verificado contra una instalación real de rc.9), y la recuperación de contexto tras una generación fallida vive en la app (recreateContext), como en la 0.1.98.
     expect(deps["expo-secure-store"]).toBe("57.0.4"); // Keystore DEK wrapper
-    expect(deps["expo-sqlite"]).toBe("57.0.4"); // SQLCipher storage (fix concurrencia #49796)
+    expect(deps["expo-sqlite"]).toBe("57.0.5"); // SQLCipher storage (fix concurrencia #49796; 57.0.5 revisada en REV-SQLITE-5705: motor SQLCipher/SQLite byte-idéntico a 57.0.4, el parche solo resetea el statement tras SQLITE_BUSY, PRs #51413/#53339)
     expect(deps["expo-crypto"]).toBe("57.0.4"); // RNG/hash
     expect(deps["expo-local-authentication"]).toBe("57.0.3"); // biometric gate
     expect(deps["tweetnacl"]).toBe("1.0.3"); // P2P crypto primitives
