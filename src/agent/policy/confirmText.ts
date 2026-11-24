@@ -26,7 +26,7 @@ export interface ConfirmDialogText {
   message: string;
 }
 
-const T = {
+const T: Record<string, Record<ConfirmLang, string>> = {
   callTitle: { es: "Llamar", en: "Call", pt: "Ligar" },
   callMessage: {
     es: "¿Abrir el marcador para llamar a {{phone}}?\n\nLa llamada no empieza hasta que pulses llamar.",
