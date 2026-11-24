@@ -191,3 +191,135 @@ describe("bloque 1 (0.1.112): la red de crisis caza las cuatro familias en los t
     }
   });
 });
+
+/**
+ * Paso 0-bis, pieza (a): los literales del cobro 6 de la verificación de la
+ * corrección del bloque 1. La conducta ya estaba ejecutada y verde (88/88 en
+ * el arnés de la casa); lo que faltaba era el caso propio y literal de cada
+ * frase, para que ninguna regresión futura la pierda de vista. Cada frase va
+ * como `it` propio con su grafía gobernada exacta: 18 que declaran y 8
+ * guardas que no declaran. La guarda de packs vive en packFacts.test.ts.
+ */
+describe("paso 0-bis (a): los literales gobernados del bloque 1, caso a caso", () => {
+  it("declara · no quiero despertarme nunca más", () => {
+    expect(isSelfHarmMessage("no quiero despertarme nunca más")).toBe(true);
+    expect(matchSafetyAnswer("no quiero despertarme nunca más", "es")?.kind).toBe("self-harm");
+  });
+
+  it("declara · quiero dormir y no despertar", () => {
+    expect(isSelfHarmMessage("quiero dormir y no despertar")).toBe(true);
+    expect(matchSafetyAnswer("quiero dormir y no despertar", "es")?.kind).toBe("self-harm");
+  });
+
+  it("declara · no hay razón para seguir viviendo", () => {
+    expect(isSelfHarmMessage("no hay razón para seguir viviendo")).toBe(true);
+    expect(matchSafetyAnswer("no hay razón para seguir viviendo", "es")?.kind).toBe("self-harm");
+  });
+
+  it("declara · voy a tomar todas mis pastillas", () => {
+    expect(isSelfHarmMessage("voy a tomar todas mis pastillas")).toBe(true);
+    expect(matchSafetyAnswer("voy a tomar todas mis pastillas", "es")?.kind).toBe("self-harm");
+  });
+
+  it("declara · i don't want to wake up anymore", () => {
+    expect(isSelfHarmMessage("i don't want to wake up anymore")).toBe(true);
+    expect(matchSafetyAnswer("i don't want to wake up anymore", "es")?.kind).toBe("self-harm");
+  });
+
+  it("declara · my family would be better off without me", () => {
+    expect(isSelfHarmMessage("my family would be better off without me")).toBe(true);
+    expect(matchSafetyAnswer("my family would be better off without me", "es")?.kind).toBe("self-harm");
+  });
+
+  it("declara · i want to take all the pills", () => {
+    expect(isSelfHarmMessage("i want to take all the pills")).toBe(true);
+    expect(matchSafetyAnswer("i want to take all the pills", "es")?.kind).toBe("self-harm");
+  });
+
+  it("declara · i'm going to overdose", () => {
+    expect(isSelfHarmMessage("i'm going to overdose")).toBe(true);
+    expect(matchSafetyAnswer("i'm going to overdose", "es")?.kind).toBe("self-harm");
+  });
+
+  it("declara · não há razão para viver", () => {
+    expect(isSelfHarmMessage("não há razão para viver")).toBe(true);
+    expect(matchSafetyAnswer("não há razão para viver", "es")?.kind).toBe("self-harm");
+  });
+
+  it("declara · não tenho razões para viver", () => {
+    expect(isSelfHarmMessage("não tenho razões para viver")).toBe(true);
+    expect(matchSafetyAnswer("não tenho razões para viver", "es")?.kind).toBe("self-harm");
+  });
+
+  it("declara · minha família estaria melhor sem mim", () => {
+    expect(isSelfHarmMessage("minha família estaria melhor sem mim")).toBe(true);
+    expect(matchSafetyAnswer("minha família estaria melhor sem mim", "es")?.kind).toBe("self-harm");
+  });
+
+  it("declara · quero tomar todos os meus remédios", () => {
+    expect(isSelfHarmMessage("quero tomar todos os meus remédios")).toBe(true);
+    expect(matchSafetyAnswer("quero tomar todos os meus remédios", "es")?.kind).toBe("self-harm");
+  });
+
+  it("declara · quero ter uma overdose", () => {
+    expect(isSelfHarmMessage("quero ter uma overdose")).toBe(true);
+    expect(matchSafetyAnswer("quero ter uma overdose", "es")?.kind).toBe("self-harm");
+  });
+
+  it("declara · no quiero despertar", () => {
+    expect(isSelfHarmMessage("no quiero despertar")).toBe(true);
+    expect(matchSafetyAnswer("no quiero despertar", "es")?.kind).toBe("self-harm");
+  });
+
+  it("declara · no tengo razones para vivir", () => {
+    expect(isSelfHarmMessage("no tengo razones para vivir")).toBe(true);
+    expect(matchSafetyAnswer("no tengo razones para vivir", "es")?.kind).toBe("self-harm");
+  });
+
+  it("declara · estarían mejor sin mí", () => {
+    expect(isSelfHarmMessage("estarían mejor sin mí")).toBe(true);
+    expect(matchSafetyAnswer("estarían mejor sin mí", "es")?.kind).toBe("self-harm");
+  });
+
+  it("declara · estariam melhor sem mim", () => {
+    expect(isSelfHarmMessage("estariam melhor sem mim")).toBe(true);
+    expect(matchSafetyAnswer("estariam melhor sem mim", "es")?.kind).toBe("self-harm");
+  });
+
+  it("declara · vou tomar todos os comprimidos", () => {
+    expect(isSelfHarmMessage("vou tomar todos os comprimidos")).toBe(true);
+    expect(matchSafetyAnswer("vou tomar todos os comprimidos", "es")?.kind).toBe("self-harm");
+  });
+
+  it("no declara · no quiero despertarme a las cinco", () => {
+    expect(isSelfHarmMessage("no quiero despertarme a las cinco")).toBe(false);
+  });
+
+  it("no declara · no quiero despertar a los niños", () => {
+    expect(isSelfHarmMessage("no quiero despertar a los niños")).toBe(false);
+  });
+
+  it("no declara · i don't want to wake up at five", () => {
+    expect(isSelfHarmMessage("i don't want to wake up at five")).toBe(false);
+  });
+
+  it("no declara · don't wake me up tomorrow", () => {
+    expect(isSelfHarmMessage("don't wake me up tomorrow")).toBe(false);
+  });
+
+  it("no declara · não quero acordar às cinco", () => {
+    expect(isSelfHarmMessage("não quero acordar às cinco")).toBe(false);
+  });
+
+  it("no declara · tengo que tomarme todas las pastillas que me recetó el médico", () => {
+    expect(isSelfHarmMessage("tengo que tomarme todas las pastillas que me recetó el médico")).toBe(false);
+  });
+
+  it("no declara · vou tomar todos os comprimidos que o médico receitou", () => {
+    expect(isSelfHarmMessage("vou tomar todos os comprimidos que o médico receitou")).toBe(false);
+  });
+
+  it("no declara · me quiero morir de la risa", () => {
+    expect(isSelfHarmMessage("me quiero morir de la risa")).toBe(false);
+  });
+});
