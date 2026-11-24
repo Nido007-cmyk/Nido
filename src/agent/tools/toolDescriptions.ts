@@ -15,8 +15,9 @@
  * traducidas palabra por palabra. Los nombres de herramienta y de
  * parámetro no se traducen: son el contrato con el despachador.
  *
- * El test toolDescriptions.test.ts exige una entrada por herramienta del
- * manifiesto: una herramienta nueva sin sus gemelas rompe la batería.
+ * La batería del bloque 4 (systemPromptLang0112.test.ts) exige una
+ * entrada por herramienta del manifiesto: una herramienta nueva sin
+ * sus gemelas rompe la batería.
  */
 
 export const TOOL_DESCRIPTIONS_I18N: Readonly<Record<string, { en: string; pt: string }>> = {
