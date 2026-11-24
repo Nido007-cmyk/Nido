@@ -192,6 +192,18 @@ describe("extractToolAction — mensajería NIDO", () => {
     expect(extractToolAction("mándale un mensaje por nido a Ana", NOW)).toMatchObject({ kind: "nidoSend", to: "Ana", text: null });
   });
 
+  // Paso 0-bis (c-rescate): el arreglo del enrutador en portugués que
+  // vivía dentro del bloque 5, reaplicado como commit propio tras la
+  // reversión. Las dos frases cobradas por la verificación del bloque,
+  // cada una con su caso; en la base publicada las dos daban null.
+  it("0-bis (c-rescate) · «mensagem NIDO para…» sin preposición enruta a nidoSend", () => {
+    expect(extractToolAction("manda uma mensagem NIDO para a Ana: chego às 8", NOW)).toMatchObject({ kind: "nidoSend", to: "Ana", text: "chego às 8", lang: "pt" });
+  });
+
+  it("0-bis (c-rescate) · «tarefas pendentes do nido» enruta a nidoTasks", () => {
+    expect(extractToolAction("tarefas pendentes do nido", NOW)?.kind).toBe("nidoTasks");
+  });
+
   it("bandeja, código y tareas", () => {
     expect(extractToolAction("lee mis mensajes", NOW)?.kind).toBe("nidoInbox");
     expect(extractToolAction("¿tengo mensajes nuevos?", NOW)?.kind).toBe("nidoInbox");
