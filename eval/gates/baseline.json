@@ -1,0 +1,828 @@
+{
+ "fase": "F0 · corpus de puertas en el repo (staging de la casa)",
+ "versionApp": "0.1.112-alpha (árbol publicado)",
+ "arbolMedido": "2efdee95",
+ "medidoCon": "fases-gratis/f0/eval-gates.mjs contra las funciones puras reales del árbol (isHealthQuestion, isEmergencySituation, isSelfHarmMessage, crisisQuestionKind, matchSafetyAnswer)",
+ "salidaCompleta": "salida-publicada.json (agregados y ids de fallo de esta misma corrida)",
+ "fechaMedicion": "2026-11-24",
+ "corpus": {
+  "lineas": 2957,
+  "guarda": 274,
+  "ficheros": [
+   "corpus.jsonl",
+   "guarda.jsonl",
+   "particion.json"
+  ]
+ },
+ "totalPrimaria": {
+  "ok": 2325,
+  "total": 2957,
+  "tasa": 78.6
+ },
+ "primariaPorRutaIdioma": {
+  "salud/es": {
+   "ok": 516,
+   "total": 575,
+   "tasa": 89.7
+  },
+  "salud/en": {
+   "ok": 366,
+   "total": 425,
+   "tasa": 86.1
+  },
+  "salud/pt": {
+   "ok": 365,
+   "total": 455,
+   "tasa": 80.2
+  },
+  "emergencia/es": {
+   "ok": 229,
+   "total": 305,
+   "tasa": 75.1
+  },
+  "emergencia/en": {
+   "ok": 183,
+   "total": 270,
+   "tasa": 67.8
+  },
+  "emergencia/pt": {
+   "ok": 183,
+   "total": 270,
+   "tasa": 67.8
+  },
+  "crisis/es": {
+   "ok": 58,
+   "total": 100,
+   "tasa": 58
+  },
+  "crisis/en": {
+   "ok": 48,
+   "total": 80,
+   "tasa": 60
+  },
+  "crisis/pt": {
+   "ok": 32,
+   "total": 80,
+   "tasa": 40
+  },
+  "caida/es": {
+   "ok": 18,
+   "total": 21,
+   "tasa": 85.7
+  },
+  "caida/en": {
+   "ok": 16,
+   "total": 18,
+   "tasa": 88.9
+  },
+  "caida/pt": {
+   "ok": 11,
+   "total": 18,
+   "tasa": 61.1
+  },
+  "caida-narrada/es": {
+   "ok": 6,
+   "total": 6,
+   "tasa": 100
+  },
+  "caida-narrada/en": {
+   "ok": 2,
+   "total": 6,
+   "tasa": 33.3
+  },
+  "caida-narrada/pt": {
+   "ok": 6,
+   "total": 6,
+   "tasa": 100
+  },
+  "monoxido/es": {
+   "ok": 15,
+   "total": 21,
+   "tasa": 71.4
+  },
+  "monoxido/en": {
+   "ok": 9,
+   "total": 15,
+   "tasa": 60
+  },
+  "monoxido/pt": {
+   "ok": 6,
+   "total": 12,
+   "tasa": 50
+  },
+  "guia/es": {
+   "ok": 49,
+   "total": 49,
+   "tasa": 100
+  },
+  "guia/en": {
+   "ok": 42,
+   "total": 42,
+   "tasa": 100
+  },
+  "guia/pt": {
+   "ok": 42,
+   "total": 42,
+   "tasa": 100
+  },
+  "negativos/es": {
+   "ok": 42,
+   "total": 45,
+   "tasa": 93.3
+  },
+  "negativos/en": {
+   "ok": 33,
+   "total": 42,
+   "tasa": 78.6
+  },
+  "negativos/pt": {
+   "ok": 30,
+   "total": 36,
+   "tasa": 83.3
+  },
+  "negativos-historicos/es": {
+   "ok": 6,
+   "total": 6,
+   "tasa": 100
+  },
+  "negativos-historicos/en": {
+   "ok": 6,
+   "total": 6,
+   "tasa": 100
+  },
+  "negativos-historicos/pt": {
+   "ok": 6,
+   "total": 6,
+   "tasa": 100
+  }
+ },
+ "sensibilidadPorTipo": {
+  "base": {
+   "ok": 572,
+   "total": 648,
+   "tasa": 88.3
+  },
+  "sinAcentos": {
+   "ok": 572,
+   "total": 648,
+   "tasa": 88.3
+  },
+  "cortesia": {
+   "ok": 498,
+   "total": 543,
+   "tasa": 91.7
+  },
+  "errata": {
+   "ok": 164,
+   "total": 512,
+   "tasa": 32
+  },
+  "pregunta": {
+   "ok": 419,
+   "total": 460,
+   "tasa": 91.1
+  },
+  "marco-temporal": {
+   "ok": 33,
+   "total": 52,
+   "tasa": 63.5
+  },
+  "cierre-desesperado": {
+   "ok": 33,
+   "total": 52,
+   "tasa": 63.5
+  },
+  "ayuda": {
+   "ok": 27,
+   "total": 35,
+   "tasa": 77.1
+  },
+  "voseo": {
+   "ok": 4,
+   "total": 4,
+   "tasa": 100
+  },
+  "usted": {
+   "ok": 3,
+   "total": 3,
+   "tasa": 100
+  }
+ },
+ "puertasBinarias": {
+  "global": {
+   "health": {
+    "tp": 1589,
+    "fp": 152,
+    "fn": 711,
+    "tn": 505,
+    "recall": 69.1,
+    "precision": 91.3
+   },
+   "emergency": {
+    "tp": 640,
+    "fp": 20,
+    "fn": 262,
+    "tn": 2035,
+    "recall": 71,
+    "precision": 97
+   },
+   "crisis": {
+    "tp": 138,
+    "fp": 18,
+    "fn": 122,
+    "tn": 2679,
+    "recall": 53.1,
+    "precision": 88.5
+   },
+   "co": {
+    "tp": 30,
+    "fp": 0,
+    "fn": 18,
+    "tn": 2909,
+    "recall": 62.5,
+    "precision": 100
+   }
+  },
+  "es": {
+   "health": {
+    "tp": 639,
+    "fp": 50,
+    "fn": 241,
+    "tn": 198,
+    "recall": 72.6,
+    "precision": 92.7
+   },
+   "emergency": {
+    "tp": 247,
+    "fp": 1,
+    "fn": 79,
+    "tn": 801,
+    "recall": 75.8,
+    "precision": 99.6
+   },
+   "crisis": {
+    "tp": 58,
+    "fp": 3,
+    "fn": 42,
+    "tn": 1025,
+    "recall": 58,
+    "precision": 95.1
+   },
+   "co": {
+    "tp": 15,
+    "fp": 0,
+    "fn": 6,
+    "tn": 1107,
+    "recall": 71.4,
+    "precision": 100
+   }
+  },
+  "en": {
+   "health": {
+    "tp": 465,
+    "fp": 63,
+    "fn": 230,
+    "tn": 146,
+    "recall": 66.9,
+    "precision": 88.1
+   },
+   "emergency": {
+    "tp": 199,
+    "fp": 18,
+    "fn": 89,
+    "tn": 598,
+    "recall": 69.1,
+    "precision": 91.7
+   },
+   "crisis": {
+    "tp": 48,
+    "fp": 9,
+    "fn": 32,
+    "tn": 815,
+    "recall": 60,
+    "precision": 84.2
+   },
+   "co": {
+    "tp": 9,
+    "fp": 0,
+    "fn": 6,
+    "tn": 889,
+    "recall": 60,
+    "precision": 100
+   }
+  },
+  "pt": {
+   "health": {
+    "tp": 485,
+    "fp": 39,
+    "fn": 240,
+    "tn": 161,
+    "recall": 66.9,
+    "precision": 92.6
+   },
+   "emergency": {
+    "tp": 194,
+    "fp": 1,
+    "fn": 94,
+    "tn": 636,
+    "recall": 67.4,
+    "precision": 99.5
+   },
+   "crisis": {
+    "tp": 32,
+    "fp": 6,
+    "fn": 48,
+    "tn": 839,
+    "recall": 40,
+    "precision": 84.2
+   },
+   "co": {
+    "tp": 6,
+    "fp": 0,
+    "fn": 6,
+    "tn": 913,
+    "recall": 50,
+    "precision": 100
+   }
+  }
+ },
+ "matrizConfusion": {
+  "salud": {
+   "salud": 1243,
+   "ninguna": 208,
+   "emergencia": 4
+  },
+  "emergencia": {
+   "emergencia": 595,
+   "ninguna": 164,
+   "salud": 86
+  },
+  "crisis": {
+   "ninguna": 102,
+   "crisis": 138,
+   "salud": 20
+  },
+  "caida": {
+   "emergencia": 45,
+   "ninguna": 12
+  },
+  "ninguna": {
+   "ninguna": 234,
+   "emergencia": 10,
+   "salud": 30,
+   "crisis": 18
+  },
+  "monoxido": {
+   "monoxido": 30,
+   "ninguna": 15,
+   "emergencia": 3
+  }
+ },
+ "confusionNombrada": {
+  "crisisEsperadaRespondidaComoSalud": 20,
+  "crisisEsperadaSinNingunaPuerta": 102
+ },
+ "guarda": {
+  "total": 274,
+  "conAlgunaPuerta": 54,
+  "porPuerta": {
+   "health": 50,
+   "emergency": 6,
+   "crisis": 18,
+   "co": 0
+  },
+  "porSubcorpus": {
+   "guia": {
+    "total": 133,
+    "conAlgunaPuerta": 0,
+    "porPuerta": {
+     "health": 0,
+     "emergency": 0,
+     "crisis": 0,
+     "co": 0
+    }
+   },
+   "negativos": {
+    "total": 123,
+    "conAlgunaPuerta": 46,
+    "porPuerta": {
+     "health": 42,
+     "emergency": 6,
+     "crisis": 18,
+     "co": 0
+    }
+   },
+   "historicos": {
+    "total": 18,
+    "conAlgunaPuerta": 8,
+    "porPuerta": {
+     "health": 8,
+     "emergency": 0,
+     "crisis": 0,
+     "co": 0
+    }
+   }
+  }
+ },
+ "guardaAmpliada": {
+  "fichero": "guarda-ampliada.jsonl",
+  "fuente": "fuente-ciega-guarda.jsonl",
+  "arbolMedido": "3d2c26c5",
+  "total": 546,
+  "porSubcorpus": {
+   "ciega-guia": {
+    "total": 48,
+    "conAlgunaPuerta": 0,
+    "porPuerta": {
+     "health": 0,
+     "emergency": 0,
+     "crisis": 0,
+     "co": 0
+    }
+   },
+   "ciega-ficcion": {
+    "total": 102,
+    "conAlgunaPuerta": 27,
+    "porPuerta": {
+     "health": 0,
+     "emergency": 21,
+     "crisis": 6,
+     "co": 0
+    }
+   },
+   "ciega-modismos": {
+    "total": 99,
+    "conAlgunaPuerta": 3,
+    "porPuerta": {
+     "health": 3,
+     "emergency": 0,
+     "crisis": 0,
+     "co": 0
+    }
+   },
+   "ciega-prevencion": {
+    "total": 99,
+    "conAlgunaPuerta": 66,
+    "porPuerta": {
+     "health": 66,
+     "emergency": 6,
+     "crisis": 0,
+     "co": 0
+    }
+   },
+   "ciega-historicos": {
+    "total": 99,
+    "conAlgunaPuerta": 54,
+    "porPuerta": {
+     "health": 54,
+     "emergency": 9,
+     "crisis": 0,
+     "co": 0
+    }
+   },
+   "ciega-medico": {
+    "total": 99,
+    "conAlgunaPuerta": 84,
+    "porPuerta": {
+     "health": 84,
+     "emergency": 0,
+     "crisis": 0,
+     "co": 0
+    }
+   }
+  }
+ },
+ "comparacionCenso": {
+  "criterio": "el script reproduce las cifras del censo verificado dentro de ±0,1 puntos por celda",
+  "celdasPrimaria": [
+   {
+    "celda": "salud/es",
+    "censo": 89.7,
+    "medido": 89.7,
+    "ok": 516,
+    "total": 575,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "salud/en",
+    "censo": 86.1,
+    "medido": 86.1,
+    "ok": 366,
+    "total": 425,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "salud/pt",
+    "censo": 80.2,
+    "medido": 80.2,
+    "ok": 365,
+    "total": 455,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "emergencia/es",
+    "censo": 75.1,
+    "medido": 75.1,
+    "ok": 229,
+    "total": 305,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "emergencia/en",
+    "censo": 67.8,
+    "medido": 67.8,
+    "ok": 183,
+    "total": 270,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "emergencia/pt",
+    "censo": 67.8,
+    "medido": 67.8,
+    "ok": 183,
+    "total": 270,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "crisis/es",
+    "censo": 58,
+    "medido": 58,
+    "ok": 58,
+    "total": 100,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "crisis/en",
+    "censo": 60,
+    "medido": 60,
+    "ok": 48,
+    "total": 80,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "crisis/pt",
+    "censo": 40,
+    "medido": 40,
+    "ok": 32,
+    "total": 80,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "caida/es",
+    "censo": 85.7,
+    "medido": 85.7,
+    "ok": 18,
+    "total": 21,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "caida/en",
+    "censo": 88.9,
+    "medido": 88.9,
+    "ok": 16,
+    "total": 18,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "caida/pt",
+    "censo": 61.1,
+    "medido": 61.1,
+    "ok": 11,
+    "total": 18,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "caida-narrada/es",
+    "censo": 100,
+    "medido": 100,
+    "ok": 6,
+    "total": 6,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "caida-narrada/en",
+    "censo": 33.3,
+    "medido": 33.3,
+    "ok": 2,
+    "total": 6,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "caida-narrada/pt",
+    "censo": 100,
+    "medido": 100,
+    "ok": 6,
+    "total": 6,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "monoxido/es",
+    "censo": 71.4,
+    "medido": 71.4,
+    "ok": 15,
+    "total": 21,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "monoxido/en",
+    "censo": 60,
+    "medido": 60,
+    "ok": 9,
+    "total": 15,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "monoxido/pt",
+    "censo": 50,
+    "medido": 50,
+    "ok": 6,
+    "total": 12,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "guia/es",
+    "censo": 100,
+    "medido": 100,
+    "ok": 49,
+    "total": 49,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "guia/en",
+    "censo": 100,
+    "medido": 100,
+    "ok": 42,
+    "total": 42,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "guia/pt",
+    "censo": 100,
+    "medido": 100,
+    "ok": 42,
+    "total": 42,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "negativos/es",
+    "censo": 93.3,
+    "medido": 93.3,
+    "ok": 42,
+    "total": 45,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "negativos/en",
+    "censo": 78.6,
+    "medido": 78.6,
+    "ok": 33,
+    "total": 42,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "negativos/pt",
+    "censo": 83.3,
+    "medido": 83.3,
+    "ok": 30,
+    "total": 36,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "negativos-historicos/es",
+    "censo": 100,
+    "medido": 100,
+    "ok": 6,
+    "total": 6,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "negativos-historicos/en",
+    "censo": 100,
+    "medido": 100,
+    "ok": 6,
+    "total": 6,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "negativos-historicos/pt",
+    "censo": 100,
+    "medido": 100,
+    "ok": 6,
+    "total": 6,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   }
+  ],
+  "celdasSensibilidad": [
+   {
+    "celda": "base",
+    "censo": 88.3,
+    "medido": 88.3,
+    "ok": 572,
+    "total": 648,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "sinAcentos",
+    "censo": 88.3,
+    "medido": 88.3,
+    "ok": 572,
+    "total": 648,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "cortesia",
+    "censo": 91.7,
+    "medido": 91.7,
+    "ok": 498,
+    "total": 543,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "pregunta",
+    "censo": 91.1,
+    "medido": 91.1,
+    "ok": 419,
+    "total": 460,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "ayuda",
+    "censo": 77.1,
+    "medido": 77.1,
+    "ok": 27,
+    "total": 35,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "errata",
+    "censo": 32,
+    "medido": 32,
+    "ok": 164,
+    "total": 512,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "marco-temporal",
+    "censo": 63.5,
+    "medido": 63.5,
+    "ok": 33,
+    "total": 52,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   },
+   {
+    "celda": "cierre-desesperado",
+    "censo": 63.5,
+    "medido": 63.5,
+    "ok": 33,
+    "total": 52,
+    "delta": 0,
+    "dentroDeTolerancia": true
+   }
+  ],
+  "total": {
+   "celda": "TOTAL primaria",
+   "censo": 78.6,
+   "medido": 78.6,
+   "ok": 2325,
+   "total": 2957,
+   "delta": 0,
+   "dentroDeTolerancia": true
+  },
+  "celdasFueraDeTolerancia": 0,
+  "veredicto": "REPRODUCE: las 36 celdas comparadas (27 de primaria, 8 de sensibilidad y el total) caen dentro de ±0,1 puntos; de hecho las 36 coinciden al decimal (delta 0,0). No hay diferencia de método que aclarar."
+ }
+}

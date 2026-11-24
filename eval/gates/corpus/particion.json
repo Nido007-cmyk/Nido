@@ -1,0 +1,78 @@
+{
+ "regla": "Partición fija por FRASE BASE, nunca por variante. Clave: ruta|lang|fraseBase. Hash FNV-1a de 32 bits sobre la clave (offset 0x811c9dc5, primo 0x01000193). La base es «ciega» si hash % 5 == 0 y «desarrollo» en el resto (≈20 % de bases a la ciega). Todas las variantes de una base heredan la partición de su base: la fase 3 puede entrenar con la partición de desarrollo sin ver jamás una variante de una frase que la ciega examina. La regla es determinista y se recalcula con construir-jsonl.mjs; cualquier cambio de corpus se ve en el diff de corpus.jsonl y en este fichero.",
+ "funcion": "fnv1a32(ruta + '|' + lang + '|' + fraseBase) % 5 == 0 -> ciega",
+ "bases": {
+  "total": 654,
+  "porParticion": {
+   "desarrollo": 505,
+   "ciega": 149
+  }
+ },
+ "variantes": {
+  "total": 2957,
+  "porParticion": {
+   "desarrollo": 2271,
+   "ciega": 686
+  },
+  "porRuta": {
+   "salud": 1455,
+   "emergencia": 845,
+   "crisis": 260,
+   "caida": 57,
+   "caida-narrada": 18,
+   "monoxido": 48,
+   "guia": 133,
+   "negativos": 123,
+   "negativos-historicos": 18
+  },
+  "porRutaEIdioma": {
+   "salud/es": 575,
+   "salud/en": 425,
+   "salud/pt": 455,
+   "emergencia/es": 305,
+   "emergencia/en": 270,
+   "emergencia/pt": 270,
+   "crisis/es": 100,
+   "crisis/en": 80,
+   "crisis/pt": 80,
+   "caida/es": 21,
+   "caida/en": 18,
+   "caida/pt": 18,
+   "caida-narrada/es": 6,
+   "caida-narrada/en": 6,
+   "caida-narrada/pt": 6,
+   "monoxido/es": 21,
+   "monoxido/en": 15,
+   "monoxido/pt": 12,
+   "guia/es": 49,
+   "guia/en": 42,
+   "guia/pt": 42,
+   "negativos/es": 45,
+   "negativos/en": 42,
+   "negativos/pt": 36,
+   "negativos-historicos/es": 6,
+   "negativos-historicos/en": 6,
+   "negativos-historicos/pt": 6
+  },
+  "porTipo": {
+   "base": 648,
+   "sinAcentos": 648,
+   "cortesia": 543,
+   "errata": 512,
+   "pregunta": 460,
+   "marco-temporal": 52,
+   "cierre-desesperado": 52,
+   "ayuda": 35,
+   "voseo": 4,
+   "usted": 3
+  }
+ },
+ "guarda": {
+  "total": 274,
+  "porSubcorpus": {
+   "guia": 133,
+   "negativos": 123,
+   "historicos": 18
+  }
+ }
+}
