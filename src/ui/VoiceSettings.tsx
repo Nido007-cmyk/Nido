@@ -37,7 +37,8 @@ export function VoiceSettings() {
   const [onDeviceOnly, setOnDeviceOnly] = useState(true);
   const [enabled, setEnabled] = useState(true);
   // FIX 2026-10-09 (UI-AUDIT): exponer el switch de lectura en voz alta.
-  // El backend (src/voice/tts.ts, expo-speech offline) y los 3 call sites
+  // El backend (src/voice/tts.ts, expo-speech: la voz del sistema puede
+  // ser de red según el motor, sin promesa de offline) y los 3 call sites
   // en ChatScreen ya existen; solo faltaba la superficie.
   const [readAloud, setReadAloud] = useState(false);
 
@@ -130,7 +131,7 @@ export function VoiceSettings() {
         <Text style={styles.note}>{t("voiceSettings.onlineOnlyNote")}</Text>
       )}
 
-      {/* FIX 2026-10-09 (UI-AUDIT): lectura en voz alta (TTS offline). */}
+      {/* FIX 2026-10-09 (UI-AUDIT): lectura en voz alta (TTS del sistema). */}
       <View style={styles.row}>
         <View style={{ flex: 1 }}>
           <Text style={styles.rowLabel}>{t("voiceSettings.readAloudLabel")}</Text>

@@ -11,7 +11,7 @@ import java.io.InputStream
 
 /**
  * Batería JVM de NidoP2PFraming (auditoría 0.1.112, bloque 6). La corre
- * scripts/check-p2p-framing.mjs; imprime PASS o los fallos.
+ * scripts/check-native-cores.mjs; imprime PASS o los fallos.
  */
 private var failures = 0
 private var checks = 0
