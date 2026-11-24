@@ -435,12 +435,20 @@ const SELF_HARM_PATTERNS = [
       "no (?:hay|veo|encuentro) (?:ninguna |ningun )?(?:razon|motivo|sentido) (?:para|en) (?:seguir )?vivi(?:r|endo)",
       "(?:ya )?no quiero (?:volver a )?despertar(?:me)?(?: (?:manana|nunca mas|mas|jamas))?(?=\\s*(?:$|[.,;:!?]|y |porque |pero ))",
       "(?:dormir(?:me)?|quedarme dormid[oa]) y no (?:volver a )?despertar(?:me)?",
+      // Corrección del bloque 1 (veredicto de la casa): la desiderativa
+      // de la familia 1, «quisiera no despertar», con la misma guarda de
+      // final de frase que «no quiero despertar».
+      "(?:quisiera|querria|me gustaria) no (?:volver a )?despertar(?:me)?(?: (?:manana|nunca mas|mas|jamas))?(?=\\s*(?:$|[.,;:!?]|y |porque |pero ))",
       "ojala no (?:despertara|despierte|amaneciera)",
       "ojala (?:estuviera muert[oa]|me muriera|no hubiera nacido)",
       "seria mejor (?:si )?(?:no existiera|desapareciera|me muriera|estuviera muert[oa])",
       "(?:todos|todo el mundo|mi familia) (?:estaria|estarian|viviria|vivirian) mejor sin mi",
       "(?:voy a|quiero|pienso|tengo ganas de|(?:estoy )?pensando en|he pensado en) (?:tomarme|tomar|beberme|tragarme|meterme) (?:todas (?:las|mis)|un bote de|un frasco de|una caja de|la caja de|el bote de) (?:pastillas|pildoras|medicinas|medicamentos|tabletas|capsulas|somniferos)",
-      "(?:voy a|quiero|pienso) (?:tomarme|tomar|hacerme) una sobredosis",
+      "(?:voy a|quiero|pienso) (?:tomarme|tomar|hacerme|provocarme|provocar) una sobredosis",
+      // Familia 4, forma telegráfica: la frase ENTERA es «tomarme todas
+      // las pastillas», sin verbo de anuncio. Anclada al mensaje completo
+      // para no cazar «tengo que tomarme todas las pastillas del…».
+      "^(?:tomarme|tragarme|beberme) todas (?:las|mis) (?:pastillas|pildoras|medicinas|tabletas|capsulas|somniferos)(?=[.!]*$)",
       "(?:quiero|me gustaria) desaparecer (?:para siempre|del mundo|de este mundo)",
       // — en
       "(?:have|got) no (?:reason|reasons) (?:left )?(?:to live|for living|to go on)",
@@ -449,23 +457,33 @@ const SELF_HARM_PATTERNS = [
       "(?:don't|dont|do not) want to wake up(?: (?:tomorrow|again|ever again|anymore))?(?=\\s*(?:$|[.,;:!?]|and |because |but ))",
       "(?:go to sleep|fall asleep|sleep) and (?:never|not) wake up",
       "hope i (?:don't|dont|never) wake up",
-      "(?:would be|'d be|d be|are) better off without me",
+      "wish i (?:wouldn['’]?t|would not|won['’]?t|would never|could just not) wake up(?: (?:tomorrow|again|ever again|anymore))?(?=\\s*(?:$|[.,;:!?]|and |because |but ))",
+      // Familia 3 firmada en condicional, igual en las tres lenguas: el
+      // presente («they are better off without me») no declara.
+      "(?:would be|'d be|d be) better off without me",
       "better off if i (?:was|were) (?:dead|gone)",
       "wish i (?:was|were) (?:dead|never born)",
       "(?:i'm going to|i'm gonna|im gonna|i am going to|i will|i'll|i want to|i wanna|thinking (?:about|of)) (?:take|taking|swallow|swallowing) (?:all (?:of )?(?:my|the)|a (?:whole )?bottle of|the whole bottle of) (?:pills|meds|medication|medications|tablets|sleeping pills)",
       "(?:i'm going to|i'm gonna|im gonna|i am going to|i want to|i wanna|thinking (?:about|of)) (?:overdose|overdosing|od)\\b",
+      "^(?:take|swallow) all (?:of )?my (?:pills|meds|medication|tablets|sleeping pills)(?=[.!]*$)",
       "(?:want|wanna) to disappear (?:forever|from (?:this|the) world)",
       // — pt
       "nao tenho (?:mais )?(?:nenhum |nenhuma )?(?:motivo|motivos|razao|razoes) (?:para|pra) (?:continuar )?viver",
       "nao (?:ha|vejo|encontro) (?:nenhum |nenhuma )?(?:motivo|razao|sentido) (?:para|pra|em) (?:continuar )?viver",
       "nao quero (?:mais )?acordar(?: (?:amanha|nunca mais|mais))?(?=\\s*(?:$|[.,;:!?]|e |porque |mas ))",
       "dormir e nao (?:mais )?acordar",
+      // Familia 1 portuguesa en imperfecto: «queria não acordar», «não
+      // queria acordar nunca mais».
+      "(?:queria|gostaria de) nao (?:mais )?acordar(?: (?:amanha|nunca mais|mais))?(?=\\s*(?:$|[.,;:!?]|e |porque |mas ))",
+      "nao queria (?:mais )?acordar(?: (?:amanha|nunca mais|mais))?(?=\\s*(?:$|[.,;:!?]|e |porque |mas ))",
       "(?:espero|tomara que eu) nao (?:acordar|acorde)",
       "(?:estariam|estaria|ficariam|ficaria|viveriam) melhor sem mim",
       "seria melhor se eu (?:morresse|nao existisse|sumisse|estivesse mort[oa])",
       "queria (?:estar mort[oa]|nunca ter nascido|nao ter nascido)",
       "(?:vou|quero|penso em|pensando em|pensei em|tenho vontade de) (?:tomar|engolir) (?:todos os (?:meus )?|todas as (?:minhas )?|um vidro de |uma caixa de |a caixa de )(?:comprimidos|remedios|pilulas|capsulas|calmantes)",
-      "(?:vou|quero) (?:tomar|ter) uma overdose",
+      "(?:vou|quero) (?:tomar|ter|me provocar|provocar) uma overdose",
+      "^(?:tomar|engolir) todos os (?:meus )?(?:comprimidos|remedios|calmantes)(?=[.!]*$)",
+      "^(?:tomar|engolir) todas as (?:minhas )?(?:pilulas|capsulas)(?=[.!]*$)",
       "quero (?:sumir|desaparecer) (?:para sempre|do mundo|deste mundo)",
 ];
 

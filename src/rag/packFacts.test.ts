@@ -207,6 +207,34 @@ describe("líneas de crisis (familia crisis.*): el consumidor que faltaba", () =
     expect(crisisQuestionKind("qué tiempo hace en España")).toBe(false);
   });
 
+  it("corrección del bloque 1 (0.1.112): la ideación pasiva contada en tercera persona declara crisis", async () => {
+    const { crisisQuestionKind } = await import("./packFacts");
+    // Las sondas gobernadas, literales.
+    for (const text of [
+      "dice que no quiere despertar",
+      "says she doesn't want to wake up",
+      "diz que não quer acordar",
+      "no tiene razones para vivir",
+      "sem razões para viver",
+    ]) {
+      expect(crisisQuestionKind(text), text).toBe(true);
+    }
+    // Sin verbo de reporte, o con complemento, no es crisis.
+    for (const text of [
+      "el bebé no quiere despertar",
+      "mi hijo dice que no quiere despertarse temprano",
+      "she says she doesn't want to wake up early",
+      "diz que não quer acordar cedo",
+      "no hay razones para vivir en esa ciudad",
+      "there is no reason to live in fear",
+      "sem razões para viver com medo",
+      "escribe un cuento donde el personaje dice que no quiere despertar",
+      "in the song he says he doesn't want to wake up",
+    ]) {
+      expect(crisisQuestionKind(text), text).toBe(false);
+    }
+  });
+
   it("pre-censo PC2-1: la expresión de intención tiene su forma en las tres lenguas", async () => {
     const { crisisQuestionKind } = await import("./packFacts");
     // La misma familia, lengua a lengua: raíz de suicidio, autolesión,

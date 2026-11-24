@@ -459,6 +459,33 @@ const CRISIS_SELF_KILL_CUES =
   / (quiero matarme|voy a matarme|me quiero matar|me voy a matar|pienso matarme|quero me matar|vou me matar|quero matar me|penso em me matar)(?! (a|de|trabajando|estudiando|corriendo|rir|trabalhando|estudando)\b)/;
 
 /**
+ * Auditoría 0.1.112, corrección del bloque 1 (veredicto de la casa): la
+ * ideación pasiva contada en tercera persona también es «alguien puede
+ * estar en crisis». Dos familias, en los tres idiomas:
+ *  - no querer despertar, solo como reporte («dice que…», «says…»,
+ *    «diz que…»): sin el verbo de reporte, «el bebé no quiere
+ *    despertar» es sueño, no crisis; y la frase termina ahí;
+ *  - no tener razones para vivir, en cualquier persona.
+ * El texto llega plegado por foldText (sin acentos ni apóstrofos).
+ */
+const CRISIS_PASSIVE_CUES = new RegExp(
+  [
+    // reporte + no querer despertar (fin de frase o «nunca más»)
+    " (?:dice|dijo|me dice|me dijo|cuenta|says|said|keeps saying|told me|tells me|diz|disse|me diz|me disse|fala|falou) (?:que )?(?:(?:she|he|they|ella|el|ele|ela) )?" +
+      "(?:ya no quiere|no quiere|doesn t want to|does not want to|don t want to|do not want to|nao quer|nao quer mais) " +
+      "(?:volver a )?(?:despertar(?:se)?|wake up|acordar)(?: (?:manana|nunca mas|mas|tomorrow|ever again|again|anymore|amanha|nunca mais|mais))? $",
+    // no tener razones para vivir, en cualquier persona; «vivir aquí»,
+    // «live in fear» y similares no cuentan
+    " (?:no tiene|no tengo|no tienen|sin|has no|have no|no|nao tem|nao tenho|sem) (?:ninguna |ningun |mas |mais |nenhuma |nenhum |any )?" +
+      "(?:razon|razones|motivo|motivos|reason|reasons|razao|razoes) (?:para|to|pra) (?:seguir |continuar |keep )?(?:vivir|live|living|viver) (?!(?:in|with|like|here|there|near|en|con|aqui|alli|asi|em|com|ali|assim|perto|cerca) )",
+  ].join("|"),
+);
+
+/** La forma pasiva nueva no entra si se habla de una obra (cuento, canción…). */
+const PASSIVE_FICTION_VETO =
+  / (?:cuento|novela|historia|guion|cancion|poema|personaje|pelicula|serie|libro|story|novel|script|song|lyrics|poem|character|movie|book|conto|romance|roteiro|musica|personagem|filme|livro) /;
+
+/**
  * The text asks for a crisis line, or says someone may be in crisis. A
  * plain emergency-number question ("número de emergencias de España") is
  * not one: the emergency route answers that, unchanged.
@@ -473,7 +500,12 @@ export function crisisQuestionKind(text: string): boolean {
   // señal, una frase larga sigue sin ser pregunta de crisis. Es la
   // misma forma que su gemela emergencyQuestionKind recibió al perder
   // su tope en la auditoría 2026-10-31 (F1 B-3).
-  return CRISIS_LINE_CUES.test(folded) || CRISIS_INTENT_CUES.test(folded) || CRISIS_SELF_KILL_CUES.test(folded);
+  return (
+    CRISIS_LINE_CUES.test(folded) ||
+    CRISIS_INTENT_CUES.test(folded) ||
+    CRISIS_SELF_KILL_CUES.test(folded) ||
+    (CRISIS_PASSIVE_CUES.test(folded) && !PASSIVE_FICTION_VETO.test(folded))
+  );
 }
 
 const CT: Record<
