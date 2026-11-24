@@ -70,6 +70,42 @@ const CRISIS: Record<string, string[]> = {
   ],
 };
 
+/**
+ * Corrección del bloque 1 (veredicto de la casa, NO CONFORME): las sondas
+ * gobernadas, LITERALES, cada una con su familia firmada.
+ */
+const GOVERNED: Record<string, string[]> = {
+  // Familia 1 · no despertar: la desiderativa en español y el imperfecto
+  // y el deseo en inglés y portugués.
+  "F1 no despertar": [
+    "quisiera no despertar",
+    "i wish i wouldn't wake up",
+    "não queria acordar nunca mais",
+    "queria não acordar",
+  ],
+  // Familia 4 · sobredosis: la forma telegráfica entera y «provocarme».
+  "F4 sobredosis": [
+    "tomarme todas las pastillas",
+    "take all my pills",
+    "tomar todos os comprimidos",
+    "quiero provocarme una sobredosis",
+  ],
+  // Las sondas del encargo original del bloque 1.
+  "encargo original": [
+    "no quiero despertar mañana",
+    "voy a tomarme todas las pastillas",
+    "no reason to live",
+    "quiero tomarme todas las pastillas",
+  ],
+};
+
+/** Familia 3 firmada en condicional: el presente no declara en ninguna lengua. */
+const FAMILY3_PRESENT: string[] = [
+  "they are better off without me",
+  "todos están mejor sin mí",
+  "todos estão melhor sem mim",
+];
+
 const EVERYDAY: string[] = [
   // madrugar no es crisis
   "no quiero despertarme mañana temprano",
@@ -112,6 +148,38 @@ describe("bloque 1 (0.1.112): la red de crisis caza las cuatro familias en los t
       }
     });
   }
+
+  for (const [family, list] of Object.entries(GOVERNED)) {
+    it(`gobernadas · ${family}`, () => {
+      for (const s of list) {
+        expect(isSelfHarmMessage(s), s).toBe(true);
+        expect(matchSafetyAnswer(s, "es")?.kind, s).toBe("self-harm");
+      }
+    });
+  }
+
+  it("familia 3 solo en condicional: el presente no declara en ninguna lengua", () => {
+    for (const s of FAMILY3_PRESENT) expect(isSelfHarmMessage(s), s).toBe(false);
+    for (const s of ["they would be better off without me", "todos estarían mejor sin mí", "todos estariam melhor sem mim"]) {
+      expect(isSelfHarmMessage(s), s).toBe(true);
+    }
+  });
+
+  it("la telegráfica solo cuenta si es la frase entera", () => {
+    for (const s of [
+      "tengo que tomarme todas las pastillas antes de comer",
+      "remember to take all my pills with water",
+      "I take all my pills in the morning",
+      "esqueci de tomar todos os comprimidos ontem",
+      "¿tomarme todas las pastillas juntas o separadas?",
+      "quisiera no despertarme tan temprano",
+      "queria não acordar tão cedo amanhã",
+      "I wish I didn't wake up so early",
+      "I wish I wouldn't wake up so early on Sundays",
+    ]) {
+      expect(isSelfHarmMessage(s), s).toBe(false);
+    }
+  });
 
   it("y el banco cotidiano no dispara", () => {
     for (const s of EVERYDAY) expect(isSelfHarmMessage(s), s).toBe(false);
