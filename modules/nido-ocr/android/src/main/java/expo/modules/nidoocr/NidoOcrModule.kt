@@ -24,10 +24,6 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.io.File
 import java.io.InputStream
-import java.security.MessageDigest
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.sqrt
 
 /**
  * On-device OCR for imported documents (programa «Lo mejor de la
@@ -253,7 +249,7 @@ class NidoOcrModule : Module() {
           stripper.startPage = page
           stripper.endPage = page
           val text = stripper.getText(document)
-          if (text.trim().length < EMPTY_PAGE_MAX_CHARS) {
+          if (NidoOcrCore.isScannedText(text)) {
             found += page - 1
             if (found.size >= MAX_OCR_PAGES) break
           }
@@ -291,12 +287,7 @@ class NidoOcrModule : Module() {
 
   /** Renders one page at print resolution (300 dpi), capped so a huge page can't exhaust memory. */
   private fun render(page: PdfRenderer.Page): Bitmap {
-    val scale = min(
-      RENDER_DPI / 72.0,
-      min(4096.0 / max(page.width, page.height), sqrt(MAX_RENDER_PIXELS / (page.width.toDouble() * page.height))),
-    )
-    val w = max(1, (page.width * scale).toInt())
-    val h = max(1, (page.height * scale).toInt())
+    val (w, h) = NidoOcrCore.renderSize(page.width, page.height)
     val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
     bitmap.eraseColor(Color.WHITE)
     page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
@@ -329,29 +320,20 @@ class NidoOcrModule : Module() {
     const val MAX_OCR_PAGES = 30
 
     /** A page with less text than this counts as scanned (a page number or a short header over an image). */
-    const val EMPTY_PAGE_MAX_CHARS = 16
+    const val EMPTY_PAGE_MAX_CHARS = NidoOcrCore.EMPTY_PAGE_MAX_CHARS
 
     /** Print resolution for rendered pages. */
-    const val RENDER_DPI = 300.0
+    const val RENDER_DPI = NidoOcrCore.RENDER_DPI
 
     /** Rendered-page pixel budget. */
-    const val MAX_RENDER_PIXELS = 12_000_000.0
+    const val MAX_RENDER_PIXELS = NidoOcrCore.MAX_RENDER_PIXELS
 
     /** Image pixel budget, from Field Atlas's ImageTextReader.dimensions. */
-    fun dimensions(width: Int, height: Int): Pair<Int, Int> {
-      require(width > 0 && height > 0)
-      val scale = minOf(1.0, sqrt(4_000_000.0 / (width.toDouble() * height)), 4096.0 / maxOf(width, height))
-      return maxOf(1, (width * scale).toInt()) to maxOf(1, (height * scale).toInt())
-    }
+    fun dimensions(width: Int, height: Int): Pair<Int, Int> = NidoOcrCore.dimensions(width, height)
 
     /** SHA-256 of each bundled traineddata, recorded in docs/OCR_DESIGN.md (pinned tessdata_fast revision). */
-    val TRAINEDDATA_SHA256: Map<String, String> = mapOf(
-      "eng" to "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2",
-      "spa" to "6f2e04d02774a18f01bed44b1111f2cd7f3ba7ac9dc4373cd3f898a40ea6b464",
-      "por" to "c4932b937207a9514b7514d518b931a99938c02a28a5a5a553f8599ed58b7deb",
-    )
+    val TRAINEDDATA_SHA256: Map<String, String> = NidoOcrCore.TRAINEDDATA_SHA256
 
-    private fun sha256(bytes: ByteArray): String =
-      MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+    private fun sha256(bytes: ByteArray): String = NidoOcrCore.sha256Hex(bytes)
   }
 }

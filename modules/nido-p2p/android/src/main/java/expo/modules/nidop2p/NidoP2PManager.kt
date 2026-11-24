@@ -62,7 +62,7 @@ class NidoP2PManager(private val context: Context) {
     val SERVICE_UUID: UUID = UUID.fromString(SERVICE_UUID_STRING)
 
     /** Debe coincidir con MAX_FRAME_BYTES en src/p2p/protocol.ts. */
-    const val MAX_FRAME_BYTES = 256 * 1024
+    const val MAX_FRAME_BYTES = NidoP2PFraming.MAX_FRAME_BYTES
 
     const val SERVICE_NAME = "NIDO-P2P"
 
@@ -81,8 +81,8 @@ class NidoP2PManager(private val context: Context) {
      * saludo (HELLO y CONFIRM, sellados o no: < 2 KB). Antes de autenticarse
      * nadie puede mandar frames grandes; ya existía para el Wi-Fi local.
      */
-    const val HANDSHAKE_FRAMES = 2
-    const val MAX_HANDSHAKE_FRAME_BYTES = 4 * 1024
+    const val HANDSHAKE_FRAMES = NidoP2PFraming.HANDSHAKE_FRAMES
+    const val MAX_HANDSHAKE_FRAME_BYTES = NidoP2PFraming.MAX_HANDSHAKE_FRAME_BYTES
   }
 
   var listener: Listener? = null
@@ -632,7 +632,7 @@ class NidoP2PManager(private val context: Context) {
   @Throws(IOException::class)
   fun sendFrame(address: String, payload: ByteArray) {
     val conn = connections[address] ?: throw IOException("Sin conexión con $address.")
-    if (payload.isEmpty() || payload.size > MAX_FRAME_BYTES) {
+    if (!NidoP2PFraming.sendable(payload.size)) {
       throw IOException("Frame de tamaño inválido: ${payload.size} bytes.")
     }
     conn.writeFrame(payload)
@@ -733,12 +733,7 @@ class NidoP2PManager(private val context: Context) {
       } catch (e: Exception) {
         throw IOException("Stream de escritura no disponible ($address): ${e.message}")
       } ?: throw IOException("Stream de escritura null ($address).")
-      val header = ByteArray(4)
-      header[0] = (payload.size ushr 24).toByte()
-      header[1] = (payload.size ushr 16).toByte()
-      header[2] = (payload.size ushr 8).toByte()
-      header[3] = payload.size.toByte()
-      out.write(header)
+      out.write(NidoP2PFraming.header(payload.size))
       out.write(payload)
       out.flush()
     }
@@ -748,22 +743,22 @@ class NidoP2PManager(private val context: Context) {
         val input = socket.inputStream
         val header = ByteArray(4)
         while (!closed && !Thread.currentThread().isInterrupted) {
-          readFully(input, header, 0, 4)
-          val bodyLen = ((header[0].toInt() and 0xff) shl 24) or
-            ((header[1].toInt() and 0xff) shl 16) or
-            ((header[2].toInt() and 0xff) shl 8) or
-            (header[3].toInt() and 0xff)
-          if (bodyLen <= 0 || bodyLen > MAX_FRAME_BYTES) {
-            listener?.onError("Frame inválido de $address (${bodyLen} bytes): conexión cerrada.")
-            break
-          }
-          if (framesRead < HANDSHAKE_FRAMES && bodyLen > MAX_HANDSHAKE_FRAME_BYTES) {
-            Log.w(TAG, "frame de saludo demasiado grande ($bodyLen bytes): conexión cerrada")
-            break
+          NidoP2PFraming.readFully(input, header, 0, 4)
+          val bodyLen = NidoP2PFraming.length(header)
+          when (NidoP2PFraming.judge(bodyLen, framesRead)) {
+            NidoP2PFraming.Verdict.INVALID -> {
+              listener?.onError("Frame inválido de $address (${bodyLen} bytes): conexión cerrada.")
+              break
+            }
+            NidoP2PFraming.Verdict.HANDSHAKE_TOO_BIG -> {
+              Log.w(TAG, "frame de saludo demasiado grande ($bodyLen bytes): conexión cerrada")
+              break
+            }
+            NidoP2PFraming.Verdict.OK -> Unit
           }
           framesRead++
           val body = ByteArray(bodyLen)
-          readFully(input, body, 0, bodyLen)
+          NidoP2PFraming.readFully(input, body, 0, bodyLen)
           listener?.onFrame(address, Base64.encodeToString(body, Base64.NO_WRAP))
         }
       } catch (e: IOException) {
@@ -774,20 +769,6 @@ class NidoP2PManager(private val context: Context) {
         close()
         // F-7: solo la instancia dueña de la ruta emite/limpia.
         onConnectionClosed(this)
-      }
-    }
-
-    private fun readFully(
-      input: java.io.InputStream,
-      buffer: ByteArray,
-      offset: Int,
-      length: Int,
-    ) {
-      var read = 0
-      while (read < length) {
-        val n = input.read(buffer, offset + read, length - read)
-        if (n < 0) throw IOException("Fin del stream.")
-        read += n
       }
     }
   }
