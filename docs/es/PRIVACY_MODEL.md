@@ -13,7 +13,9 @@ el único lugar donde existen sus datos. No hay cuenta, no hay servidor, no hay 
 | Contactos P2P | SQLite local | **No** |
 | Memoria del agente (memorias, notas, resúmenes) | SQLite local | **No** |
 | Claves de identidad/firma | SecureStore (Keystore) | **No** (nunca; solo la pública viaja en el QR físico) |
-| Modelos de IA (LLM, STT, TTS) | Almacenamiento local (bundled) | **No** |
+| Modelos de IA (conversación y búsqueda) | Almacenamiento local, descargados una vez y verificados | **No** |
+| Dictado (STT) | El reconocedor del propio teléfono por defecto (Ajustes › Voz) | **No** por defecto; sí si permites el servicio del sistema |
+| Lectura en voz alta (TTS) | El motor de voz del sistema del teléfono | **No garantizado**: NIDO descarta las voces que el motor marca como de red, pero no todos los motores las marcan |
 | Crash reports | Local, opt-in | **No** (exportación manual del usuario) |
 | Telemetría / analytics | — | **No existe** |
 
@@ -97,9 +99,14 @@ qué riesgo tiene), no en jerga técnica.
 
 ## 8. Privacidad de los modelos de IA locales
 
-- Los modelos (LLM, whisper STT, Piper TTS) se distribuyen con la app o se descargan
-  una vez de una URL inmutable con **SHA-256 pinneado y verificado antes de cargar**.
-- La inferencia ocurre en el dispositivo; ningún audio, texto ni embedding sale.
+- Los modelos de conversación y de búsqueda se descargan una vez de un origen fijado
+  con **SHA-256 fijado y verificado antes de cargar**. No hay modelo de voz incluido:
+  el dictado usa el reconocedor del teléfono y la lectura en voz alta, el motor de voz
+  del sistema (corregido el 2026-11-24; esta línea nombraba whisper y Piper, que NIDO
+  no trae).
+- La inferencia de los modelos ocurre en el dispositivo; ningún texto ni embedding sale.
+  La lectura en voz alta depende de la voz del sistema: NIDO descarta las voces que el
+  motor marca como de red, cosa que no todos los motores hacen.
 - **Sin promesas sin evidencia:** no se declara "STT 100% offline" hasta probarlo en modo
   avión con captura de tráfico (P7); `EXTRA_PREFER_OFFLINE` es una preferencia, no una
   garantía.

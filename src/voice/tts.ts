@@ -5,10 +5,18 @@
  */
 
 /**
- * tts.ts — NIDO: lectura en voz alta 100% offline.
+ * tts.ts — NIDO: lectura en voz alta con el motor TTS del sistema.
  *
- * Usa el motor TTS del sistema Android (voces preinstaladas, sin red).
- * Nada de lo que se lee sale del teléfono.
+ * Auditoría de la 0.1.112, bloque 3: la cabecera decía «100% offline,
+ * voces preinstaladas, sin red», y no lo es por construcción. Android
+ * declara voces que necesitan red (Voice.isNetworkConnectionRequired),
+ * y expo-speech no expone ese dato: su getVoices solo devuelve
+ * identificador, nombre, calidad e idioma. Lo que NIDO sí hace ahora:
+ * descarta las voces cuyo nombre las declara de red y prefiere las que
+ * se declaran locales (la convención «…-network» / «…-local» del motor
+ * de Google, el de casi todos los Android), ver chooseVoice. Con un
+ * motor que no siga esa convención NIDO no puede saberlo, y el texto
+ * del ajuste lo dice (voiceSettings.readAloudValue).
  */
 
 import * as Speech from "expo-speech";
@@ -36,19 +44,49 @@ export function speechLocaleFor(appLanguage: string | null | undefined): string 
 
 const voiceCache = new Map<string, string | null>();
 
+/** Lo que chooseVoice lee de cada voz (el Voice de expo-speech). */
+export interface VoiceLike {
+  identifier: string;
+  name?: string;
+  language: string;
+}
+
+/** ¿El nombre de la voz la declara de red o local? (convención del motor de Google). */
+const NETWORK_VOICE_RE = /(?:^|[-_ ])network(?:$|[-_ ])/i;
+const LOCAL_VOICE_RE = /(?:^|[-_ ])local(?:$|[-_ ])/i;
+const declares = (v: VoiceLike, re: RegExp) => re.test(v.identifier) || (v.name !== undefined && re.test(v.name));
+
+/**
+ * Bloque 3 (auditoría 0.1.112): elige la voz del idioma de lectura
+ * sin las que se declaran de red. Orden: local declarada y del locale
+ * exacto; local del idioma; sin marca del locale exacto; sin marca del
+ * idioma. Si todas las del idioma son de red, null: speakAloud no pasa
+ * voz y el motor usa su voz por defecto (NIDO no puede saber si esa es
+ * local; el texto del ajuste lo declara).
+ */
+export function chooseVoice(voices: readonly VoiceLike[], locale: string): string | null {
+  const lang = locale.toLowerCase();
+  const prefix = lang.split("-")[0];
+  const same = voices.filter((v) => v.language?.toLowerCase().startsWith(prefix) && !declares(v, NETWORK_VOICE_RE));
+  const exact = (v: VoiceLike) => v.language.toLowerCase().startsWith(lang);
+  const local = (v: VoiceLike) => declares(v, LOCAL_VOICE_RE);
+  const pick =
+    same.find((v) => local(v) && exact(v)) ??
+    same.find(local) ??
+    same.find(exact) ??
+    same[0];
+  return pick?.identifier ?? null;
+}
+
 /** Elige la mejor voz del idioma de lectura disponible en el dispositivo. */
 async function pickVoice(locale: string): Promise<string | undefined> {
   const cached = voiceCache.get(locale);
   if (cached !== undefined) return cached ?? undefined;
   try {
     const voices = await Speech.getAvailableVoicesAsync();
-    const lang = locale.toLowerCase();
-    const prefix = lang.split("-")[0];
-    const same = voices.filter((v) => v.language?.toLowerCase().startsWith(prefix));
-    const pick =
-      same.find((v) => v.language.toLowerCase().startsWith(lang)) ?? same[0];
-    voiceCache.set(locale, pick?.identifier ?? null);
-    return pick?.identifier;
+    const pick = chooseVoice(voices, locale);
+    voiceCache.set(locale, pick);
+    return pick ?? undefined;
   } catch {
     voiceCache.set(locale, null);
     return undefined;

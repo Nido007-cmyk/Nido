@@ -13,7 +13,7 @@ vi.mock("expo-speech", () => ({
 }));
 vi.mock("../i18n", () => ({ default: { language: "es" } }));
 
-import { cleanForSpeech, speechLocaleFor } from "./tts";
+import { chooseVoice, cleanForSpeech, speechLocaleFor } from "./tts";
 
 describe("speechLocaleFor (F1 M-3)", () => {
   it("cada idioma de la app lee con su variante regional", () => {
@@ -70,3 +70,26 @@ describe("cleanForSpeech: el razonamiento no se lee (auditoría 0.1.93)", () => 
   });
 });
 
+
+describe("bloque 3 (0.1.112): chooseVoice descarta las voces de red y prefiere las locales", () => {
+  const V = (identifier: string, language: string, name = identifier) => ({ identifier, name, language });
+
+  it("con las dos variantes del motor de Google elige la local", () => {
+    const voices = [V("es-us-x-esd-network", "es-US"), V("es-us-x-esd-local", "es-US"), V("en-us-x-sfg-network", "en-US")];
+    expect(chooseVoice(voices, "es-MX")).toBe("es-us-x-esd-local");
+  });
+
+  it("nunca elige una voz marcada de red, aunque sea la del locale exacto", () => {
+    const voices = [V("pt-br-x-afs-network", "pt-BR"), V("pt-pt-x-sfs-local", "pt-PT")];
+    expect(chooseVoice(voices, "pt-BR")).toBe("pt-pt-x-sfs-local");
+  });
+
+  it("si todas las del idioma son de red, no pasa voz (null)", () => {
+    expect(chooseVoice([V("en-us-x-iom-network", "en-US")], "en-US")).toBeNull();
+  });
+
+  it("un motor sin marca (otro fabricante) sigue eligiendo por idioma, como antes", () => {
+    const voices = [V("SMTl01", "es-ES"), V("SMTm02", "es-MX")];
+    expect(chooseVoice(voices, "es-MX")).toBe("SMTm02");
+  });
+});

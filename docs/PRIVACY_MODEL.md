@@ -13,7 +13,9 @@ the only place where their data exists. No account, no server, no cloud.
 | P2P contacts | Local SQLite | **No** |
 | Agent memory (memories, notes, summaries) | Local SQLite | **No** |
 | Identity/signing keys | SecureStore (Keystore) | **No** (never; only the public one travels in the physical QR) |
-| AI models (LLM, STT, TTS) | Local storage (bundled) | **No** |
+| AI models (chat and search) | Local storage, downloaded once and verified | **No** |
+| Dictation (STT) | The phone's own recognizer by default (Settings › Voice) | **No** by default; yes if you allow the system service |
+| Read aloud (TTS) | The phone's system voice engine | **Not guaranteed**: NIDO skips voices the engine marks as network ones, but not every engine marks them |
 | Crash reports | Local, opt-in | **No** (manual user export) |
 | Telemetry / analytics | — | **Doesn't exist** |
 
@@ -97,9 +99,14 @@ what risk it has), not technical jargon.
 
 ## 8. Local AI model privacy
 
-- Models (LLM, whisper STT, Piper TTS) ship with the app or are downloaded
-  once from an immutable URL with **SHA-256 pinned and verified before loading**.
-- Inference happens on-device; no audio, text or embedding leaves.
+- The chat and search models are downloaded once from a pinned source with
+  **SHA-256 pinned and verified before loading**. There is no bundled speech
+  model: dictation uses the phone's recognizer and reading aloud uses the
+  system voice engine (corrected 2026-11-24; this line used to name whisper
+  and Piper, which NIDO does not ship).
+- Model inference happens on-device; no text or embedding leaves. Reading
+  aloud depends on the system voice: NIDO skips voices the engine marks as
+  network voices, which not every engine does.
 - **No promises without evidence:** "100% offline STT" isn't claimed until tested
   in airplane mode with traffic capture (P7); `EXTRA_PREFER_OFFLINE` is a preference,
   not a guarantee.

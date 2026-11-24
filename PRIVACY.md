@@ -49,6 +49,8 @@ Every local Wi-Fi connection also appears in the network log.
 
 By default, voice dictation only works with a speech recognizer that runs on your phone (Android 12 or later, when the phone has one), so the audio never leaves it. If your phone only has the system speech service (Google's or the manufacturer's), dictation stays off unless you turn off Settings › Voice › "On-device recognition only". That service may send your audio over the internet and process it according to its own policy.
 
+Reading answers aloud uses your phone's system voice engine. NIDO skips the voices the engine marks as network voices and prefers the ones that run on the phone. Not every engine says which is which: with one that doesn't, the voice it uses may send the text over the internet.
+
 ## Permissions
 
 - **Bluetooth and nearby devices**: pairing and messaging between phones.

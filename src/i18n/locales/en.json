@@ -362,7 +362,7 @@
     "unavailable": "Unavailable on this device",
     "unavailableNote": "No system speech-recognition service was found — common on GrapheneOS / de-Googled builds. An embedded whisper.cpp model would remove this dependency but is a separate project on the scale of the llama.rn integration itself; not implemented in this version.",
     "readAloudLabel": "Read aloud",
-    "readAloudValue": "Reads the assistant's responses using the system voice (no internet).",
+    "readAloudValue": "Reads the assistant's answers with the system voice. NIDO skips the voices your speech engine marks as network voices and prefers the ones that work on the phone; if the engine doesn't say, it may use a voice that sends the text over the internet.",
     "engineOnDevice": "On-device recognizer: the audio stays on this phone",
     "engineSystem": "Only the system voice service (Google’s or the manufacturer’s): it may send the audio over the internet",
     "onDeviceOnlyLabel": "On-device recognition only",
