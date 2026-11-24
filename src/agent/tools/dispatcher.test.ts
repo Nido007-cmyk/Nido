@@ -4,8 +4,9 @@
  * See LICENSE file for details.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
-import { validateToolCall, dispatchToolCall } from "./dispatcher";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { validateToolCall, dispatchToolCall, dispatchToolCallDetailed } from "./dispatcher";
+import { withConfirmation, confirmCancelledMessage } from "./confirm";
 import { actionLog } from "../actionLog";
 
 describe("validateToolCall", () => {
@@ -357,5 +358,50 @@ describe("dispatchToolCallDetailed", () => {
       },
     );
     expect(seen).toEqual([{ tool: "delete_note", args: { id: "n1", title: "Receta" } }]);
+  });
+});
+
+describe("CONF-2 · el rechazo en el handler asienta «cancelled», no «executed»", () => {
+  beforeEach(() => {
+    actionLog.clear();
+  });
+
+  const describeSms = () => ({ tool: "send_sms", title: "T", message: "M" });
+  const smsArgs = { phone: "+123", message: "hola" };
+
+  it("el usuario dice «no» en el diálogo del handler → el registro asienta cancelled y el handler no corre", async () => {
+    const inner = vi.fn(async () => "SMS abierto");
+    const wrapped = withConfirmation("send_sms", inner, async () => false, describeSms);
+    const out = await dispatchToolCall(
+      { name: "send_sms", arguments: smsArgs },
+      { send_sms: wrapped },
+    );
+    expect(out).toBe(confirmCancelledMessage());
+    expect(inner).not.toHaveBeenCalled();
+    const entry = actionLog.list().find((e) => e.tool === "send_sms");
+    expect(entry?.outcome).toBe("cancelled");
+  });
+
+  it("el usuario acepta y el handler ejecuta → el registro asienta executed", async () => {
+    const inner = vi.fn(async () => "SMS abierto");
+    const wrapped = withConfirmation("send_sms", inner, async () => true, describeSms);
+    const out = await dispatchToolCall(
+      { name: "send_sms", arguments: smsArgs },
+      { send_sms: wrapped },
+    );
+    expect(out).toBe("SMS abierto");
+    expect(inner).toHaveBeenCalledOnce();
+    const entry = actionLog.list().find((e) => e.tool === "send_sms");
+    expect(entry?.outcome).toBe("executed");
+  });
+
+  it("el despacho de un rechazo devuelve el mismo estado y el mismo texto que hoy (solo cambia el registro)", async () => {
+    const inner = vi.fn(async () => "SMS abierto");
+    const wrapped = withConfirmation("send_sms", inner, async () => false, describeSms);
+    const out = await dispatchToolCallDetailed(
+      { name: "send_sms", arguments: smsArgs },
+      { send_sms: wrapped },
+    );
+    expect(out).toEqual({ status: "executed", text: confirmCancelledMessage() });
   });
 });

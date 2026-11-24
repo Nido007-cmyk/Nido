@@ -99,6 +99,17 @@ export function confirmBlockedMessage(tool: string): string {
 }
 
 /**
+ * CONF-2: el mensaje de cancelación con nombre propio. El despachador lo
+ * compara contra el resultado del handler envuelto para asentar el
+ * rechazo como "cancelled" en el registro de acciones, no como
+ * "executed" (la forma que PC sirvió en su CONF-2). El texto no cambia:
+ * es el mismo que el rechazo ya devolvía.
+ */
+export function confirmCancelledMessage(): string {
+  return confirmCoreT()("agentConfirm.confirmCancelled");
+}
+
+/**
  * N2: mensaje de bloqueo cuando el payload muta entre la confirmación y la
  * ejecución (el consentimiento se dio sobre otros bytes).
  */
@@ -190,7 +201,7 @@ export function withConfirmation(
     } catch {
       ok = false; // ante la duda, no actuar
     }
-    if (!ok) return confirmCoreT()("agentConfirm.confirmCancelled");
+    if (!ok) return confirmCancelledMessage();
     // N2: paridad describe/execute. Si los args mutaron entre la
     // descripción y la ejecución, el usuario aprobó otros bytes → la
     // acción NO se ejecuta. Sin foto verificable tampoco se ejecuta.
