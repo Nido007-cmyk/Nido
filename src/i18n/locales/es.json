@@ -1645,6 +1645,17 @@
             "tip": "«Recuerda que…» guarda un dato. «Recuérdame…» crea un aviso. Ves y borras lo guardado en el menú → $t(chatScreen.drawerItems.memory)."
           },
           {
+            "id": "forget",
+            "title": "Borrar y olvidar",
+            "what": "Borra una nota o un recordatorio, u olvida algo que me contaste. Antes de borrar te enseño qué es y espero tu confirmación.",
+            "examples": [
+              "borra la nota de la compra",
+              "borra el recordatorio de la farmacia",
+              "olvida mi color favorito"
+            ],
+            "tip": "Borrar no tiene vuelta atrás. Si no sabes el nombre exacto, pide antes «qué notas tengo» o «mis recordatorios»."
+          },
+          {
             "id": "calendar",
             "title": "Calendario",
             "what": "Consulta tus eventos y crea nuevos en el calendario del dispositivo.",
@@ -1661,9 +1672,20 @@
             "what": "Busca en tus contactos y llama sin buscar el número.",
             "examples": [
               "busca el contacto Ana",
-              "llama a Ana"
+              "llama a Ana",
+              "manda un SMS a Ana diciendo que voy en camino"
             ],
             "tip": "Antes de llamar NIDO te muestra el número y te pide confirmar. Necesita permiso de contactos."
+          },
+          {
+            "id": "skills",
+            "title": "Procedimientos guiados",
+            "what": "Con un modelo cargado, NIDO puede seguir procedimientos paso a paso para tareas que se repiten: planificar tu día o tu semana, analizar una tabla o resumir un archivo.",
+            "steps": [
+              "Pídelo con tus palabras: «planifica mi día», «organiza mi semana» o «resume un archivo».",
+              "NIDO carga el procedimiento y usa lo que ya tienes en el teléfono: la hora, el calendario, tus notas o el archivo que elijas."
+            ],
+            "tip": "Necesita el modelo de conversación descargado. Antes de crear recordatorios o eventos a partir del plan, NIDO te pregunta."
           }
         ]
       },
@@ -1766,6 +1788,39 @@
             "tip": "Si el otro no está al alcance, el mensaje espera cifrado y se envía solo cuando aparezca. Si se desconecta al rato con NIDO cerrado, toca «Permitir» en el aviso de batería de la pantalla NIDO."
           },
           {
+            "id": "agentMessages",
+            "title": "Mensajes NIDO desde el chat",
+            "what": "Pide en el chat que mande o lea mensajes NIDO, sin salir de la conversación.",
+            "examples": [
+              "manda un mensaje a Ana por NIDO: llego a las 8",
+              "¿tengo mensajes de nido?",
+              "cuál es mi código de nido",
+              "tareas pendientes de nido"
+            ],
+            "tip": "Antes de enviar te enseño el mensaje completo y espero tu confirmación. Solo llega a contactos ya emparejados; si no está al alcance, el mensaje espera cifrado."
+          },
+          {
+            "id": "disappearing",
+            "title": "Mensajes temporales",
+            "what": "Haz que los mensajes nuevos de un chat se borren solos en los dos teléfonos.",
+            "steps": [
+              "Menú → NIDO → pestaña $t(nido.tabChats), y abre el chat con tu contacto.",
+              "Arriba, toca el botón del temporizador ($t(nido.disappearTitle)) y elige cuánto duran."
+            ],
+            "tip": "Para ti el tiempo cuenta desde que envías; para tu contacto, desde que lo ve. Nadie puede impedir que alguien fotografíe la pantalla con otra cámara."
+          },
+          {
+            "id": "packShare",
+            "title": "Compartir un paquete",
+            "what": "Pasa un paquete de conocimiento a otro NIDO sin internet, por Bluetooth o Wi-Fi local.",
+            "steps": [
+              "Conéctate antes con el contacto (pestaña $t(nido.tabLink)).",
+              "Menú → NIDO → pestaña $t(nido.tabPacks), elige el paquete y toca $t(packshare.share).",
+              "Elige a quién se lo mandas; tu contacto lo acepta o lo rechaza."
+            ],
+            "tip": "Solo se comparten paquetes del catálogo de NIDO, tal como se descargaron. Si aún no habéis comparado las huellas, la oferta queda en pausa."
+          },
+          {
             "id": "outside",
             "title": "NIDO desde cualquier app",
             "what": "Usa NIDO sin abrirlo primero.",
@@ -1827,6 +1882,16 @@
               "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.recovery) → $t(modelSetupScreen.recovery.dangerBadge)."
             ],
             "tip": "No se puede deshacer. Si quieres conservar algo, haz antes un respaldo."
+          },
+          {
+            "id": "panic",
+            "title": "Botón de pánico",
+            "what": "Un botón que, mantenido 3 segundos, borra todos los datos de NIDO de golpe.",
+            "steps": [
+              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.security) → enciende $t(panic.settingTitle).",
+              "En la pantalla principal aparece un escudo rojo: mantenlo pulsado 3 segundos para borrarlo todo."
+            ],
+            "tip": "No pide huella ni confirmación y no se puede deshacer. Si quieres conservar algo, haz antes una copia de seguridad."
           }
         ]
       },
