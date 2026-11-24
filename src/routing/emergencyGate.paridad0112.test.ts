@@ -97,4 +97,37 @@ describe("bloque 2 (0.1.112): la matriz trilingüe da el mismo veredicto en es/e
       "how do I clean the bathroom with bleach",
     ]) expect(verdict(t).emergency, t).toBe(false);
   });
+
+  // Paso 0-bis (b): la causa del NO CONFORME del bloque 2. El corpus de
+  // variantes (2.957) midió exactamente cuatro cambios en dirección
+  // mala en todo el bloque: dos caras nuevas del verbo de dolor sin su
+  // guarda de colisión. Cada falso positivo va como caso propio con su
+  // grafía exacta de corpus, con la guarda gemela y un ancla por cara.
+  it("0-bis (b) · no declara salud · you really hurt my feelings yesterday", () => {
+    expect(isHealthQuestion("you really hurt my feelings yesterday")).toBe(false);
+  });
+
+  it("0-bis (b) · no declara salud · please, you really hurt my feelings yesterday", () => {
+    expect(isHealthQuestion("please, you really hurt my feelings yesterday")).toBe(false);
+  });
+
+  it("0-bis (b) · no declara salud · ontem minha cabeça doeu mas já estou bem", () => {
+    expect(isHealthQuestion("ontem minha cabeça doeu mas já estou bem")).toBe(false);
+  });
+
+  it("0-bis (b) · no declara salud · ontem minha cabeca doeu mas ja estou bem", () => {
+    expect(isHealthQuestion("ontem minha cabeca doeu mas ja estou bem")).toBe(false);
+  });
+
+  it("0-bis (b) · la guarda gemela sigue sin declarar · you hurt my feelings", () => {
+    expect(isHealthQuestion("you hurt my feelings")).toBe(false);
+  });
+
+  it("0-bis (b) · el ancla de «hurt» sigue declarando · my chest and my left arm hurt", () => {
+    expect(isHealthQuestion("my chest and my left arm hurt")).toBe(true);
+  });
+
+  it("0-bis (b) · el ancla de «doeu» sigue declarando · minha cabeça doeu muito hoje", () => {
+    expect(isHealthQuestion("minha cabeça doeu muito hoje")).toBe(true);
+  });
 });

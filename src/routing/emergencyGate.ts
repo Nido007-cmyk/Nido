@@ -392,6 +392,19 @@ const HEALTH_EXCLUSIONS = [
   "burn a cd", "burn a dvd", "burn a disc", "burn calories", "burn fat", "burnout",
   "labor market", "labour market", "labor day", "labor union", "labour party", "labor law",
   "rash guard", "pain point", "horoscopo", "horoscope", "zodiac", "zodiaco",
+  // Paso 0-bis (b): la cara emocional de «really hurt» (bloque 2 de la
+  // auditoría 0.1.112). La frase atada entró sin el contexto de cuerpo
+  // de sus hermanas y declaraba salud en «you really hurt my feelings
+  // yesterday»; la exclusión emocional que la prep preveía para esta
+  // cara la deja fuera sin tocar el uso corporal («my leg really hurt»
+  // sigue declarando).
+  "really hurt my feelings",
+  // Paso 0-bis (b): la guarda de pasado resuelto para «doeu». Un dolor
+  // contado como ya curado («ontem minha cabeça doeu mas já estou
+  // bem») no es una situación presente; el marcador de resolución veta
+  // la declaración y el plegado cubre la forma sin acentos. El «doeu»
+  // sin resolución («minha cabeça doeu muito hoje») sigue declarando.
+  "ja estou bem",
   // La ficción que se está escribiendo no es una situación (las señales
   // nuevas, «estoy», «i», la habrían contado como tal).
   "escribiendo un cuento", "escribiendo una novela", "escribiendo una historia", "escribiendo un guion",
