@@ -64,7 +64,7 @@ import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
 import { makeSurfaces } from "./theme/surfaces";
 import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
-import { backupErrorText } from "./backupErrorText";
+import { backupErrorText, invalidBackupText } from "./backupErrorText";
 import { ExactAlarmCard } from "./ExactAlarmCard";
 import { DailySummaryCard } from "./DailySummaryCard";
 import { SecurityStatusCard } from "./SecurityStatusCard";
@@ -1095,7 +1095,9 @@ export function ModelSetupScreen(props: Props) {
                       const { validateBackup, restoreBackup } = await import("../security/backup");
                       const v = await validateBackup(uri);
                       if (!v.valid) {
-                        Alert.alert(t("backup.invalidTitle"), v.reason ?? t("backup.invalidBody"));
+                        // Bloque 8 (0.1.112): el motivo, traducido; nunca el texto
+                        // interno en español.
+                        Alert.alert(t("backup.invalidTitle"), invalidBackupText(v.reasonCode, t));
                         return;
                       }
                       const { restoreConfirmText } = await import("../security/restoreNotice");

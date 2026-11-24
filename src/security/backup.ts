@@ -28,7 +28,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { getDatabaseKeyHex } from "../privacy/keyManager";
 import { WAL_CHECKPOINT_SQL } from "./secureDatabase";
 import { getDatabase, closeDatabase } from "./databaseManager";
-import { BackupError } from "./backupErrors";
+import { BackupError, type BackupInvalidReason } from "./backupErrors";
 
 const DB_NAME = "nido_memory.db";
 const KNOWLEDGE_DB_NAME = "nido_knowledge.db";
@@ -429,14 +429,14 @@ export async function exportDatabaseKey(): Promise<string> {
 async function validateBundle(bundleUri: string): Promise<BackupValidation> {
   const info = await FileSystem.getInfoAsync(bundleUri);
   if (!info.exists) {
-    return { valid: false, reason: "El archivo no existe." };
+    return { valid: false, reason: "El archivo no existe.", reasonCode: "notFound" };
   }
   const size = (info as any).size ?? 0;
   if (size > MAX_BUNDLE_BYTES) {
-    return { valid: false, reason: "El bundle es demasiado grande." };
+    return { valid: false, reason: "El bundle es demasiado grande.", reasonCode: "tooLarge" };
   }
   if (size < 100) {
-    return { valid: false, reason: "El bundle es demasiado pequeño." };
+    return { valid: false, reason: "El bundle es demasiado pequeño.", reasonCode: "tooSmall" };
   }
 
   let bundle: any;
@@ -444,25 +444,25 @@ async function validateBundle(bundleUri: string): Promise<BackupValidation> {
     const raw = await FileSystem.readAsStringAsync(bundleUri);
     bundle = JSON.parse(raw);
   } catch {
-    return { valid: false, reason: "El bundle no es JSON válido." };
+    return { valid: false, reason: "El bundle no es JSON válido.", reasonCode: "notJson" };
   }
 
   if (!bundle || typeof bundle !== "object" || bundle.format !== "nidobackup") {
-    return { valid: false, reason: "Formato de bundle no reconocido." };
+    return { valid: false, reason: "Formato de bundle no reconocido.", reasonCode: "unknownFormat" };
   }
   if (!bundle.manifest || typeof bundle.manifest !== "object") {
-    return { valid: false, reason: "El bundle no tiene manifest válido." };
+    return { valid: false, reason: "El bundle no tiene manifest válido.", reasonCode: "noManifest" };
   }
   if (typeof bundle.db !== "string" || bundle.db.length < 100) {
-    return { valid: false, reason: "El bundle no tiene base de datos válida." };
+    return { valid: false, reason: "El bundle no tiene base de datos válida.", reasonCode: "noDatabase" };
   }
   const m = bundle.manifest;
   if (typeof m.sha256 !== "string" || typeof m.dekFingerprint !== "string") {
-    return { valid: false, reason: "El manifest está incompleto (falta SHA o fingerprint)." };
+    return { valid: false, reason: "El manifest está incompleto (falta SHA o fingerprint).", reasonCode: "manifestIncomplete" };
   }
   const mInfo = backupManifestInfo(m);
   if (mInfo.tooNew) {
-    return { valid: false, reason: "Este respaldo es de una versión más nueva de NIDO. Actualiza NIDO para restaurarlo." };
+    return { valid: false, reason: "Este respaldo es de una versión más nueva de NIDO. Actualiza NIDO para restaurarlo.", reasonCode: "tooNew" };
   }
 
   return { valid: true, sizeBytes: size, info: mInfo };
@@ -479,7 +479,13 @@ async function validateBundle(bundleUri: string): Promise<BackupValidation> {
 export interface BackupValidation {
   valid: boolean;
   sizeBytes?: number;
+  /** Motivo en español, para registros y pruebas (no se muestra tal cual). */
   reason?: string;
+  /**
+   * Auditoría 0.1.112, bloque 8: el motivo como código estable, para que
+   * la pantalla lo diga en el idioma de la app (backup.invalidReasons.*).
+   */
+  reasonCode?: BackupInvalidReason;
   /** Lo que dice el manifest, si había uno (para avisar antes de restaurar). */
   info?: BackupManifestInfo;
 }
@@ -493,11 +499,11 @@ export async function validateBackup(uri: string): Promise<BackupValidation> {
     }
     const info = await FileSystem.getInfoAsync(uri);
     if (!info.exists) {
-      return { valid: false, reason: "El archivo no existe." };
+      return { valid: false, reason: "El archivo no existe.", reasonCode: "notFound" };
     }
     const size = (info as any).size ?? 0;
     if (size < 1024) {
-      return { valid: false, reason: "El archivo es demasiado pequeño para ser un backup válido." };
+      return { valid: false, reason: "El archivo es demasiado pequeño para ser un backup válido.", reasonCode: "tooSmall" };
     }
     // FIX 2026-10-09 (B13): NO rechazar por magic header. SQLCipher cifra el
     // header por defecto (default_plaintext_header_size=0), así que un backup
@@ -532,7 +538,7 @@ export async function validateBackup(uri: string): Promise<BackupValidation> {
           trialOpenOk = true;
         } catch {
           await (db as any).closeAsync().catch(() => {});
-          return { valid: false, reason: "El backup no se puede abrir con la clave actual (es de otra instalación o está corrupto)." };
+          return { valid: false, reason: "El backup no se puede abrir con la clave actual (es de otra instalación o está corrupto).", reasonCode: "wontOpen" };
         }
       }
       // Si no hay DEK (instalación fresca), no podemos hacer trial-open.
@@ -545,7 +551,7 @@ export async function validateBackup(uri: string): Promise<BackupValidation> {
     // va firmado: basura + manifest con el SHA recalculado lo pasaba si la
     // apertura de prueba no llegaba a ejecutarse (error técnico).
     if (dekPresent && !trialOpenOk) {
-      return { valid: false, reason: "No se pudo comprobar el backup con la clave de este teléfono." };
+      return { valid: false, reason: "No se pudo comprobar el backup con la clave de este teléfono.", reasonCode: "cantVerify" };
     }
     // FIX 2026-10-09 (K1/K2): verificar manifest — SHA-256 del archivo y
     // fingerprint del DEK. Si el backup es de otra instalación (DEK distinto),
@@ -559,11 +565,11 @@ export async function validateBackup(uri: string): Promise<BackupValidation> {
         try {
           manifest = JSON.parse(manifestRaw);
         } catch {
-          return { valid: false, reason: "El manifest está corrupto (JSON inválido)." };
+          return { valid: false, reason: "El manifest está corrupto (JSON inválido).", reasonCode: "corrupt" };
         }
         // FIX 2026-10-09 (NEW-H-2): validar forma del manifest en path .db crudo.
         if (!manifest || typeof manifest !== "object") {
-          return { valid: false, reason: "El manifest no es un objeto válido." };
+          return { valid: false, reason: "El manifest no es un objeto válido.", reasonCode: "corrupt" };
         }
         // K2: verificar SHA-256.
         // FIX 2026-10-09 (H-5): fail-closed si no se puede calcular el SHA.
@@ -573,27 +579,27 @@ export async function validateBackup(uri: string): Promise<BackupValidation> {
         // no-string (ej. número) haría throw en .toLowerCase(), el catch externo
         // lo tragaría y el check se saltaría (fail-open).
         if (typeof manifest.sha256 !== "string" || !manifest.sha256) {
-          return { valid: false, reason: "El manifest no incluye SHA-256 válido (no se puede verificar integridad)." };
+          return { valid: false, reason: "El manifest no incluye SHA-256 válido (no se puede verificar integridad).", reasonCode: "manifestIncomplete" };
         }
         parsedInfo = backupManifestInfo(manifest);
         if (parsedInfo.tooNew) {
-          return { valid: false, reason: "Este respaldo es de una versión más nueva de NIDO. Actualiza NIDO para restaurarlo." };
+          return { valid: false, reason: "Este respaldo es de una versión más nueva de NIDO. Actualiza NIDO para restaurarlo.", reasonCode: "tooNew" };
         }
         // Manifest nuevo: SHA-256 real de los bytes. Manifest de 0.1.61 o
         // anterior (sin sha256Kind): el cálculo de entonces.
         const actualSha =
           manifest.sha256Kind === SHA256_KIND_BYTES ? await sha256File(uri) : await legacySha256File(uri);
         if (!actualSha) {
-          return { valid: false, reason: "No se pudo verificar la integridad (SHA-256)." };
+          return { valid: false, reason: "No se pudo verificar la integridad (SHA-256).", reasonCode: "cantVerify" };
         }
         if (actualSha.toLowerCase() !== manifest.sha256.toLowerCase()) {
-          return { valid: false, reason: "El backup está corrupto (SHA-256 no coincide)." };
+          return { valid: false, reason: "El backup está corrupto (SHA-256 no coincide).", reasonCode: "corrupt" };
         }
         // K1: verificar DEK fingerprint.
         // FIX 2026-10-09 (K2-TYPEFAIL): mismo guard de tipo para dekFingerprint.
         if (manifest.dekFingerprint) {
           if (typeof manifest.dekFingerprint !== "string") {
-            return { valid: false, reason: "El manifest tiene fingerprint inválido." };
+            return { valid: false, reason: "El manifest tiene fingerprint inválido.", reasonCode: "corrupt" };
           }
           const currentDek = await getDatabaseKeyHex().catch(() => null);
           if (currentDek) {
@@ -604,7 +610,7 @@ export async function validateBackup(uri: string): Promise<BackupValidation> {
               { encoding: Crypto.CryptoEncoding.HEX }
             );
             if (currentFp.toLowerCase() !== manifest.dekFingerprint.toLowerCase()) {
-              return { valid: false, reason: "Este backup es de otra instalación (clave distinta). No se puede restaurar." };
+              return { valid: false, reason: "Este backup es de otra instalación (clave distinta). No se puede restaurar.", reasonCode: "otherInstall" };
             }
           }
         }
@@ -618,11 +624,12 @@ export async function validateBackup(uri: string): Promise<BackupValidation> {
         valid: false,
         reason:
           "No se pudo verificar el backup: no abre con la clave de este dispositivo y no trae un manifest válido.",
+        reasonCode: "cantVerify",
       };
     }
     return { valid: true, sizeBytes: size, ...(parsedInfo ? { info: parsedInfo } : {}) };
   } catch (e) {
-    return { valid: false, reason: e instanceof Error ? e.message : "Error desconocido." };
+    return { valid: false, reason: e instanceof Error ? e.message : "Error desconocido.", reasonCode: "unknown" };
   }
 }
 
@@ -677,7 +684,7 @@ async function restoreExtracted(actualUri: string): Promise<void> {
   // 1. Validar ANTES de tocar nada (BK-3).
   const validation = await validateBackup(actualUri);
   if (!validation.valid) {
-    throw new BackupError("invalid", `Backup inválido: ${validation.reason}`);
+    throw new BackupError("invalid", `Backup inválido: ${validation.reason}`, validation.reasonCode);
   }
 
   const dbPath = await getDbPath();
@@ -782,7 +789,7 @@ async function restoreExtracted(actualUri: string): Promise<void> {
       const kbValidation = await validateBackup(knowledgeBackupUri);
       if (!kbValidation.valid) {
         await rollbackMain();
-        throw new BackupError("invalid", `El respaldo de conocimiento no es válido: ${kbValidation.reason}`);
+        throw new BackupError("invalid", `El respaldo de conocimiento no es válido: ${kbValidation.reason}`, kbValidation.reasonCode);
       }
       // F3-08: si el manifest de la principal declara la huella del
       // conocimiento, se comprueba antes de reemplazar nada. Los
@@ -795,7 +802,7 @@ async function restoreExtracted(actualUri: string): Promise<void> {
           const actualKbSha = await sha256File(knowledgeBackupUri);
           if (!actualKbSha || actualKbSha.toLowerCase() !== m.knowledgeSha256.toLowerCase()) {
             await rollbackMain();
-            throw new BackupError("invalid", "El respaldo de conocimiento está corrupto (SHA-256 no coincide).");
+            throw new BackupError("invalid", "El respaldo de conocimiento está corrupto (SHA-256 no coincide).", "corrupt");
           }
         }
       } catch (e) {
@@ -888,7 +895,7 @@ export async function createPortableBundle(backupUri: string): Promise<string> {
   }
   // El bundle infla los bytes (base64, ~4/3) más el envoltorio JSON.
   if (totalBytes * 1.4 > MAX_BUNDLE_BYTES) {
-    throw new BackupError("invalid", "El respaldo es demasiado grande para compartirlo como un solo archivo.");
+    throw new BackupError("invalid", "El respaldo es demasiado grande para compartirlo como un solo archivo.", "tooLargeToShare");
   }
 
   const manifestRaw = await FileSystem.readAsStringAsync(manifestUri);
@@ -929,12 +936,12 @@ export async function extractPortableBundle(bundleUri: string, destDir: string):
   const info = await FileSystem.getInfoAsync(bundleUri);
   const size = (info as { size?: number }).size;
   if (!info.exists || typeof size !== "number" || size > MAX_BUNDLE_BYTES) {
-    throw new BackupError("invalid", "El bundle no existe o es demasiado grande.");
+    throw new BackupError("invalid", "El bundle no existe o es demasiado grande.", "tooLarge");
   }
   const raw = await FileSystem.readAsStringAsync(bundleUri);
   const bundle = JSON.parse(raw);
   if (bundle.format !== "nidobackup") {
-    throw new BackupError("invalid", "Formato de bundle no reconocido");
+    throw new BackupError("invalid", "Formato de bundle no reconocido", "unknownFormat");
   }
 
   // Auditoría completa 2026-10-31 (F3-19): la extracción ya no usa el
@@ -1008,7 +1015,7 @@ export async function restoreBackupWithKey(backupUri: string, backupKeyInput: st
   const extracted: string[] = [];
   if (backupUri.endsWith(".nidobackup.json")) {
     const v = await validateBackup(backupUri);
-    if (!v.valid) throw new BackupError("invalid", `Backup inválido: ${v.reason}`);
+    if (!v.valid) throw new BackupError("invalid", `Backup inválido: ${v.reason}`, v.reasonCode);
     sourceUri = await extractPortableBundle(backupUri, dir);
     extracted.push(sourceUri, `${sourceUri}.manifest.json`, knowledgeBackupUriFor(sourceUri));
   }
@@ -1040,7 +1047,7 @@ export async function restoreBackupWithKey(backupUri: string, backupKeyInput: st
 
   try {
     const info = await FileSystem.getInfoAsync(sourceUri);
-    if (!info.exists) throw new BackupError("invalid", "El archivo no existe.");
+    if (!info.exists) throw new BackupError("invalid", "El archivo no existe.", "notFound");
     try {
       await rekeyCopy(sourceUri, tempMain, "restore-with-key");
     } catch {
