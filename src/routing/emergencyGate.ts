@@ -1122,16 +1122,23 @@ const FALL_PLACE_ARTICLES = new Set([
 ]);
 
 /** ¿Sigue a la caída (que acaba en `end`) su lugar? Preposición
- * en la posición `end + 1`, artículo opcional y el lugar. */
+ * en la posición `end + 1`, artículo opcional y el lugar.
+ * Ampliación del lote (§1): la contracción fusionada («al»,
+ * «del») trae la preposición y el artículo en un solo token, así
+ * que el lugar se cobra en el token siguiente; y «del» vale
+ * además como artículo tras una preposición («dentro del
+ * baño»). */
 function fallPlaceFollows(
   words: string[],
   end: number,
   preps: string[],
   places: Set<string>,
 ): boolean {
-  if (!preps.includes(words[end + 1] ?? "")) return false;
+  const next = words[end + 1] ?? "";
+  if (next === "al" || next === "del") return places.has(words[end + 2] ?? "");
+  if (!preps.includes(next)) return false;
   let j = end + 2;
-  if (FALL_PLACE_ARTICLES.has(words[j] ?? "")) j++;
+  if (FALL_PLACE_ARTICLES.has(words[j] ?? "") || words[j] === "del") j++;
   return places.has(words[j] ?? "");
 }
 
@@ -1210,15 +1217,26 @@ function fallDeclares(words: string[], folded: string): boolean {
       // baño» sin sujeto) es contexto bastante: ver FALL_PLACES_*.
       if (
         (phrase === "se cayo" || phrase === "se callo") &&
-        fallPlaceFollows(words, end, ["en"], FALL_PLACES_ES)
+        fallPlaceFollows(words, end, ["en", "a", "dentro"], FALL_PLACES_ES)
       ) return true;
       if (phrase === "caiu" && fallPlaceFollows(words, end, ["no", "na", "em"], FALL_PLACES_PT)) return true;
-      if (
-        phrase === "fell" &&
-        words[end + 1] === "in" &&
-        words[end + 2] === "the" &&
-        FALL_PLACES_EN.has(words[end + 3] ?? "")
-      ) return true;
+      // Ampliación del lote (§1): tras «fell», un «down» opcional e
+      // inmediato; con él vale también «the» + lugar («fell down
+      // the stairs»), y sin él la forma de siempre («in the»).
+      if (phrase === "fell") {
+        const down = words[end + 1] === "down";
+        const k = down ? end + 2 : end + 1;
+        if (
+          words[k] === "in" &&
+          words[k + 1] === "the" &&
+          FALL_PLACES_EN.has(words[k + 2] ?? "")
+        ) return true;
+        if (
+          down &&
+          words[k] === "the" &&
+          FALL_PLACES_EN.has(words[k + 1] ?? "")
+        ) return true;
+      }
     }
   }
   return false;
