@@ -419,6 +419,54 @@ const SELF_HARM_PATTERNS = [
       "nao quero (?:mais )?viver",
       "nao aguento mais viver",
       "acabar com (?:a )?minha vida",
+      // Auditoría de la 0.1.112, bloque 1: ideación pasiva y sobredosis
+      // anunciada. La red era léxica y le faltaban cuatro familias en los
+      // tres idiomas (o en alguno): «no tengo razones para vivir», «no
+      // quiero despertar mañana», «estarían mejor sin mí» y «voy a
+      // tomarme todas las pastillas». Siempre en primera persona, y con
+      // las guardas que separan la frase de crisis de la cotidiana: el
+      // despertar solo cuenta si la frase termina ahí («no quiero
+      // despertarme mañana temprano» es madrugar), y las pastillas solo
+      // con «todas» o una cantidad que no es una toma (un bote, una caja),
+      // nunca «voy a tomar mis pastillas». El tratamiento completo
+      // («todas las pastillas del tratamiento») va a SELF_HARM_VETO_RE.
+      // — es
+      "(?:ya )?no tengo (?:ninguna |ningun |mas )?(?:razon|razones|motivo|motivos) (?:para|por (?:la )?(?:que|cual)) (?:seguir )?vivi(?:r|endo)",
+      "no (?:hay|veo|encuentro) (?:ninguna |ningun )?(?:razon|motivo|sentido) (?:para|en) (?:seguir )?vivi(?:r|endo)",
+      "(?:ya )?no quiero (?:volver a )?despertar(?:me)?(?: (?:manana|nunca mas|mas|jamas))?(?=\\s*(?:$|[.,;:!?]|y |porque |pero ))",
+      "(?:dormir(?:me)?|quedarme dormid[oa]) y no (?:volver a )?despertar(?:me)?",
+      "ojala no (?:despertara|despierte|amaneciera)",
+      "ojala (?:estuviera muert[oa]|me muriera|no hubiera nacido)",
+      "seria mejor (?:si )?(?:no existiera|desapareciera|me muriera|estuviera muert[oa])",
+      "(?:todos|todo el mundo|mi familia) (?:estaria|estarian|viviria|vivirian) mejor sin mi",
+      "(?:voy a|quiero|pienso|tengo ganas de|(?:estoy )?pensando en|he pensado en) (?:tomarme|tomar|beberme|tragarme|meterme) (?:todas (?:las|mis)|un bote de|un frasco de|una caja de|la caja de|el bote de) (?:pastillas|pildoras|medicinas|medicamentos|tabletas|capsulas|somniferos)",
+      "(?:voy a|quiero|pienso) (?:tomarme|tomar|hacerme) una sobredosis",
+      "(?:quiero|me gustaria) desaparecer (?:para siempre|del mundo|de este mundo)",
+      // — en
+      "(?:have|got) no (?:reason|reasons) (?:left )?(?:to live|for living|to go on)",
+      "no reason to (?:keep )?(?:living|going on|go on)",
+      "nothing (?:left )?to live for",
+      "(?:don't|dont|do not) want to wake up(?: (?:tomorrow|again|ever again|anymore))?(?=\\s*(?:$|[.,;:!?]|and |because |but ))",
+      "(?:go to sleep|fall asleep|sleep) and (?:never|not) wake up",
+      "hope i (?:don't|dont|never) wake up",
+      "(?:would be|'d be|d be|are) better off without me",
+      "better off if i (?:was|were) (?:dead|gone)",
+      "wish i (?:was|were) (?:dead|never born)",
+      "(?:i'm going to|i'm gonna|im gonna|i am going to|i will|i'll|i want to|i wanna|thinking (?:about|of)) (?:take|taking|swallow|swallowing) (?:all (?:of )?(?:my|the)|a (?:whole )?bottle of|the whole bottle of) (?:pills|meds|medication|medications|tablets|sleeping pills)",
+      "(?:i'm going to|i'm gonna|im gonna|i am going to|i want to|i wanna|thinking (?:about|of)) (?:overdose|overdosing|od)\\b",
+      "(?:want|wanna) to disappear (?:forever|from (?:this|the) world)",
+      // — pt
+      "nao tenho (?:mais )?(?:nenhum |nenhuma )?(?:motivo|motivos|razao|razoes) (?:para|pra) (?:continuar )?viver",
+      "nao (?:ha|vejo|encontro) (?:nenhum |nenhuma )?(?:motivo|razao|sentido) (?:para|pra|em) (?:continuar )?viver",
+      "nao quero (?:mais )?acordar(?: (?:amanha|nunca mais|mais))?(?=\\s*(?:$|[.,;:!?]|e |porque |mas ))",
+      "dormir e nao (?:mais )?acordar",
+      "(?:espero|tomara que eu) nao (?:acordar|acorde)",
+      "(?:estariam|estaria|ficariam|ficaria|viveriam) melhor sem mim",
+      "seria melhor se eu (?:morresse|nao existisse|sumisse|estivesse mort[oa])",
+      "queria (?:estar mort[oa]|nunca ter nascido|nao ter nascido)",
+      "(?:vou|quero|penso em|pensando em|pensei em|tenho vontade de) (?:tomar|engolir) (?:todos os (?:meus )?|todas as (?:minhas )?|um vidro de |uma caixa de |a caixa de )(?:comprimidos|remedios|pilulas|capsulas|calmantes)",
+      "(?:vou|quero) (?:tomar|ter) uma overdose",
+      "quero (?:sumir|desaparecer) (?:para sempre|do mundo|deste mundo)",
 ];
 
 const SELF_HARM_RE = new RegExp("\\b(?:" + SELF_HARM_PATTERNS.join("|") + ")\\b");
@@ -449,7 +497,7 @@ const SELF_HARM_GLUED_RE = new RegExp(
 // (El veto de la familia de «cortar» vive aparte, en cutObjectVeto:
 // es por clase de objeto, no una lista dentro de esta regex.)
 const SELF_HARM_VETO_RE =
-  /\b(?:morir(?:me)? de (?:la )?(?:risa|verguenza|pena|hambre|sueno|calor|frio|amor|ganas|envidia|aburrimiento|cansancio|nervios)|die of (?:embarrassment|laughter|boredom|shame|hunger|thirst)|morrer de (?:rir|vergonha|fome|sono|calor|frio|amor|vontade|tedio|saudade)|(?:cuento|novela|historia|guion|cancion|poema|personaje|pelicula|serie|story|novel|script|song|lyrics|poem|character|movie|conto|romance|roteiro|musica|personagem|filme)\b)/;
+  /\b(?:morir(?:me)? de (?:la )?(?:risa|verguenza|pena|hambre|sueno|calor|frio|amor|ganas|envidia|aburrimiento|cansancio|nervios)|die of (?:embarrassment|laughter|boredom|shame|hunger|thirst)|morrer de (?:rir|vergonha|fome|sono|calor|frio|amor|vontade|tedio|saudade)|(?:cuento|novela|historia|guion|cancion|poema|personaje|pelicula|serie|story|novel|script|song|lyrics|poem|character|movie|conto|romance|roteiro|musica|personagem|filme)\b|(?:pastillas|pildoras|medicinas|medicamentos|tabletas|capsulas|pills|meds|medication|tablets|comprimidos|remedios|pilulas) (?:del tratamiento|de la receta|que me (?:receto|mando|indico)|hasta (?:el )?final|of (?:the|my) (?:course|treatment|prescription)|(?:as|like) (?:prescribed|the doctor said)|until (?:the )?end|do tratamento|da receita|que o medico (?:receitou|passou|mandou)|ate o fim)\b)/;
 
 /**
  * 0.1.99 T-27 (H-Z4-1, re-auditoría zona 4): el veto de la familia
