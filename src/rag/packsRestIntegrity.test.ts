@@ -42,9 +42,12 @@ interface World {
   files: Map<string, FakeFile>;
   dbs: Map<string, FakeDb>;
   openedDbs: string[];
+  /** Lote paso 5: la región elegida que el ajuste falso devuelve. */
+  chosenRegion: string | null;
+  chosenRegionThrows: boolean;
 }
 const W = (): World => (globalThis as unknown as { __priW: World }).__priW;
-(globalThis as unknown as { __priW: World }).__priW = { files: new Map(), dbs: new Map(), openedDbs: [] } as World;
+(globalThis as unknown as { __priW: World }).__priW = { files: new Map(), dbs: new Map(), openedDbs: [], chosenRegion: null, chosenRegionThrows: false } as World;
 
 const DOCS = "file:///docs/";
 const CORPUS = `${DOCS}corpus/`;
@@ -120,6 +123,20 @@ vi.mock("./vectorIndex", () => ({
   searchPackIndex: async () => ({ ids: [], scores: [], gatedCount: 0, gatedMin: null }),
 }));
 
+// Lote paso 5: la elección de región, controlada por el mundo; el
+// resto del módulo de ajustes queda el real.
+vi.mock("../models/settings", async (importOriginal) => {
+  const orig = await importOriginal<typeof import("../models/settings")>();
+  return {
+    ...orig,
+    getEmergencyRegion: async () => {
+      const w = W();
+      if (w.chosenRegionThrows) throw new Error("almacén degradado (mundo falso)");
+      return w.chosenRegion;
+    },
+  };
+});
+
 let packs: typeof import("./packs");
 let catalog: typeof import("../models/manifest");
 beforeAll(async () => {
@@ -161,6 +178,8 @@ function seedWorld() {
   w.files.clear();
   w.dbs.clear();
   w.openedDbs.length = 0;
+  w.chosenRegion = null;
+  w.chosenRegionThrows = false;
   const local = catalog.CORPUS_CATALOG.find((c) => c.id === "nido-local")!;
   // Catalog pack: installed by the manager — journal proof, mtime-bound.
   w.files.set(`${CORPUS}nido-local.sqlite`, { bytes: null, size: local.sizeBytes, mtimeSec: 4242 });
@@ -265,5 +284,30 @@ describe("M-35/P-39: topes de filas al abrir", () => {
     db.chunkCount = 2_000_000;
     const answer = await packs.answerFromPackFacts(CL_QUESTION, "es");
     expect(answer).toBeNull();
+  });
+});
+
+describe("lote · paso 5 (§5): answerFromPackFacts honra la región elegida", () => {
+  it("con la elección guardada, responde sin que el texto nombre el país", async () => {
+    W().dbs.get("nido-local.sqlite")!.regions = [clRegionRow];
+    W().dbs.get("nido-local.sqlite")!.facts = clFactRows;
+    W().chosenRegion = "CL";
+    const answer = await packs.answerFromPackFacts("¿a qué número llamo para una ambulancia?", "es");
+    expect(answer).not.toBeNull();
+    expect(answer!.region).toBe("CL");
+    expect(answer!.text).toContain("131");
+  });
+
+  it("guarda: con el almacén degradado, la lectura de la elección cae a null y compone como hoy", async () => {
+    W().dbs.get("nido-local.sqlite")!.regions = [clRegionRow];
+    W().dbs.get("nido-local.sqlite")!.facts = clFactRows;
+    W().chosenRegionThrows = true;
+    // El país nombrado sigue respondiendo igual que hoy…
+    const named = await packs.answerFromPackFacts(CL_QUESTION, "es");
+    expect(named).not.toBeNull();
+    expect(named!.text).toContain("131");
+    // …y sin país nombrado no hay respuesta nueva: la caída es la de hoy.
+    const unnamed = await packs.answerFromPackFacts("¿a qué número llamo para una ambulancia?", "es");
+    expect(unnamed).toBeNull();
   });
 });

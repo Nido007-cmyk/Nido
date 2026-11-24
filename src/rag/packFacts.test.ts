@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { composeFactsAnswer, emergencyQuestionKind, findRegion, foldText, type PackFact, type PackRegion } from "./packFacts";
+import { composeFactsAnswer, composeFactsAnswerForRegion, emergencyQuestionKind, findRegion, foldText, type PackFact, type PackRegion } from "./packFacts";
 
 // The real NIDO Local data, read the way the app reads the pack's tables.
 const doc = JSON.parse(readFileSync(new URL("../../knowledge-packs/nido-local/facts.json", import.meta.url), "utf8"));
@@ -504,5 +504,54 @@ describe("recetas de plegado (B-resto B-07): caracterización, sin fusionar", ()
     const samu: PackRegion[] = [{ code: "BR", names: {}, phrases: {}, aliases: ["SAMU"] }];
     expect(findRegion("llama al SAMU por favor", samu)?.code).toBe("BR");
     expect(findRegion("llama al samu por favor", samu)).toBeNull();
+  });
+});
+
+describe("lote · paso 5 (§5): la gemela composeFactsAnswerForRegion compone con el país elegido", () => {
+  // La persona elige su país en la pestaña de Emergencia
+  // (getEmergencyRegion) y luego pregunta en el chat sin nombrar
+  // el país: la gemela compone con la región elegida. El país
+  // nombrado en el texto manda siempre (RC-AJ1). Sin región
+  // elegida, la gemela es idéntica a composeFactsAnswer por
+  // construcción (la cola de composición es un ayudante interno
+  // compartido, composeForRegion).
+  it("sin país nombrado y con región elegida cubierta, compone la respuesta de esa región", () => {
+    const a = composeFactsAnswerForRegion("¿a qué número llamo para una ambulancia?", "es", regions, facts, "CL")!;
+    expect(a).not.toBeNull();
+    expect(a.region).toBe("CL");
+    expect(a.text.split("\n")[0]).toBe("En Chile, para una ambulancia:");
+    expect(a.text).toContain("• 131 — emergencias médicas");
+  });
+
+  it("con país nombrado distinto del elegido, manda el nombrado", () => {
+    const a = composeFactsAnswerForRegion("¿a qué número llamo para una ambulancia en España?", "es", regions, facts, "CL")!;
+    expect(a).not.toBeNull();
+    expect(a.region).toBe("ES");
+  });
+
+  it("sin regionCode, es idéntica a composeFactsAnswer caso a caso", () => {
+    const inputs: Array<[string, "es" | "en" | "pt"]> = [
+      ["¿a qué número llamo para una ambulancia en Chile?", "es"],
+      ["número de emergencias", "es"],
+      ["emergency number in Mongolia", "en"],
+      ["qual o telefone dos bombeiros no Brasil?", "pt"],
+      ["¿qué tiempo hace en Chile?", "es"],
+    ];
+    for (const [text, lang] of inputs) {
+      expect(composeFactsAnswerForRegion(text, lang, regions, facts, null)).toEqual(
+        composeFactsAnswer(text, lang, regions, facts),
+      );
+    }
+  });
+
+  it("región elegida sin hechos de emergencia → null (la caída honesta sigue su camino)", () => {
+    const factsSinCL = facts.filter((f) => f.region !== "CL");
+    expect(
+      composeFactsAnswerForRegion("¿a qué número llamo para una ambulancia?", "es", regions, factsSinCL, "CL"),
+    ).toBeNull();
+    // Y una región que ni siquiera está en la lista, también null:
+    expect(
+      composeFactsAnswerForRegion("¿a qué número llamo para una ambulancia?", "es", regions, facts, "XX"),
+    ).toBeNull();
   });
 });
