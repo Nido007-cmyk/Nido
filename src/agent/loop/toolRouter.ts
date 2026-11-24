@@ -875,7 +875,9 @@ const NIDO_SEND_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   { re: new RegExp(`^${POLITE}d[ií]le\\s+a\\s+(.+?)\\s+(?:por|v[ií]a)\\s+nido(?:${SEP}|\\s+)(.+)$`, "is"), lang: "es" },
   { re: new RegExp(`^${POLITE}send\\s+(?:a\\s+)?nido\\s+message\\s+to\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "en" },
   { re: new RegExp(`^${POLITE}(?:send|message)\\s+(.+?)\\s+(?:on|via|through|by)\\s+nido(?:${SEP}(.+))?$`, "is"), lang: "en" },
-  { re: new RegExp(`^${POLITE}(?:manda|mande|envia|envie)\\s+(?:uma\\s+)?mensagem\\s+(?:pelo|no|via)\\s+nido\\s+(?:para|pra|pro)\\s+(?:o\\s+|a\\s+)?(.+?)(?:${SEP}(.+))?$`, "is"), lang: "pt" },
+  // Bloque 5 (auditoría 0.1.112): también «mensagem NIDO para…» sin
+  // preposición, gemela de «mensaje NIDO a…» y «NIDO message to…».
+  { re: new RegExp(`^${POLITE}(?:manda|mande|envia|envie)\\s+(?:uma\\s+)?mensagem\\s+(?:(?:pelo|no|via|do)\\s+)?nido\\s+(?:para|pra|pro)\\s+(?:o\\s+|a\\s+)?(.+?)(?:${SEP}(.+))?$`, "is"), lang: "pt" },
   // 0.1.32 (paridad es/en/pt): las formas con marca que solo tenía un idioma.
   { re: new RegExp(`^${POLITE}(?:manda|mande|envia|envie|escreve|escreva)\\s+(?:pelo|via)\\s+nido\\s+(?:para|pra|pro)\\s+(?:o\\s+|a\\s+)?(.+?)(?:${SEP}(.+))?$`, "is"), lang: "pt" },
   { re: new RegExp(`^${POLITE}(?:send|write)\\s+(?:on|via|through|by)\\s+nido\\s+to\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "en" },
@@ -922,7 +924,8 @@ const NIDO_CODE_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
 const NIDO_TASKS_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   { re: /^(?:(?:mu[eé]strame|revisa|ver)\s+)?(?:mis\s+|las\s+)?tareas\s+(?:pendientes|remotas)(?:\s+de\s+nido)?$/i, lang: "es" },
   { re: /^(?:(?:show(?: me)?|review|check)\s+)?(?:my\s+)?pending\s+(?:nido\s+)?tasks$/i, lang: "en" },
-  { re: /^(?:(?:mostra|ver)\s+)?(?:minhas\s+|as\s+)?tarefas\s+pendentes$/i, lang: "pt" },
+  // Bloque 5 (auditoría 0.1.112): «remotas» y «do nido», como el español.
+  { re: /^(?:(?:mostra|mostre|ver|revisa|revise)\s+)?(?:minhas\s+|as\s+)?tarefas\s+(?:pendentes|remotas)(?:\s+(?:do|no)\s+nido)?$/i, lang: "pt" },
 ];
 
 // --------------------------------------------------------- enlaces/archivos
