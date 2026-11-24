@@ -54,7 +54,7 @@ class NidoLanManager(
   companion object {
     /** Tipo de servicio DNS-SD. Fijo y genérico: no identifica a nadie. */
     const val SERVICE_TYPE = "_nidop2p._tcp."
-    const val ADDRESS_PREFIX = "LAN:"
+    const val ADDRESS_PREFIX = NidoP2PFraming.LAN_PREFIX
     const val CONNECT_TIMEOUT_MS = 5_000
     const val MAX_CONNECTIONS = 8
     /**
@@ -63,8 +63,8 @@ class NidoLanManager(
      * nadie puede mandar frames grandes: se corta en vez de pasar hasta
      * 256 KB por frame al hilo de JS.
      */
-    const val HANDSHAKE_FRAMES = 2
-    const val MAX_HANDSHAKE_FRAME_BYTES = 4 * 1024
+    const val HANDSHAKE_FRAMES = NidoP2PFraming.HANDSHAKE_FRAMES
+    const val MAX_HANDSHAKE_FRAME_BYTES = NidoP2PFraming.MAX_HANDSHAKE_FRAME_BYTES
     /**
      * 0.1.47 (auditoría): conexiones simultáneas por dirección IP. Sin esto,
      * un solo dispositivo de la red podía ocupar los MAX_CONNECTIONS huecos
@@ -100,8 +100,6 @@ class NidoLanManager(
     const val MAX_ACCEPTS_PER_IP_WINDOW = 12
     const val MAX_ACCEPTS_GLOBAL_WINDOW = 48
     const val TAG = "NidoLan"
-
-    private val ADDRESS_RE = Regex("^LAN:(\\d{1,3}(?:\\.\\d{1,3}){3}):(\\d{1,5})$")
 
     /**
      * 0.1.55 (P-06): interfaces del punto de acceso que crea el propio
@@ -142,16 +140,7 @@ class NidoLanManager(
         null
       } ?: return false
       val ia = iface.interfaceAddresses.firstOrNull { it.address == local } ?: return false
-      val prefix = ia.networkPrefixLength.toInt()
-      if (prefix !in 1..32) return false
-      val mask = if (prefix == 32) -1 else (-1 shl (32 - prefix))
-      return (ipv4ToInt(local) and mask) == (ipv4ToInt(remote) and mask)
-    }
-
-    private fun ipv4ToInt(a: InetAddress): Int {
-      val b = a.address
-      return ((b[0].toInt() and 0xff) shl 24) or ((b[1].toInt() and 0xff) shl 16) or
-        ((b[2].toInt() and 0xff) shl 8) or (b[3].toInt() and 0xff)
+      return NidoP2PFraming.sameSubnet(local.address, remote.address, ia.networkPrefixLength.toInt())
     }
   }
 
@@ -389,12 +378,7 @@ class NidoLanManager(
    */
   @Throws(IOException::class)
   fun connect(address: String): Map<String, String?> {
-    val m = ADDRESS_RE.matchEntire(address)
-      ?: throw IOException("Dirección Wi-Fi local inválida: $address")
-    val host = m.groupValues[1]
-    val port = m.groupValues[2].toInt()
-    if (port !in 1..65535) throw IOException("Puerto inválido: $port")
-    if (host.split('.').any { it.toInt() > 255 }) throw IOException("IP inválida: $host")
+    val (host, port) = NidoP2PFraming.parseLanAddress(address)
     // IP literal: getByName no consulta DNS.
     val ip = InetAddress.getByName(host)
     if (!isLocalIpv4(ip)) throw IOException("Solo se permiten direcciones de la red local.")
@@ -438,7 +422,7 @@ class NidoLanManager(
   @Throws(IOException::class)
   fun sendFrame(address: String, payload: ByteArray) {
     val conn = connections[address] ?: throw IOException("Sin conexión con $address.")
-    if (payload.isEmpty() || payload.size > NidoP2PManager.MAX_FRAME_BYTES) {
+    if (!NidoP2PFraming.sendable(payload.size)) {
       throw IOException("Frame de tamaño inválido: ${payload.size} bytes.")
     }
     conn.writeFrame(payload)
@@ -688,12 +672,7 @@ class NidoLanManager(
     fun writeFrame(payload: ByteArray) {
       if (closed) throw IOException("Conexión cerrada ($address).")
       val out = socket.getOutputStream()
-      val header = ByteArray(4)
-      header[0] = (payload.size ushr 24).toByte()
-      header[1] = (payload.size ushr 16).toByte()
-      header[2] = (payload.size ushr 8).toByte()
-      header[3] = payload.size.toByte()
-      out.write(header)
+      out.write(NidoP2PFraming.header(payload.size))
       out.write(payload)
       out.flush()
     }
@@ -703,22 +682,22 @@ class NidoLanManager(
         val input = socket.getInputStream()
         val header = ByteArray(4)
         while (!closed && !Thread.currentThread().isInterrupted) {
-          readFully(input, header, 4)
-          val bodyLen = ((header[0].toInt() and 0xff) shl 24) or
-            ((header[1].toInt() and 0xff) shl 16) or
-            ((header[2].toInt() and 0xff) shl 8) or
-            (header[3].toInt() and 0xff)
-          if (bodyLen <= 0 || bodyLen > NidoP2PManager.MAX_FRAME_BYTES) {
-            listener()?.onError("Frame inválido por Wi-Fi local (${bodyLen} bytes): conexión cerrada.")
-            break
-          }
-          if (framesRead < HANDSHAKE_FRAMES && bodyLen > MAX_HANDSHAKE_FRAME_BYTES) {
-            Log.w(TAG, "frame de handshake demasiado grande ($bodyLen bytes): conexión cerrada")
-            break
+          NidoP2PFraming.readFully(input, header, 0, 4)
+          val bodyLen = NidoP2PFraming.length(header)
+          when (NidoP2PFraming.judge(bodyLen, framesRead)) {
+            NidoP2PFraming.Verdict.INVALID -> {
+              listener()?.onError("Frame inválido por Wi-Fi local (${bodyLen} bytes): conexión cerrada.")
+              break
+            }
+            NidoP2PFraming.Verdict.HANDSHAKE_TOO_BIG -> {
+              Log.w(TAG, "frame de handshake demasiado grande ($bodyLen bytes): conexión cerrada")
+              break
+            }
+            NidoP2PFraming.Verdict.OK -> Unit
           }
           framesRead++
           val body = ByteArray(bodyLen)
-          readFully(input, body, bodyLen)
+          NidoP2PFraming.readFully(input, body, 0, bodyLen)
           if (framesRead == HANDSHAKE_FRAMES) {
             // Saludo completo en frames, pero aún NO autenticado: corre
             // la gracia post-saludo (T-12, m-37). El timeout solo se
@@ -738,15 +717,6 @@ class NidoLanManager(
       } finally {
         close()
         onConnectionClosed(this)
-      }
-    }
-
-    private fun readFully(input: java.io.InputStream, buffer: ByteArray, length: Int) {
-      var read = 0
-      while (read < length) {
-        val n = input.read(buffer, read, length - read)
-        if (n < 0) throw IOException("Fin del stream.")
-        read += n
       }
     }
   }

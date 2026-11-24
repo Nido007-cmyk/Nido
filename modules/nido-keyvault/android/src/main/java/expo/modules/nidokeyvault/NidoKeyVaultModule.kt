@@ -66,10 +66,10 @@ class NidoKeyVaultModule : Module() {
     const val KEYSTORE = "AndroidKeyStore"
     const val KEK_ALIAS = "nido_kek_v1"
     const val MIN_API = Build.VERSION_CODES.R // 30
-    const val BLOB_VERSION: Byte = 1
-    const val IV_BYTES = 12
-    const val TAG_BITS = 128
-    val AAD = "nido-dek-v1".toByteArray(Charsets.UTF_8)
+    const val BLOB_VERSION: Byte = NidoKeyVaultBlob.VERSION
+    const val IV_BYTES = NidoKeyVaultBlob.IV_BYTES
+    const val TAG_BITS = NidoKeyVaultBlob.TAG_BITS
+    val AAD = NidoKeyVaultBlob.AAD
     const val AUTHENTICATORS = Authenticators.BIOMETRIC_STRONG or Authenticators.DEVICE_CREDENTIAL
   }
 
@@ -285,12 +285,8 @@ class NidoKeyVaultModule : Module() {
       try {
         authed.updateAAD(AAD)
         val ct = authed.doFinal(plain)
-        val iv = authed.iv
-        if (iv == null || iv.size != IV_BYTES) throw VaultException("E_CRYPTO", "IV inesperado.")
-        val out = ByteArray(1 + IV_BYTES + ct.size)
-        out[0] = BLOB_VERSION
-        System.arraycopy(iv, 0, out, 1, IV_BYTES)
-        System.arraycopy(ct, 0, out, 1 + IV_BYTES, ct.size)
+        val out = NidoKeyVaultBlob.pack(authed.iv, ct)
+          ?: throw VaultException("E_CRYPTO", "IV inesperado.")
         Base64.encodeToString(out, Base64.NO_WRAP)
       } finally {
         plain.fill(0)
@@ -305,12 +301,10 @@ class NidoKeyVaultModule : Module() {
       promise.reject(VaultException("E_BLOB_CORRUPT", "La llave guardada está dañada.", e))
       return
     }
-    if (blob.size < 1 + IV_BYTES + TAG_BITS / 8 || blob[0] != BLOB_VERSION) {
+    val (iv, ct) = NidoKeyVaultBlob.unpack(blob) ?: run {
       promise.reject(VaultException("E_BLOB_CORRUPT", "La llave guardada está dañada o es de otra versión."))
       return
     }
-    val iv = blob.copyOfRange(1, 1 + IV_BYTES)
-    val ct = blob.copyOfRange(1 + IV_BYTES, blob.size)
     val cipher = try {
       initCipher(Cipher.DECRYPT_MODE, iv)
     } catch (e: VaultException) {
