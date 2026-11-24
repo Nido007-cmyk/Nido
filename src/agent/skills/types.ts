@@ -18,6 +18,12 @@ export interface Skill {
   name: string;
   /** Una línea: cuándo usarla. Aparece en el prompt del sistema. */
   description: string;
-  /** Instrucciones detalladas que el agente sigue paso a paso. */
+  /** Instrucciones detalladas que el agente sigue paso a paso (español). */
   instructions: string;
+  /**
+   * Las mismas instrucciones en inglés y portugués (auditoría de la
+   * 0.1.112, bloque 4): las españolas pedían responder «en español»
+   * también en un turno en otro idioma. Opcional para las aprendidas.
+   */
+  instructionsI18n?: { en: string; pt: string };
 }
