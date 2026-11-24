@@ -267,6 +267,14 @@ const HEALTH_TERMS: Record<GateLang, { w: string[]; p: string[] }> = {
       // La ingestión, solo con su objeto (no «se tragó el cuento»).
       "se trago una pila", "se trago pastillas", "se trago una moneda", "se trago un iman",
       "bebio lejia", "se bebio la lejia", "trago lejia",
+      // Bloque 2 (auditoría 0.1.112): «tomar» es el verbo corriente de la
+      // ingestión en español («se tomó lejía»); solo cazaba «bebió».
+      "tomo lejia", "se tomo lejia", "se tomo la lejia", "se trago lejia",
+      // La quemadura contada en primera persona o con su parte del
+      // cuerpo («me quemé la mano»; «se quemó» a secas es la comida).
+      "me queme", "me he quemado", "se quemo la mano", "se quemo el brazo", "se quemo la cara", "se quemo con",
+      // La hinchazón en curso («se le está hinchando la garganta»).
+      "hinchando", "se le hincha", "se me hincha",
       // Auditoría 0.1.93: lo que la gente escribe y la puerta no conocía
       // (batería de 62 preguntas reales: 40 se iban al modelo sin fuentes).
       // El dolor contado, los medicamentos de uso corriente, la presión y
@@ -306,6 +314,15 @@ const HEALTH_TERMS: Record<GateLang, { w: string[]; p: string[] }> = {
       // Ingestion, only with its object (not «the ATM swallowed my card»).
       "swallowed a battery", "swallowed pills", "swallowed a coin", "swallowed a magnet",
       "drank bleach", "swallowed bleach",
+      // Bloque 2 (auditoría 0.1.112): the determiner form, twin of the
+      // Spanish «se tomó lejía».
+      "drank some bleach", "swallowed some bleach", "drank the bleach", "swallowed the bleach",
+      // The plural pain verb, twin of «me duelen» / «doem»: «hurts»
+      // only matched a singular subject («my chest and left arm hurt»
+      // did not). Bound to a body part or a degree so «I hurt her
+      // feelings» stays out.
+      "arm hurt", "arms hurt", "legs hurt", "feet hurt", "eyes hurt", "ears hurt", "joints hurt",
+      "muscles hurt", "teeth hurt", "ribs hurt", "hurt a lot", "hurt so much", "hurt badly", "really hurt",
       // Audit 0.1.93: everyday words the gate did not know.
       "tylenol", "advil", "benadryl", "melatonin", "insulin", "warfarin", "blood thinner", "naproxen",
       "tramadol", "oxycodone", "xanax", "pill", "painkiller", "lethal dose",
@@ -338,6 +355,14 @@ const HEALTH_TERMS: Record<GateLang, { w: string[]; p: string[] }> = {
       // A ingestão, só com o objeto.
       "engoliu uma pilha", "engoliu remedios", "engoliu comprimidos", "engoliu uma moeda", "engoliu um ima",
       "bebeu agua sanitaria", "engoliu agua sanitaria",
+      // Bloco 2 (auditoria 0.1.112): «tomar» também é ingestão, como no
+      // espanhol; o verbo de dor no plural e no gerúndio («doem»,
+      // «está doendo»), gêmeo de «me duelen»; a queimadura contada e o
+      // inchaço em curso.
+      "tomou agua sanitaria", "bebeu cloro", "tomou cloro",
+      "doem", "doendo", "doeu",
+      "me queimei", "se queimou", "queimei a mao", "queimei o braco", "queimou a mao", "queimou o braco",
+      "inchando", "inchou",
       // Auditoria 0.1.93: palavras do dia a dia que a porta não conhecia.
       "dor", "doi", "remedio", "comprimido", "insulina", "tramadol", "varfarina", "naproxeno",
       "pressao alta", "pressao baixa", "pressao esta alta", "pressao esta baixa", "acucar no sangue", "glicose", "enxaqueca", "taquicardia",
@@ -402,6 +427,12 @@ const HISTORY_FRAMES = [
   "gripe espanhola", "peste bubonica", "naquela epoca", "antigamente",
   "na antiguidade", "primeira guerra mundial", "segunda guerra mundial",
   "num romance", "no romance", "num filme", "no filme",
+  // Bloque 2 (auditoría 0.1.112): la ficción contada con relativo («vi
+  // una película donde alguien se desmaya») declaraba emergencia en las
+  // tres lenguas; solo vetaba «en una película».
+  "una pelicula donde", "una pelicula en la que", "una serie donde", "una serie en la que", "sone que",
+  "a movie where", "a movie in which", "a film where", "a show where", "a series where", "i dreamt", "i dreamed",
+  "um filme em que", "um filme onde", "uma serie em que", "uma serie onde", "sonhei que",
 ];
 
 /**
@@ -452,9 +483,19 @@ const SITUATION_CUES = [
   " how ", " what ", " which ", " can ", " should ", " is ", " are ", " does ", " i ", " he ", " she ", " has ", " need ",
   " quanto ", " quanta ", " quantos ", " quantas ", " qual ", " posso ", " pode ", " devo ", " serve ",
   " tem ", " preciso ", " tomei ", " fui ", " quero ",
+  // Bloque 2 (auditoría 0.1.112): los pronombres de persona, como « me »
+  // y « le » en español e « i », « he », « she » en inglés; sin ellos
+  // «queimei a mão com óleo fervendo» no traía señal en portugués.
+  " eu ", " me ", " ele ", " ela ", " queimei ",
 ];
 
 const ALL_TERMS: Array<{ w: string[]; p: string[] }> = Object.values(HEALTH_TERMS);
+
+/** La ingestión contada, en las tres lenguas (ver isHealthQuestion). */
+const INGESTION_TERMS: string[] = Object.values(HEALTH_TERMS)
+  .flatMap(({ w }) => w)
+  .filter((t) => /^(?:se trago|trago|bebio|se bebio|tomo|se tomo|swallowed|drank|engoliu|bebeu|tomou) /.test(t) &&
+    /(?:lejia|pila|pastillas|moneda|iman|bleach|battery|pills|coin|magnet|agua sanitaria|remedios|comprimidos|ima)$/.test(t));
 
 /**
  * ¿Pregunta (o cuenta) el texto algo de salud? Léxico puro: un
@@ -517,6 +558,11 @@ export function isHealthQuestion(text: string): boolean {
         ({ w, p }) => w.some((t) => hasWord(folded, t)) || p.some((t) => folded.includes(` ${t}`)),
       );
   if (!hasTerm) return false;
+  // Bloque 2 (auditoría 0.1.112): la ingestión contada (lejía, pilas,
+  // pastillas, imanes) ya es una situación por sí sola, sin señal de
+  // pregunta ni sujeto: «se tomó lejía» no traía ninguna señal en
+  // español (el sujeto se omite) y su gemela inglesa con «he» sí.
+  if (INGESTION_TERMS.some((t) => hasWord(folded, t))) return true;
   // Auditoría 0.1.93: dos términos de salud juntos ya cuentan una
   // situación («vomite sangre» no trae ninguna señal de pregunta).
   if (!chokOnlyHit && healthTermHits(folded) >= 2) return true;
@@ -637,6 +683,10 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "breathing very badly", "breathing badly", "breathing poorly", "breathing with difficulty",
     "clutching his chest", "clutching her chest", "clutching my chest", "clutching their chest",
     "is unconscious", "was unconscious", "found unconscious", "not responding", "lost consciousness",
+    // Bloque 2 (auditoría 0.1.112): the contracted and adjectival forms,
+    // twins of «no responde» / «não responde».
+    "isn t responding", "is not responding", "not responsive", "unresponsive",
+    "won t respond", "doesn t respond", "isn t responsive",
     // ADV-E1: «passed out», la frase-signo corriente del desmayo.
     "passed out",
     "smoke coming", "smoke pouring", "full of smoke", "there is a fire", "there s a fire",
@@ -870,6 +920,13 @@ const STEM_BODY_SIGNALS = [
   "esposo", "esposa", "marido", "husband", "wife", "brother", "sister",
   "amigo", "amiga",
   "children", "kid", "kids",
+  // Bloque 2 (auditoría 0.1.112): «hombre»/«homem» estaban y «man» no,
+  // así que «there is a man unconscious on the street» no declaraba en
+  // inglés y su gemela española sí. Las personas corrientes de las tres
+  // lenguas, en paridad.
+  "man", "woman", "men", "women", "guy", "lady", "boy", "girl", "neighbor", "neighbour", "friend",
+  "chico", "chica", "muchacho", "muchacha",
+  "menino", "menina", "rapaz", "moca", "senhor", "senhora", "vizinho", "vizinha",
 ];
 
 /**
