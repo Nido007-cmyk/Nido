@@ -235,6 +235,11 @@ describe("líneas de crisis (familia crisis.*): el consumidor que faltaba", () =
     }
   });
 
+  it("paso 0-bis (a): la guarda de packs del cobro 6 no declara crisis", async () => {
+    const { crisisQuestionKind } = await import("./packFacts");
+    expect(crisisQuestionKind("quiero despertar temprano mañana")).toBe(false);
+  });
+
   it("pre-censo PC2-1: la expresión de intención tiene su forma en las tres lenguas", async () => {
     const { crisisQuestionKind } = await import("./packFacts");
     // La misma familia, lengua a lengua: raíz de suicidio, autolesión,
