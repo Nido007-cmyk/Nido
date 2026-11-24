@@ -27,7 +27,8 @@ import { BGE_SMALL_EN_PROFILE, packSemanticFloor, type EmbeddingProfile } from "
 import { packIndexIfReady, releaseAllIndexes, searchPackIndex } from "./vectorIndex";
 import { isNativeGateTaken } from "../inference/nativeGate";
 import { isBackgroundIndexingHeld } from "../diagnostics/nativeSession";
-import { composeCrisisAnswer, composeFactsAnswer, composeMergedCrisisAnswer, emergencyRegions, markOutdated, mergePackFacts, type FactLang, type FactsAnswer, type PackFact, type PackRegion } from "./packFacts";
+import { composeCrisisAnswer, composeFactsAnswerForRegion, composeMergedCrisisAnswer, emergencyRegions, markOutdated, mergePackFacts, type FactLang, type FactsAnswer, type PackFact, type PackRegion } from "./packFacts";
+import { getEmergencyRegion } from "../models/settings";
 
 const PACK_CANDIDATES = 400;
 const REQUIRED_EMBEDDING_SHA256 = MODEL_CATALOG.find((m) => m.kind === "embedding" && m.required)!.sha256;
@@ -627,6 +628,12 @@ async function packFacts(packId: string, open: OpenPack): Promise<{ regions: Pac
  */
 export async function answerFromPackFacts(text: string, lang: FactLang): Promise<FactsAnswer | null> {
   try {
+    // Lote paso 5 (§5): la región que la persona eligió en la
+    // pestaña de Emergencia compone también en el chat cuando el
+    // texto no nombra el país. La lectura cae honesta a null con
+    // la bóveda bloqueada o el almacén degradado, y el turno
+    // compone como siempre.
+    const chosenRegion = await getEmergencyRegion().catch(() => null);
     const perPack: Array<{ regions: PackRegion[]; facts: PackFact[] }> = [];
     const packMeta: Array<{ label: string; outdated: boolean }> = [];
     for (const pack of await knowledgePacks()) {
@@ -643,7 +650,7 @@ export async function answerFromPackFacts(text: string, lang: FactLang): Promise
       const open = await openPack(pack).catch(() => null);
       if (!open || open.formatVersion < 2) continue;
       const { regions, facts } = await packFacts(pack.id, open).catch(() => ({ regions: [], facts: [] }));
-      const answer = composeFactsAnswer(text, lang, regions, facts) ?? composeCrisisAnswer(text, lang, regions, facts);
+      const answer = composeFactsAnswerForRegion(text, lang, regions, facts, chosenRegion) ?? composeCrisisAnswer(text, lang, regions, facts);
       if (answer) return open.outdated ? markOutdated(answer, lang, pack.label) : answer;
       perPack.push({ regions, facts });
       packMeta.push({ label: pack.label, outdated: !!open.outdated });

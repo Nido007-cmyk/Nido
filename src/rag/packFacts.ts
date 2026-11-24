@@ -258,6 +258,36 @@ export function composeFactsAnswer(text: string, lang: FactLang, regions: PackRe
   if (!kind) return null;
   const region = findRegion(text, regions);
   if (!region) return null;
+  return composeForRegion(kind, region, lang, facts);
+}
+
+/**
+ * Lote paso 5 (§5, la gemela de PREP-AJ1 §3.1): como
+ * `composeFactsAnswer`, pero cuando el texto no nombra el país
+ * compone con la región elegida por la persona en la pestaña de
+ * Emergencia (`regionCode`). El país nombrado manda siempre:
+ * primero corre la vía de siempre y solo si da null entra la
+ * elegida. Sin `regionCode`, es idéntica a `composeFactsAnswer`
+ * por construcción: las dos comparten la cola de composición
+ * (`composeForRegion`), así que el par es gemelo por
+ * construcción, no por copia.
+ */
+export function composeFactsAnswerForRegion(text: string, lang: FactLang, regions: PackRegion[], facts: PackFact[], regionCode: string | null): FactsAnswer | null {
+  const named = composeFactsAnswer(text, lang, regions, facts);
+  if (named) return named;
+  if (!regionCode) return null;
+  const kind = emergencyQuestionKind(text);
+  if (!kind) return null;
+  const region = regions.find((r) => r.code === regionCode);
+  if (!region) return null;
+  return composeForRegion(kind, region, lang, facts);
+}
+
+/** La cola de composición, compartida: con la clase de pregunta y
+ * la región ya resueltas, arma la respuesta desde los hechos
+ * verificados de esa región, o null si el pack no trae hechos de
+ * emergencia para ella. */
+function composeForRegion(kind: ServiceKind, region: PackRegion, lang: FactLang, facts: PackFact[]): FactsAnswer | null {
   const mine = facts.filter((f) => f.region === region.code && f.key.startsWith("emergency."));
   if (mine.length === 0) return null;
   const t = T[lang];
