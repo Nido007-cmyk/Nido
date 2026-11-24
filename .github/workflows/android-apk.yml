@@ -128,6 +128,12 @@ jobs:
       - name: Install JS dependencies
         run: npm ci
 
+      - name: Safety card gate (Fase 1)
+        # Sin ficha regenerada para este commit exacto, el build
+        # muere aquí y el job release (needs: build-apk) nunca
+        # corre: nada se publica con la ficha desfasada.
+        run: node scripts/check-gates.mjs --github
+
       - name: Third-party notices (bundled into the app)
         # Las licencias de los paquetes que se compilan dentro del APK
         # viajan con él (Acerca de → Licencias): se regeneran aquí, desde
