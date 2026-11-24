@@ -492,6 +492,16 @@
    }
   }
  },
+ "suelos": {
+  "crisis/es": 58.0,
+  "crisis/en": 60.0,
+  "crisis/pt": 40.0
+ },
+ "suelosHistorial": {
+  "crisis/es": "F0 (2026-11-24)",
+  "crisis/en": "F0 (2026-11-24)",
+  "crisis/pt": "F0 (2026-11-24)"
+ },
  "comparacionCenso": {
   "criterio": "el script reproduce las cifras del censo verificado dentro de ±0,1 puntos por celda",
   "celdasPrimaria": [

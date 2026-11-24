@@ -69,6 +69,11 @@ jobs:
       # 0.1.60: cada regla firme de la constitución tiene sus comprobaciones.
       - run: node scripts/check-constitution.mjs --github
       - run: npm run verify:manifest-sig
+      # Fase 1: suelo de seguridad de puertas. Mide el árbol con el
+      # corpus de la F0 y lo compara con eval/gates/baseline.json;
+      # una regresión, un suelo de crisis roto, un falso positivo en
+      # la guarda dura o una ficha desfasada tumban el job.
+      - run: node scripts/check-gates.mjs --github
       # Avisos de licencias de terceros (2026-10-14): se generan desde
       # node_modules para comprobar que el generador funciona y avisar si
       # lo subido está desfasado. No bloquea: el APK los regenera al
