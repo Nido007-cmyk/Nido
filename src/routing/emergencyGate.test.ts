@@ -870,3 +870,55 @@ describe("0.1.112 · resto de la familia ancha: la caída con lugar sin sujeto y
     expect(isEmergencySituation("Se cayó ayer y no se puede levantar")).toBe(true);
   });
 });
+
+describe("lote · paso 4 (§1): la ampliación léxica de la cara de lugar de la caída", () => {
+  // La ampliación gobernada de PREP §1: el español gana las
+  // preposiciones «a» y «dentro» y las contracciones «al»/«del»;
+  // el inglés gana el «down» opcional tras «fell», con «in the» y
+  // con «the» + lugar. El portugués no cambia (ya trae sus
+  // contracciones). Los conjuntos de lugares, la narración, la
+  // negación y la exención de inmovilidad no se tocan.
+  it("«se cayó dentro del baño» declara: la preposición «dentro» y la contracción «del»", () => {
+    expect(isEmergencySituation("Se cayó dentro del baño")).toBe(true);
+  });
+
+  it("«se cayó a la piscina» declara: la preposición «a» con su lugar", () => {
+    // El caso gobernado trae sujeto («Mi abuelo…») y ya declaraba
+    // por la cara de víctima nombrada; su gemela impersonal es la
+    // que cobra la cara de lugar nueva: nace en rojo.
+    expect(isEmergencySituation("Mi abuelo se cayó a la piscina")).toBe(true);
+    expect(isEmergencySituation("Se cayó a la piscina")).toBe(true);
+  });
+
+  it("«se cayó al suelo» declara: la contracción fusionada «al» trae preposición y artículo", () => {
+    expect(isEmergencySituation("Se cayó al suelo")).toBe(true);
+  });
+
+  it("«fell down in the bathroom» declara: el «down» opcional no rompe la forma «in the»", () => {
+    expect(isEmergencySituation("Fell down in the bathroom")).toBe(true);
+  });
+
+  it("«I fell down in the bathroom» declara, y tras la cura también por la cara de lugar", () => {
+    // Verde de nacimiento por la frase-signo «i fell down»; la
+    // cura lo cubre además por la cara de lugar con «down».
+    expect(isEmergencySituation("I fell down in the bathroom")).toBe(true);
+  });
+
+  it("«he fell down the stairs» declara: «down» + «the» + lugar", () => {
+    // Verde de nacimiento por la frase-signo «fell down the
+    // stairs»; la cura lo cubre además por la cara de lugar.
+    expect(isEmergencySituation("He fell down the stairs")).toBe(true);
+  });
+
+  it("guarda: la negación por ocurrencia veta también la forma nueva con «a»", () => {
+    expect(isEmergencySituation("Mi hijo no se cayó a la piscina")).toBe(false);
+  });
+
+  it("guarda: la narración resuelta veta también la forma nueva con «dentro»", () => {
+    expect(isEmergencySituation("Ayer se cayó dentro del baño, pero fue solo un susto")).toBe(false);
+  });
+
+  it("guarda: la metáfora con «fell down» y un no-lugar no declara", () => {
+    expect(isEmergencySituation("The meeting fell down the agenda")).toBe(false);
+  });
+});
