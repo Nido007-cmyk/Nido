@@ -922,3 +922,17 @@ describe("lote · paso 4 (§1): la ampliación léxica de la cara de lugar de la
     expect(isEmergencySituation("The meeting fell down the agenda")).toBe(false);
   });
 });
+
+describe("barrido · paso 9: la guarda del caso 9 del dirimen", () => {
+  // Dirimen del coordinador (paso 4, cobrado por VERIF-PASOS-4-5):
+  // la prep firmó «Fell down» a secas como guarda que NO declara,
+  // pero medido declara, por la regla telegráfica del mensaje
+  // corto de fallDeclares (el mensaje entero es el signo, la
+  // misma que hace declarar «Fell» y «Se cayó»). La regla
+  // telegráfica se queda; este caso la firma como guarda que
+  // DECLARA: si alguien «arregla» la regla mañana, el caso cae
+  // y obliga a re-dirimir, no a colar el cambio.
+  it("«Fell down» a secas declara (la regla telegráfica, dirimen del caso 9)", () => {
+    expect(isEmergencySituation("Fell down")).toBe(true);
+  });
+});
