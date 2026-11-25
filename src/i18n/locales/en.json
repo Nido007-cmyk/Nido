@@ -86,7 +86,9 @@
       "outdated": "Update available"
     },
     "updateAsset": "⬆️ Update",
-    "outdatedNote": "A newer version of this pack is available. Until then the one you have keeps working, offline too; the new one only replaces it once it has finished downloading and been verified."
+    "outdatedNote": "A newer version of this pack is available. Until then the one you have keeps working, offline too; the new one only replaces it once it has finished downloading and been verified.",
+    "measuredRowSpeed": "{{rate}} tok/s here",
+    "measuredBasis": "The median of your last {{count}} replies with this model"
   },
   "modelLoadErrorCard": {
     "corrupt": {
@@ -1856,7 +1858,8 @@
             "title": "Choose a model",
             "what": "Change the AI model for your device: small ones are fast, big ones reason better and use more memory.",
             "steps": [
-              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.models)."
+              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.models).",
+              "If a model has already answered on this phone, its card shows the speed measured here: the median of your last replies with that model. For choosing, that counts for more than any catalog figure."
             ],
             "tip": "If answers take too long or the app closes, try a smaller model."
           },

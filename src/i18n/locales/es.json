@@ -82,7 +82,9 @@
     "retryDownload": "🔄 Reintentar descarga",
     "selectUse": "🔘 Seleccionar y usar",
     "updateAsset": "⬆️ Actualizar",
-    "outdatedNote": "Hay una versión más nueva de este paquete. Mientras tanto se sigue usando la que tienes, también sin conexión; la nueva solo la reemplaza cuando termina de descargarse y se comprueba."
+    "outdatedNote": "Hay una versión más nueva de este paquete. Mientras tanto se sigue usando la que tienes, también sin conexión; la nueva solo la reemplaza cuando termina de descargarse y se comprueba.",
+    "measuredRowSpeed": "{{rate}} tok/s aquí",
+    "measuredBasis": "La mediana de tus últimas {{count}} respuestas con este modelo"
   },
   "chatHeader": {
     "cycleTone": "Cambiar el tono del asistente",
@@ -1856,7 +1858,8 @@
             "title": "Elegir modelo",
             "what": "Cambia el modelo de IA según tu dispositivo: los pequeños son rápidos, los grandes razonan mejor y ocupan más memoria.",
             "steps": [
-              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.models)."
+              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.models).",
+              "Si un modelo ya respondió en este teléfono, su tarjeta enseña su velocidad medida aquí: la mediana de tus últimas respuestas con ese modelo. Para elegir, eso vale más que cualquier cifra de catálogo."
             ],
             "tip": "Si una respuesta tarda mucho o la app se cierra, prueba un modelo más pequeño."
           },

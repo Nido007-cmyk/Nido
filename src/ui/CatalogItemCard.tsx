@@ -20,6 +20,7 @@ import type { Typography } from "./theme/typography";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import { spacing, radii } from "./theme/spacing";
 import { getCorpusIndexStatus, onCorpusIndexStatus, type CorpusIndexStatus } from "../rag/corpusIndexStatus";
+import type { ModelSpeedSummary } from "../inference/telemetry";
 import { displayLang, formatInt } from "../utils/safeFormat";
 
 function formatMB(bytes: number): string {
@@ -95,9 +96,17 @@ interface Props {
    * encima de sí mismo. Sin ella, la foto va como siempre.
    */
   residentLoad?: { nCtx: number; memoryProfile?: LlmMemoryProfile } | null;
+  /**
+   * G-1 (partida del móvil): el resumen de velocidad medida de este
+   * modelo (la mediana de sus generaciones reales en este aparato,
+   * desde la telemetría persistida), que la pantalla del gestor lee
+   * al refrescar. Sin resumen o con la velocidad en null (menos de 2
+   * muestras) la tarjeta no pinta nada: el «sin datos» es ausencia.
+   */
+  speedSummary?: ModelSpeedSummary | null;
 }
 
-export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemove, onDiscardPartial, activating, busy, residentLoad }: Props) {
+export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemove, onDiscardPartial, activating, busy, residentLoad, speedSummary }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
@@ -255,6 +264,17 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
                 <Text style={styles.defaultChipText}>{t("catalogItemCard.default")}</Text>
               </>
             )}
+            {/* G-1: la velocidad medida en este aparato, al final de
+                la meta de la fila, solo cuando hay mediana que
+                enseñar (≥ 2 generaciones que califican). */}
+            {speedSummary?.medianTokPerSec != null && (
+              <>
+                <Text style={styles.metaBullet}>•</Text>
+                <Text style={styles.metaText}>
+                  {t("catalogItemCard.measuredRowSpeed", { rate: speedSummary.medianTokPerSec.toFixed(1) })}
+                </Text>
+              </>
+            )}
           </View>
         </View>
 
@@ -288,6 +308,14 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
             </View>
           )}
         </View>
+      )}
+
+      {/* G-1: la base de la mediana, para que la cifra diga de dónde
+          sale. Solo con velocidad que enseñar. */}
+      {speedSummary?.medianTokPerSec != null && (
+        <Text style={styles.measuredBasis}>
+          {t("catalogItemCard.measuredBasis", { count: speedSummary.sampleCount })}
+        </Text>
       )}
 
       {/* Description */}
@@ -577,6 +605,10 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   compatRow: {
     flexDirection: "row",
     alignItems: "center",
+  },
+  measuredBasis: {
+    ...typography.mono.xs,
+    color: colors.text.dim,
   },
   compatPill: {
     flexDirection: "row",

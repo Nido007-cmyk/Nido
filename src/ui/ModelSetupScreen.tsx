@@ -46,6 +46,7 @@ import {
 } from "../services/downloadManager";
 import { resetAllAppData } from "../services/appReset";
 import { CatalogItemCard, CatalogRowState } from "./CatalogItemCard";
+import { modelSpeedSummaries, type ModelSpeedSummary } from "../inference/telemetry";
 import { CorpusSettingsTab } from "./CorpusSettingsTab";
 import { PersonalitySettings } from "./PersonalitySettings";
 import { UsageStatsContent } from "./UsageStatsContent";
@@ -141,6 +142,11 @@ export function ModelSetupScreen(props: Props) {
   // 0.1.92: bytes de una descarga en pausa que siguen en el disco.
   const [partialById, setPartialById] = useState<Record<string, number>>({});
   const [activeIds, setActiveIds] = useState<Partial<Record<AssetKind, string>>>({});
+  // G-1 (partida del móvil): los resúmenes de velocidad medida por
+  // modelo (nombre base del fichero → resumen), leídos de la
+  // telemetría persistida en cada refresco: es cuando una generación
+  // nueva puede haber movido la mediana.
+  const [speedByModel, setSpeedByModel] = useState<Record<string, ModelSpeedSummary>>({});
   // 0.1.108: la carga residente REAL (del motor: contexto cargado y
   // perfil aceptado) para que la tarjeta del activo aplique el
   // crédito liberable de la carga. Se relee en cada render de la
@@ -246,6 +252,11 @@ export function ModelSetupScreen(props: Props) {
   useEffect(() => subscribeDownloads(() => forceRender((n) => n + 1)), []);
 
   const refreshStatus = useCallback(async () => {
+    // G-1: la velocidad medida se relee con el resto del estado (el
+    // lector nunca lanza: sin base devuelve vacío y las filas quedan
+    // sin velocidad que enseñar).
+    const summaries = await modelSpeedSummaries();
+    setSpeedByModel(Object.fromEntries(summaries.map((s) => [s.modelId, s])));
     const statuses = await modelManager.statusAll();
     setPresence(Object.fromEntries(statuses.map((s) => [s.asset.id, s.present])));
     setOutdatedIds(Object.fromEntries(statuses.map((s) => [s.asset.id, s.outdated === true])));
@@ -877,6 +888,7 @@ export function ModelSetupScreen(props: Props) {
                   activating={activatingId === item.id}
                   busy={activatingId !== null}
                   residentLoad={activeIds[item.kind] === item.id ? residentLoadFor(item) : undefined}
+                  speedSummary={speedByModel[item.filename.split("/").pop() ?? item.filename] ?? null}
                 />
               )}
             />

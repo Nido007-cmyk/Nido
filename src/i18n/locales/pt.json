@@ -86,7 +86,9 @@
       "outdated": "Atualização disponível"
     },
     "updateAsset": "⬆️ Atualizar",
-    "outdatedNote": "Há uma versão mais nova deste pacote. Enquanto isso, a que você tem continua funcionando, também sem conexão; a nova só a substitui quando terminar de baixar e for verificada."
+    "outdatedNote": "Há uma versão mais nova deste pacote. Enquanto isso, a que você tem continua funcionando, também sem conexão; a nova só a substitui quando terminar de baixar e for verificada.",
+    "measuredRowSpeed": "{{rate}} tok/s aqui",
+    "measuredBasis": "A mediana das suas últimas {{count}} respostas com este modelo"
   },
   "modelLoadErrorCard": {
     "corrupt": {
@@ -1856,7 +1858,8 @@
             "title": "Escolher modelo",
             "what": "Troque o modelo de IA conforme seu dispositivo: os pequenos são rápidos, os grandes raciocinam melhor e usam mais memória.",
             "steps": [
-              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.models)."
+              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.models).",
+              "Se um modelo já respondeu neste telefone, o cartão dele mostra a velocidade medida aqui: a mediana das suas últimas respostas com esse modelo. Para escolher, isso vale mais do que qualquer número de catálogo."
             ],
             "tip": "Se as respostas demoram muito ou o app fecha, tente um modelo menor."
           },
