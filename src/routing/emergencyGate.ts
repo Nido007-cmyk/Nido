@@ -698,6 +698,11 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "sin poder respirar",
     "dejo de respirar", "paro de respirar",
     "se esta ahogando", "esta ahogandose", "ahogandose", "se ahoga",
+    // Fase B ronda 1 (2026-11-25): el ahogamiento contado como
+    // hundimiento y el desplome, las paráfrasis que la ronda
+    // cazó al modelo («un niño se está hundiendo en la
+    // alberca», «mi esposo se desplomó en la cocina»).
+    "se esta hundiendo", "se desplomo",
     "se esta atragantando", "atragantandose",
     // ADV-E1: los eventos nuevos también se cuentan con frase-signo
     // (el suceso ya ocurrió y se nombra en pasado, sin víctima cerca
@@ -812,6 +817,8 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     // («unable to breathe is a man on the street»).
     "unable to breathe",
     "is choking", "choking on", "started choking", "is drowning",
+    // Fase B ronda 1 (2026-11-25): «going under» en el agua.
+    "going under in the pool", "going under in the water",
     "struggling to breathe", "hard to breathe", "difficulty breathing",
     // 0.1.99 T-01 (m-10): the same family as the Spanish signs —
     // the breathing told with its severity inside the phrase.
@@ -902,6 +909,10 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "esta engasgando", "engasgando", "engasgou",
     // ADV-E1: os eventos novos em português («desmaiou», «se afogou»).
     "desmaiou", "se afogou",
+    // Fase B ronda 1 (2026-11-25): o afogamento como
+    // afundamento e a queda como desabamento («está afundando
+    // na piscina», «meu marido desabou na cozinha»).
+    "esta afundando", "desabou",
     "dificuldade para respirar", "dificuldade em respirar",
     // 0.1.99 T-01 (m-10): a mesma família dos signos em espanhol
     // («respira muito mal»); «respira mal» já entra pela lista
@@ -1044,6 +1055,10 @@ const NEGATED_EVENT_FRAMES = [
   "alarm didn t go off", "alarm did not go off", "was a detector test",
   "nao esta se engasgando", "nao esta sangrando", "nao desmaiou",
   "quase se queimou", "citando uma frase", "nao quero me machucar",
+  // Fase B ronda 1 (2026-11-25): la negación con resolución
+  // («no hay ninguna hemorragia, solo fue un susto»).
+  "no hay ninguna hemorragia", "no hay hemorragia", "there is no bleeding",
+  "nao ha nenhuma hemorragia", "nao ha hemorragia",
 ];
 
 /**
@@ -1098,6 +1113,10 @@ const GUIDE_TASK_FRAMES = [
   "quiero consejos para que", "i want tips so", "quero dicas para",
   "health workshop", "taller de salud", "detector is used", "alarm installed",
   "alarma instalada", "alarme instalado",
+  // Fase B ronda 1 (2026-11-25): el taller como tarea, en su
+  // nombre propio («estoy montando un taller de primeros
+  // auxilios para la escuela»).
+  "taller de primeros auxilios", "first aid workshop", "oficina de primeiros socorros",
 ];
 
 function isHabitualFireStatement(text: string, folded: string): boolean {

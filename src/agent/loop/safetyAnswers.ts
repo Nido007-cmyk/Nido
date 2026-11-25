@@ -67,7 +67,11 @@ const CO_DEVICE_RE =
 const CO_INDOOR_RE =
   /\b(dentro|adentro|en (la |mi )?casa|garaje|garage|cochera|sotano|porche|cuarto|habitacion|dormitorio|recamara|sala|tienda de campana|casa de campana|carpa|caravana|cerrad[oa]|inside|indoors?|in (the|my) (house|home|garage|basement|tent|room|bedroom|camper|rv)|basement|crawl ?space|shed|tent|camper|enclosed|porch|em casa|garagem|porao|barraca|quarto|fechad[oa]|varanda)\b/;
 
-const CO_WORD_RE = /\b(monoxido|carbon monoxide)\b/;
+// Fase B ronda 1 (2026-11-25): «monoxide» a secas, la grafía
+// inglesa dentro de la frase española de la pasada del dueño
+// («esta sonando la alarms de monoxide de carbono ahorita»):
+// sin ella la palabra de CO no existía para esta tabla.
+const CO_WORD_RE = /\b(monoxido|monoxide|carbon monoxide)\b/;
 
 // 0.1.60: aparatos que se usan DENTRO a propósito (caldera, calentador o
 // estufa de gas, chimenea) pero que, si fallan, producen monóxido. Solo
@@ -81,7 +85,7 @@ const CO_SYMPTOM_ONLY_DEVICE_RE =
 // alarma o detector (tanda de variantes, Familia 4): «the co
 // alarm is beeping» no trae «carbon monoxide» entero y la puerta
 // no lo veía. Fuera del marco, «co» suelto no es esta puerta.
-const CO_FRAME_RE = /\b(?:co (?:alarm|alarma|alarme|detector)|(?:alarma|alarme|detector) de (?:co|monoxido))\b/;
+const CO_FRAME_RE = /\b(?:co (?:alarm|alarma|alarme|detector)|monoxide (?:alarm|detector)|(?:alarma|alarme|detector) de (?:co|monoxido|monoxide))\b/;
 
 // Síntomas o alarma: entonces no es una pregunta de planificación.
 // Tanda de variantes (Familia 4): la alarma contada entera, con
@@ -101,7 +105,7 @@ const CO_FRAME_RE = /\b(?:co (?:alarm|alarma|alarme|detector)|(?:alarma|alarme|d
 // —«ontem estava tocando»— sigue vetado por su marcador y
 // su pasado, que la lista de pasados ya trae).
 const CO_SYMPTOM_RE =
-  /\b(?:(?:me|nos|le|les|te) duele(?:n)? la cabeza|dolor de cabeza|marea|nausea|vomit|confus|debil|desmay|alarma (?:de co |de monoxido (?:de carbono )?)?(?:sono|suena|esta sonando)|(?:suena|sono|esta sonando|esta pitando) (?:la alarma|el detector) de (?:co|monoxido)|detector de (?:co|monoxido(?: de carbono)?) (?:esta )?(?:pitando|sonando|apitando|tocando)|headache|dizz|nause|confused|weak|faint|alarm (?:is )?(?:going off|beeping|sounding)|(?:carbon monoxide|co) detector (?:is )?(?:beeping|sounding|going off)|dor de cabeca|tont|enjo|fraqueza|desmai|alarme (?:de monoxido (?:de carbono )?)?(?:esta )?(?:tocando|disparou)|(?:tocando|apitando) (?:o alarme|o detector) de monoxido)/;
+  /\b(?:(?:me|nos|le|les|te) duele(?:n)? la cabeza|dolor de cabeza|marea|nausea|vomit|confus|debil|desmay|alarma (?:de co |de monoxido (?:de carbono )?|de monoxide (?:de carbono )?)?(?:sono|suena|esta sonando)|(?:suena|sono|esta sonando|esta pitando) (?:la alarma|el detector) de (?:co|monoxido|monoxide)|(?:esta sonando|sonando) la alarms? de (?:monoxide|monoxido)|detector de (?:co|monoxido(?: de carbono)?|monoxide(?: de carbono)?) (?:esta )?(?:pitando|sonando|apitando|tocando)|headache|dizz|nause|confused|weak|faint|alarm (?:is )?(?:going off|beeping|sounding)|(?:carbon monoxide|monoxide|co) detector (?:is )?(?:beeping|sounding|going off)|dor de cabeca|tont|enjo|fraqueza|desmai|alarme (?:de monoxido (?:de carbono )?)?(?:esta )?(?:tocando|disparou)|(?:tocando|apitando) (?:o alarme|o detector) de monoxido)/;
 
 // Tanda de narración (2026-11-25): el monóxido CONTADO no es un
 // parte. Las formas de pasado de CO_SYMPTOM_RE («sonó»,
