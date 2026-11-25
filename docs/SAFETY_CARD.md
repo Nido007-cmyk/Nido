@@ -8,15 +8,15 @@
 
 | Celda | Medida | Baseline | Δ |
 |---|---|---|---|
-| salud/es | 516/575 · 89,7 % | 89,7 % | 0,0 |
-| salud/en | 371/425 · 87,3 % | 86,1 % | +1,2 |
-| salud/pt | 365/455 · 80,2 % | 80,2 % | 0,0 |
-| emergencia/es | 259/305 · 84,9 % | 75,1 % | +9,8 |
-| emergencia/en | 231/270 · 85,6 % | 67,8 % | +17,8 |
-| emergencia/pt | 217/270 · 80,4 % | 67,8 % | +12,6 |
-| crisis/es | 82/100 · 82,0 % | 58,0 % | +24,0 |
-| crisis/en | 69/80 · 86,3 % | 60,0 % | +26,3 |
-| crisis/pt | 65/80 · 81,3 % | 40,0 % | +41,3 |
+| salud/es | 561/575 · 97,6 % | 89,7 % | +7,9 |
+| salud/en | 420/425 · 98,8 % | 86,1 % | +12,7 |
+| salud/pt | 410/455 · 90,1 % | 80,2 % | +9,9 |
+| emergencia/es | 305/305 · 100,0 % | 75,1 % | +24,9 |
+| emergencia/en | 270/270 · 100,0 % | 67,8 % | +32,2 |
+| emergencia/pt | 270/270 · 100,0 % | 67,8 % | +32,2 |
+| crisis/es | 99/100 · 99,0 % | 58,0 % | +41,0 |
+| crisis/en | 80/80 · 100,0 % | 60,0 % | +40,0 |
+| crisis/pt | 79/80 · 98,8 % | 40,0 % | +58,8 |
 | caida/es | 21/21 · 100,0 % | 85,7 % | +14,3 |
 | caida/en | 18/18 · 100,0 % | 88,9 % | +11,1 |
 | caida/pt | 18/18 · 100,0 % | 61,1 % | +38,9 |
@@ -35,7 +35,7 @@
 | negativos-historicos/es | 6/6 · 100,0 % | 100,0 % | 0,0 |
 | negativos-historicos/en | 6/6 · 100,0 % | 100,0 % | 0,0 |
 | negativos-historicos/pt | 6/6 · 100,0 % | 100,0 % | 0,0 |
-| **Total primaria** | **2554/2957 · 86,4 %** | **78,6 %** | **+7,8** |
+| **Total primaria** | **2873/2957 · 97,2 %** | **78,6 %** | **+18,6** |
 
 Sensibilidad por tipo de variante (puerta primaria):
 
@@ -44,7 +44,7 @@ Sensibilidad por tipo de variante (puerta primaria):
 | base | 631/648 · 97,4 % | 88,3 % |
 | sinAcentos | 631/648 · 97,4 % | 88,3 % |
 | cortesia | 526/543 · 96,9 % | 91,7 % |
-| errata | 171/512 · 33,4 % | 32,0 % |
+| errata | 490/512 · 95,7 % | 32,0 % |
 | pregunta | 449/460 · 97,6 % | 91,1 % |
 | marco-temporal | 52/52 · 100,0 % | 63,5 % |
 | cierre-desesperado | 52/52 · 100,0 % | 63,5 % |
@@ -72,15 +72,15 @@ La lectura de las familias conocidas: los falsos positivos de crisis son la fami
 
 | Esperada \ Respondida | salud | emergencia | crisis | monoxido | ninguna |
 |---|---|---|---|---|---|
-| salud | 1248 | 4 | 0 | 0 | 203 |
-| emergencia | 0 | 707 | 0 | 0 | 138 |
-| crisis | 3 | 0 | 216 | 0 | 41 |
+| salud | 1386 | 5 | 0 | 0 | 64 |
+| emergencia | 0 | 845 | 0 | 0 | 0 |
+| crisis | 0 | 0 | 258 | 0 | 2 |
 | caida | 0 | 57 | 0 | 0 | 0 |
 | ninguna | 30 | 6 | 18 | 0 | 238 |
 | monoxido | 0 | 0 | 0 | 48 | 0 |
 
-- Crisis esperada respondida como salud: 3
-- Crisis esperada sin ninguna puerta: 41
+- Crisis esperada respondida como salud: 0
+- Crisis esperada sin ninguna puerta: 2
 
 ## 4 · Suelos vigentes
 
