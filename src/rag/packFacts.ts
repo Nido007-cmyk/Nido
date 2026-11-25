@@ -289,6 +289,16 @@ export function emergencyQuestionKind(text: string): ServiceKind | null {
     // de las cinco palabras; la narración medida veta igual. La
     // frase-tema corta sigue con su veto propio, abajo.
     if (isNarratedEvent(folded)) asks = false;
+    // Auditoría 2026-11-25 (H-5): la afirmación habitual o
+    // hipotética de incendio («when there is a fire, I call
+    // the fire department») es un enunciado, no una pregunta
+    // por el número: es la gemela inglesa del dirimen sellado
+    // de «cuando haya un incendio llamo a los bomberos», que
+    // esta ruta ya dejaba fuera en español y portugués.
+    if (
+      / (when there is a fire|when there s a fire|cuando haya un incendio|quando houver um incendio) /.test(folded) &&
+      / (i call|llamo|ligo) /.test(folded)
+    ) asks = false;
     // Causa D: la longitud sola ya no basta si la frase corta
     // trae forma de tema.
     if (!hasCue && words.length <= 5 && isTopicPhrase(folded)) asks = false;

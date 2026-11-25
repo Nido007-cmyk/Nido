@@ -565,6 +565,10 @@ export function isHealthQuestion(text: string): boolean {
   // Auditoría 2026-11-25 (H-4): el suceso negado o el
   // casi-suceso resuelto no es una consulta en curso.
   if (NEGATED_EVENT_FRAMES.some((x) => folded.includes(x))) return false;
+  // Auditoría 2026-11-25 (H-5): el enunciado hipotético
+  // tampoco es una consulta en curso.
+  if (isHypotheticalStatement(text, folded)) return false;
+  if (isHabitualFireStatement(text, folded)) return false;
   if (hasHistoricalFrame(folded)) return false;
   // Tanda de narración (2026-11-25): el suceso contado con su
   // distancia no es una consulta en curso («ayer mi abuelo llamó
@@ -1027,6 +1031,42 @@ const NEGATED_EVENT_FRAMES = [
   "nao esta se engasgando", "nao esta sangrando", "nao desmaiou",
   "quase se queimou", "citando uma frase", "nao quero me machucar",
 ];
+
+/**
+ * El enunciado HIPOTÉTICO (auditoría 2026-11-25, H-5): abre
+ * con la condición (if / si / se), trae el modo condicional
+ * en la cláusula principal (would / tendría / teria) y no
+ * tiene forma interrogativa. Es el dirimen sellado de «cuando
+ * haya un incendio llamo a los bomberos» llevado a las formas
+ * que la auditoría midió: el inglés de caída y de CO, y el
+ * atragantamiento en subjuntivo en español y portugués. La
+ * consulta condicional genuina no abre con la condición
+ * («¿qué hago si mi hijo se atraganta?») y sigue cerrando su
+ * puerta; el suceso vivo no trae el modo condicional.
+ */
+function isHypotheticalStatement(text: string, folded: string): boolean {
+  if (/[¿?]/.test(text)) return false;
+  const t = folded.trim().replace(/^(por favor|please)\s+/, "");
+  if (!/^(if|si|se) /.test(t)) return false;
+  return / (would|tendria|teria) /.test(` ${t} `);
+}
+
+/**
+ * La afirmación HABITUAL de incendio (auditoría 2026-11-25,
+ * H-5): «when there is a fire, I call the fire department»
+ * trae el signo «there is a fire», pero es un enunciado de
+ * costumbre, no un parte — la misma forma sellada del
+ * dirimen en español («cuando haya un incendio llamo a los
+ * bomberos») y en portugués. Sin forma interrogativa y con
+ * el verbo de llamada en primera persona de presente, las
+ * dos caras la dejan fuera, como la ruta del número.
+ */
+function isHabitualFireStatement(text: string, folded: string): boolean {
+  if (/[¿?]/.test(text)) return false;
+  const hay = ` ${folded} `;
+  if (!/ (when there is a fire|when there s a fire|cuando haya un incendio|quando houver um incendio) /.test(hay)) return false;
+  return / (i call|llamo|ligo) /.test(hay);
+}
 
 /**
  * Raíces de situación (R-07, ronda física de la 0.1.68): la cara de
@@ -1915,6 +1955,11 @@ export function isEmergencySituation(text: string): boolean {
   // negado veta la cara de situación («the carbon monoxide
   // alarm didn't go off; it was a detector test»).
   if (NEGATED_EVENT_FRAMES.some((x) => vetoHay.includes(` ${x}`))) return false;
+  // Auditoría 2026-11-25 (H-5): el enunciado hipotético no
+  // es una situación («if my grandfather fell tomorrow, I
+  // would help him get up»).
+  if (isHypotheticalStatement(text, folded)) return false;
+  if (isHabitualFireStatement(text, folded)) return false;
   if (hasHistoricalFrame(folded)) return false;
   // Causa E de DIAG-A (paquete de arreglos del móvil, §4.3): el
   // suceso ya resuelto, contado con su cláusula de resolución
