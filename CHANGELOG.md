@@ -4,6 +4,98 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.113-alpha - 2026-11-24
+
+This release is about the words people actually use.
+NIDO's fixed answers (the ones that do not come from
+the model: health, emergencies, falls, carbon
+monoxide and crisis) were measured against 2,957
+phrasings in Spanish, English and Portuguese:
+synonyms, every verb form, the telegraphic way
+people type in a hurry and the narrated way they
+tell it afterwards, polite framings, missing
+accents and light typos. On the previous release
+about four in five reached the right answer, and a
+single mistyped letter dropped that to one in
+three. Now every one of the 2,957 reaches it, and
+the measurement runs on every change from now on,
+so a future edit that breaks a phrasing fails the
+build instead of shipping.
+
+Crisis wording that slipped through is fixed:
+"no quiero despertar mañana", "mejor sin mí",
+"voy a tomarme todas las pastillas" and "no reason
+to live" now reach the crisis answer in the three
+languages, while stories, fiction and questions
+about the topic still do not trigger it. The
+health and emergency gates now agree across
+languages on the forms an independent audit
+caught: "my chest and my left arm hurt", "mi hijo
+tomó la lejía" and "there is a man unconscious on
+the street" declare in Spanish, English and
+Portuguese alike. More fall wordings declare too
+("se cayó al baño", "fell down in the kitchen"),
+with the old guards intact: a fall told as an old
+story and a fallen price still stay normal
+conversation.
+
+The assistant's own instructions now follow the
+language of the conversation: before, the fixed
+parts of the system prompt and the tool
+descriptions were Spanish even when you spoke
+English or Portuguese. The voice settings no
+longer promise that every voice works offline,
+and when NIDO picks a voice it now prefers one
+that lives on the device when it can tell. A
+backup that cannot be restored now says why, in
+your language, instead of only saying it failed.
+
+Lists no longer lie about loading. The guide
+library used to show "no guides" when the load
+had failed; it now says it could not load. The
+scheduled tasks card used to show "no tasks"
+while the first load was still running; it now
+shows that it is loading, the empty state waits
+for the first real load, and a task that is
+running is marked as running.
+
+When your message names no country, the answers
+built from your knowledge packs now follow the
+country you chose in the Emergency tab; before,
+they only followed a country named in the message
+itself. The model manager shows each model's
+typical answering speed, measured from your own
+generations on this phone (the median of the last
+20 that qualify), and the model catalog now
+judges each kind of model against the memory that
+kind really uses, instead of one measure for all.
+
+Two leftovers are named on purpose, with their
+homes: the in-app guide still does not teach
+every tool the assistant has (rebuilding it is
+the next brief), and the memory monitor's native
+module still has no automated harness of its own
+(its three sibling modules, key vault, device
+messaging and text recognition, got theirs in
+this release and run them on every change).
+
+Test figures for the tree this release is built
+from: vitest 9,593 passed, 0 failed, 0 skipped of
+9,593; jest 155 of 155 (command: `npm test` +
+`npm run test:components`; environment: CI,
+ubuntu-24.04, Node 24; run:
+https://github.com/Nido007-cmyk/Nido/actions/runs/45545634843).
+The pre-release sweep was run again on this exact
+tree before publishing: the 2,957 phrasings, the
+grounding judge's typed legs and the twin answer
+composers all came out clean.
+
+As with every alpha, this build is verified by
+the automated suite and the sweep, not by a pass
+on a physical phone. The owner's tablet pass is
+still due, and whatever it finds feeds the next
+alpha.
+
 ## 0.1.112-alpha - 2026-11-23
 
 This release corrects two things an independent check
