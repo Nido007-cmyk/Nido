@@ -4,6 +4,72 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.114-alpha - 2026-11-25
+
+This release is about telling the difference
+between something that is happening and something
+that already happened.
+
+NIDO's fixed safety answers (the ones that do not
+come from the model) used to fire on the story as
+well as on the event. A call, a fall or a carbon
+monoxide alarm told afterwards, in the past tense,
+could still bring up the emergency answer as if it
+were happening now: "ayer llamé al número de
+emergencias", "last week my grandfather fell down
+the stairs", "ontem o alarme de monóxido tocou". A
+corpus of 2,758 narrated phrasings in Spanish,
+English and Portuguese was measured against the
+fixed routes: before, fewer than half of them
+(46.3%) were handled right. Now 99.96% are. One
+form is left the way it was, on purpose: a
+hypothetical ("cuando haya un incendio llamo a los
+bomberos", when there is a fire I call the fire
+brigade) is a plan, not an event, and it stays
+normal conversation.
+
+The other half of the same door is the live event
+told in the words people type while it happens.
+The whole live class was measured (289 phrasings
+in the three languages) and now every one of them
+reaches its answer: "me estoy cayendo" (I am
+falling), "se acaba de caer y no puede moverse"
+(he just fell and cannot move), "mi padre se está
+agarrando el pecho" (my father is clutching his
+chest), a burn in the present tense, and the
+carbon monoxide alarm with the verb first ("está
+sonando la alarma de monóxido ahora mismo").
+Before, fewer than half of them did (45.3%). The
+guards hold in both directions: a story still does
+not trigger the emergency answer, and nothing that
+reached its answer before has stopped reaching it.
+
+Two leftovers are named on purpose, with their
+homes, as in the previous release: the in-app
+guide still does not teach every tool the
+assistant has (rebuilding it is its own brief),
+and the memory monitor's native module still has
+no automated harness of its own (its reduced
+harness is its own brief too).
+
+Test figures for the tree this release is built
+from: vitest 9,637 passed, 0 failed, 0 skipped of
+9,637; jest 155 of 155 (command: `npm test` +
+`npm run test:components`; environment: CI,
+ubuntu24 20261116.133.1, Node 24.22.3; run:
+https://github.com/Nido007-cmyk/Nido/actions/runs/45646558054).
+The pre-release sweep was run again on this exact
+tree before publishing: the 2,957 phrasings, the
+narration and live corpora, the grounding judge's
+typed legs and the twin answer composers all came
+out clean.
+
+As with every alpha, this build is verified by
+the automated suite and the sweep, not by a pass
+on a physical phone. The owner's tablet pass is
+still due, and whatever it finds feeds the next
+alpha.
+
 ## 0.1.113-alpha - 2026-11-24
 
 This release is about the words people actually use.
