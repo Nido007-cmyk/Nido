@@ -958,6 +958,15 @@ const STEM_BODY_SIGNALS = [
   "man", "woman", "men", "women", "guy", "lady", "boy", "girl", "neighbor", "neighbour", "friend",
   "chico", "chica", "muchacho", "muchacha",
   "menino", "menina", "rapaz", "moca", "senhor", "senhora", "vizinho", "vizinha",
+  // Tanda de variantes (Familia 3): la persona mayor nombrada por
+  // su edad en las formas que el censo midió («una anciana
+  // caída», «uma idosa caída»). Solo esas dos: el plural
+  // masculino portugués («idosos») medido contra la guarda
+  // ampliada daba contexto de cuerpo a un tema de prevención
+  // («como evitar que idosos desmaiem») y la empeoraba; las
+  // formas masculinas del baño las carga el lugar (IMMOBILITY_
+  // PLACES), y las de parentesco ya viven en la lista («padre»).
+  "anciana", "idosa",
 ];
 
 /**
@@ -1184,6 +1193,10 @@ const FALL_DISTANCE_BIGRAMS = new Set([
   "semana pasada", "semana passada", "mes pasado", "mes passado",
   "ano pasado", "anos atras", "years ago", "months ago", "weeks ago",
   "days ago", "desde entonces", "desde entao", "otro dia",
+  // Tanda de variantes (Familia 3): la distancia inglesa corriente
+  // («fell last week», «fell last year»), que declaraba situación
+  // viva por no estar en la lista.
+  "last week", "last year",
 ]);
 const FALL_RESOLUTION_PHRASES = new Set([
   "ya esta bien", "ya esta mejor", "esta bien ahora",
@@ -1196,7 +1209,11 @@ function fallOccurrenceNarrated(words: string[], i: number, end: number): boolea
   const hi = Math.min(words.length - 1, end + 4);
   for (let j = lo; j <= hi; j++) {
     if (FALL_DISTANCE_TOKENS.has(words[j])) return true;
-    if (j < hi && FALL_DISTANCE_BIGRAMS.has(`${words[j]} ${words[j + 1]}`)) return true;
+    // Tanda de variantes (Familia 3): el bigrama que ABRE en el
+    // borde de la ventana también cuenta («fell in the kitchen
+    // last week»: «last» cae en hi y su segunda palabra queda
+    // una fuera; sin esto la distancia inglesa no vetaba).
+    if (j <= hi && j + 1 < words.length && FALL_DISTANCE_BIGRAMS.has(`${words[j]} ${words[j + 1]}`)) return true;
     if (words[j] === "hace") {
       if (FALL_TIME_UNITS.has(words[j + 1] ?? "")) return true;
       if (FALL_COUNT_WORDS.has(words[j + 1] ?? "") && FALL_TIME_UNITS.has(words[j + 2] ?? "")) return true;
@@ -1378,6 +1395,11 @@ const IMMOBILITY_SIGNS = [
   "no se puede levantar", "no puede levantarse", "no puedo mover",
   "can t get up",
   "nao consegue se levantar", "nao se pode levantar", "nao consigo mover",
+  // Tanda de variantes (Familia 3): la familia sin el «se» que el
+  // dictado se come («ela caiu e não consegue levantar», «she
+  // fell and cannot get up», «minha avó caiu e não levanta»): la
+  // misma disciplina de contexto las ata a un cuerpo.
+  "nao consegue levantar", "nao levanta", "cannot get up",
 ];
 
 /** Las formas de caída narrada de `EMERGENCY_SIGNS`, en las
@@ -1409,7 +1431,10 @@ const IMMOBILITY_BODY_PARTS = [
   "perna", "pernas", "braco", "bracos", "mao", "maos", "pes", "pescoco", "costas",
   "leg", "legs", "arm", "arms", "hand", "hands", "foot", "feet", "neck", "back",
 ];
-const IMMOBILITY_PLACES = ["suelo", "piso", "chao", "floor"];
+// Tanda de variantes (Familia 3): el baño entra como lugar — es
+// donde el parte corriente encuentra al caído que no se levanta
+// («anciana caída en el baño que no se puede levantar»).
+const IMMOBILITY_PLACES = ["suelo", "piso", "chao", "floor", "bano", "banheiro", "bathroom"];
 
 /**
  * La familia «levantar» de `IMMOBILITY_SIGNS` (0.1.112, resto de
@@ -1430,6 +1455,9 @@ const IMMOBILITY_PLACES = ["suelo", "piso", "chao", "floor"];
 const LEVANTAR_SIGNS = [
   "no se puede levantar", "no puede levantarse", "can t get up",
   "nao consegue se levantar", "nao se pode levantar",
+  // Tanda de variantes (Familia 3): las formas sin «se», en la
+  // misma red del mensaje desnudo.
+  "nao consegue levantar", "cannot get up",
 ];
 const LEVANTAR_OBJECT_INTRODUCERS = new Set([
   "el", "la", "los", "las", "un", "una", "unos", "unas",
