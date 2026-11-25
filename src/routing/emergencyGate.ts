@@ -703,6 +703,11 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "sin poder respirar",
     "dejo de respirar", "paro de respirar",
     "se esta ahogando", "esta ahogandose", "ahogandose", "se ahoga",
+    // Fase B ronda 4 (2026-11-25): la espina atorada y el
+    // corte con el hueso visible («se le atoró una espina de
+    // pescado en la garganta», «se cortó y se le ve el
+    // hueso»).
+    "se le atoro", "se le ve el hueso",
     // Fase B ronda 1 (2026-11-25): el ahogamiento contado como
     // hundimiento y el desplome, las paráfrasis que la ronda
     // cazó al modelo («un niño se está hundiendo en la
@@ -826,6 +831,10 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     // («unable to breathe is a man on the street»).
     "unable to breathe",
     "is choking", "choking on", "started choking", "is drowning",
+    // Fase B ronda 4 (2026-11-25): el corte con el hueso
+    // visible y el incendio forestal («you can see the
+    // bone», «there's a wildfire nearby»).
+    "can see the bone", "wildfire",
     // Fase B ronda 1 (2026-11-25): «going under» en el agua.
     "going under in the pool", "going under in the water",
     "struggling to breathe", "hard to breathe", "difficulty breathing",
@@ -920,6 +929,10 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "sem conseguir respirar",
     "deixou de respirar",
     "esta engasgando", "engasgando", "engasgou",
+    // Fase B ronda 4 (2026-11-25): o corte com o osso à
+    // vista e o incêndio florestal («dá para ver o osso»,
+    // «tem um incêndio florestal perto»).
+    "da para ver o osso", "incendio florestal",
     // ADV-E1: os eventos novos em português («desmaiou», «se afogou»).
     "desmaiou", "se afogou",
     // Fase B ronda 1 (2026-11-25): o afogamento como
