@@ -8,15 +8,15 @@
 
 | Celda | Medida | Baseline | Δ |
 |---|---|---|---|
-| salud/es | 566/575 · 98,4 % | 89,7 % | +8,7 |
+| salud/es | 575/575 · 100,0 % | 89,7 % | +10,3 |
 | salud/en | 425/425 · 100,0 % | 86,1 % | +13,9 |
 | salud/pt | 455/455 · 100,0 % | 80,2 % | +19,8 |
 | emergencia/es | 305/305 · 100,0 % | 75,1 % | +24,9 |
 | emergencia/en | 270/270 · 100,0 % | 67,8 % | +32,2 |
 | emergencia/pt | 270/270 · 100,0 % | 67,8 % | +32,2 |
-| crisis/es | 99/100 · 99,0 % | 58,0 % | +41,0 |
+| crisis/es | 100/100 · 100,0 % | 58,0 % | +42,0 |
 | crisis/en | 80/80 · 100,0 % | 60,0 % | +40,0 |
-| crisis/pt | 79/80 · 98,8 % | 40,0 % | +58,8 |
+| crisis/pt | 80/80 · 100,0 % | 40,0 % | +60,0 |
 | caida/es | 21/21 · 100,0 % | 85,7 % | +14,3 |
 | caida/en | 18/18 · 100,0 % | 88,9 % | +11,1 |
 | caida/pt | 18/18 · 100,0 % | 61,1 % | +38,9 |
@@ -35,7 +35,7 @@
 | negativos-historicos/es | 6/6 · 100,0 % | 100,0 % | 0,0 |
 | negativos-historicos/en | 6/6 · 100,0 % | 100,0 % | 0,0 |
 | negativos-historicos/pt | 6/6 · 100,0 % | 100,0 % | 0,0 |
-| **Total primaria** | **2946/2957 · 99,6 %** | **78,6 %** | **+21,0** |
+| **Total primaria** | **2957/2957 · 100,0 %** | **78,6 %** | **+21,4** |
 
 Sensibilidad por tipo de variante (puerta primaria):
 
@@ -44,7 +44,7 @@ Sensibilidad por tipo de variante (puerta primaria):
 | base | 648/648 · 100,0 % | 88,3 % |
 | sinAcentos | 648/648 · 100,0 % | 88,3 % |
 | cortesia | 543/543 · 100,0 % | 91,7 % |
-| errata | 501/512 · 97,9 % | 32,0 % |
+| errata | 512/512 · 100,0 % | 32,0 % |
 | pregunta | 460/460 · 100,0 % | 91,1 % |
 | marco-temporal | 52/52 · 100,0 % | 63,5 % |
 | cierre-desesperado | 52/52 · 100,0 % | 63,5 % |
@@ -72,15 +72,15 @@ La lectura de las familias conocidas: los falsos positivos de crisis son la fami
 
 | Esperada \ Respondida | salud | emergencia | crisis | monoxido | ninguna |
 |---|---|---|---|---|---|
-| salud | 1441 | 5 | 0 | 0 | 9 |
+| salud | 1450 | 5 | 0 | 0 | 0 |
 | emergencia | 0 | 845 | 0 | 0 | 0 |
-| crisis | 0 | 0 | 258 | 0 | 2 |
+| crisis | 0 | 0 | 260 | 0 | 0 |
 | caida | 0 | 57 | 0 | 0 | 0 |
 | ninguna | 42 | 0 | 0 | 0 | 250 |
 | monoxido | 0 | 0 | 0 | 48 | 0 |
 
 - Crisis esperada respondida como salud: 0
-- Crisis esperada sin ninguna puerta: 2
+- Crisis esperada sin ninguna puerta: 0
 
 ## 4 · Suelos vigentes
 

@@ -1899,6 +1899,10 @@ const SAFETY_ERRATA_REPAIR = buildErrataRepair([
   CO_SYMPTOM_RE.source,
   CO_SYMPTOM_ONLY_DEVICE_RE.source,
   EMERGENCY_Q_RE.source,
+  // Compleción (F5-bis): las formas enteras tras los comodines
+  // de la tabla («vivi(?:r|endo)», «suicid\w*») que el
+  // re-cobro midió rotas («vviendo», «sicidio»).
+  "viviendo", "suicidio",
 ]);
 
 export function isSelfHarmMessage(userText: string): boolean {
