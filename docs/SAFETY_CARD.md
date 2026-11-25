@@ -23,9 +23,9 @@
 | caida-narrada/es | 6/6 · 100,0 % | 100,0 % | 0,0 |
 | caida-narrada/en | 6/6 · 100,0 % | 33,3 % | +66,7 |
 | caida-narrada/pt | 6/6 · 100,0 % | 100,0 % | 0,0 |
-| monoxido/es | 15/21 · 71,4 % | 71,4 % | 0,0 |
-| monoxido/en | 9/15 · 60,0 % | 60,0 % | 0,0 |
-| monoxido/pt | 6/12 · 50,0 % | 50,0 % | 0,0 |
+| monoxido/es | 21/21 · 100,0 % | 71,4 % | +28,6 |
+| monoxido/en | 15/15 · 100,0 % | 60,0 % | +40,0 |
+| monoxido/pt | 12/12 · 100,0 % | 50,0 % | +50,0 |
 | guia/es | 49/49 · 100,0 % | 100,0 % | 0,0 |
 | guia/en | 42/42 · 100,0 % | 100,0 % | 0,0 |
 | guia/pt | 42/42 · 100,0 % | 100,0 % | 0,0 |
@@ -35,20 +35,20 @@
 | negativos-historicos/es | 6/6 · 100,0 % | 100,0 % | 0,0 |
 | negativos-historicos/en | 6/6 · 100,0 % | 100,0 % | 0,0 |
 | negativos-historicos/pt | 6/6 · 100,0 % | 100,0 % | 0,0 |
-| **Total primaria** | **2536/2957 · 85,8 %** | **78,6 %** | **+7,2** |
+| **Total primaria** | **2554/2957 · 86,4 %** | **78,6 %** | **+7,8** |
 
 Sensibilidad por tipo de variante (puerta primaria):
 
 | Tipo | Medida | Baseline |
 |---|---|---|
-| base | 625/648 · 96,5 % | 88,3 % |
-| sinAcentos | 625/648 · 96,5 % | 88,3 % |
+| base | 631/648 · 97,4 % | 88,3 % |
+| sinAcentos | 631/648 · 97,4 % | 88,3 % |
 | cortesia | 526/543 · 96,9 % | 91,7 % |
 | errata | 171/512 · 33,4 % | 32,0 % |
 | pregunta | 449/460 · 97,6 % | 91,1 % |
 | marco-temporal | 52/52 · 100,0 % | 63,5 % |
 | cierre-desesperado | 52/52 · 100,0 % | 63,5 % |
-| ayuda | 29/35 · 82,9 % | 77,1 % |
+| ayuda | 35/35 · 100,0 % | 77,1 % |
 | voseo | 4/4 · 100,0 % | 100,0 % |
 | usted | 3/3 · 100,0 % | 100,0 % |
 
@@ -77,7 +77,7 @@ La lectura de las familias conocidas: los falsos positivos de crisis son la fami
 | crisis | 3 | 0 | 216 | 0 | 41 |
 | caida | 0 | 57 | 0 | 0 | 0 |
 | ninguna | 30 | 6 | 18 | 0 | 238 |
-| monoxido | 0 | 3 | 0 | 30 | 15 |
+| monoxido | 0 | 0 | 0 | 48 | 0 |
 
 - Crisis esperada respondida como salud: 3
 - Crisis esperada sin ninguna puerta: 41

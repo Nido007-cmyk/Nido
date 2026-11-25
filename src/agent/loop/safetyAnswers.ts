@@ -77,9 +77,20 @@ const CO_WORD_RE = /\b(monoxido|carbon monoxide)\b/;
 const CO_SYMPTOM_ONLY_DEVICE_RE =
   /\b(calentador(es)? (de|a) gas|calentador de agua|estufa(s)? (de|a) gas|calefactor(es)? (de|a) gas|caldera|calefon|chimenea|gas (heater|fire|fireplace|stove|furnace)|space heater|water heater|furnace|boiler|fireplace|aquecedor(es)? (de|a) gas|aquecedor de agua|caldeira|lareira|fogao a gas)\b/;
 
+// El «co» a secas como palabra de la puerta, solo en su marco de
+// alarma o detector (tanda de variantes, Familia 4): «the co
+// alarm is beeping» no trae «carbon monoxide» entero y la puerta
+// no lo veía. Fuera del marco, «co» suelto no es esta puerta.
+const CO_FRAME_RE = /\b(?:co (?:alarm|alarma|alarme|detector)|(?:alarma|alarme|detector) de (?:co|monoxido))\b/;
+
 // Síntomas o alarma: entonces no es una pregunta de planificación.
+// Tanda de variantes (Familia 4): la alarma contada entera, con
+// «de carbono» detrás y con el verbo delante («suena la
+// alarma…»), y el detector en su forma corriente
+// (pitando/apitando/beeping) — con la preposición obligada: el
+// detector de humo no es esta puerta.
 const CO_SYMPTOM_RE =
-  /\b(?:(?:me|nos|le|les|te) duele(?:n)? la cabeza|dolor de cabeza|marea|nausea|vomit|confus|debil|desmay|alarma (?:de co |de monoxido )?(?:sono|suena|esta sonando)|headache|dizz|nause|confused|weak|faint|alarm (?:is )?(?:going off|beeping|sounding)|dor de cabeca|tont|enjo|fraqueza|desmai|alarme (?:de monoxido )?(?:esta )?(?:tocando|disparou))/;
+  /\b(?:(?:me|nos|le|les|te) duele(?:n)? la cabeza|dolor de cabeza|marea|nausea|vomit|confus|debil|desmay|alarma (?:de co |de monoxido (?:de carbono )?)?(?:sono|suena|esta sonando)|(?:suena|sono) la alarma de (?:co|monoxido)|detector de (?:co|monoxido(?: de carbono)?) (?:esta )?(?:pitando|sonando|apitando|tocando)|headache|dizz|nause|confused|weak|faint|alarm (?:is )?(?:going off|beeping|sounding)|(?:carbon monoxide|co) detector (?:is )?(?:beeping|sounding|going off)|dor de cabeca|tont|enjo|fraqueza|desmai|alarme (?:de monoxido (?:de carbono )?)?(?:esta )?(?:tocando|disparou))/;
 
 const CO_TEXT: Record<SafetyLang, string> = {
   es:
@@ -1907,7 +1918,7 @@ export function matchSafetyAnswer(userText: string, lang: SafetyLang): SafetyHit
   const device = CO_DEVICE_RE.test(folded);
   const indoor = CO_INDOOR_RE.test(folded);
   const coWord = CO_WORD_RE.test(folded);
-  if ((coWord || device || CO_SYMPTOM_ONLY_DEVICE_RE.test(folded)) && CO_SYMPTOM_RE.test(folded)) {
+  if ((coWord || device || CO_SYMPTOM_ONLY_DEVICE_RE.test(folded) || CO_FRAME_RE.test(folded)) && CO_SYMPTOM_RE.test(folded)) {
     return { kind: "co-symptoms", lang, text: CO_SYMPTOM_TEXT[lang], deterministic: true };
   }
   // Un coche, una moto o un motor solo cuentan si están encendidos o en marcha.
