@@ -429,6 +429,15 @@ const SELF_HARM_PATTERNS = [
       "cut myself on purpose",
       "(?:want|wanna) to be dead",
       "(?:don't|dont|do not) want to (?:live|be alive)(?: anymore)?",
+      // Auditoría 2026-11-25 (H-3): la forma de pregunta en
+      // primera persona que el español ya cazaba por su patrón
+      // («no quiero seguir viviendo») caía a la negativa factual
+      // en inglés: «Why do I feel that I don't want to go on
+      // living?». Entra la familia «go on / keep / continue
+      // living» anclada a la primera persona («i»), como el
+      // «quiero» español ancla la suya: la segunda persona
+      // («you don't want to go on living») queda fuera.
+      "i (?:don't|dont|don t|do not) want to (?:go on|keep|continue) living",
       "no (?:point|reason) (?:in|to) (?:living|live)",
       "better off dead",
       "(?:thinking|thought) (?:about|of) ending it",
@@ -455,6 +464,13 @@ const SELF_HARM_PATTERNS = [
       "(?:quero|queria) estar mort[oa]",
       "(?:machucar|ferir) a mim mesm[oa]",
       "nao quero (?:mais )?viver",
+      // Auditoría 2026-11-25 (H-3): la gemela portuguesa de la
+      // forma española «no quiero seguir viviendo» dentro de la
+      // pregunta («Por que sinto que não quero continuar
+      // vivendo?»), que caía a la negativa factual: el portugués
+      // solo traía el infinitivo a secas («não quero viver»).
+      "nao quero (?:mais )?(?:continuar |seguir )?vivendo",
+      "nao quero (?:mais )?continuar a viver",
       "nao aguento mais viver",
       "acabar com (?:a )?minha vida",
       // Auditoría de la 0.1.112, bloque 1: ideación pasiva y sobredosis
