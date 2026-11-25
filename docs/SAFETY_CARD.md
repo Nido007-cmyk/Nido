@@ -8,9 +8,9 @@
 
 | Celda | Medida | Baseline | Δ |
 |---|---|---|---|
-| salud/es | 561/575 · 97,6 % | 89,7 % | +7,9 |
-| salud/en | 420/425 · 98,8 % | 86,1 % | +12,7 |
-| salud/pt | 410/455 · 90,1 % | 80,2 % | +9,9 |
+| salud/es | 566/575 · 98,4 % | 89,7 % | +8,7 |
+| salud/en | 425/425 · 100,0 % | 86,1 % | +13,9 |
+| salud/pt | 455/455 · 100,0 % | 80,2 % | +19,8 |
 | emergencia/es | 305/305 · 100,0 % | 75,1 % | +24,9 |
 | emergencia/en | 270/270 · 100,0 % | 67,8 % | +32,2 |
 | emergencia/pt | 270/270 · 100,0 % | 67,8 % | +32,2 |
@@ -35,17 +35,17 @@
 | negativos-historicos/es | 6/6 · 100,0 % | 100,0 % | 0,0 |
 | negativos-historicos/en | 6/6 · 100,0 % | 100,0 % | 0,0 |
 | negativos-historicos/pt | 6/6 · 100,0 % | 100,0 % | 0,0 |
-| **Total primaria** | **2891/2957 · 97,8 %** | **78,6 %** | **+19,2** |
+| **Total primaria** | **2946/2957 · 99,6 %** | **78,6 %** | **+21,0** |
 
 Sensibilidad por tipo de variante (puerta primaria):
 
 | Tipo | Medida | Baseline |
 |---|---|---|
-| base | 637/648 · 98,3 % | 88,3 % |
-| sinAcentos | 637/648 · 98,3 % | 88,3 % |
-| cortesia | 532/543 · 98,0 % | 91,7 % |
-| errata | 490/512 · 95,7 % | 32,0 % |
-| pregunta | 449/460 · 97,6 % | 91,1 % |
+| base | 648/648 · 100,0 % | 88,3 % |
+| sinAcentos | 648/648 · 100,0 % | 88,3 % |
+| cortesia | 543/543 · 100,0 % | 91,7 % |
+| errata | 501/512 · 97,9 % | 32,0 % |
+| pregunta | 460/460 · 100,0 % | 91,1 % |
 | marco-temporal | 52/52 · 100,0 % | 63,5 % |
 | cierre-desesperado | 52/52 · 100,0 % | 63,5 % |
 | ayuda | 35/35 · 100,0 % | 77,1 % |
@@ -72,7 +72,7 @@ La lectura de las familias conocidas: los falsos positivos de crisis son la fami
 
 | Esperada \ Respondida | salud | emergencia | crisis | monoxido | ninguna |
 |---|---|---|---|---|---|
-| salud | 1386 | 5 | 0 | 0 | 64 |
+| salud | 1441 | 5 | 0 | 0 | 9 |
 | emergencia | 0 | 845 | 0 | 0 | 0 |
 | crisis | 0 | 0 | 258 | 0 | 2 |
 | caida | 0 | 57 | 0 | 0 | 0 |
