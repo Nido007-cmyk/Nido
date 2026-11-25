@@ -681,6 +681,12 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     // desvanecimiento en su participio, con los vetos de
     // resolución y de marco que la cara ya aplica.
     "desvanecido", "desvanecida",
+    // Tanda del residuo vivo (2026-11-25): el desvanecimiento en
+    // curso, en su perífrasis y con el enclítico, como
+    // «ahogandose»: «se está desvaneciendo» no casaba ninguna
+    // forma (la del desmayo en curso, «se está desmayando»,
+    // entra por su raíz con contexto; esta no trae raíz).
+    "se esta desvaneciendo", "desvaneciendose",
     "cuesta respirar", "cuesta mucho respirar",
     // 0.1.99 T-01 (m-10, auditoría 2026-11-14): la respiración
     // contada con su marca de gravedad dentro de la frase («mi
@@ -695,6 +701,12 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "respira con dificultad", "respirando con dificultad",
     "esta inconsciente", "quedo inconsciente", "no responde",
     "se agarra el pecho", "agarrandose el pecho", "se aprieta el pecho",
+    // Tanda del residuo vivo: el gerundio suelto del pecho, la
+    // forma que la perífrasis con «está» necesita («se está
+    // agarrando el pecho») y que la lista portuguesa ya traía
+    // («segurando o peito»): sin él, el signo en progresivo
+    // español iba al modelo y sus gemelas en/pt declaraban.
+    "agarrando el pecho", "apretando el pecho",
     "humo saliendo", "saliendo humo", "sale humo", "hay humo", "hay fuego",
     "salen llamas", "saliendo llamas", "esta ardiendo",
     "sangrando mucho", "no para de sangrar", "esta convulsionando",
@@ -731,6 +743,10 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     // Auditoría 0.1.93: sucesos en curso que no son del cuerpo y la
     // puerta no conocía (13 de 21 de la batería se iban al modelo).
     "se esta incendiando", "se incendia", "se esta quemando", "hay un incendio", "incendio forestal",
+    // Tanda del residuo vivo: la quemadura de persona en primera
+    // persona, que el signo de fuego (de tercera) no casaba:
+    // «me estoy quemando», «quemándome».
+    "me estoy quemando", "quemandome",
     "se esta inundando", "se inunda", "hay una inundacion",
     "hubo un temblor", "esta temblando", "hubo un terremoto", "hubo un sismo",
     "se cayo un cable", "cable caido", "cable de luz caido",
@@ -772,6 +788,9 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     // the breathing told with its severity inside the phrase.
     "breathing very badly", "breathing badly", "breathing poorly", "breathing with difficulty",
     "clutching his chest", "clutching her chest", "clutching my chest", "clutching their chest",
+    // Tanda del residuo vivo: el mismo pecho con «grabbing», la
+    // forma corriente que faltaba junto a «clutching».
+    "grabbing his chest", "grabbing her chest", "grabbing my chest", "grabbing their chest",
     "is unconscious", "was unconscious", "found unconscious", "not responding", "lost consciousness",
     // Bloque 2 (auditoría 0.1.112): the contracted and adjectival forms,
     // twins of «no responde» / «não responde».
@@ -779,6 +798,20 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "won t respond", "doesn t respond", "isn t responsive",
     // ADV-E1: «passed out», la frase-signo corriente del desmayo.
     "passed out",
+    // Tanda del residuo vivo: la gemela en curso de «passed
+    // out» («my mother is passing out»). El precio de la forma
+    // (el reparto: «she passed out the invitations» ya declara
+    // en la base) es el ya pagado por la lista, no uno nuevo.
+    "passing out",
+    // Tanda del residuo vivo: la quemadura de persona en
+    // presente, el reflexivo y la parte del cuerpo en
+    // progresivo — en pasado sí son formas conocidas («burned
+    // his hand» declara por su cara) y en presente ninguna
+    // cara las traía: «my neighbor is burning himself with
+    // boiling water right now» iba al modelo.
+    "burning himself", "burning herself", "burning myself",
+    "burning his hand", "burning her hand", "burning his arm", "burning her arm",
+    "burning my hand",
     "smoke coming", "smoke pouring", "full of smoke", "there is a fire", "there s a fire",
     "house on fire", "kitchen on fire", "building on fire", "car on fire", "room on fire",
     "bleeding a lot", "bleeding heavily", "won t stop bleeding",
@@ -839,6 +872,16 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "respira com dificuldade", "respirando com dificuldade",
     "esta inconsciente", "ficou inconsciente", "nao responde",
     "segurando o peito", "apertando o peito", "mao no peito",
+    // Tanda del residuo vivo: o peito com «agarrando», nas duas
+    // ordens («agarrando o peito», «se agarrando no peito»).
+    "agarrando o peito", "agarrando no peito",
+    // Tanda del residuo vivo: a queimadura de pessoa no
+    // presente, o reflexivo e a parte do corpo em progressivo
+    // — como no inglês, em passado são formas conhecidas e no
+    // presente nenhuma cara as trazia («meu vizinho está se
+    // queimando com água fervendo agora» ia ao modelo).
+    "se queimando", "me queimando",
+    "queimando a mao", "queimando o braco",
     "fumaca saindo", "saindo fumaca", "tem fogo", "pegando fogo", "em chamas", "saindo chamas",
     "sangrando muito", "nao para de sangrar", "esta convulsionando",
     // Causa E de DIAG-A: o jorro com o seu verbo, com o sangue
