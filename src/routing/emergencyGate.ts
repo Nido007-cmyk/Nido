@@ -815,6 +815,12 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "smoke coming", "smoke pouring", "full of smoke", "there is a fire", "there s a fire",
     "house on fire", "kitchen on fire", "building on fire", "car on fire", "room on fire",
     "bleeding a lot", "bleeding heavily", "won t stop bleeding",
+    // Auditoría 2026-11-25 (H-2): «perder sangre» con su
+    // cuantificador, la forma que faltaba junto a «bleeding a
+    // lot» («my father is losing a lot of blood» iba al modelo).
+    // Sin cantidad no entra: perder sangre a secas también se
+    // dice de una analítica.
+    "losing a lot of blood", "losing lots of blood", "losing so much blood", "losing too much blood",
     // Causa E de DIAG-A: el chorro con su verbo, con la sangre
     // nombrada en la frase (la vara de la cura: sin sangre
     // nombrada, el aspersor y la manguera no entran).
@@ -884,6 +890,11 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "queimando a mao", "queimando o braco",
     "fumaca saindo", "saindo fumaca", "tem fogo", "pegando fogo", "em chamas", "saindo chamas",
     "sangrando muito", "nao para de sangrar", "esta convulsionando",
+    // Auditoria 2026-11-25 (H-2): «perder sangue» com o seu
+    // quantificador, a forma que faltava junto a «sangrando
+    // muito» («meu pai está perdendo muito sangue» ia ao
+    // modelo); inclui a perífrase europeia «a perder».
+    "perdendo muito sangue", "perdendo tanto sangue", "a perder muito sangue",
     // Causa E de DIAG-A: o jorro com o seu verbo, com o sangue
     // nomeado na frase.
     "sangue espirrando", "espirrando sangue", "sangue a espirrar", "sangue esta espirrando",
