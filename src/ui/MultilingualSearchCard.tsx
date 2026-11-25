@@ -36,6 +36,8 @@ import {
 import { onReembedProgress, type ReembedProgress } from "../rag/reembed";
 import { displayLang, formatInt } from "../utils/safeFormat";
 import { errorReason } from "./userFacingError";
+import { computeCompatibility } from "../models/compatibility";
+import { getDeviceTotalRamBytes } from "ram-monitor";
 
 const modelManager = new ModelManager();
 
@@ -48,7 +50,21 @@ export function MultilingualSearchCard({ onChanged }: { onChanged?: () => void }
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [progress, setProgress] = useState<ReembedProgress | null>(null);
+  const [deviceRam, setDeviceRam] = useState(0);
   const [, rerender] = useState(0);
+
+  // M-1 (espejo del móvil): el veredicto de ajuste de su destino (el
+  // e5 multilingüe), con la RAM del aparato y el mismo cálculo de las
+  // filas del catálogo. Sin RAM leída queda «unknown» y la tarjeta no
+  // enseña veredicto: nunca uno inventado.
+  useEffect(() => {
+    try {
+      setDeviceRam(getDeviceTotalRamBytes());
+    } catch {
+      // native module fallback: sin foto de RAM no hay veredicto
+    }
+  }, []);
+  const compatibility = target ? computeCompatibility(target, deviceRam) : "unknown";
   // A second confirm while a change is running is ignored (the button is
   // already disabled; this also covers two dialogs confirmed quickly).
   const running = useRef(false);
@@ -127,6 +143,12 @@ export function MultilingualSearchCard({ onChanged }: { onChanged?: () => void }
         </Text>
       )}
       {message && <Text style={styles.status}>{message}</Text>}
+      {/* M-1: la insignia junto al gesto, con el mismo vocabulario de
+          tres valores y las mismas claves que las filas del catálogo.
+          En rojo ES el aviso: el gesto de activar queda desactivado. */}
+      {compatibility !== "unknown" && (
+        <Text style={styles.status}>{t(`catalogItemCard.compat.${compatibility}`)}</Text>
+      )}
       <View style={styles.row}>
         {active ? (
           <Pressable
@@ -140,9 +162,9 @@ export function MultilingualSearchCard({ onChanged }: { onChanged?: () => void }
           </Pressable>
         ) : (
           <Pressable
-            style={[styles.actionBtn, busy && { opacity: 0.5 }]}
+            style={[styles.actionBtn, (busy || compatibility === "red") && { opacity: 0.5 }]}
             onPress={() => confirm(true)}
-            disabled={busy}
+            disabled={busy || compatibility === "red"}
             accessibilityRole="button"
             accessibilityLabel={t("multilingual.turnOn")}
           >
