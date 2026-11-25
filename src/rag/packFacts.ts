@@ -590,6 +590,9 @@ const CRISIS_ERRATA_REPAIR = buildErrataRepair([
   CRISIS_INTENT_CUES.source,
   CRISIS_SELF_KILL_CUES.source,
   CRISIS_PASSIVE_CUES.source,
+  // Compleción (F5-bis): la forma entera tras el comodín
+  // «suicid\w*» de las señales, medida rota («sicidio»).
+  "suicidio",
 ]);
 
 // Los vetos de esta cara (tanda de variantes, Familia 6): las

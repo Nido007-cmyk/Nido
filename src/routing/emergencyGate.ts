@@ -1597,6 +1597,12 @@ const GATE_ERRATA_REPAIR = buildErrataRepair([
   ...IMMOBILITY_BODY_PARTS,
   ...IMMOBILITY_PLACES,
   ...HEALTH_EXCLUSIONS,
+  // Compleción (F5-bis): las formas enteras que la puerta solo
+  // conoce por prefijo («vomit») y el re-cobro midió rotas:
+  // sin ellas, «vmitos» no tenía canónica que reponer. No son
+  // términos nuevos: no casan nada por sí mismas, solo
+  // alimentan la reparación.
+  "vomitos", "vomite",
 ]);
 
 export function isEmergencySituation(text: string): boolean {
