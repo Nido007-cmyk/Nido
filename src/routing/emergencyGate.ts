@@ -572,6 +572,11 @@ export function isHealthQuestion(text: string): boolean {
   // Auditoría 2026-11-25 (H-8): la tarea de guía sin suceso
   // no es una consulta en curso.
   if (GUIDE_TASK_FRAMES.some((x) => folded.includes(x))) return false;
+  // Fase B ronda 3 (2026-11-25): la metáfora «drowning in
+  // work» sobre-disparaba ESTA cara; la de situación tiene
+  // su forma fixturada como precio aceptado (X-09) y no se
+  // toca — el veto es solo de salud, donde se midió.
+  if (folded.includes("drowning in work")) return false;
   if (hasHistoricalFrame(folded)) return false;
   // Tanda de narración (2026-11-25): el suceso contado con su
   // distancia no es una consulta en curso («ayer mi abuelo llamó
@@ -1077,9 +1082,14 @@ const NEGATED_EVENT_FRAMES = [
   "nao ha nenhuma hemorragia", "nao ha hemorragia",
   // Fase B ronda 3 (2026-11-25): la metáfora en curso no es
   // un suceso que no ocurre: es un suceso que no existe
-  // («i'm drowning in work», «estoy sangrando de amor»).
-  // Las dos caras consultan la familia, como la negación.
-  "drowning in work", "sangrando de amor",
+  // («estoy sangrando de amor»). La familia la consultan
+  // las dos caras, como la negación. La gemela inglesa
+  // («drowning in work») NO entra aquí: su familia tiene un
+  // precio fixturado en la suite gobernada (X-09, «He is
+  // drowning in work emails» es disparo aceptado de la cara
+  // de situación) y su veto vive solo en la cara de salud,
+  // donde la ronda midió su sobre-disparo.
+  "sangrando de amor",
 ];
 
 /**
