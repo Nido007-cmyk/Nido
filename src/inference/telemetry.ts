@@ -366,6 +366,127 @@ export async function listStoredRamRejections(limit = 50): Promise<StoredRamReje
   }
 }
 
+/** Una fila de la tabla persistida, en la forma que el resumen consume. */
+export interface ModelSpeedRow {
+  modelId: string | null;
+  tokensPerSec: number | null;
+  completionTokens: number;
+  deterministic?: boolean;
+  stopReason: string;
+  ts: number;
+}
+
+export interface ModelSpeedSummary {
+  /** Nombre base del fichero del modelo (sin directorio): la clave
+   * contra la que la tarjeta del gestor busca su resumen. */
+  modelId: string;
+  /** Mediana de tokensPerSec de las últimas 20 generaciones que
+   * califican; null con menos de 2 muestras (no hay velocidad que
+   * enseñar: hay conteo). */
+  medianTokPerSec: number | null;
+  sampleCount: number;
+  lastTs: number;
+}
+
+const SPEED_WINDOW = 20;
+const SPEED_MIN_TOKENS = 32;
+
+function speedRowQualifies(r: ModelSpeedRow): boolean {
+  return (
+    r.modelId !== null &&
+    r.deterministic !== true &&
+    r.tokensPerSec !== null &&
+    r.tokensPerSec > 0 &&
+    r.completionTokens >= SPEED_MIN_TOKENS &&
+    (r.stopReason === "completed" || r.stopReason === "stopped")
+  );
+}
+
+function baseFilename(modelId: string): string {
+  const i = modelId.lastIndexOf("/");
+  return i >= 0 ? modelId.slice(i + 1) : modelId;
+}
+
+/**
+ * G-1 (partida del móvil): el resumen de velocidad por modelo, en la
+ * forma del cierre de G-1 en PC. Función pura sobre las filas, de la
+ * más reciente a la más vieja (el orden en que el lector las trae):
+ * por modelo, la mediana de tokensPerSec de las últimas 20
+ * generaciones que califican (no deterministas, tasa > 0, ≥ 32
+ * tokens, terminadas o paradas por el llamador). Solo cuentan los
+ * tokens generados: la tasa asentada ya es esa (genMs, sin prompt).
+ * Con un solo evento válido no hay velocidad que enseñar: el resumen
+ * trae el conteo y la velocidad vuelve null, para que la letra diga
+ * la verdad. La clave es el nombre base del fichero: la telemetría
+ * guarda el nombre con el que el motor cargó y el catálogo declara
+ * «models/<fichero>»; normalizar aquí cierra la costura de las dos
+ * formas del mismo nombre.
+ */
+export function summarizeModelSpeeds(rows: ModelSpeedRow[]): ModelSpeedSummary[] {
+  const byModel = new Map<string, { rates: number[]; lastTs: number }>();
+  for (const r of rows) {
+    if (!speedRowQualifies(r)) continue;
+    const key = baseFilename(r.modelId as string);
+    let acc = byModel.get(key);
+    if (!acc) {
+      acc = { rates: [], lastTs: r.ts };
+      byModel.set(key, acc);
+    }
+    if (acc.rates.length < SPEED_WINDOW) acc.rates.push(r.tokensPerSec as number);
+    if (r.ts > acc.lastTs) acc.lastTs = r.ts;
+  }
+  const out: ModelSpeedSummary[] = [];
+  for (const [modelId, acc] of byModel) {
+    let median: number | null = null;
+    if (acc.rates.length >= 2) {
+      const sorted = [...acc.rates].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      median = sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+    }
+    out.push({ modelId, medianTokPerSec: median, sampleCount: acc.rates.length, lastTs: acc.lastTs });
+  }
+  return out;
+}
+
+/**
+ * El lector agregado de G-1: lee la tabla persistida (sobrevive a los
+ * reinicios; no el anillo en memoria) y resume por modelo. Nunca
+ * lanza: sin base o con la lectura rota devuelve lista vacía, con la
+ * disciplina del módulo.
+ */
+export async function modelSpeedSummaries(): Promise<ModelSpeedSummary[]> {
+  try {
+    const { getDatabase } = await import("../security/databaseManager");
+    const db = await getDatabase();
+    await db.execAsync(TELEMETRY_DDL);
+    const rows = await db.getAllAsync<{
+      model_id: string | null;
+      tokens_per_sec: number | null;
+      completion_tokens: number;
+      deterministic: number;
+      stop_reason: string;
+      ts: number;
+    }>(
+      `SELECT model_id, tokens_per_sec, completion_tokens, deterministic, stop_reason, ts
+       FROM inference_telemetry
+       ORDER BY id DESC
+       LIMIT ${DB_MAX_ROWS}`,
+    );
+    return summarizeModelSpeeds(
+      rows.map((r) => ({
+        modelId: r.model_id,
+        tokensPerSec: r.tokens_per_sec,
+        completionTokens: r.completion_tokens,
+        deterministic: r.deterministic === 1,
+        stopReason: r.stop_reason,
+        ts: r.ts,
+      })),
+    );
+  } catch {
+    return [];
+  }
+}
+
 export function getRecentTelemetry(limit = 100): InferenceTelemetryEvent[] {
   return ring.slice(Math.max(0, ring.length - limit));
 }
