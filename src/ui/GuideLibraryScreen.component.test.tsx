@@ -13,6 +13,8 @@ import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react-native";
 
 const mockState = {
+  failPacks: false,
+  packsPromise: null as Promise<Array<Record<string, unknown>>> | null,
   packs: [{ id: "pack-1", label: "Pack Uno", format: "sqlite-pack" }] as Array<Record<string, unknown>>,
   guidesByPack: {
     "pack-1": [
@@ -30,7 +32,11 @@ const mockLlamaLoad = jest.fn();
 const mockEmbeddingLoad = jest.fn();
 
 jest.mock("../rag/packs", () => ({
-  knowledgePacks: async () => mockState.packs,
+  knowledgePacks: async () => {
+    if (mockState.failPacks) throw new Error("canal de packs caído (simulado)");
+    if (mockState.packsPromise) return mockState.packsPromise;
+    return mockState.packs;
+  },
   listPackGuides: async (packId: string) => mockState.guidesByPack[packId] ?? [],
   readPackGuide: async (packId: string, guideId: number) => mockState.docs[`${packId}:${guideId}`] ?? null,
 }));
@@ -77,6 +83,8 @@ describe("GuideLibraryScreen", () => {
   beforeEach(() => {
     mockLlamaLoad.mockClear();
     mockEmbeddingLoad.mockClear();
+    mockState.failPacks = false;
+    mockState.packsPromise = null;
     mockState.packs = [{ id: "pack-1", label: "Pack Uno", format: "sqlite-pack" }];
   });
 
@@ -169,6 +177,45 @@ describe("GuideLibraryScreen", () => {
     fireEvent.press(await screen.findByText("CPR for adults"));
     expect(await screen.findByText(/Check response first/)).toBeTruthy();
     expect(withInset().length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("paso 9-bis: el fallo de la carga pinta su palabra propia y no el vacío", async () => {
+    mockState.failPacks = true;
+    const { GuideLibraryScreen } = require("./GuideLibraryScreen");
+    await render(<GuideLibraryScreen onClose={() => {}} />);
+    expect(await screen.findByText("guideLibrary.loadFailed")).toBeTruthy();
+    expect(screen.queryByText("guideLibrary.noPacks")).toBeNull();
+  });
+
+  it("paso 9-bis: durante la carga no se pinta el vacío", async () => {
+    let resolvePacks: (packs: Array<Record<string, unknown>>) => void = () => {};
+    mockState.packsPromise = new Promise((res) => {
+      resolvePacks = res;
+    });
+    const { GuideLibraryScreen } = require("./GuideLibraryScreen");
+    await render(<GuideLibraryScreen onClose={() => {}} />);
+    expect(screen.getByText("guideLibrary.loading")).toBeTruthy();
+    expect(screen.queryByText("guideLibrary.noPacks")).toBeNull();
+    expect(screen.queryByText("guideLibrary.loadFailed")).toBeNull();
+    resolvePacks(mockState.packs);
+    expect(await screen.findByText("Pack Uno")).toBeTruthy();
+  });
+
+  it("paso 9-bis: tras un fallo, una recarga buena apaga el error y pinta la lista", async () => {
+    // La «recarga» de esta pantalla es salir y volver a entrar:
+    // monta nueva. Sin desmontes manuales: el desmonte manual a
+    // mitad de batería corrompe el registro de montas de la
+    // librería y el caso siguiente renderiza un árbol nulo
+    // (medido en esta tanda); la limpieza automática entre
+    // casos baja las dos montas al cerrar este.
+    mockState.failPacks = true;
+    const { GuideLibraryScreen } = require("./GuideLibraryScreen");
+    await render(<GuideLibraryScreen onClose={() => {}} />);
+    expect(await screen.findByText("guideLibrary.loadFailed")).toBeTruthy();
+    mockState.failPacks = false;
+    await render(<GuideLibraryScreen onClose={() => {}} />);
+    expect(await screen.findByText("Pack Uno")).toBeTruthy();
+    expect(screen.queryByText("guideLibrary.loadFailed")).toBeNull();
   });
 
   it("la ruta de lectura no carga ningún motor", async () => {

@@ -65,6 +65,10 @@ export function GuideLibraryScreen({ onClose }: { onClose: () => void }) {
   // barra del sistema (foto del dueño, Tab A9+, 2026-11-09).
   const rootStyle = [styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }];
   const [sections, setSections] = useState<PackSection[] | null>(null);
+  // Paso 9-bis (espejo de E-EST-6): el fallo de la carga tiene su
+  // propio estado; sin él, el catch asentaba la lista vacía y la
+  // pantalla pintaba «no hay guías» sobre un fallo del canal.
+  const [loadFailed, setLoadFailed] = useState(false);
   const [selection, setSelection] = useState<Selection>(null);
   const [doc, setDoc] = useState<PackGuideDoc | null>(null);
   const [docState, setDocState] = useState<"idle" | "loading" | "ready" | "missing">("idle");
@@ -82,7 +86,10 @@ export function GuideLibraryScreen({ onClose }: { onClose: () => void }) {
         if (!cancelled) setSections(found);
       })
       .catch(() => {
-        if (!cancelled) setSections([]);
+        if (!cancelled) {
+          setLoadFailed(true);
+          setSections([]);
+        }
       });
     return () => {
       cancelled = true;
@@ -181,7 +188,11 @@ export function GuideLibraryScreen({ onClose }: { onClose: () => void }) {
             <Text style={styles.hint}>{t("guideLibrary.loading")}</Text>
           </>
         ) : sections.length === 0 ? (
-          <Text style={styles.bodyText}>{t("guideLibrary.noPacks")}</Text>
+          loadFailed ? (
+            <Text style={styles.bodyText}>{t("guideLibrary.loadFailed")}</Text>
+          ) : (
+            <Text style={styles.bodyText}>{t("guideLibrary.noPacks")}</Text>
+          )
         ) : (
           sections.map((section) => (
             <View key={section.packId} style={styles.packBlock}>

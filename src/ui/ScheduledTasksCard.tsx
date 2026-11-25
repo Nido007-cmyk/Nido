@@ -30,6 +30,7 @@ import {
   type TaskRunResult,
 } from "../agent/scheduled/scheduledTasks";
 import { deleteTask, getTaskRuns, listTasks, saveTask } from "../agent/scheduled/taskStore";
+import { currentRunningTaskId } from "../agent/scheduled/runner";
 import { scheduleTaskReminder } from "../agent/scheduled/runScheduled";
 import { cancelTaskNotification } from "../notify/notifications";
 import { displayLang, formatDateTime } from "../utils/safeFormat";
@@ -58,6 +59,12 @@ export function ScheduledTasksCard() {
   const [tasks, setTasks] = useState<ScheduledTask[]>([]);
   const [lastRuns, setLastRuns] = useState<Record<string, TaskRunResult | undefined>>({});
   const [loadFailed, setLoadFailed] = useState(false);
+  // Paso 9-bis (mitad móvil de E-EST-13): la primera carga se
+  // distingue de «cargó y no hay tareas» — el vacío solo se pinta
+  // tras la primera carga buena — y la fila de la tarea en curso
+  // se pinta como tal con el dato del runner.
+  const [loaded, setLoaded] = useState(false);
+  const [runningId, setRunningId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [instruction, setInstruction] = useState("");
@@ -85,6 +92,9 @@ export function ScheduledTasksCard() {
       setLoadFailed(false);
     } catch {
       setLoadFailed(true);
+    } finally {
+      setLoaded(true);
+      setRunningId(currentRunningTaskId());
     }
   }, []);
 
@@ -188,7 +198,8 @@ export function ScheduledTasksCard() {
       <Text style={styles.cardTitle}>{t("scheduledTasks.title")}</Text>
       <Text style={styles.paragraph}>{t("scheduledTasks.body")}</Text>
       {loadFailed && <Text style={styles.paragraph}>{t("scheduledTasks.loadFailed")}</Text>}
-      {!loadFailed && tasks.length === 0 && !creating && (
+      {!loadFailed && !loaded && <Text style={styles.paragraph}>{t("scheduledTasks.loading")}</Text>}
+      {!loadFailed && loaded && tasks.length === 0 && !creating && (
         <Text style={styles.paragraph}>{t("scheduledTasks.empty")}</Text>
       )}
 
@@ -210,6 +221,9 @@ export function ScheduledTasksCard() {
               />
             </View>
             <Text style={styles.rowInstruction}>{task.instruction}</Text>
+            {task.id === runningId ? (
+              <Text style={styles.rowMeta}>{t("scheduledTasks.running")}</Text>
+            ) : null}
             {task.enabled && task.nextRunAt ? (
               <Text style={styles.rowMeta}>
                 {t("scheduledTasks.nextRun", { when: formatDateTime(task.nextRunAt, displayLang(i18n.language)) })}
