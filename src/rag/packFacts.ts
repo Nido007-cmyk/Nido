@@ -199,16 +199,31 @@ const NUMBER_CUES = / (numero|numeros|telefono|telefonos|tel|llamo|llamar|llamas
 // servicio («Historia de los bomberos») entrara como
 // pregunta. La pregunta genuina no se toca: con forma
 // interrogativa, cualquier señal vale como siempre.
-const NARRATIVE_FRAME_RE = / (en el cuento|en la novela|en el relato|me conto que|segun el relato) /;
-const NARRATIVE_PAST_RE = / (llamo|marco|disco|ligo|telefono) /;
-const NARRATIVE_LINK_RE = / (despues|cuando|conto|habia|mientras|vio) /;
+const NARRATIVE_FRAME_RE = / (en el cuento|en la novela|en el relato|me conto que|segun el relato|me contou que|contou que|me dijo que|told me that) /;
+const NARRATIVE_PAST_RE = / (llamo|llame|llamaron|llamaba|marco|marque|marcaron|marcaba|disco|disquei|discou|discaram|telefono|telefoneo|telefonearon|called|dialed|dialled|phoned|rang|ligo|ligou|liguei|ligaram|ligava|telefonou|telefonei|telefonaram|chamou|chamaram) /;
+const NARRATIVE_LINK_RE = / (despues|depois|cuando|quando|when|after|conto|contou|disse|dijo|told|said|habia|havia|mientras|enquanto|while|vio|viu|saw|resulta que) /;
+// Ampliación de la capa (tanda de narración, 2026-11-25): la
+// medición de la alineación X cazó «ayer llamé al número de
+// emergencias» recibiendo la tabla — «llamé» se pliega a «llame»
+// (la lista de pasado solo traía la forma que el plegado confunde
+// con el presente) y «ayer» no era señal en ninguna lista. La
+// ampliación trae el pretérito plegado entero de los verbos de
+// llamada en las tres lenguas (arriba) y los marcadores de
+// tiempo como segunda clase de enlace (aquí): la estructura
+// (pasado ∧ enlace) no cambia, y la forma interrogativa sigue
+// mandando sobre todo. «Mañana» a secas NO es marcador (es
+// futuro); solo «esta mañana/manha/morning», ya pasada cuando el
+// verbo va en pasado. El corpus de la tanda (1.478 frases F-NUM)
+// pasa entero por esta capa; su batería es
+// packFacts.narracion.test.ts.
+const NARRATIVE_TIME_RE = / (ayer|anoche|anteayer|esta manana|la semana pasada|semana pasada|el mes pasado|mes pasado|el ano pasado|ano pasado|hace un rato|hace rato|hace unas horas|hace dos dias|hace tres dias|hace una semana|hace dos semanas|hace un mes|hace dos meses|hace un ano|hace dos anos|hace anos|hace mucho|el otro dia|otro dia|el lunes pasado|el martes pasado|el miercoles pasado|el jueves pasado|el viernes pasado|la noche pasada|la otra noche|el fin de semana pasado|yesterday|last night|the day before yesterday|this morning|last week|last month|last year|two days ago|three days ago|a few days ago|a while ago|the other day|on monday|last monday|last tuesday|last weekend|ontem|ontem a noite|anteontem|esta manha|na semana passada|no mes passado|no ano passado|faz dois dias|ha dois dias|faz tres dias|faz um tempo|ha um tempo|no outro dia|outro dia|na segunda passada|na terca passada|na quarta passada|na quinta passada|na sexta passada|no fim de semana passado) /;
 const INTERROGATIVE_RE = / (cual|cuales|que numero|a que numero|como llamo|como llamar|what number|what is the number|which number) /;
 const TOPIC_FRAME_RE = / (historia de|history of|en accion) /;
 const TOPIC_COMPLEMENT_RE = / (bomberos|bombeiros|policia|police|firefighters|ambulancia|ambulance|ambulancias) (de|in) /;
 
 function isNarratedEvent(folded: string): boolean {
   if (NARRATIVE_FRAME_RE.test(folded)) return true;
-  return NARRATIVE_PAST_RE.test(folded) && NARRATIVE_LINK_RE.test(folded);
+  return NARRATIVE_PAST_RE.test(folded) && (NARRATIVE_LINK_RE.test(folded) || NARRATIVE_TIME_RE.test(folded));
 }
 
 function isTopicPhrase(folded: string): boolean {
@@ -256,7 +271,12 @@ export function emergencyQuestionKind(text: string): ServiceKind | null {
   if (asks && !/[¿?]/.test(text) && !INTERROGATIVE_RE.test(folded)) {
     // Causa C: la narración no pregunta, aunque el plegado le
     // preste la señal de presente.
-    if (hasCue && isNarratedEvent(folded)) asks = false;
+    // Ampliación (tanda de narración, 2026-11-25): el veto no
+    // depende de que haya señal de número — «ayer llamé al 911»
+    // no trae ninguna («llamé» no es señal) y entraba por la regla
+    // de las cinco palabras; la narración medida veta igual. La
+    // frase-tema corta sigue con su veto propio, abajo.
+    if (isNarratedEvent(folded)) asks = false;
     // Causa D: la longitud sola ya no basta si la frase corta
     // trae forma de tema.
     if (!hasCue && words.length <= 5 && isTopicPhrase(folded)) asks = false;
