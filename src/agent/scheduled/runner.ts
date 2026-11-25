@@ -71,9 +71,21 @@ const MAX_SUMMARY_CHARS = 600;
 
 let running = false;
 
+// Paso 9-bis (mitad móvil de E-EST-13): la identidad de la tarea
+// en curso. El runner ya sabía QUE corría (la bandera de arriba);
+// ahora también asienta CUÁL, para que la tarjeta de tareas pueda
+// pintar la fila «en ejecución» sin inventar el dato.
+let runningTaskId: string | null = null;
+
+/** La tarea que se está ejecutando ahora mismo, o null. */
+export function currentRunningTaskId(): string | null {
+  return runningTaskId;
+}
+
 /** Solo para tests. */
 export function __resetRunnerForTests(): void {
   running = false;
+  runningTaskId = null;
 }
 
 /**
@@ -89,6 +101,7 @@ export async function runDueTasks(deps: RunnerDeps): Promise<TaskRunResult[]> {
     const due = await deps.getDueTasks(clock());
     for (const task of due) {
       const startedAt = clock();
+      runningTaskId = task.id;
       let result: TaskRunResult;
       try {
         const out = await deps.runInstruction(
@@ -141,6 +154,7 @@ export async function runDueTasks(deps: RunnerDeps): Promise<TaskRunResult[]> {
     }
   } finally {
     running = false;
+    runningTaskId = null;
   }
   return results;
 }
