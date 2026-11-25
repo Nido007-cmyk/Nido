@@ -14,7 +14,7 @@
 // La RAM fijada es la de la Tab A9+ del dueño (3416 MiB), cuyos
 // veredictos están censados en src/models/compatibility.test.ts:
 // Qwen2.5-7B = red, Qwen3-0.6B = green.
-import { jest, describe, it, expect } from "@jest/globals";
+import { jest, describe, it, expect, afterEach } from "@jest/globals";
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react-native";
 
@@ -48,9 +48,12 @@ jest.mock("react-i18next", () => ({
   }),
 }));
 
+// La Tab A9+ del dueño: su RAM total real (3416 MiB). Mutable solo
+// para que los casos de M-1 fijen aparatos más pequeños; cada caso que
+// la mueve la devuelve a la Tab al terminar (afterEach de su describe).
+let mockRamBytes = 3416 * 1024 * 1024;
 jest.mock("ram-monitor", () => ({
-  // La Tab A9+ del dueño: su RAM total real (3416 MiB).
-  getDeviceTotalRamBytes: () => 3416 * 1024 * 1024,
+  getDeviceTotalRamBytes: () => mockRamBytes,
 }));
 
 jest.mock("./components/icons/NidoIcon", () => ({ NidoIcon: () => null }));
@@ -207,3 +210,35 @@ describe("CatalogItemCard: un modelo en rojo con una parte ya descargada (0.1.92
   });
 });
 
+
+describe("CatalogItemCard: la entrada de embeddings enseña su veredicto (M-1)", () => {
+  // Los veredictos del e5 multilingüe (132 MB) medidos contra
+  // computeCompatibility en el acto 0 del paso: verde en la Tab
+  // (3416 MiB), amarillo a 2,8 GB, rojo a 2 GB. Hasta este paso la
+  // puerta por clase devolvía «unknown» para embeddings y la fila no
+  // pintaba insignia ni frenaba el gesto en rojo.
+  const e5 = () => byId("multilingual-e5-small-q8");
+
+  afterEach(() => {
+    mockRamBytes = 3416 * 1024 * 1024;
+  });
+
+  it("en verde (la Tab): pinta la insignia verde y ofrece descargar", async () => {
+    await render(<CatalogItemCard item={e5()} row={undefined} {...baseProps} />);
+    expect(await screen.findByText("catalogItemCard.compat.green")).toBeTruthy();
+    expect(screen.getByText("catalogItemCard.downloadAsset")).toBeTruthy();
+  });
+
+  it("en amarillo (2,8 GB): pinta la insignia amarilla", async () => {
+    mockRamBytes = Math.floor(2.8 * 1024 * 1024 * 1024);
+    await render(<CatalogItemCard item={e5()} row={undefined} {...baseProps} />);
+    expect(await screen.findByText("catalogItemCard.compat.yellow")).toBeTruthy();
+  });
+
+  it("en rojo (2 GB): pinta la insignia roja y NO ofrece descargar", async () => {
+    mockRamBytes = 2 * 1024 * 1024 * 1024;
+    await render(<CatalogItemCard item={e5()} row={undefined} {...baseProps} />);
+    expect(await screen.findByText("catalogItemCard.compat.red")).toBeTruthy();
+    expect(screen.queryByText("catalogItemCard.downloadAsset")).toBeNull();
+  });
+});

@@ -169,7 +169,15 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
     return credit > 0 ? { ...liveSnapshot, releasableBytes: credit } : liveSnapshot;
   }, [liveSnapshot, isActive, residentLoad, item, deviceRam]);
 
-  const compatibility = item.kind === "llm" ? computeCompatibility(item, deviceRam, liveForBadge) : "unknown";
+  // M-1 (espejo del móvil): el veredicto de ajuste también se calcula
+  // para la entrada de embeddings — su fila enseña la insignia y en
+  // rojo frena el gesto, como las de LLM. Corpus se queda en
+  // «unknown»: su vía no es la de carga de modelos y la pieza no la
+  // toca. Ningún cálculo nuevo: es el mismo computeCompatibility.
+  const compatibility =
+    item.kind === "llm" || item.kind === "embedding"
+      ? computeCompatibility(item, deviceRam, liveForBadge)
+      : "unknown";
 
   // 0.1.108 (A3): el chip «Default» nombra al default DE ESTE
   // APARATO, no a una bandera fija del catálogo: la bandera
