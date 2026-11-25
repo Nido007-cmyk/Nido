@@ -559,7 +559,7 @@ function healthTermHits(folded: string): number {
 
 export function isHealthQuestion(text: string): boolean {
   if (!text) return false;
-  const folded = foldText(GATE_ERRATA_REPAIR(text));
+  const folded = foldText(gateErrataRepair(text));
   if (folded.trim().length === 0) return false;
   if (HEALTH_EXCLUSIONS.some((x) => folded.includes(` ${x} `) || folded.includes(` ${x}`))) return false;
   // Auditoría 2026-11-25 (H-4): el suceso negado o el
@@ -640,6 +640,17 @@ const GATE_EVENT_PAST_RE = / (cayo|cayeron|cai|desmayo|desmayaron|quemo|quemaron
 // suceso contado. El progresivo vivo es «cutting», otra forma.)
 const GATE_LIVE_ANCHOR_RE = / (se esta cayendo|se esta caindo|esta cayendo|esta caindo|esta sangrando|esta desmayando|esta convulsionando|esta atragantando|esta engasgando|esta quemando|esta queimando|esta teniendo|is falling|is fainting|is bleeding|is choking|is seizing|is having|is burning|acaba de|acabou de|just fell|just fainted|just collapsed|no respira|nao respira|not breathing|is not breathing|sin pulso|sem pulso|no pulse|nao tem pulso|le duele|duele|doi|hurts|esta mareado|esta mareada|esta tonto|esta tonta|is dizzy|feels dizzy|feels sick|se siente mal|sente se mal|sigue inconsciente|continua inconsciente|still unconscious|esta inconsciente|no se puede mover|no puede moverse|no se puede levantar|no puede levantarse|no se levanta|nao consegue se mexer|nao consegue se mover|nao consegue se levantar|nao se pode mover|nao levanta|nao se levanta|cannot move|can t move|can t get up|can not move|cannot get up|no se mueve|nao se mexe) /;
 
+/**
+ * El marco de RELATO (auditoría 2026-11-25, H-6): el suceso
+ * llega contado por otra voz («contó que», «me contaram
+ * que», «diz que»…). Con el verbo del suceso en pasado y sin
+ * ancla viva es la misma narración que la rama de distancia
+ * veta; con el suceso en presente o un ancla viva («diz que
+ * está se engasgando agora») el marco no veta nada, como la
+ * dimensión de habla indirecta viva mide al 100 %.
+ */
+const GATE_REPORTED_FRAME_RE = / (conto que|contou que|contaram que|me contaron que|me contaram que|me conto que|me contou que|dice que|diz que|conta que|me dijo que|me disse que) /;
+
 /** ¿El texto cuenta un suceso ya pasado, sin ninguna parte viva? */
 function isNarratedGateEvent(folded: string): boolean {
   // El plegado de la puerta no acolcha los extremos (el de
@@ -647,7 +658,7 @@ function isNarratedGateEvent(folded: string): boolean {
   // my neighbor…») necesita el espacio inicial para casar.
   const hay = ` ${folded} `;
   return (
-    GATE_TIME_MARKER_RE.test(hay) &&
+    (GATE_TIME_MARKER_RE.test(hay) || GATE_REPORTED_FRAME_RE.test(hay)) &&
     GATE_EVENT_PAST_RE.test(hay) &&
     !GATE_LIVE_ANCHOR_RE.test(hay)
   );
@@ -1941,9 +1952,41 @@ const GATE_ERRATA_REPAIR = buildErrataRepair([
   "vomitos", "vomite",
 ]);
 
+/**
+ * Auditoría 2026-11-25 (H-6): el posesivo portugués «dele»
+ * es, letra a letra, la errata española de «duele» (el
+ * borrado de la primera vocal), y la reparación lo
+ * reescribía como dolor: «o filho dele desmaiou na semana
+ * passada» ganaba el ancla viva «duele» y el veto de
+ * narración se desarmaba. Las dos lecturas son reales y el
+ * corpus gobernado cobra la española («me dele el pecho» es
+ * «me duele» dictado), así que la protección es por
+ * contexto: el posesivo portugués (dele/dela/nele…) se
+ * restaura tras la reparación salvo que vaya tras un
+ * pronombre de la construcción de dolor (me/le/se/te/nos),
+ * donde la lectura española es la que manda.
+ */
+const GATE_REPAIR_POSSESSIVES = new Set(["dele", "dela", "deles", "delas", "nele", "nela", "neles", "nelas"]);
+const GATE_REPAIR_PAIN_PRONOUNS = new Set(["me", "le", "se", "te", "nos"]);
+function gateErrataRepair(text: string): string {
+  const repaired = GATE_ERRATA_REPAIR(text);
+  const orig = text.split(/(\s+)/);
+  const rep = repaired.split(/(\s+)/);
+  if (orig.length !== rep.length) return repaired;
+  let prev = "";
+  for (let i = 0; i < orig.length; i++) {
+    const m = orig[i].match(/^(\P{L}*)([\p{L}]+)(\P{L}*)$/u);
+    if (!m) continue;
+    const core = m[2].normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+    if (GATE_REPAIR_POSSESSIVES.has(core) && !GATE_REPAIR_PAIN_PRONOUNS.has(prev)) rep[i] = orig[i];
+    prev = core;
+  }
+  return rep.join("");
+}
+
 export function isEmergencySituation(text: string): boolean {
   if (!text) return false;
-  const folded = foldText(GATE_ERRATA_REPAIR(text));
+  const folded = foldText(gateErrataRepair(text));
   if (folded.trim().length === 0) return false;
   // El pajar va acolchado: un veto que ABRE el mensaje («Choking
   // hazard for toddlers…», ADV2-08) también veta — sin el acolchado
