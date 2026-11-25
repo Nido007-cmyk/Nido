@@ -9,7 +9,7 @@ The list covers every package that `package-lock.json` does not mark as developm
 
 AI models are not part of the app: they are downloaded separately and keep their own licenses. Two of NIDO's own knowledge packs ship inside the APK since 0.1.95 (NIDO Essentials and NIDO Local, CC BY 4.0); the other packs are downloaded separately. All of them keep their own licenses (see [ATTRIBUTION.md](ATTRIBUTION.md) and `docs/release/MODEL_LICENSE_AUDIT.md`). Android libraries resolved by Gradle at build time (AndroidX, Kotlin, SQLCipher and their dependencies) do not come from npm: since 0.1.55 the exact list for each build is attached to its GitHub release as `android-runtime-dependencies.txt` (see below).
 
-Source: `package-lock.json sha256:d2ebf668460e` · 592 packages.
+Source: `package-lock.json sha256:f919d091121a` · 591 packages.
 
 ## License elections
 
@@ -108,17 +108,17 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | @babel/template | 7.29.7 | MIT |
 | @babel/traverse | 7.29.8 | MIT |
 | @babel/types | 7.29.8 | MIT |
-| @expo/cli | 57.0.33 | MIT |
+| @expo/cli | 57.0.34 | MIT |
 | @expo/code-signing-certificates | 0.0.6 | MIT |
 | @expo/config | 57.0.11 | MIT |
-| @expo/config-plugins | 57.0.12 | MIT |
+| @expo/config-plugins | 57.0.13 | MIT |
 | @expo/config-types | 57.0.2 | MIT |
 | @expo/devcert | 1.2.2 | MIT |
 | @expo/devtools | 57.0.1 | MIT |
 | @expo/dom-webview | 57.0.1 | MIT |
 | @expo/env | 2.4.4 | MIT |
 | @expo/expo-modules-macros-plugin | 0.6.1 | MIT |
-| @expo/fingerprint | 0.20.15 | MIT |
+| @expo/fingerprint | 0.20.16 | MIT |
 | @expo/image-utils | 0.11.7 | MIT |
 | @expo/inline-modules | 0.1.9 | MIT |
 | @expo/json-file | 11.0.1 | MIT |
@@ -127,11 +127,11 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | @expo/log-box | 57.0.5 | MIT |
 | @expo/metro | 56.0.2 | MIT |
 | @expo/metro-config | 57.0.14 | MIT |
-| @expo/metro-file-map | 57.0.4 | MIT |
+| @expo/metro-file-map | 57.0.5 | MIT |
 | @expo/osascript | 2.8.1 | MIT |
 | @expo/package-manager | 1.14.2 | MIT |
 | @expo/plist | 0.8.2 | MIT |
-| @expo/prebuild-config | 57.0.20 | MIT |
+| @expo/prebuild-config | 57.0.21 | MIT |
 | @expo/require-utils | 57.0.7 | MIT |
 | @expo/router-server | 57.0.15 | MIT |
 | @expo/schema-utils | 57.0.3 | MIT |
@@ -296,13 +296,13 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | etag | 1.8.1 | MIT |
 | event-target-shim | 5.0.1 | MIT |
 | exact-alarm | local | MIT (NIDO's own module) |
-| expo | 57.0.32 | MIT |
+| expo | 57.0.33 | MIT |
 | expo-asset | 57.0.21 | MIT |
 | expo-build-properties | 57.0.23 | MIT |
 | expo-calendar | 57.0.6 | MIT |
 | expo-clipboard | 57.0.2 | MIT |
-| expo-constants | 57.0.23 | MIT |
-| expo-contacts | 57.0.8 | MIT |
+| expo-constants | 57.0.24 | MIT |
+| expo-contacts | 57.0.9 | MIT |
 | expo-crypto | 57.0.4 | MIT |
 | expo-document-picker | 57.0.3 | MIT |
 | expo-file-system | 57.0.7 | MIT |
@@ -311,15 +311,15 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | expo-keep-awake | 57.0.2 | MIT |
 | expo-linear-gradient | 57.0.2 | MIT |
 | expo-local-authentication | 57.0.3 | MIT |
-| expo-modules-autolinking | 57.0.17 | MIT |
-| expo-modules-core | 57.0.25 | MIT |
+| expo-modules-autolinking | 57.0.18 | MIT |
+| expo-modules-core | 57.0.26 | MIT |
 | expo-modules-jsi | 57.1.3 | MIT |
 | expo-secure-store | 57.0.4 | MIT |
 | expo-server | 57.0.3 | MIT |
-| expo-sharing | 57.0.25 | MIT |
+| expo-sharing | 57.0.26 | MIT |
 | expo-speech | 57.0.3 | MIT |
 | expo-splash-screen | 57.0.11 | MIT |
-| expo-sqlite | 57.0.4 | MIT |
+| expo-sqlite | 57.0.5 | MIT |
 | expo-status-bar | 57.0.1 | MIT |
 | exponential-backoff | 3.1.3 | Apache-2.0 |
 | fast-json-stable-stringify | 2.1.0 | MIT |
@@ -334,12 +334,12 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | fontfaceobserver | 2.3.0 | BSD-2-Clause |
 | fresh | 0.5.2 | MIT |
 | fs.realpath | 1.0.0 | ISC |
+| fsevents | 2.3.3 | MIT |
 | function-bind | 1.1.2 | MIT |
 | gensync | 1.0.0-beta.2 | MIT |
 | get-caller-file | 2.0.5 | ISC |
 | get-package-type | 0.1.0 | MIT |
 | getenv | 2.0.0 | MIT |
-| glob | 13.0.7 | BlueOak-1.0.0 |
 | glob | 14.0.4 | BlueOak-1.0.0 |
 | glob | 7.2.3 | ISC |
 | graceful-fs | 4.2.11 | ISC |
@@ -357,7 +357,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | html-parse-stringify | 4.0.1 | MIT |
 | http-errors | 2.0.1 | MIT |
 | https-proxy-agent | 7.0.6 | MIT |
-| i18next | 27.1.1 | MIT |
+| i18next | 27.2.2 | MIT |
 | ignore | 5.3.2 | MIT |
 | imurmurhash | 0.1.4 | MIT |
 | inflight | 1.0.6 | ISC |
@@ -495,7 +495,6 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | path-is-absolute | 1.0.1 | MIT |
 | path-key | 3.1.1 | MIT |
 | path-parse | 1.0.7 | MIT |
-| path-scurry | 2.0.2 | BlueOak-1.0.0 |
 | path-scurry | 3.0.0 | BlueOak-1.0.0 |
 | picocolors | 1.1.1 | ISC |
 | picomatch | 2.3.2 | MIT |
@@ -504,7 +503,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | plist | 3.1.1 | MIT |
 | pngjs | 3.4.0 | MIT |
 | pngjs | 5.0.0 | MIT |
-| postcss | 8.5.30 | MIT |
+| postcss | 8.5.33 | MIT |
 | pretty-format | 29.7.0 | MIT |
 | proc-log | 4.2.0 | ISC |
 | progress | 2.0.3 | MIT |
@@ -515,7 +514,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | range-parser | 1.2.1 | MIT |
 | react | 19.2.3 | MIT |
 | react-devtools-core | 6.1.5 | MIT |
-| react-i18next | 18.0.1 | MIT |
+| react-i18next | 18.0.3 | MIT |
 | react-is | 18.3.1 | MIT |
 | react-native | 0.86.3 | MIT |
 | react-native-safe-area-context | 5.11.1 | MIT |
@@ -608,7 +607,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | wrappy | 1.0.2 | ISC |
 | write-file-atomic | 4.0.2 | ISC |
 | ws | 7.5.13 | MIT |
-| ws | 8.22.1 | MIT |
+| ws | 8.23.0 | MIT |
 | xcode | 4.0.0 | Apache-2.0 |
 | xml2js | 0.6.0 | MIT |
 | xmlbuilder | 11.0.1 | MIT |
@@ -2755,7 +2754,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### @expo/cli@57.0.33 — LICENSE
+### @expo/cli@57.0.34 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -2833,7 +2832,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### @expo/config-plugins@57.0.12 — LICENSE
+### @expo/config-plugins@57.0.13 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -3016,7 +3015,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### @expo/fingerprint@0.20.15 — LICENSE
+### @expo/fingerprint@0.20.16 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -3251,7 +3250,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### @expo/metro-file-map@57.0.4 — LICENSE
+### @expo/metro-file-map@57.0.5 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -3355,7 +3354,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### @expo/prebuild-config@57.0.20 — LICENSE
+### @expo/prebuild-config@57.0.21 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -8292,7 +8291,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### expo@57.0.32 — LICENSE
+### expo@57.0.33 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -8422,7 +8421,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### expo-constants@57.0.23 — LICENSE
+### expo-constants@57.0.24 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -8448,7 +8447,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### expo-contacts@57.0.8 — LICENSE
+### expo-contacts@57.0.9 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -8682,7 +8681,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### expo-modules-autolinking@57.0.17 — LICENSE
+### expo-modules-autolinking@57.0.18 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -8708,7 +8707,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### expo-modules-core@57.0.25 — LICENSE
+### expo-modules-core@57.0.26 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -8812,7 +8811,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### expo-sharing@57.0.25 — LICENSE
+### expo-sharing@57.0.26 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -8890,7 +8889,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### expo-sqlite@57.0.4 — LICENSE
+### expo-sqlite@57.0.5 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -9509,74 +9508,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### glob@13.0.7 — LICENSE.md
-
-```text
-All packages under `src/` are licensed according to the terms in
-their respective `LICENSE` or `LICENSE.md` files.
-
-The remainder of this project is licensed under the Blue Oak
-Model License, as follows:
-
------
-
-# Blue Oak Model License
-
-Version 1.0.0
-
-## Purpose
-
-This license gives everyone as much permission to work with
-this software as possible, while protecting contributors
-from liability.
-
-## Acceptance
-
-In order to receive this license, you must agree to its
-rules.  The rules of this license are both obligations
-under that agreement and conditions to your license.
-You must not do anything with this software that triggers
-a rule that you cannot or will not follow.
-
-## Copyright
-
-Each contributor licenses you to do everything with this
-software that would otherwise infringe that contributor's
-copyright in it.
-
-## Notices
-
-You must ensure that everyone who gets a copy of
-any part of this software from you, with or without
-changes, also gets the text of this license or a link to
-<https://blueoakcouncil.org/license/1.0.0>.
-
-## Excuse
-
-If anyone notifies you in writing that you have not
-complied with [Notices](#notices), you can keep your
-license by taking all practical steps to comply within 30
-days after the notice.  If you do not do so, your license
-ends immediately.
-
-## Patent
-
-Each contributor licenses you to do everything with this
-software that would otherwise infringe any patent claims
-they can license or become able to license.
-
-## Reliability
-
-No contributor can revoke this license.
-
-## No Liability
-
-***As far as the law allows, this software comes as is,
-without any warranty or condition, and no contributor
-will be liable to anyone for any damages related to this
-software or this license, under any kind of legal claim.***
-```
-
 ### glob@14.0.4 — LICENSE.md
 
 ```text
@@ -10004,7 +9935,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### i18next@27.1.1 — LICENSE
+### i18next@27.2.2 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -14377,66 +14308,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### path-scurry@2.0.2 — LICENSE.md
-
-```text
-# Blue Oak Model License
-
-Version 1.0.0
-
-## Purpose
-
-This license gives everyone as much permission to work with
-this software as possible, while protecting contributors
-from liability.
-
-## Acceptance
-
-In order to receive this license, you must agree to its
-rules.  The rules of this license are both obligations
-under that agreement and conditions to your license.
-You must not do anything with this software that triggers
-a rule that you cannot or will not follow.
-
-## Copyright
-
-Each contributor licenses you to do everything with this
-software that would otherwise infringe that contributor's
-copyright in it.
-
-## Notices
-
-You must ensure that everyone who gets a copy of
-any part of this software from you, with or without
-changes, also gets the text of this license or a link to
-<https://blueoakcouncil.org/license/1.0.0>.
-
-## Excuse
-
-If anyone notifies you in writing that you have not
-complied with [Notices](#notices), you can keep your
-license by taking all practical steps to comply within 30
-days after the notice.  If you do not do so, your license
-ends immediately.
-
-## Patent
-
-Each contributor licenses you to do everything with this
-software that would otherwise infringe any patent claims
-they can license or become able to license.
-
-## Reliability
-
-No contributor can revoke this license.
-
-## No Liability
-
-***As far as the law allows, this software comes as is,
-without any warranty or condition, and no contributor
-will be liable to anyone for any damages related to this
-software or this license, under any kind of legal claim.***
-```
-
 ### path-scurry@3.0.0 — LICENSE.md
 
 ```text
@@ -14674,7 +14545,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### postcss@8.5.30 — LICENSE
+### postcss@8.5.33 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -14894,7 +14765,7 @@ SOFTWARE.
 
 Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
 
-### react-i18next@18.0.1 — LICENSE
+### react-i18next@18.0.3 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -17037,7 +16908,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### ws@8.22.1 — LICENSE
+### ws@8.23.0 — LICENSE
 
 ```text
 Copyright (c) 2011 Einar Otto Stangvik <einaros@gmail.com>
@@ -17846,6 +17717,7 @@ These packages declare a license in their `package.json` but ship no license fil
 - bser@2.1.1
 - fb-dotslash@0.5.8
 - fb-watchman@2.0.2
+- fsevents@2.3.3
 - imurmurhash@0.1.4
 - jimp-compact@0.16.1
 - stream-buffers@2.2.0
