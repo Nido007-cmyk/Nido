@@ -11,9 +11,9 @@
 | salud/es | 516/575 · 89,7 % | 89,7 % | 0,0 |
 | salud/en | 371/425 · 87,3 % | 86,1 % | +1,2 |
 | salud/pt | 365/455 · 80,2 % | 80,2 % | 0,0 |
-| emergencia/es | 229/305 · 75,1 % | 75,1 % | 0,0 |
-| emergencia/en | 195/270 · 72,2 % | 67,8 % | +4,4 |
-| emergencia/pt | 183/270 · 67,8 % | 67,8 % | 0,0 |
+| emergencia/es | 259/305 · 84,9 % | 75,1 % | +9,8 |
+| emergencia/en | 231/270 · 85,6 % | 67,8 % | +17,8 |
+| emergencia/pt | 217/270 · 80,4 % | 67,8 % | +12,6 |
 | crisis/es | 82/100 · 82,0 % | 58,0 % | +24,0 |
 | crisis/en | 69/80 · 86,3 % | 60,0 % | +26,3 |
 | crisis/pt | 65/80 · 81,3 % | 40,0 % | +41,3 |
@@ -35,17 +35,17 @@
 | negativos-historicos/es | 6/6 · 100,0 % | 100,0 % | 0,0 |
 | negativos-historicos/en | 6/6 · 100,0 % | 100,0 % | 0,0 |
 | negativos-historicos/pt | 6/6 · 100,0 % | 100,0 % | 0,0 |
-| **Total primaria** | **2420/2957 · 81,8 %** | **78,6 %** | **+3,2** |
+| **Total primaria** | **2520/2957 · 85,2 %** | **78,6 %** | **+6,6** |
 
 Sensibilidad por tipo de variante (puerta primaria):
 
 | Tipo | Medida | Baseline |
 |---|---|---|
-| base | 595/648 · 91,8 % | 88,3 % |
-| sinAcentos | 595/648 · 91,8 % | 88,3 % |
-| cortesia | 502/543 · 92,4 % | 91,7 % |
-| errata | 167/512 · 32,6 % | 32,0 % |
-| pregunta | 423/460 · 92,0 % | 91,1 % |
+| base | 618/648 · 95,4 % | 88,3 % |
+| sinAcentos | 618/648 · 95,4 % | 88,3 % |
+| cortesia | 526/543 · 96,9 % | 91,7 % |
+| errata | 171/512 · 33,4 % | 32,0 % |
+| pregunta | 449/460 · 97,6 % | 91,1 % |
 | marco-temporal | 52/52 · 100,0 % | 63,5 % |
 | cierre-desesperado | 52/52 · 100,0 % | 63,5 % |
 | ayuda | 27/35 · 77,1 % | 77,1 % |
@@ -73,7 +73,7 @@ La lectura de las familias conocidas: los falsos positivos de crisis son la fami
 | Esperada \ Respondida | salud | emergencia | crisis | monoxido | ninguna |
 |---|---|---|---|---|---|
 | salud | 1248 | 4 | 0 | 0 | 203 |
-| emergencia | 86 | 607 | 0 | 0 | 152 |
+| emergencia | 0 | 707 | 0 | 0 | 138 |
 | crisis | 3 | 0 | 216 | 0 | 41 |
 | caida | 0 | 45 | 0 | 0 | 12 |
 | ninguna | 30 | 10 | 18 | 0 | 234 |

@@ -630,6 +630,10 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     // eventos que el inglés o el portugués nombraban y el español no.
     "no puedo respirar", "no podemos respirar",
     "esta teniendo una convulsion", "le esta dando una convulsion",
+    // Tanda de variantes (Familia 2a): el presente simple con su
+    // paradigma de sujeto («mi hijo tiene convulsiones»), la forma
+    // corriente de contarlo que el progresivo no cubría.
+    "tiene convulsiones", "tienen convulsiones",
     "esta teniendo un infarto", "le esta dando un infarto",
     "esta teniendo un ictus", "le esta dando un ictus", "le esta dando un derrame",
     // Causa E de DIAG-A: «un ataque» a secas, solo en su marco
@@ -715,6 +719,9 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     // breathing») y las convulsiones, que es y pt ya traían.
     "isn t breathing", "wasn t breathing", "aren t breathing",
     "having a seizure", "is seizing", "is convulsing",
+    // Tanda de variantes (Familia 2a): el plural corriente
+    // («my son is having seizures»), gemelo del singular.
+    "having seizures",
     "having a heart attack", "having a stroke",
     // F-1 (CPR practice audit, 2026-11-06): resuscitation already
     // in progress, as a bystander tells it.
@@ -739,6 +746,11 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "fell off the", "i fell down", "i can t move", "i can t get up",
     "i m trapped", "i am trapped", "is trapped",
     "smoke alarm", "i see smoke", "collapsed", "is sinking",
+    // Tanda de variantes (Familia 2b): la inmovilidad con su
+    // pronombre («she is not moving»), la base que el censo dejó
+    // restante. Sin pronombre no entra: «the car is not moving»
+    // es tráfico, no un cuerpo.
+    "she is not moving", "he is not moving", "they are not moving",
   ],
   pt: [
     "nao esta respirando", "nao respira", "nao respiram", "parou de respirar", "sem respirar",
@@ -764,6 +776,12 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     // dos lenguas.
     "nao consigo respirar", "nao consegue respirar", "nao conseguem respirar",
     "esta tendo uma convulsao", "esta tendo um infarto", "esta tendo um avc",
+    // Tanda de variantes (Familia 2a): el plural sin artículo
+    // («meu filho está tendo convulsões»).
+    "tendo convulsoes",
+    // Tanda de variantes (Familia 2c): la inmovilidad portuguesa,
+    // espejo del «no se mueve» español que ya era signo.
+    "nao se mexe", "nao se move",
     // F-1 (auditoria da RCP, 2026-11-06): a reanimação em curso,
     // contada por quem a vê ou a faz, nas duas variantes do
     // português (a fazer / fazendo).
@@ -1272,6 +1290,17 @@ const TELEGRAPHIC_STATE_WORDS = new Set(["inconsciente", "inconscientes", "uncon
  * fragmento telegráfico que sea título o pie («Choking.»,
  * «Drowning.») cae hacia la emergencia, en la dirección aceptada.
  */
+// Las colas de pregunta que cierran un parte («…, ¿qué hago?»):
+// no son el tema del mensaje, son la petición pegada al parte, y
+// la tanda de variantes midió que rompían la forma telegráfica
+// entera (Familia 2d). Solo se recortan AL FINAL y solo si queda
+// parte delante.
+const TELEGRAPHIC_QUESTION_TAILS = [
+  "que hago", "que debo hacer", "que hacemos",
+  "what should i do", "what do i do", "what should we do",
+  "o que eu faco", "o que faco", "que faco",
+];
+
 function stemHitIsTelegraphic(folded: string, rawHasQuestion = false): boolean {
   // 0.1.111: la interrogación se lee sobre el texto CRUDO, no
   // sobre el plegado — foldText convierte «?» y «¿» en espacios
@@ -1279,13 +1308,30 @@ function stemHitIsTelegraphic(folded: string, rawHasQuestion = false): boolean {
   // auditoría lo probó: foldText("¿Qué?") no contiene «?»). El
   // casado sobre el plegado se queda como red por si un llamante
   // futuro pliega distinto.
-  if (rawHasQuestion) return false;
   if (folded.includes("?") || folded.includes("¿")) return false;
-  const words = folded
+  let words = folded
     .trim()
     .split(/\s+/)
     .map((w) => w.replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, ""))
     .filter((w) => w.length > 0);
+  // Tanda de variantes (Familia 2d): la cortesía que abre y la
+  // pregunta que cierra no son el parte; se recortan antes de
+  // contar, y la interrogación del texto crudo solo veta si no
+  // era esa cola («inconsciente en la calle, ¿qué hago?» es un
+  // parte con petición, no una pregunta de tema).
+  if (words[0] === "por" && words[1] === "favor") words = words.slice(2);
+  else if (words[0] === "please") words = words.slice(1);
+  let tailStripped = false;
+  for (const tail of TELEGRAPHIC_QUESTION_TAILS) {
+    const tw = tail.split(" ");
+    if (words.length <= tw.length) continue;
+    if (tw.every((w, k) => words[words.length - tw.length + k] === w)) {
+      words = words.slice(0, words.length - tw.length);
+      tailStripped = true;
+      break;
+    }
+  }
+  if (rawHasQuestion && !tailStripped) return false;
   if (words.length === 0 || words.length > 5) return false;
   if (words.some((w) => TELEGRAPHIC_TOPIC_MARKERS.includes(w))) return false;
   // 0.1.111: la ventana de negación también manda aquí — el
