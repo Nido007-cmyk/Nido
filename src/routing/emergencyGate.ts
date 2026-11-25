@@ -670,6 +670,11 @@ const HEALTH_QUESTION_FORM_RE = / (cuanto|cuanta|cuantos|cuantas|puedo|debo|debe
 const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
   es: [
     "no puede respirar", "no pueden respirar", "no respira", "no respiran", "sin respirar",
+    // Auditoría 2026-11-25 (H-7): la falta de aire ANTEPUESTA
+    // («sin poder respirar está un hombre en la calle»), la
+    // forma natural de alarma que caía al modelo porque la
+    // lista solo traía el predicado tras el sujeto.
+    "sin poder respirar",
     "dejo de respirar", "paro de respirar",
     "se esta ahogando", "esta ahogandose", "ahogandose", "se ahoga",
     "se esta atragantando", "atragantandose",
@@ -782,6 +787,9 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
   en: [
     "not breathing", "is not breathing", "stopped breathing", "no longer breathing",
     "can t breathe", "cant breathe", "cannot breathe",
+    // Auditoría 2026-11-25 (H-7): la falta de aire antepuesta
+    // («unable to breathe is a man on the street»).
+    "unable to breathe",
     "is choking", "choking on", "started choking", "is drowning",
     "struggling to breathe", "hard to breathe", "difficulty breathing",
     // 0.1.99 T-01 (m-10): the same family as the Spanish signs —
@@ -866,6 +874,9 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
   ],
   pt: [
     "nao esta respirando", "nao respira", "nao respiram", "parou de respirar", "sem respirar",
+    // Auditoria 2026-11-25 (H-7): a falta de ar anteposta
+    // («sem conseguir respirar está um homem na rua»).
+    "sem conseguir respirar",
     "deixou de respirar",
     "esta engasgando", "engasgando", "engasgou",
     // ADV-E1: os eventos novos em português («desmaiou», «se afogou»).
@@ -1649,6 +1660,20 @@ const IMMOBILITY_SIGNS = [
   // el parte contra la doctrina de la cara (la inmovilidad en
   // presente manda sobre el marcador).
   "no se levanta", "no levanta", "nao se levanta",
+  // Auditoría 2026-11-25 (H-1): las colas de inmovilidad de las
+  // paráfrasis de caída, en las tres lenguas. Como el resto de
+  // la familia, solo declaran con su contexto (cuerpo, lugar o
+  // la caída contada en el mismo texto, que FALL_TOLD_SIGNS
+  // aprende en esta misma tanda): «no se puede parar» a secas
+  // también lo dice un coche, y sin contexto no entra.
+  "no se puede parar", "sin poder levantarse", "sin poder levantar",
+  "no hay manera de que se levante", "no hay forma de que se levante",
+  "can t get back up", "can t get himself up", "can t get herself up",
+  "can t get myself up", "unable to get up",
+  "no way she can get up", "no way he can get up", "no way they can get up",
+  "nao consegue ficar de pe", "nao consegue se erguer",
+  "sem conseguir se levantar", "sem conseguir levantar",
+  "nao ha jeito de ela se levantar", "nao ha jeito de ele se levantar",
 ];
 
 /** Las formas de caída narrada de `EMERGENCY_SIGNS`, en las
@@ -1664,6 +1689,13 @@ const FALL_TOLD_SIGNS = [
   // no se puede mover» no es una frase que nadie escriba, y la
   // caída a secas tiene su propia cara con su contexto, abajo).
   "se cayo", "se callo", "me cai", "caiu", "fell",
+  // Auditoría 2026-11-25 (H-1): las paráfrasis de la caída
+  // contada, SOLO como contexto de la inmovilidad (desde esta
+  // lista nunca declaran solas: «el precio tuvo una caída» no
+  // es un parte, y su guarda vive en la batería de la tanda).
+  "se fue al suelo", "tuvo una caida", "se resbalo",
+  "took a tumble", "had a fall", "lying on the floor", "slipped",
+  "foi ao chao", "caido no chao", "sofreu uma queda", "escorregou",
 ];
 
 /**
