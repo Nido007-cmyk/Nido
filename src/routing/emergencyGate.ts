@@ -562,6 +562,9 @@ export function isHealthQuestion(text: string): boolean {
   const folded = foldText(GATE_ERRATA_REPAIR(text));
   if (folded.trim().length === 0) return false;
   if (HEALTH_EXCLUSIONS.some((x) => folded.includes(` ${x} `) || folded.includes(` ${x}`))) return false;
+  // Auditoría 2026-11-25 (H-4): el suceso negado o el
+  // casi-suceso resuelto no es una consulta en curso.
+  if (NEGATED_EVENT_FRAMES.some((x) => folded.includes(x))) return false;
   if (hasHistoricalFrame(folded)) return false;
   // Tanda de narración (2026-11-25): el suceso contado con su
   // distancia no es una consulta en curso («ayer mi abuelo llamó
@@ -996,6 +999,33 @@ const RESOLVED_CLAUSES = [
   "pero ya esta bien", "pero ya esta mejor", "pero ya paso",
   "mas ja esta bem", "mas ja passou",
   "but is fine now", "but he is fine now", "but she is fine now", "but is already fine",
+];
+
+/**
+ * El suceso NEGADO o el casi-suceso resuelto (auditoría
+ * 2026-11-25, H-4): la frase nombra el signo solo para decir
+ * que no está pasando («no está sangrando, es solo un
+ * rasguño», «the carbon monoxide alarm didn't go off; it was
+ * a detector test», «ela quase se queimou, mas tirou a mão a
+ * tempo»). La negación que acota las rutas de seguridad no
+ * acotaba la puerta de salud, que se disparaba por la mera
+ * mención del signo negado. Marcos con la negación (o el
+ * «casi») pegados al suceso mismo, en las tres lenguas, y el
+ * marco de cita («estoy citando una frase de una novela»):
+ * las dos caras de la puerta los consultan, como comparten
+ * los vetos de contexto. El suceso vivo gemelo no trae
+ * ninguno de estos marcos y sigue declarando.
+ */
+const NEGATED_EVENT_FRAMES = [
+  "no se esta atragantando", "no esta atragantando", "no esta sangrando",
+  "no se desmayo", "no quiero hacerme dano", "estoy citando una frase",
+  "casi se quemo", "no hay fuego", "alarma no sono",
+  "isn t bleeding", "is not bleeding", "isn t choking", "is not choking",
+  "there is no fire", "don t want to hurt myself", "do not want to hurt myself",
+  "quoting a line", "almost burned herself", "almost burned himself",
+  "alarm didn t go off", "alarm did not go off", "was a detector test",
+  "nao esta se engasgando", "nao esta sangrando", "nao desmaiou",
+  "quase se queimou", "citando uma frase", "nao quero me machucar",
 ];
 
 /**
@@ -1881,6 +1911,10 @@ export function isEmergencySituation(text: string): boolean {
   // se colaba. Es el mismo patrón de hasHistoricalFrame.
   const vetoHay = ` ${folded} `;
   if (EMERGENCY_VETOES.some((x) => vetoHay.includes(` ${x} `) || vetoHay.includes(` ${x}`))) return false;
+  // Auditoría 2026-11-25 (H-4): la misma familia de suceso
+  // negado veta la cara de situación («the carbon monoxide
+  // alarm didn't go off; it was a detector test»).
+  if (NEGATED_EVENT_FRAMES.some((x) => vetoHay.includes(` ${x}`))) return false;
   if (hasHistoricalFrame(folded)) return false;
   // Causa E de DIAG-A (paquete de arreglos del móvil, §4.3): el
   // suceso ya resuelto, contado con su cláusula de resolución
