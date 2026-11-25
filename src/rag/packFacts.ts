@@ -592,9 +592,24 @@ const CRISIS_ERRATA_REPAIR = buildErrataRepair([
   CRISIS_PASSIVE_CUES.source,
 ]);
 
+// Los vetos de esta cara (tanda de variantes, Familia 6): las
+// caras de línea, intención y self-kill no tenían ninguno, y la
+// ficción, la canción y el modismo que la puerta de autolesión
+// ya vetaba declaraban aquí pregunta de crisis («escribe un
+// cuento donde el personaje dice no quiero vivir», «I want to
+// die of embarrassment», «quero morrer de vergonha»). El espejo
+// es el de esa puerta: la ficción veta la intención y el
+// self-kill (la línea queda: preguntar por la línea a
+// propósito de una canción sigue siendo pregunta por la
+// línea) y el modismo veta la intención.
+const CRISIS_IDIOM_VETO =
+  / (?:morir(?:me)? de (?:la )?(?:risa|verguenza|pena|hambre|sueno|calor|frio|amor|ganas|envidia|aburrimiento|cansancio|nervios)|die of (?:embarrassment|laughter|boredom|shame|hunger|thirst)|die laughing|dying laughing|morrer de (?:rir|vergonha|fome|sono|calor|frio|amor|vontade|tedio|saudade)) /;
+
 export function crisisQuestionKind(text: string): boolean {
   const folded = foldText(CRISIS_ERRATA_REPAIR(text));
   if (!folded.trim()) return false;
+  const fiction = PASSIVE_FICTION_VETO.test(folded);
+  const idiom = CRISIS_IDIOM_VETO.test(folded);
   // Pre-censo PC2-4: el tope de 24 palabras dejaba fuera la pregunta
   // larga por la línea con su motivo declarado, con la señal literal
   // intacta. La guarda real contra frases que no preguntan es la
@@ -604,9 +619,9 @@ export function crisisQuestionKind(text: string): boolean {
   // su tope en la auditoría 2026-10-31 (F1 B-3).
   return (
     CRISIS_LINE_CUES.test(folded) ||
-    CRISIS_INTENT_CUES.test(folded) ||
-    CRISIS_SELF_KILL_CUES.test(folded) ||
-    (CRISIS_PASSIVE_CUES.test(folded) && !PASSIVE_FICTION_VETO.test(folded))
+    (!fiction && !idiom && CRISIS_INTENT_CUES.test(folded)) ||
+    (!fiction && CRISIS_SELF_KILL_CUES.test(folded)) ||
+    (CRISIS_PASSIVE_CUES.test(folded) && !fiction)
   );
 }
 
