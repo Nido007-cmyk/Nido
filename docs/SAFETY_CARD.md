@@ -14,9 +14,9 @@
 | emergencia/es | 229/305 · 75,1 % | 75,1 % | 0,0 |
 | emergencia/en | 195/270 · 72,2 % | 67,8 % | +4,4 |
 | emergencia/pt | 183/270 · 67,8 % | 67,8 % | 0,0 |
-| crisis/es | 74/100 · 74,0 % | 58,0 % | +16,0 |
+| crisis/es | 82/100 · 82,0 % | 58,0 % | +24,0 |
 | crisis/en | 69/80 · 86,3 % | 60,0 % | +26,3 |
-| crisis/pt | 61/80 · 76,3 % | 40,0 % | +36,3 |
+| crisis/pt | 65/80 · 81,3 % | 40,0 % | +41,3 |
 | caida/es | 18/21 · 85,7 % | 85,7 % | 0,0 |
 | caida/en | 16/18 · 88,9 % | 88,9 % | 0,0 |
 | caida/pt | 11/18 · 61,1 % | 61,1 % | 0,0 |
@@ -35,19 +35,19 @@
 | negativos-historicos/es | 6/6 · 100,0 % | 100,0 % | 0,0 |
 | negativos-historicos/en | 6/6 · 100,0 % | 100,0 % | 0,0 |
 | negativos-historicos/pt | 6/6 · 100,0 % | 100,0 % | 0,0 |
-| **Total primaria** | **2408/2957 · 81,4 %** | **78,6 %** | **+2,8** |
+| **Total primaria** | **2420/2957 · 81,8 %** | **78,6 %** | **+3,2** |
 
 Sensibilidad por tipo de variante (puerta primaria):
 
 | Tipo | Medida | Baseline |
 |---|---|---|
-| base | 592/648 · 91,4 % | 88,3 % |
-| sinAcentos | 592/648 · 91,4 % | 88,3 % |
+| base | 595/648 · 91,8 % | 88,3 % |
+| sinAcentos | 595/648 · 91,8 % | 88,3 % |
 | cortesia | 502/543 · 92,4 % | 91,7 % |
 | errata | 167/512 · 32,6 % | 32,0 % |
 | pregunta | 423/460 · 92,0 % | 91,1 % |
-| marco-temporal | 49/52 · 94,2 % | 63,5 % |
-| cierre-desesperado | 49/52 · 94,2 % | 63,5 % |
+| marco-temporal | 52/52 · 100,0 % | 63,5 % |
+| cierre-desesperado | 52/52 · 100,0 % | 63,5 % |
 | ayuda | 27/35 · 77,1 % | 77,1 % |
 | voseo | 4/4 · 100,0 % | 100,0 % |
 | usted | 3/3 · 100,0 % | 100,0 % |
@@ -74,13 +74,13 @@ La lectura de las familias conocidas: los falsos positivos de crisis son la fami
 |---|---|---|---|---|---|
 | salud | 1248 | 4 | 0 | 0 | 203 |
 | emergencia | 86 | 607 | 0 | 0 | 152 |
-| crisis | 3 | 0 | 204 | 0 | 53 |
+| crisis | 3 | 0 | 216 | 0 | 41 |
 | caida | 0 | 45 | 0 | 0 | 12 |
 | ninguna | 30 | 10 | 18 | 0 | 234 |
 | monoxido | 0 | 3 | 0 | 30 | 15 |
 
 - Crisis esperada respondida como salud: 3
-- Crisis esperada sin ninguna puerta: 53
+- Crisis esperada sin ninguna puerta: 41
 
 ## 4 · Suelos vigentes
 

@@ -485,6 +485,97 @@ const SELF_HARM_PATTERNS = [
       "^(?:tomar|engolir) todos os (?:meus )?(?:comprimidos|remedios|calmantes)(?=[.!]*$)",
       "^(?:tomar|engolir) todas as (?:minhas )?(?:pilulas|capsulas)(?=[.!]*$)",
       "quero (?:sumir|desaparecer) (?:para sempre|do mundo|deste mundo)",
+      // Tanda de variantes de la casa, Familia 1: las formas que la
+      // ciega gastada midió en falso negativo, por grupos, en el
+      // orden del censo (METODO, LIMITE, CARGA, SUENO, DESAPAR,
+      // SINSENTIDO). Batería: safetyAnswers.variantesF1.test.ts.
+      // — METODO: el medio entra en la ideación y en el anuncio.
+      "me dan ganas de cortarme",
+      "(?:pienso|pensando|he pensado) en (?:ahorcarme|envenenarme)",
+      "(?:quiero|voy a) (?:ahorcarme|envenenarme)",
+      "(?:pienso|pensando|he pensado) en tirarme de (?:un|el) puente",
+      "(?:escribi|he escrito) (?:mi |la )?carta de despedida",
+      "(?:he guardado|guarde|guardo|guardando) (?:las |mis )?(?:pastillas|pildoras|medicinas|medicamentos|tabletas|capsulas|comprimidos|somniferos)[^.]{0,30}no aguant",
+      "(?:voy a|quiero|pienso|pensando en|he pensado en) mezclar (?:las |mis |los )?(?:pastillas|pildoras|medicinas|medicamentos|tabletas|capsulas|comprimidos|remedios)[^.]{0,20}con alcohol",
+      "(?:thinking|thought|thoughts) (?:about|of) (?:hanging|poisoning) myself",
+      "(?:keep|kept|keeping|saving|saved) (?:some |all )?(?:my )?(?:pills|meds|medication|tablets) aside[^.]{0,30}(?:cannot hold on|can t hold on|can t take it)",
+      "(?:have|ve) (?:already )?written (?:my |a )?goodbye letter",
+      "wrote (?:my |a )?goodbye letter",
+      "hope i (?:get in|have) an accident and (?:do not|don t|dont) survive",
+      "(?:penso|pensando|pensei|pensado) em (?:me enforcar|me envenenar)",
+      "(?:quero|vou) me (?:enforcar|envenenar)",
+      "(?:penso|pensando|pensei|pensado) em me jogar de (?:uma|a) ponte",
+      "fico me imaginando (?:nos|nas) (?:trilhos|vias)",
+      "(?:escrevi|ja escrevi) (?:minha |a )?carta de despedida",
+      "(?:guardo|guardei|guardando|guardado) (?:comprimidos|remedios|pilulas|capsulas)[^.]{0,30}nao aguent",
+      "(?:vou|quero|penso em) misturar (?:meus |os |as |minhas )?(?:remedios|comprimidos|medicamentos|pilulas|capsulas)[^.]{0,20}com alcool",
+      "ja (?:me feri|me machuquei)",
+      "(?:fico planejando|planeando|planejando|pensando en|pensando em) (?:como |como eu )?(?:acabar (?:con todo|com tudo)|quitarme de en medio)",
+      // — LIMITE: la firma es el complemento (duración, salida
+      // única, comparación), nunca el verbo suelto.
+      "(?:no soporto|nao suporto) (?:nem )?(?:mais )?(?:un|um) dia(?: mas| mais)?",
+      "(?:can't stand|can t stand|cannot stand|can not stand) one more day",
+      "(?:hart[oa]|fart[oa]|cansad[oa]) de fingir que (?:quiero seguir|quero continuar)",
+      "(?:tired|sick) of pretending (?:that )?(?:i want to (?:keep going|go on))",
+      "(?:atrapad[oa])[^.]{0,40}(?:la )?unica salida es (?:morirme|morir)",
+      "(?:preso|presa)[^.]{0,30}morrer e a unica saida",
+      "trapped[^.]{0,40}(?:dying is the only way out|only way out is (?:dying|death|to die))",
+      "(?:prefiero|preferiria|prefiro) estar (?:muert[oa]|mort[oa]) (?:que seguir|que continuar|a continuar)",
+      "(?:would rather|i d rather) be dead (?:than|then) (?:keep|continue|go on)",
+      "(?:quiero|quero|voy a|vou) (?:dejar|parar) de respirar (?:para siempre|para sempre|forever)",
+      "(?:seria|ficaria) mais facil se eu (?:nao existisse|morresse|sumisse)",
+      "(?:al limite|en mi limite)[^.]{0,40}hacerme algo(?=\\s*(?:$|[.,;:!?]))",
+      "(?:no meu limite|no limite)[^.]{0,40}fazer algo contra mim",
+      "(?:acabar|terminar) con (?:mi )?sufrimiento (?:de una vez|de uma vez)",
+      "(?:acabar|terminar) com (?:o )?(?:meu )?sofrimento (?:de uma vez|de una vez)",
+      "(?:end|ending) (?:my )?suffering once and for all",
+      "(?:ya )?no aguanto mas (?:esta vida|vivi(?:r|endo))",
+      "(?:quiero|vou|voy a) acabar (?:con todo|com tudo)",
+      // — CARGA: la ausencia firmada (nadie + falta/cuidado + la
+      // cláusula de muerte o desaparición) y el estorbo sentido.
+      "(?:nadie|ninguno)[^.]{0,30}(?:echaria de menos|haria falta|se importaria|notaria)[^.]{0,30}(?:si (?:me muero|me muriera|me fuera|desapareciera|no estuviera)|esta noche)",
+      "ninguem[^.]{0,30}(?:sentiria (?:minha|sua) falta|se importaria|notaria|perceberia)[^.]{0,30}(?:se eu (?:morresse|sumisse|fosse embora|desaparecesse)|esta noite)",
+      "(?:se eu (?:morresse|sumisse|desaparecesse))[^.]{0,30}ninguem[^.]{0,20}(?:se importaria|notaria|sentiria)",
+      "(?:nobody|no one)[^.]{0,30}(?:would (?:notice|care|miss me)|wouldn t (?:notice|care))[^.]{0,30}(?:if i (?:died|die|disappeared|was gone)|tonight)",
+      "(?:if i (?:died|die|was gone|disappeared))[^.]{0,30}(?:nobody|no one)[^.]{0,20}(?:would (?:care|notice|miss)|wouldn t care)",
+      "(?:siento que|me siento)[^.]{0,25}(?:estorbo|soy un peso|mi vida es una carga)",
+      "(?:sinto que|me sinto)[^.]{0,25}(?:atrapalho|sou um peso|sou um fardo|minha vida e (?:uma carga|um peso))",
+      "(?:mi presencia|minha presenca|my presence) (?:solo |so |only )?(?:estorba|atrapalha|gets in)",
+      "(?:ficariam|estariam) melhor se eu (?:simplesmente )?(?:desaparecesse|sumisse|morresse|nao existisse)",
+      // — SUENO: la mañana dentro de la optativa, la forma de los
+      // ojos y el dormir para siempre.
+      "ojala (?:manana )?no (?:despertara|despierte|amaneciera)",
+      "(?:ojala|quisiera|queria|deseo|desearia|espero)[^.]{0,50}(?:no (?:volver a )?abrir|nunca (?:mas )?abrir|no abriera|nunca abriera) (?:los |mis )?ojos",
+      "(?:queria|quero|desejo|torco|espero)[^.]{0,50}(?:nunca mais abrir|nao (?:mais )?abrir) (?:os |meus )?olhos",
+      "(?:torco|queria|desejo|espero)[^.]{0,50}(?:meus )?olhos nunca mais (?:abrirem|abrir)",
+      "(?:wish|hope)[^.]{0,50}(?:never open (?:my )?eyes|eyes never open)",
+      "(?:quedarme dormid[oa]|dormir(?:me)?|ficar dormindo|ficar dormid[oa]|stay asleep|remain asleep) (?:para siempre|para sempre|forever)",
+      // — DESAPAR: el complemento nuevo es «sin dejar rastro».
+      "(?:quiero|quisiera|querria|me gustaria) desaparecer sin dejar rastro",
+      "nao encontro (?:mais )?sentido na vida",
+      // — SINSENTIDO: solo marcos ENTEROS anclados al mensaje, con
+      // la cortesía delante y la pregunta detrás opcionales; la
+      // misma forma suelta en una frase más larga no declara (el
+      // residuo de FP queda declarado en el censo).
+      "^(?:por favor,? )?(?:estoy )?cansad[oa] de existir(?:\\s*,?\\s*¿?(?:que hago|que puedo hacer))?(?=[.!?]*$)",
+      "^(?:por favor,? )?(?:estou )?cansad[oa] de existir(?:\\s*,?\\s*¿?(?:o que (?:eu )?faco|que faco))?(?=[.!?]*$)",
+      "^(?:please,? )?(?:i am |i m )?(?:tired|sick) of (?:being alive|existing)(?:\\s*,?\\s*(?:what (?:should|do) i do))?(?=[.!?]*$)",
+      "^(?:por favor,? )?siento un vacio que no se llena con nada(?=[.!?]*$)",
+      "^(?:por favor,? )?sinto um vazio que (?:nada preenche|nao se preenche com nada)(?=[.!?]*$)",
+      "^(?:please,? )?i feel (?:an? )?emptiness (?:that )?nothing fills(?=[.!?]*$)",
+      "^(?:por favor,? )?la idea de (?:morirme|morir) me (?:tranquiliza|calma)(?=[.!?]*$)",
+      "^(?:por favor,? )?a ideia de morrer me (?:tranquiliza|acalma)(?=[.!?]*$)",
+      "^(?:please,? )?the (?:idea|thought) of (?:dying|being dead) (?:calms|soothes) me(?=[.!?]*$)",
+      "^(?:please,? )?being dead sounds peaceful(?: to me)?(?=[.!?]*$)",
+      "^(?:por favor,? )?(?:ya )?no (?:veo|encuentro) (?:ningun )?futuro(?: para mi)?(?:\\s*,?\\s*¿?(?:que hago|que puedo hacer))?(?=[.!?]*$)",
+      "^(?:por favor,? )?nao vejo (?:nenhum )?futuro(?: para mim)?(?=[.!?]*$)",
+      "^(?:please,? )?i (?:cannot|can t|can not|don t) see (?:any )?future(?: for me)?(?=[.!?]*$)",
+      "^(?:por favor,? )?acordar todos os dias (?:parece|e) um castigo(?=[.!?]*$)",
+      "^(?:por favor,? )?(?:ya )?no deseo seguir en este mundo(?=[.!?]*$)",
+      "(?:desearia|quisiera|queria) no haber nacido",
+      "wish i had never been born",
+      "(?:cannot|can t|couldn t) find (?:a single |any )?reason to (?:go on|keep living|live)",
+      "life has no meaning(?: left)? for me",
 ];
 
 const SELF_HARM_RE = new RegExp("\\b(?:" + SELF_HARM_PATTERNS.join("|") + ")\\b");
@@ -514,8 +605,31 @@ const SELF_HARM_GLUED_RE = new RegExp(
 // Frases hechas y ficción: no son una persona contando que quiere morir.
 // (El veto de la familia de «cortar» vive aparte, en cutObjectVeto:
 // es por clase de objeto, no una lista dentro de esta regex.)
-const SELF_HARM_VETO_RE =
-  /\b(?:morir(?:me)? de (?:la )?(?:risa|verguenza|pena|hambre|sueno|calor|frio|amor|ganas|envidia|aburrimiento|cansancio|nervios)|die of (?:embarrassment|laughter|boredom|shame|hunger|thirst)|morrer de (?:rir|vergonha|fome|sono|calor|frio|amor|vontade|tedio|saudade)|(?:cuento|novela|historia|guion|cancion|poema|personaje|pelicula|serie|story|novel|script|song|lyrics|poem|character|movie|conto|romance|roteiro|musica|personagem|filme)\b|(?:pastillas|pildoras|medicinas|medicamentos|tabletas|capsulas|pills|meds|medication|tablets|comprimidos|remedios|pilulas) (?:del tratamiento|de la receta|que me (?:receto|mando|indico)|hasta (?:el )?final|of (?:the|my) (?:course|treatment|prescription)|(?:as|like) (?:prescribed|the doctor said)|until (?:the )?end|do tratamento|da receita|que o medico (?:receitou|passou|mandou)|ate o fim)\b)/;
+// El veto vive por partes con nombre porque la vía pegada las
+// trata distinto (ver SELF_HARM_VETO_GLUED_* más abajo): la letra
+// de modismo, ficción y marco médico es la que ya gobernaba; la
+// tanda de variantes (Familia 1) añade solo la parte de contexto
+// laboral que separa la carga de crisis de la carta y la ausencia
+// del trabajo.
+const SELF_HARM_VETO_IDIOM_SRC =
+  "morir(?:me)? de (?:la )?(?:risa|verguenza|pena|hambre|sueno|calor|frio|amor|ganas|envidia|aburrimiento|cansancio|nervios)|die of (?:embarrassment|laughter|boredom|shame|hunger|thirst)|morrer de (?:rir|vergonha|fome|sono|calor|frio|amor|vontade|tedio|saudade)";
+const SELF_HARM_VETO_FICTION_SRC =
+  "cuento|novela|historia|guion|cancion|poema|personaje|pelicula|serie|story|novel|script|song|lyrics|poem|character|movie|conto|romance|roteiro|musica|personagem|filme";
+const SELF_HARM_VETO_MEDICAL_SRC =
+  "(?:pastillas|pildoras|medicinas|medicamentos|tabletas|capsulas|pills|meds|medication|tablets|comprimidos|remedios|pilulas) (?:del tratamiento|de la receta|que me (?:receto|mando|indico)|hasta (?:el )?final|of (?:the|my) (?:course|treatment|prescription)|(?:as|like) (?:prescribed|the doctor said)|until (?:the )?end|do tratamento|da receita|que o medico (?:receitou|passou|mandou)|ate o fim)";
+const SELF_HARM_VETO_CONTEXT_SRC =
+  "(?:si me fuera|se eu fosse embora|if i left) (?:de la empresa|do trabalho|da empresa|do emprego|my job|the company|o trabalho)|(?:carta de despedida|goodbye letter) (?:del trabajo|de mi trabajo|de la empresa|to (?:my )?(?:coworkers|colleagues|boss|job)|aos (?:meus )?colegas|para (?:mis|os) (?:companeros|colegas))";
+const SELF_HARM_VETO_RE = new RegExp(
+  "\\b(?:" +
+    SELF_HARM_VETO_IDIOM_SRC +
+    "|(?:" +
+    SELF_HARM_VETO_FICTION_SRC +
+    ")\\b|" +
+    SELF_HARM_VETO_MEDICAL_SRC +
+    "\\b|" +
+    SELF_HARM_VETO_CONTEXT_SRC +
+    ")",
+);
 
 /**
  * 0.1.99 T-27 (H-Z4-1, re-auditoría zona 4): el veto de la familia
@@ -1706,7 +1820,23 @@ function cutObjectVetoGlued(glued: string): boolean {
   return everyday;
 }
 
-const SELF_HARM_VETO_GLUED_RE = new RegExp(SELF_HARM_VETO_RE.source.replace(/\\b/g, "").replace(/\s+/g, ""));
+const glueVetoSrc = (src: string) => src.replace(/\\b/g, "").replace(/\s+/g, "");
+// La vía pegada del veto, sin la alternativa de ficción: modismo,
+// marco médico y contexto laboral vetan en cualquier tramo.
+const SELF_HARM_VETO_GLUED_MAIN_RE = new RegExp(
+  glueVetoSrc(
+    "\\b(?:" + SELF_HARM_VETO_IDIOM_SRC + "|" + SELF_HARM_VETO_MEDICAL_SRC + "\\b|" + SELF_HARM_VETO_CONTEXT_SRC + ")",
+  ),
+);
+// La ficción, en la vía pegada, solo veta FUERA del tramo del
+// patrón que declaró (guardarraíl de la tanda de variantes,
+// cobrado por el CENSO-CIEGA-GASTADA): pegada, una palabra de
+// ficción puede nacer del cruce de dos palabras de la propia
+// frase de crisis («con»+«todo» = «conto» dentro de
+// «quieroacabarcontodo») y vetaría la frase que el dictado pegó
+// de verdad. Un marco de ficción dictado («escribeuncuentodonde…»)
+// lleva su palabra fuera del tramo y sigue vetando.
+const SELF_HARM_VETO_GLUED_FICTION_RE = new RegExp(glueVetoSrc(SELF_HARM_VETO_FICTION_SRC), "g");
 
 const SELF_HARM_TEXT: Record<SafetyLang, string> = {
   es:
@@ -1749,7 +1879,20 @@ export function isSelfHarmMessage(userText: string): boolean {
   // CL-11b: la forma dictada con las palabras pegadas, contra la
   // misma lista sin espacios y con el mismo veto sin espacios.
   const glued = folded.replace(/ /g, "");
-  return SELF_HARM_GLUED_RE.test(glued) && !SELF_HARM_VETO_GLUED_RE.test(glued) && !cutObjectVetoGlued(glued);
+  if (!SELF_HARM_GLUED_RE.test(glued)) return false;
+  if (SELF_HARM_VETO_GLUED_MAIN_RE.test(glued) || cutObjectVetoGlued(glued)) return false;
+  // La ficción pegada veta solo fuera del tramo declarado (ver la
+  // nota de SELF_HARM_VETO_GLUED_FICTION_RE).
+  const spans: Array<[number, number]> = [];
+  for (const m of glued.matchAll(new RegExp(SELF_HARM_GLUED_RE.source, "g"))) {
+    spans.push([m.index ?? 0, (m.index ?? 0) + m[0].length]);
+  }
+  for (const m of glued.matchAll(SELF_HARM_VETO_GLUED_FICTION_RE)) {
+    const a = m.index ?? 0;
+    const b = a + m[0].length;
+    if (!spans.some(([x, y]) => a < y && b > x)) return false;
+  }
+  return true;
 }
 
 export function matchSafetyAnswer(userText: string, lang: SafetyLang): SafetyHit | null {
