@@ -4,7 +4,7 @@
  * See LICENSE file for details.
  */
 
-import { isNarratedEventText } from "../../rag/packFacts";
+import { buildErrataRepair, isNarratedEventText } from "../../rag/packFacts";
 
 /**
  * safetyAnswers.ts — 0.1.55: respuestas FIJAS para preguntas donde un error
@@ -1883,8 +1883,26 @@ const SELF_HARM_TEXT: Record<SafetyLang, string> = {
 };
 
 /** ¿La persona cuenta, en primera persona, que quiere morir o hacerse daño? */
+// La reparación de errata leve de estas caras (tanda de
+// variantes, Familia 5; la ayuda vive en packFacts): el
+// vocabulario sale de la tabla de autolesión, de las partes del
+// veto y de las regex de monóxido y de la pregunta de
+// emergencia, que son las caras que este fichero sirve.
+const SAFETY_ERRATA_REPAIR = buildErrataRepair([
+  ...SELF_HARM_PATTERNS,
+  SELF_HARM_VETO_IDIOM_SRC,
+  SELF_HARM_VETO_FICTION_SRC,
+  SELF_HARM_VETO_MEDICAL_SRC,
+  SELF_HARM_VETO_CONTEXT_SRC,
+  CO_DEVICE_RE.source,
+  CO_INDOOR_RE.source,
+  CO_SYMPTOM_RE.source,
+  CO_SYMPTOM_ONLY_DEVICE_RE.source,
+  EMERGENCY_Q_RE.source,
+]);
+
 export function isSelfHarmMessage(userText: string): boolean {
-  const folded = fold(userText).replace(/\s+/g, " ").trim();
+  const folded = fold(SAFETY_ERRATA_REPAIR(userText)).replace(/\s+/g, " ").trim();
   if (folded.length === 0 || folded.length > 4000) return false;
   if (SELF_HARM_RE.test(folded) && !SELF_HARM_VETO_RE.test(folded) && !cutObjectVeto(folded)) return true;
   // CL-11b: la forma dictada con las palabras pegadas, contra la
@@ -1912,7 +1930,7 @@ export function matchSafetyAnswer(userText: string, lang: SafetyLang): SafetyHit
   if (isSelfHarmMessage(userText)) {
     return { kind: "self-harm", lang, text: SELF_HARM_TEXT[lang], deterministic: true };
   }
-  const folded = fold(userText).replace(/\s+/g, " ").trim();
+  const folded = fold(SAFETY_ERRATA_REPAIR(userText)).replace(/\s+/g, " ").trim();
   if (folded.length === 0 || folded.length > 400) return null;
 
   const device = CO_DEVICE_RE.test(folded);

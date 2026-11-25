@@ -201,7 +201,7 @@
  * Puro, sin dependencias de UI, 100% testeable.
  */
 
-import { crisisQuestionKind, emergencyQuestionKind, foldText, type FactLang } from "../rag/packFacts";
+import { buildErrataRepair, crisisQuestionKind, emergencyQuestionKind, foldText, type FactLang } from "../rag/packFacts";
 import { parsePackChunkId } from "../rag/packSource";
 import type { RetrievedChunk } from "../rag/retrieve";
 import { matchSafetyAnswer } from "../agent/loop/safetyAnswers";
@@ -544,7 +544,7 @@ function healthTermHits(folded: string): number {
 
 export function isHealthQuestion(text: string): boolean {
   if (!text) return false;
-  const folded = foldText(text);
+  const folded = foldText(GATE_ERRATA_REPAIR(text));
   if (folded.trim().length === 0) return false;
   if (HEALTH_EXCLUSIONS.some((x) => folded.includes(` ${x} `) || folded.includes(` ${x}`))) return false;
   if (hasHistoricalFrame(folded)) return false;
@@ -1556,9 +1556,29 @@ const SITUATION_TOPIC_FRAMES = [
  * texto. Ver la cabecera, punto 3: donde manda la puerta de
  * salud manda también esta cara, con el mismo texto seguro.
  */
+// La reparación de errata leve de estas dos puertas (tanda de
+// variantes, Familia 5; la ayuda vive en packFacts): el
+// vocabulario sale de las listas propias de la puerta —
+// términos de salud, signos, inmovilidad, caída, señales de
+// cuerpo y exclusiones — para que la palabra repuesta sea
+// siempre una palabra que la puerta ya conoce. Vive aquí
+// abajo porque sus listas se definen a lo largo del fichero;
+// las dos funciones la llaman al entrar, ya con el módulo
+// entero cargado.
+const GATE_ERRATA_REPAIR = buildErrataRepair([
+  ...Object.values(HEALTH_TERMS).flatMap((fam) => [...fam.w, ...fam.p]),
+  ...ALL_SIGNS,
+  ...IMMOBILITY_SIGNS,
+  ...FALL_TOLD_SIGNS,
+  ...STEM_BODY_SIGNALS,
+  ...IMMOBILITY_BODY_PARTS,
+  ...IMMOBILITY_PLACES,
+  ...HEALTH_EXCLUSIONS,
+]);
+
 export function isEmergencySituation(text: string): boolean {
   if (!text) return false;
-  const folded = foldText(text);
+  const folded = foldText(GATE_ERRATA_REPAIR(text));
   if (folded.trim().length === 0) return false;
   // El pajar va acolchado: un veto que ABRE el mensaje («Choking
   // hazard for toddlers…», ADV2-08) también veta — sin el acolchado

@@ -79,6 +79,69 @@ export function foldText(text: string): string {
     .trim()} `;
 }
 
+/* ------------------------------------------------------------------ */
+/* Reparación de errata leve (tanda de variantes, Familia 5)           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * La errata regular del dictado y del teclado apurado: la
+ * primera vocal de una palabra cae («inconsciente» llega
+ * «nconsciente», «quiero» llega «qiero», «cabeza» llega
+ * «cbeza»). Las puertas son léxicas y la palabra rota no casa
+ * con ninguna lista: el estudio de la tanda midió 341 de 512
+ * variantes de errata del corpus fuera de su puerta por esta
+ * sola causa.
+ *
+ * La reparación es conservadora por construcción: una palabra
+ * del texto solo se repone cuando (a) no es ella misma una
+ * palabra del vocabulario de la puerta, (b) es exactamente la
+ * forma rota de UNA sola palabra de ese vocabulario, y (c) la
+ * forma rota no es a su vez otra palabra del vocabulario. Todo
+ * lo demás queda como está, y la puntuación y los apóstrofos
+ * del texto se conservan. Medido antes de adoptar (prototipo
+ * sobre el corpus entero y las dos guardas): 293 frases del
+ * censo recuperadas y ninguna regresión en su puerta primaria;
+ * la guarda ampliada no empeora en ningún cubo.
+ */
+export function buildErrataRepair(vocabSources: Iterable<string>): (text: string) => string {
+  const vocab = new Set<string>();
+  for (const src of vocabSources) {
+    for (const w of src.toLowerCase().split(/[^a-záéíóúâêôãõç]+/)) {
+      const f = w.normalize("NFD").replace(/[̀-ͯ]/g, "");
+      if (/^[a-z]{3,}$/.test(f)) vocab.add(f);
+    }
+  }
+  const map = new Map<string, string>();
+  const ambiguous = new Set<string>();
+  for (const g of vocab) {
+    if (g.length < 4) continue;
+    const i = g.search(/[aeiou]/);
+    if (i < 0) continue;
+    const broken = g.slice(0, i) + g.slice(i + 1);
+    if (broken === g || vocab.has(broken)) continue;
+    if (map.has(broken) && map.get(broken) !== g) ambiguous.add(broken);
+    else map.set(broken, g);
+  }
+  for (const a of ambiguous) map.delete(a);
+  return (text: string): string => {
+    if (map.size === 0 || !text) return text;
+    return text
+      .split(/(\s+)/)
+      .map((tok) => {
+        const m = tok.match(/^(\P{L}*)([\p{L}]+)(\P{L}*)$/u);
+        if (!m) return tok;
+        const core = m[2]
+          .normalize("NFD")
+          .replace(/[̀-ͯ]/g, "")
+          .toLowerCase();
+        if (vocab.has(core)) return tok;
+        const fixed = map.get(core);
+        return fixed ? m[1] + fixed + m[3] : tok;
+      })
+      .join("");
+  };
+}
+
 function foldKeepCase(text: string): string {
   return ` ${text
     .normalize("NFD")
@@ -520,8 +583,17 @@ const PASSIVE_FICTION_VETO =
  * plain emergency-number question ("número de emergencias de España") is
  * not one: the emergency route answers that, unchanged.
  */
+// La reparación de errata de esta puerta, con el vocabulario de
+// sus propias señales (tanda de variantes, Familia 5).
+const CRISIS_ERRATA_REPAIR = buildErrataRepair([
+  CRISIS_LINE_CUES.source,
+  CRISIS_INTENT_CUES.source,
+  CRISIS_SELF_KILL_CUES.source,
+  CRISIS_PASSIVE_CUES.source,
+]);
+
 export function crisisQuestionKind(text: string): boolean {
-  const folded = foldText(text);
+  const folded = foldText(CRISIS_ERRATA_REPAIR(text));
   if (!folded.trim()) return false;
   // Pre-censo PC2-4: el tope de 24 palabras dejaba fuera la pregunta
   // larga por la línea con su motivo declarado, con la señal literal
