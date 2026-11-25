@@ -251,7 +251,7 @@ export function isEmergencyText(text: string, lang: GateLang): boolean {
 const HEALTH_TERMS: Record<GateLang, { w: string[]; p: string[] }> = {
   es: {
     w: [
-      "fiebre", "tos", "diarrea", "mareo", "mareos", "nauseas", "hemorragia", "fractura", "asma", "diabetes",
+      "fiebre", "tos", "diarrea", "mareo", "mareos", "mareado", "mareada", "nauseas", "hemorragia", "fractura", "asma", "diabetes",
       "alergia", "embarazo", "embarazada", "intoxicacion", "envenenamiento", "mordedura", "picadura", "desmayo",
       "convulsion", "convulsiones", "ahogamiento", "insolacion", "hipotermia", "sobredosis", "erupcion",
       "infeccion", "gripe", "resfriado", "covid", "antibiotico", "antibioticos", "vacuna", "vacunas", "torniquete",
@@ -304,6 +304,11 @@ const HEALTH_TERMS: Record<GateLang, { w: string[]; p: string[] }> = {
       "diabetes", "diabetic", "allergy", "pregnant", "pregnancy", "poisoning", "poisoned", "bite", "sting",
       "fainted", "fainting", "seizure", "seizures", "drowning", "heatstroke", "hypothermia", "overdose", "rash",
       "infection", "flu", "covid", "antibiotic", "antibiotics", "vaccine", "vaccines", "tourniquet", "sprain",
+      // Tanda de variantes (Familia 7): «cold» como sustantivo,
+      // solo con su determinante, como las formas de ingestión
+      // de esta lista: el frío del tiempo («is it cold
+      // outside») no es salud y «cold» a secas no entra.
+      "a cold",
       "urticaria", "anemia", "appendicitis", "pneumonia", "bronchitis", "dehydration", "labour", "labor", "cpr",
       "resuscitation", "hypertension", "electrocution", "headache", "toothache",
       "chest pain", "back pain", "abdominal pain", "first aid", "heat stroke", "blood pressure",
@@ -371,6 +376,10 @@ const HEALTH_TERMS: Record<GateLang, { w: string[]; p: string[] }> = {
       "quero morrer", "me matar", "tirar minha vida", "nao quero viver",
       "sintoma", "doente", "doenca", "medico", "hospital", "ambulancia",
       "bateu a cabeca", "bati a cabeca", "falta de ar", "caroco", "cancer",
+      // Tanda de variantes (Familia 7): a «coceira», que a porta
+      // não conhecia em nenhuma forma, e o adjetivo de tontura
+      // («estou tonto»), cuja família só trazia o substantivo.
+      "coceira", "tonto", "tonta",
     ],
     p: ["sangr", "vomit", "queimadur", "ferid", "alergic", "diabetic", "engasg", "convuls", "desmai", "intoxi", "suicid"],
   },
