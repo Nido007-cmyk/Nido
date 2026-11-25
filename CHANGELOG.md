@@ -4,6 +4,44 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.115-alpha - 2026-11-25
+
+This release is about the fixed safety answers
+reaching the words people actually type, in both
+directions.
+
+A fresh audit measured 402 new phrasings in
+Spanish, English and Portuguese that no test had
+covered, and 63 of them were handled wrong. Falls
+told with new words ("se fue al suelo", "lying on
+the floor", "foi ao chão"), bleeding counted with
+amounts ("perdendo muito sangue", "losing a lot of
+blood"), a person who cannot breathe told three
+ways, and wanting to stop living told in English
+and Portuguese ("I don't want to go on living",
+"não quero continuar vivendo") now reach their
+fixed answers. In the other direction, events that were
+denied, almost happened, were only quoted, were
+hypothetical or habitual, or were told about
+someone else no longer bring up the emergency
+answer, and neither do requests to learn first
+aid, prepare or translate a guide, or install a
+detector. All 402 phrasings now reach the right
+answer. Six more hunting rounds with 175 new
+phrasings found and fixed the same kind of gaps,
+among them the carbon monoxide alarm typed with
+the English word "monoxide" inside a Spanish
+sentence, a fish bone stuck in a throat, a cut
+with the bone showing, and a smoke alarm that is
+only chirping because its battery is dying.
+
+One thing is named, not hidden: when a guide in a
+pack matches a question, the app shows the guide
+before the fixed emergency wording is considered.
+That order is unchanged in this release, it is
+written down in the release notes as a known
+limitation, and it is the next fix on the list.
+
 ## 0.1.114-alpha - 2026-11-25
 
 This release is about telling the difference
