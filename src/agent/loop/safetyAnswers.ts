@@ -4,7 +4,7 @@
  * See LICENSE file for details.
  */
 
-import { buildErrataRepair, isNarratedEventText } from "../../rag/packFacts";
+import { buildErrataRepair, hasNarrativeTimeMarker, isNarratedEventText } from "../../rag/packFacts";
 
 /**
  * safetyAnswers.ts — 0.1.55: respuestas FIJAS para preguntas donde un error
@@ -91,6 +91,22 @@ const CO_FRAME_RE = /\b(?:co (?:alarm|alarma|alarme|detector)|(?:alarma|alarme|d
 // detector de humo no es esta puerta.
 const CO_SYMPTOM_RE =
   /\b(?:(?:me|nos|le|les|te) duele(?:n)? la cabeza|dolor de cabeza|marea|nausea|vomit|confus|debil|desmay|alarma (?:de co |de monoxido (?:de carbono )?)?(?:sono|suena|esta sonando)|(?:suena|sono) la alarma de (?:co|monoxido)|detector de (?:co|monoxido(?: de carbono)?) (?:esta )?(?:pitando|sonando|apitando|tocando)|headache|dizz|nause|confused|weak|faint|alarm (?:is )?(?:going off|beeping|sounding)|(?:carbon monoxide|co) detector (?:is )?(?:beeping|sounding|going off)|dor de cabeca|tont|enjo|fraqueza|desmai|alarme (?:de monoxido (?:de carbono )?)?(?:esta )?(?:tocando|disparou))/;
+
+// Tanda de narración (2026-11-25): el monóxido CONTADO no es un
+// parte. Las formas de pasado de CO_SYMPTOM_RE («sonó»,
+// «disparou») están a propósito — una alarma que acaba de sonar
+// es una emergencia — pero ninguna cara miraba la distancia:
+// «ayer sonó la alarma de monóxido» recibía el «salgan ya» como
+// si estuviera sonando. El veto pide marcador de tiempo (la
+// lista de la capa de packFacts) ∧ el suceso de CO en pasado ∧
+// ninguna ancla viva de CO (alarma sonando ahora, síntoma en
+// presente, olor presente). Foto de la familia en el corpus de
+// la tanda: 55 % de acierto antes, con las guardas vivas
+// intactas.
+const CO_PAST_EVENT_RE =
+  /\b(sono|sonaba|encendio|habia|disparou|tocou|soou|apitou|went off|sounded|tinha|era|estaba|estava|dolia|doia|salimos|saimos|tivemos)\b/;
+const CO_LIVE_ANCHOR_RE =
+  /\b(suena|esta sonando|pitando|apitando|esta tocando|is going off|is beeping|is sounding|me duele|nos duele|le duele|huele a gas|cheira a gas|hay olor|hay un olor|estoy mareado|estou tonto|me siento mal|sinto me mal|i feel dizzy|my head hurts|minha cabeca doi)\b/;
 
 const CO_TEXT: Record<SafetyLang, string> = {
   es:
@@ -1940,7 +1956,13 @@ export function matchSafetyAnswer(userText: string, lang: SafetyLang): SafetyHit
   const device = CO_DEVICE_RE.test(folded);
   const indoor = CO_INDOOR_RE.test(folded);
   const coWord = CO_WORD_RE.test(folded);
-  if ((coWord || device || CO_SYMPTOM_ONLY_DEVICE_RE.test(folded) || CO_FRAME_RE.test(folded)) && CO_SYMPTOM_RE.test(folded)) {
+  // El veto de narración de CO (ver CO_PAST_EVENT_RE): con el
+  // suceso contado a distancia, ninguna de las dos caras de
+  // monóxido dispara; el texto sigue su camino (la cara del
+  // número con su propio veto, o el modelo).
+  const coNarrated =
+    CO_PAST_EVENT_RE.test(folded) && hasNarrativeTimeMarker(userText) && !CO_LIVE_ANCHOR_RE.test(folded);
+  if (!coNarrated && (coWord || device || CO_SYMPTOM_ONLY_DEVICE_RE.test(folded) || CO_FRAME_RE.test(folded)) && CO_SYMPTOM_RE.test(folded)) {
     return { kind: "co-symptoms", lang, text: CO_SYMPTOM_TEXT[lang], deterministic: true };
   }
   // Un coche, una moto o un motor solo cuentan si están encendidos o en marcha.
@@ -1952,7 +1974,7 @@ export function matchSafetyAnswer(userText: string, lang: SafetyLang): SafetyHit
   const kitchenStrong =
     /\b(cocina|kitchen|cozinha)\b/.test(folded) &&
     /\b(generador|planta (electrica|de luz|de energia)|brasero|anafre|brasas|carbon (encendido|prendido)|generator|charcoal|gerador|braseiro|carvao aceso)\b/.test(folded);
-  if (device && (indoor || kitchenStrong) && (!vehicleOnly || vehicleRunning)) {
+  if (!coNarrated && device && (indoor || kitchenStrong) && (!vehicleOnly || vehicleRunning)) {
     return { kind: "co-hazard", lang, text: CO_TEXT[lang], deterministic: true };
   }
 

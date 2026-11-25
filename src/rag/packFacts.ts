@@ -216,7 +216,7 @@ const NARRATIVE_LINK_RE = / (despues|depois|cuando|quando|when|after|conto|conto
 // verbo va en pasado. El corpus de la tanda (1.478 frases F-NUM)
 // pasa entero por esta capa; su batería es
 // packFacts.narracion.test.ts.
-const NARRATIVE_TIME_RE = / (ayer|anoche|anteayer|esta manana|la semana pasada|semana pasada|el mes pasado|mes pasado|el ano pasado|ano pasado|hace un rato|hace rato|hace unas horas|hace dos dias|hace tres dias|hace una semana|hace dos semanas|hace un mes|hace dos meses|hace un ano|hace dos anos|hace anos|hace mucho|el otro dia|otro dia|el lunes pasado|el martes pasado|el miercoles pasado|el jueves pasado|el viernes pasado|la noche pasada|la otra noche|el fin de semana pasado|yesterday|last night|the day before yesterday|this morning|last week|last month|last year|two days ago|three days ago|a few days ago|a while ago|the other day|on monday|last monday|last tuesday|last weekend|ontem|ontem a noite|anteontem|esta manha|na semana passada|no mes passado|no ano passado|faz dois dias|ha dois dias|faz tres dias|faz um tempo|ha um tempo|no outro dia|outro dia|na segunda passada|na terca passada|na quarta passada|na quinta passada|na sexta passada|no fim de semana passado) /;
+const NARRATIVE_TIME_RE = / (ayer|anoche|anteayer|esta manana|la semana pasada|semana pasada|el mes pasado|mes pasado|el ano pasado|ano pasado|hace un rato|hace rato|hace unas horas|hace dos dias|hace tres dias|hace una semana|hace dos semanas|hace un mes|hace dos meses|hace un ano|hace dos anos|hace anos|hace mucho|el otro dia|otro dia|el lunes pasado|el martes pasado|el miercoles pasado|el jueves pasado|el viernes pasado|la noche pasada|la otra noche|el fin de semana pasado|yesterday|last night|the day before yesterday|this morning|last week|last month|last year|two days ago|three days ago|a few days ago|a while ago|the other day|on monday|last monday|last tuesday|last wednesday|last thursday|last friday|last weekend|ontem|ontem a noite|anteontem|esta manha|na semana passada|no mes passado|no ano passado|faz dois dias|ha dois dias|faz tres dias|faz um tempo|ha um tempo|no outro dia|outro dia|na segunda passada|na terca passada|na quarta passada|na quinta passada|na sexta passada|no fim de semana passado) /;
 const INTERROGATIVE_RE = / (cual|cuales|que numero|a que numero|como llamo|como llamar|what number|what is the number|which number) /;
 const TOPIC_FRAME_RE = / (historia de|history of|en accion) /;
 const TOPIC_COMPLEMENT_RE = / (bomberos|bombeiros|policia|police|firefighters|ambulancia|ambulance|ambulancias) (de|in) /;
@@ -241,6 +241,18 @@ export function isNarratedEventText(text: string): boolean {
   const folded = foldText(text);
   if (INTERROGATIVE_RE.test(folded)) return false;
   return isNarratedEvent(folded);
+}
+
+/**
+ * ¿Trae el texto un marcador de tiempo de los de la capa
+ * (tanda de narración)? Lo usa la tabla fija de safetyAnswers
+ * para su veto de monóxido contado: allí el suceso no es una
+ * llamada y la capa entera (pasado de llamada ∧ enlace) no
+ * aplica, pero el marcador es la misma señal.
+ */
+export function hasNarrativeTimeMarker(text: string): boolean {
+  if (!text) return false;
+  return NARRATIVE_TIME_RE.test(foldText(text));
 }
 
 /** Which emergency service the question asks for, or null when it isn't asking for an emergency number. */
