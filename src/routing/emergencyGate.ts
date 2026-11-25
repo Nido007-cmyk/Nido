@@ -631,7 +631,7 @@ const GATE_EVENT_PAST_RE = / (cayo|cayeron|cai|desmayo|desmayaron|quemo|quemaron
 // antes de plegar, y «cut» tiene la misma forma en pasado; con
 // marcador y sin ancla viva, en un texto de esta puerta son el
 // suceso contado. El progresivo vivo es «cutting», otra forma.)
-const GATE_LIVE_ANCHOR_RE = / (se esta cayendo|se esta caindo|esta cayendo|esta caindo|esta sangrando|esta desmayando|esta convulsionando|esta atragantando|esta engasgando|esta quemando|esta queimando|esta teniendo|is falling|is fainting|is bleeding|is choking|is seizing|is having|is burning|acaba de|acabou de|just fell|just fainted|just collapsed|no respira|nao respira|not breathing|is not breathing|sin pulso|sem pulso|no pulse|nao tem pulso|le duele|duele|doi|hurts|esta mareado|esta mareada|esta tonto|esta tonta|is dizzy|feels dizzy|feels sick|se siente mal|sente se mal|sigue inconsciente|continua inconsciente|still unconscious|esta inconsciente|no se puede mover|no se puede levantar|no se levanta|nao consegue se mexer|nao consegue se mover|nao se pode mover|nao levanta|cannot move|can t move|can t get up|can not move|cannot get up|no se mueve|nao se mexe) /;
+const GATE_LIVE_ANCHOR_RE = / (se esta cayendo|se esta caindo|esta cayendo|esta caindo|esta sangrando|esta desmayando|esta convulsionando|esta atragantando|esta engasgando|esta quemando|esta queimando|esta teniendo|is falling|is fainting|is bleeding|is choking|is seizing|is having|is burning|acaba de|acabou de|just fell|just fainted|just collapsed|no respira|nao respira|not breathing|is not breathing|sin pulso|sem pulso|no pulse|nao tem pulso|le duele|duele|doi|hurts|esta mareado|esta mareada|esta tonto|esta tonta|is dizzy|feels dizzy|feels sick|se siente mal|sente se mal|sigue inconsciente|continua inconsciente|still unconscious|esta inconsciente|no se puede mover|no puede moverse|no se puede levantar|no puede levantarse|no se levanta|nao consegue se mexer|nao consegue se mover|nao consegue se levantar|nao se pode mover|nao levanta|nao se levanta|cannot move|can t move|can t get up|can not move|cannot get up|no se mueve|nao se mexe) /;
 
 /** ¿El texto cuenta un suceso ya pasado, sin ninguna parte viva? */
 function isNarratedGateEvent(folded: string): boolean {
@@ -1040,6 +1040,13 @@ const STEM_BODY_SIGNALS = [
   // formas masculinas del baño las carga el lugar (IMMOBILITY_
   // PLACES), y las de parentesco ya viven en la lista («padre»).
   "anciana", "idosa",
+  // Tanda del residuo vivo (2026-11-25): el parentesco corriente
+  // que faltaba en las tres lenguas, con el mismo criterio de la
+  // lista (relación o papel en un parte): «mi tío se está
+  // cayendo» no traía cuerpo leíble, ni «meu avô» el suyo (el
+  // portugués no tenía su «abuelo»: «avo» es el plegado de avô y
+  // de avó).
+  "tio", "tia", "uncle", "aunt", "avo",
 ];
 
 /**
@@ -1181,7 +1188,45 @@ function stemDeclares(words: string[]): boolean {
 const FALL_PHRASES = [
   "se cayo", "se callo", "se me cayo", "se me callo", "me cai",
   "caiu", "eu cai", "fell",
+  // Tanda del residuo vivo (2026-11-25): la caída EN CURSO y la
+  // recién ocurrida, que ninguna cara conocía (las 12 frases del
+  // residuo de la tanda de narración eran esta clase). El
+  // progresivo solo vivía como ancla del veto de narración, que
+  // exime pero no declara: «me estoy cayendo» iba al modelo. Y
+  // «acaba de caer» no era forma de caída: la inmovilidad que lo
+  // acompañaba no declaraba sin su contexto. Sus reglas propias
+  // van en fallDeclares (primera persona directa, apertura y
+  // pronombre, recencia a secas); el contexto común (cuerpo,
+  // lesión, lugar, inmovilidad) las cobra como a las demás.
+  "me estoy cayendo", "se esta cayendo", "esta cayendo",
+  "i am falling", "i m falling", "is falling",
+  "estou caindo", "esta caindo",
+  "se acaba de caer", "acaba de caer", "acaba de caerse", "acabou de cair",
 ];
+
+/** Los progresivos de primera persona: solo los dice un cuerpo
+ * de sí mismo, como «me cai» — declaran directos. («i m falling»
+ * es lo que queda de «I'm falling» tras plegar, como «can t».) */
+const FALL_PROGRESSIVE_FIRST = new Set([
+  "me estoy cayendo", "i am falling", "i m falling", "estou caindo",
+]);
+const FALL_PROGRESSIVE = new Set([
+  ...FALL_PROGRESSIVE_FIRST,
+  "se esta cayendo", "esta cayendo", "is falling", "esta caindo",
+]);
+/** Las formas de recencia: el suceso que acaba de pasar. */
+const FALL_RECENT = new Set([
+  "se acaba de caer", "acaba de caer", "acaba de caerse", "acabou de cair",
+]);
+/** El pronombre sujeto pegado delante del progresivo o del
+ * «just fell»: «He is falling», «Ele está caindo». */
+const FALL_SUBJECT_PRONOUNS = new Set(["el", "ella", "he", "she", "ele", "ela"]);
+/** La meteorología tras el verbo del progresivo: «está cayendo
+ * granizo» es el tiempo, no un parte — la ocurrencia con una de
+ * estas palabras detrás no declara por la cara de caída. */
+const FALL_WEATHER_AFTER = new Set([
+  "granizo", "nieve", "neve", "chuva", "lluvia", "hail", "snow", "rain",
+]);
 const FALL_INJURY_PREFIXES = [
   "golpe", "cabez", "sangr", "herid", "fractur", "romp", "quebr",
   "machuc", "ferid", "fratur", "hurt", "injur", "bleed",
@@ -1320,10 +1365,41 @@ function fallDeclares(words: string[], folded: string): boolean {
       if (!pw.every((w, k) => words[i + k] === w)) continue;
       if (occurrenceNegated(words, i)) continue;
       if (!immobilityPresent && fallOccurrenceNarrated(words, i, i + pw.length - 1)) continue;
+      const end = i + pw.length - 1;
+      // Tanda del residuo vivo: las reglas de las formas nuevas.
+      if (FALL_PROGRESSIVE.has(phrase)) {
+        // La meteorología tras el verbo no es un parte: esta
+        // ocurrencia no declara por ninguna vía de la cara.
+        if (FALL_WEATHER_AFTER.has(words[end + 1] ?? "")) continue;
+        if (FALL_PROGRESSIVE_FIRST.has(phrase)) return true;
+        // Abriendo el mensaje o con el pronombre sujeto pegado,
+        // el progresivo ES el parte («Se está cayendo», «He is
+        // falling»): está pasando ahora y no pide contexto. Con
+        // sujeto nombrado manda el contexto común de abajo («el
+        // precio está cayendo» no lo trae y no entra).
+        if (i === 0) return true;
+        if (FALL_SUBJECT_PRONOUNS.has(words[i - 1] ?? "")) return true;
+      }
+      if (FALL_RECENT.has(phrase) && i <= 1) {
+        // La recencia a secas, con nadie o solo el «se»/el
+        // pronombre delante: «Se acaba de caer», «Ele acabou de
+        // cair». Con un sujeto extraño delante («el precio se
+        // acaba de caer») manda el contexto común.
+        return true;
+      }
+      if (
+        phrase === "fell" &&
+        words[i - 1] === "just" &&
+        (i <= 1 || FALL_SUBJECT_PRONOUNS.has(words[i - 2] ?? ""))
+      ) {
+        // «He just fell», «She just fell»: el parte desnudo de
+        // la recencia inglesa. «The price just fell» no trae el
+        // pronombre y sigue pidiendo el contexto común.
+        return true;
+      }
       if (phrase === "me cai") return true;
       if (i === 0 && words.length <= 3) return true;
       if (immobilityPresent) return true;
-      const end = i + pw.length - 1;
       for (let j = Math.max(0, i - 3); j <= Math.min(words.length - 1, end + 3); j++) {
         const w = words[j];
         if (STEM_BODY_SIGNALS.some((s) => w === s || w === `${s}s` || w === `${s}es`)) return true;
@@ -1351,6 +1427,34 @@ function fallDeclares(words: string[], folded: string): boolean {
         ) return true;
         if (
           down &&
+          words[k] === "the" &&
+          FALL_PLACES_EN.has(words[k + 1] ?? "")
+        ) return true;
+      }
+      // Tanda del residuo vivo: el lugar tras el progresivo y
+      // tras la recencia, con las preposiciones de su orden
+      // («cayendo por las escaleras», «cayendo de la silla»,
+      // «caindo da escada», «acabou de cair no banheiro»,
+      // «falling off the ladder», «falling in the bathroom»).
+      if (
+        (phrase === "se esta cayendo" || phrase === "esta cayendo" ||
+          phrase === "se acaba de caer" || phrase === "acaba de caer" || phrase === "acaba de caerse") &&
+        fallPlaceFollows(words, end, ["en", "a", "dentro", "por", "de"], FALL_PLACES_ES)
+      ) return true;
+      if (
+        (phrase === "esta caindo" || phrase === "acabou de cair") &&
+        fallPlaceFollows(words, end, ["no", "na", "em", "da", "de"], FALL_PLACES_PT)
+      ) return true;
+      if (phrase === "is falling") {
+        const step = words[end + 1] === "down" || words[end + 1] === "off";
+        const k = step ? end + 2 : end + 1;
+        if (
+          words[k] === "in" &&
+          words[k + 1] === "the" &&
+          FALL_PLACES_EN.has(words[k + 2] ?? "")
+        ) return true;
+        if (
+          step &&
           words[k] === "the" &&
           FALL_PLACES_EN.has(words[k + 1] ?? "")
         ) return true;
@@ -1483,6 +1587,14 @@ const IMMOBILITY_SIGNS = [
   // fell and cannot get up», «minha avó caiu e não levanta»): la
   // misma disciplina de contexto las ata a un cuerpo.
   "nao consegue levantar", "nao levanta", "cannot get up",
+  // Tanda del residuo vivo (2026-11-25): el «levantar» con su
+  // «se» en español y en portugués, que la familia traía solo en
+  // las formas de poder («no se puede levantar») y en la
+  // portuguesa sin «se». Sin esta forma, «ayer se cayó y no se
+  // levanta» no traía inmovilidad leíble y la distancia vetaba
+  // el parte contra la doctrina de la cara (la inmovilidad en
+  // presente manda sobre el marcador).
+  "no se levanta", "no levanta", "nao se levanta",
 ];
 
 /** Las formas de caída narrada de `EMERGENCY_SIGNS`, en las
