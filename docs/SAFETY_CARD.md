@@ -29,21 +29,21 @@
 | guia/es | 49/49 · 100,0 % | 100,0 % | 0,0 |
 | guia/en | 42/42 · 100,0 % | 100,0 % | 0,0 |
 | guia/pt | 42/42 · 100,0 % | 100,0 % | 0,0 |
-| negativos/es | 42/45 · 93,3 % | 93,3 % | 0,0 |
-| negativos/en | 33/42 · 78,6 % | 78,6 % | 0,0 |
-| negativos/pt | 30/36 · 83,3 % | 83,3 % | 0,0 |
+| negativos/es | 45/45 · 100,0 % | 93,3 % | +6,7 |
+| negativos/en | 42/42 · 100,0 % | 78,6 % | +21,4 |
+| negativos/pt | 36/36 · 100,0 % | 83,3 % | +16,7 |
 | negativos-historicos/es | 6/6 · 100,0 % | 100,0 % | 0,0 |
 | negativos-historicos/en | 6/6 · 100,0 % | 100,0 % | 0,0 |
 | negativos-historicos/pt | 6/6 · 100,0 % | 100,0 % | 0,0 |
-| **Total primaria** | **2873/2957 · 97,2 %** | **78,6 %** | **+18,6** |
+| **Total primaria** | **2891/2957 · 97,8 %** | **78,6 %** | **+19,2** |
 
 Sensibilidad por tipo de variante (puerta primaria):
 
 | Tipo | Medida | Baseline |
 |---|---|---|
-| base | 631/648 · 97,4 % | 88,3 % |
-| sinAcentos | 631/648 · 97,4 % | 88,3 % |
-| cortesia | 526/543 · 96,9 % | 91,7 % |
+| base | 637/648 · 98,3 % | 88,3 % |
+| sinAcentos | 637/648 · 98,3 % | 88,3 % |
+| cortesia | 532/543 · 98,0 % | 91,7 % |
 | errata | 490/512 · 95,7 % | 32,0 % |
 | pregunta | 449/460 · 97,6 % | 91,1 % |
 | marco-temporal | 52/52 · 100,0 % | 63,5 % |
@@ -57,10 +57,10 @@ Sensibilidad por tipo de variante (puerta primaria):
 | Subcorpus | Con alguna puerta | health | emergency | crisis | co |
 |---|---|---|---|---|---|
 | guía (suelo cero) | 0/133 | 0 | 0 | 0 | 0 |
-| negativos | 46/123 | 42 | 6 | 18 | 0 |
+| negativos | 43/123 | 42 | 6 | 0 | 0 |
 | históricos | 8/18 | 8 | 0 | 0 | 0 |
 | ciega-guia (suelo cero) | 0/48 | 0 | 0 | 0 | 0 |
-| ciega-ficcion | 27/102 | 0 | 21 | 6 | 0 |
+| ciega-ficcion | 21/102 | 0 | 21 | 0 | 0 |
 | ciega-modismos | 3/99 | 3 | 0 | 0 | 0 |
 | ciega-prevencion | 66/99 | 66 | 6 | 0 | 0 |
 | ciega-historicos | 54/99 | 54 | 9 | 0 | 0 |
@@ -76,7 +76,7 @@ La lectura de las familias conocidas: los falsos positivos de crisis son la fami
 | emergencia | 0 | 845 | 0 | 0 | 0 |
 | crisis | 0 | 0 | 258 | 0 | 2 |
 | caida | 0 | 57 | 0 | 0 | 0 |
-| ninguna | 30 | 6 | 18 | 0 | 238 |
+| ninguna | 45 | 6 | 0 | 0 | 241 |
 | monoxido | 0 | 0 | 0 | 48 | 0 |
 
 - Crisis esperada respondida como salud: 0

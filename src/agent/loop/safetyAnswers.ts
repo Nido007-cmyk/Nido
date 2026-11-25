@@ -623,7 +623,7 @@ const SELF_HARM_GLUED_RE = new RegExp(
 // laboral que separa la carga de crisis de la carta y la ausencia
 // del trabajo.
 const SELF_HARM_VETO_IDIOM_SRC =
-  "morir(?:me)? de (?:la )?(?:risa|verguenza|pena|hambre|sueno|calor|frio|amor|ganas|envidia|aburrimiento|cansancio|nervios)|die of (?:embarrassment|laughter|boredom|shame|hunger|thirst)|morrer de (?:rir|vergonha|fome|sono|calor|frio|amor|vontade|tedio|saudade)";
+  "morir(?:me)? de (?:la )?(?:risa|verguenza|pena|hambre|sueno|calor|frio|amor|ganas|envidia|aburrimiento|cansancio|nervios)|die of (?:embarrassment|laughter|boredom|shame|hunger|thirst)|die laughing|dying laughing|morrer de (?:rir|vergonha|fome|sono|calor|frio|amor|vontade|tedio|saudade)";
 const SELF_HARM_VETO_FICTION_SRC =
   "cuento|novela|historia|guion|cancion|poema|personaje|pelicula|serie|story|novel|script|song|lyrics|poem|character|movie|conto|romance|roteiro|musica|personagem|filme";
 const SELF_HARM_VETO_MEDICAL_SRC =
