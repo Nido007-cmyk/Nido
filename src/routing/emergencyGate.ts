@@ -455,6 +455,12 @@ const HISTORY_FRAMES = [
   "una pelicula donde", "una pelicula en la que", "una serie donde", "una serie en la que", "sone que",
   "a movie where", "a movie in which", "a film where", "a show where", "a series where", "i dreamt", "i dreamed",
   "um filme em que", "um filme onde", "uma serie em que", "uma serie onde", "sonhei que",
+  // Tanda de variantes (Familia 8, los menores de la F9): la
+  // muerte familiar contada con su causa, en singular — la
+  // lista traía el plural («murieron», «morreram») y no estas
+  // formas — y la distancia inglesa y la de «hace años»:
+  // «mi abuelo murió de un infarto hace años» declaraba salud.
+  "murio de", "morreu de", "died of", "hace anos", "ha anos", "last year",
 ];
 
 /**
@@ -1545,6 +1551,14 @@ const SITUATION_TOPIC_FRAMES = [
   "what is", "what are", "what does", "que es", "que significa",
   "o que e", "o que significa", "como evitar", "como prevenir",
   "how to prevent", "significado de", "meaning of",
+  // Tanda de variantes (Familia 8): la prevención preguntada
+  // con su verbo («how can I prevent…», «¿cómo puedo
+  // prevenir…?»), que el censo de la ciega midió declarando
+  // situación: la lista solo traía la forma de infinitivo.
+  "how can i prevent", "how can we prevent", "how do i prevent",
+  "como puedo prevenir", "como puedo evitar",
+  "como faco para prevenir", "como faco para evitar",
+  "como posso prevenir", "como posso evitar",
 ];
 
 /**
@@ -1610,7 +1624,12 @@ export function isEmergencySituation(text: string): boolean {
   // declara y responde la puerta de salud. El parte con la
   // petición detrás («Sale humo por la ventana, ¿qué hago?») no
   // abre con estos marcos y sigue declarando.
-  if (SITUATION_TOPIC_FRAMES.some((f) => trimmed.startsWith(f))) return false;
+  // Tanda de variantes (Familia 8): el arranque se lee tras la
+  // cortesía — «por favor, ¿cómo evitar…?» y «please, how can
+  // I prevent…?» rompían el marco por su primera palabra, en
+  // los tres idiomas, y el tema declaraba por otra cara.
+  const topicText = trimmed.replace(/^(por favor|please)\s+/, "");
+  if (SITUATION_TOPIC_FRAMES.some((f) => topicText.startsWith(f))) return false;
   const words = trimmed.split(/\s+/).filter((w) => w.length > 0);
   return (
     signDeclares(words) ||
