@@ -569,6 +569,9 @@ export function isHealthQuestion(text: string): boolean {
   // tampoco es una consulta en curso.
   if (isHypotheticalStatement(text, folded)) return false;
   if (isHabitualFireStatement(text, folded)) return false;
+  // Auditoría 2026-11-25 (H-8): la tarea de guía sin suceso
+  // no es una consulta en curso.
+  if (GUIDE_TASK_FRAMES.some((x) => folded.includes(x))) return false;
   if (hasHistoricalFrame(folded)) return false;
   // Tanda de narración (2026-11-25): el suceso contado con su
   // distancia no es una consulta en curso («ayer mi abuelo llamó
@@ -1072,6 +1075,31 @@ function isHypotheticalStatement(text: string, folded: string): boolean {
  * el verbo de llamada en primera persona de presente, las
  * dos caras la dejan fuera, como la ruta del número.
  */
+/**
+ * Los marcos de TAREA DE GUÍA (auditoría 2026-11-25, H-8):
+ * la frase pide aprender una técnica, preparar, escribir o
+ * traducir una guía o un folleto, consejos de prevención, el
+ * contenido de un botiquín, o cuenta el uso o la instalación
+ * de un detector como tema. No hay suceso en curso: es la
+ * clase «guia» del corpus gobernado medida sobre primeros
+ * auxilios, que disparaba la puerta de salud por la mención
+ * del signo dentro de la tarea, y en inglés hasta la de
+ * situación. Las dos caras consultan la familia, como los
+ * vetos de suceso negado. El suceso vivo no trae ninguno de
+ * estos marcos.
+ */
+const GUIDE_TASK_FRAMES = [
+  "quiero aprender", "quero aprender", "i want to learn", "want to learn",
+  "preparando una guia", "preparando um guia", "preparing a guide",
+  "escribiendo un folleto", "escrevendo um folheto", "writing a leaflet",
+  "traduciendo una guia", "traduzindo um guia", "translating a first aid guide", "translating a guide",
+  "first aid kit contain", "kit de primeiros socorros deve conter",
+  "botiquin debe contener", "kit de primeros auxilios debe contener",
+  "quiero consejos para que", "i want tips so", "quero dicas para",
+  "health workshop", "taller de salud", "detector is used", "alarm installed",
+  "alarma instalada", "alarme instalado",
+];
+
 function isHabitualFireStatement(text: string, folded: string): boolean {
   if (/[¿?]/.test(text)) return false;
   const hay = ` ${folded} `;
@@ -2003,6 +2031,10 @@ export function isEmergencySituation(text: string): boolean {
   // would help him get up»).
   if (isHypotheticalStatement(text, folded)) return false;
   if (isHabitualFireStatement(text, folded)) return false;
+  // Auditoría 2026-11-25 (H-8): la tarea de guía sin suceso
+  // tampoco es una situación (el taller de salud y la
+  // instalación de la alarma de CO declaraban en inglés).
+  if (GUIDE_TASK_FRAMES.some((x) => vetoHay.includes(` ${x}`))) return false;
   if (hasHistoricalFrame(folded)) return false;
   // Causa E de DIAG-A (paquete de arreglos del móvil, §4.3): el
   // suceso ya resuelto, contado con su cláusula de resolución
