@@ -1161,6 +1161,11 @@ const GUIDE_TASK_FRAMES = [
   "quiero aprender", "quero aprender", "i want to learn", "want to learn",
   "preparando una guia", "preparando um guia", "preparing a guide",
   "escribiendo un folleto", "escrevendo um folheto", "writing a leaflet",
+  // Fase B ronda 6 (2026-11-25): el cruce que faltaba —
+  // preparar un folleto («estoy preparando un folleto…»,
+  // «i'm preparing a leaflet…», «estou preparando um
+  // folheto…»).
+  "preparando un folleto", "preparing a leaflet", "preparando um folheto",
   "traduciendo una guia", "traduzindo um guia", "translating a first aid guide", "translating a guide",
   "first aid kit contain", "kit de primeiros socorros deve conter",
   "botiquin debe contener", "kit de primeros auxilios debe contener",
