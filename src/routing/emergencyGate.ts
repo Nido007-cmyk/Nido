@@ -778,6 +778,10 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     // persona, que el signo de fuego (de tercera) no casaba:
     // «me estoy quemando», «quemándome».
     "me estoy quemando", "quemandome",
+    // Fase B ronda 2 (2026-11-25): el progresivo reflexivo con
+    // su agente, en el orden alterado de la ronda («en la
+    // cocina, quemándose con la estufa, está mi abuela»).
+    "quemandose con",
     "se esta inundando", "se inunda", "hay una inundacion",
     "hubo un temblor", "esta temblando", "hubo un terremoto", "hubo un sismo",
     "se cayo un cable", "cable caido", "cable de luz caido",
@@ -1117,6 +1121,13 @@ const GUIDE_TASK_FRAMES = [
   // nombre propio («estoy montando un taller de primeros
   // auxilios para la escuela»).
   "taller de primeros auxilios", "first aid workshop", "oficina de primeiros socorros",
+  // Fase B ronda 2 (2026-11-25): la tarea meta sobre la guía
+  // —descargarla, imprimirla, pasarla— tampoco trae suceso
+  // («quiero descargar la guía de primeros auxilios para
+  // imprimirla», «send me the leaflet…», «quero baixar o
+  // guia de primeiros socorros para imprimir»).
+  "descargar la guia", "pasame el folleto", "download the first aid guide",
+  "download the guide", "send me the leaflet", "baixar o guia", "me passa o folheto",
 ];
 
 function isHabitualFireStatement(text: string, folded: string): boolean {
@@ -1798,6 +1809,10 @@ const IMMOBILITY_SIGNS = [
   "no hay manera de que se levante", "no hay forma de que se levante",
   "can t get back up", "can t get himself up", "can t get herself up",
   "can t get myself up", "unable to get up",
+  // Fase B ronda 2 (2026-11-25): «cant» sin apóstrofo, la
+  // forma que el dictado deja («cant get himself up»).
+  "cant get up", "cant get back up", "cant get himself up",
+  "cant get herself up", "cant get myself up",
   "no way she can get up", "no way he can get up", "no way they can get up",
   "nao consegue ficar de pe", "nao consegue se erguer",
   "sem conseguir se levantar", "sem conseguir levantar",
@@ -1843,7 +1858,10 @@ const IMMOBILITY_BODY_PARTS = [
 // Tanda de variantes (Familia 3): el baño entra como lugar — es
 // donde el parte corriente encuentra al caído que no se levanta
 // («anciana caída en el baño que no se puede levantar»).
-const IMMOBILITY_PLACES = ["suelo", "piso", "chao", "floor", "bano", "banheiro", "bathroom"];
+// Fase B ronda 2 (2026-11-25): «flor», la errata de dictado
+// de «floor», entra como lugar de contexto —solo habilita un
+// signo de inmovilidad, nunca declara por sí sola.
+const IMMOBILITY_PLACES = ["suelo", "piso", "chao", "floor", "flor", "bano", "banheiro", "bathroom"];
 
 /**
  * La familia «levantar» de `IMMOBILITY_SIGNS` (0.1.112, resto de
