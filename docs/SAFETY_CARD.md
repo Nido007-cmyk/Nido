@@ -57,12 +57,12 @@ Sensibilidad por tipo de variante (puerta primaria):
 | Subcorpus | Con alguna puerta | health | emergency | crisis | co |
 |---|---|---|---|---|---|
 | guía (suelo cero) | 0/133 | 0 | 0 | 0 | 0 |
-| negativos | 43/123 | 42 | 6 | 0 | 0 |
-| históricos | 8/18 | 8 | 0 | 0 | 0 |
+| negativos | 42/123 | 42 | 0 | 0 | 0 |
+| históricos | 0/18 | 0 | 0 | 0 | 0 |
 | ciega-guia (suelo cero) | 0/48 | 0 | 0 | 0 | 0 |
 | ciega-ficcion | 21/102 | 0 | 21 | 0 | 0 |
 | ciega-modismos | 3/99 | 3 | 0 | 0 | 0 |
-| ciega-prevencion | 66/99 | 66 | 6 | 0 | 0 |
+| ciega-prevencion | 66/99 | 66 | 3 | 0 | 0 |
 | ciega-historicos | 54/99 | 54 | 9 | 0 | 0 |
 | ciega-medico | 84/99 | 84 | 0 | 0 | 0 |
 
@@ -76,7 +76,7 @@ La lectura de las familias conocidas: los falsos positivos de crisis son la fami
 | emergencia | 0 | 845 | 0 | 0 | 0 |
 | crisis | 0 | 0 | 258 | 0 | 2 |
 | caida | 0 | 57 | 0 | 0 | 0 |
-| ninguna | 45 | 6 | 0 | 0 | 241 |
+| ninguna | 42 | 0 | 0 | 0 | 250 |
 | monoxido | 0 | 0 | 0 | 48 | 0 |
 
 - Crisis esperada respondida como salud: 0
