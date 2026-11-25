@@ -577,6 +577,12 @@ export function isHealthQuestion(text: string): boolean {
   // su forma fixturada como precio aceptado (X-09) y no se
   // toca — el veto es solo de salud, donde se midió.
   if (folded.includes("drowning in work")) return false;
+  // Fase B ronda 5 (2026-11-25): la comida quemada en
+  // inglés («i burned the rice») sobre-disparaba esta cara
+  // por el tallo «burn»; en español y portugués la forma ya
+  // es de contexto (la comida no es la persona) y no
+  // disparaba. Veto solo de salud, como el de arriba.
+  if (["burned the rice", "burnt the rice", "burned the toast", "burnt the toast"].some((x) => folded.includes(x))) return false;
   if (hasHistoricalFrame(folded)) return false;
   // Tanda de narración (2026-11-25): el suceso contado con su
   // distancia no es una consulta en curso («ayer mi abuelo llamó
@@ -1103,6 +1109,10 @@ const NEGATED_EVENT_FRAMES = [
   // de situación) y su veto vive solo en la cara de salud,
   // donde la ronda midió su sobre-disparo.
   "sangrando de amor",
+  // Fase B ronda 5 (2026-11-25): la hipérbole del calor con
+  // el «tú» genérico («hace un calor que te desmayas»,
+  // «dá para desmaiar») no cuenta ningún desmayo.
+  "que te desmayas", "da para desmaiar",
 ];
 
 /**
