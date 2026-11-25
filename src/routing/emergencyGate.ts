@@ -563,6 +563,12 @@ export function isHealthQuestion(text: string): boolean {
   if (folded.trim().length === 0) return false;
   if (HEALTH_EXCLUSIONS.some((x) => folded.includes(` ${x} `) || folded.includes(` ${x}`))) return false;
   if (hasHistoricalFrame(folded)) return false;
+  // Tanda de narración (2026-11-25): el suceso contado con su
+  // distancia no es una consulta en curso («ayer mi abuelo llamó
+  // una ambulancia» declaraba salud por «ambulancia»). El veto
+  // es solo para el enunciado: con forma de pregunta o petición
+  // de consejo, la consulta es viva y la puerta sigue cerrando.
+  if (isNarratedGateEvent(folded) && !/[¿?]/.test(text) && !HEALTH_QUESTION_FORM_RE.test(` ${folded} `)) return false;
   // H-05: la familia inglesa «chok» comparte raíz con la metáfora
   // deportiva («choke under pressure» = fallar bajo presión), así
   // que cuando es el ÚNICO término que casa, no basta: la puerta
@@ -596,6 +602,54 @@ export function isHealthQuestion(text: string): boolean {
   if (!chokOnlyHit && healthTermHits(folded) >= 2) return true;
   return SITUATION_CUES.some((c) => folded.includes(c) || text.includes(c));
 }
+
+// ------------------------- narración por distancia (tanda 2026-11-25)
+// El suceso contado con su marcador de distancia no es una
+// situación viva ni una consulta de salud en curso: ya pasó. La
+// puerta solo vetaba los marcos históricos (guerras, novelas,
+// «hace años») y, en la cara de caída, un juego corto de
+// marcadores por ocurrencia; el signo contado («ayer mi abuelo
+// se desmayó») y la caída contada en portugués («ontem meu avô
+// caiu», sin «ontem» en el juego) declaraban como si estuvieran
+// ocurriendo. La medición del acto 0 de la tanda: F-CAIDA
+// 47–58 %, F-SIGNOS 16–32 % según idioma. El veto pide tres
+// cosas a la vez: marcador de tiempo ∧ el verbo del suceso en
+// pasado ∧ ninguna ancla viva. Las anclas vivas son las
+// exenciones de la doctrina de la caída llevadas a todo el
+// suceso: progresivo en curso, inmovilidad en presente, «acaba
+// de», respiración o pulso ausentes ahora, síntoma en presente.
+// Sin forma de pregunta: la interrogación y la petición de
+// consejo se tratan en la cara de salud, no aquí.
+const GATE_TIME_MARKER_RE = / (ayer|anoche|anteayer|esta manana|la semana pasada|semana pasada|el mes pasado|mes pasado|el ano pasado|ano pasado|hace un rato|hace rato|hace unas horas|hace dos dias|hace tres dias|hace una semana|hace dos semanas|hace un mes|hace dos meses|hace un ano|hace dos anos|hace anos|el otro dia|otro dia|el lunes pasado|el martes pasado|la noche pasada|el fin de semana pasado|despues del accidente|tras el accidente|yesterday|last night|the day before yesterday|this morning|last week|last month|last year|two days ago|three days ago|a few days ago|a while ago|the other day|on monday|last monday|last weekend|after the accident|ontem|ontem a noite|anteontem|esta manha|na semana passada|no mes passado|no ano passado|faz dois dias|ha dois dias|faz tres dias|faz um tempo|ha um tempo|no outro dia|outro dia|na segunda passada|na terca passada|no fim de semana passado|depois do acidente|apos o acidente) /;
+const GATE_EVENT_PAST_RE = / (cayo|cayeron|cai|desmayo|desmayaron|quemo|quemaron|corto|sangro|sangraron|tuvo|tuvieron|sufrio|sufrieron|convulsiono|convulsionaron|golpeo|atraganto|atragantaron|dolia|dio|dieron|estuvo|estuvieron|llamo|llame|llamaron|marco|marque|marcaron|fell|fainted|collapsed|burned|burnt|bled|bleed|cut|hit|choked|seized|suffered|had|called|dialed|dialled|caiu|cairam|desmaiou|desmaiaram|queimou|queimaram|cortou|sangrou|sangraram|teve|tiveram|sofreu|sofreram|engasgou|engasgaram|convulsionou|bateu|bateram|estava|ligou|liguei|ligaram|discou|disquei) /;
+// («bleed» y «cut» van en la lista inglesa a sabiendas: la
+// reparación de erratas de la puerta canoniza «bled» a «bleed»
+// antes de plegar, y «cut» tiene la misma forma en pasado; con
+// marcador y sin ancla viva, en un texto de esta puerta son el
+// suceso contado. El progresivo vivo es «cutting», otra forma.)
+const GATE_LIVE_ANCHOR_RE = / (se esta cayendo|se esta caindo|esta cayendo|esta caindo|esta sangrando|esta desmayando|esta convulsionando|esta atragantando|esta engasgando|esta quemando|esta queimando|esta teniendo|is falling|is fainting|is bleeding|is choking|is seizing|is having|is burning|acaba de|acabou de|just fell|just fainted|just collapsed|no respira|nao respira|not breathing|is not breathing|sin pulso|sem pulso|no pulse|nao tem pulso|le duele|duele|doi|hurts|esta mareado|esta mareada|esta tonto|esta tonta|is dizzy|feels dizzy|feels sick|se siente mal|sente se mal|sigue inconsciente|continua inconsciente|still unconscious|esta inconsciente|no se puede mover|no se puede levantar|no se levanta|nao consegue se mexer|nao consegue se mover|nao se pode mover|nao levanta|cannot move|can t move|can t get up|can not move|cannot get up|no se mueve|nao se mexe) /;
+
+/** ¿El texto cuenta un suceso ya pasado, sin ninguna parte viva? */
+function isNarratedGateEvent(folded: string): boolean {
+  // El plegado de la puerta no acolcha los extremos (el de
+  // packFacts sí): el marcador que ABRE el relato («Last night
+  // my neighbor…») necesita el espacio inicial para casar.
+  const hay = ` ${folded} `;
+  return (
+    GATE_TIME_MARKER_RE.test(hay) &&
+    GATE_EVENT_PAST_RE.test(hay) &&
+    !GATE_LIVE_ANCHOR_RE.test(hay)
+  );
+}
+
+/**
+ * La forma de pregunta o de petición de consejo sobre salud:
+ * con ella, la cara de salud no veta aunque el texto cuente el
+ * pasado («ayer se desmayó, ¿qué hago si pasa otra vez?» es una
+ * consulta viva; el modelo no debe responder dosis, pero la
+ * puerta de salud sí debe cerrar).
+ */
+const HEALTH_QUESTION_FORM_RE = / (cuanto|cuanta|cuantos|cuantas|puedo|debo|debe|que hago|que debo|que tomo|como se|como puedo|what should|how much|how do|can i|should i|posso|devo|quanto|quanta|quantos|quantas|como devo|o que faco|o que devo|que faco) /;
 
 // -------------------------------------------- situación de emergencia
 
@@ -1196,9 +1250,15 @@ function fallPlaceFollows(
  * trae un signo de inmovilidad EN PRESENTE, el caído sigue en el
  * suelo aunque la caída fuera ayer, y la cara declara igual.
  */
-const FALL_DISTANCE_TOKENS = new Set(["ayer", "anoche", "anteayer", "yesterday"]);
+const FALL_DISTANCE_TOKENS = new Set(["ayer", "anoche", "anteayer", "yesterday",
+  // Tanda de narración (2026-11-25): el portugués de la doctrina
+  // no traía su «ayer»: «ontem meu avô caiu» declaraba.
+  "ontem", "anteontem"]);
 const FALL_TIME_UNITS = new Set([
   "anos", "ano", "meses", "mes", "semanas", "semana", "dias", "dia", "mucho",
+  // Tanda de narración: «hace un rato» no era distancia («rato»
+  // no era unidad).
+  "rato",
 ]);
 const FALL_COUNT_WORDS = new Set([
   "un", "una", "uno", "um", "uma", "dos", "dois", "duas", "tres", "cuatro",
@@ -1212,6 +1272,10 @@ const FALL_DISTANCE_BIGRAMS = new Set([
   // («fell last week», «fell last year»), que declaraba situación
   // viva por no estar en la lista.
   "last week", "last year",
+  // Tanda de narración (2026-11-25): el resto de marcadores
+  // corrientes de las tres lenguas en su forma de bigrama.
+  "last month", "last night", "outro dia", "esta manana", "esta manha",
+  "this morning", "on monday", "last monday", "lunes pasado", "segunda passada",
 ]);
 const FALL_RESOLUTION_PHRASES = new Set([
   "ya esta bien", "ya esta mejor", "esta bien ahora",
@@ -1229,7 +1293,7 @@ function fallOccurrenceNarrated(words: string[], i: number, end: number): boolea
     // last week»: «last» cae en hi y su segunda palabra queda
     // una fuera; sin esto la distancia inglesa no vetaba).
     if (j <= hi && j + 1 < words.length && FALL_DISTANCE_BIGRAMS.has(`${words[j]} ${words[j + 1]}`)) return true;
-    if (words[j] === "hace") {
+    if (words[j] === "hace" || words[j] === "faz" || words[j] === "ha") {
       if (FALL_TIME_UNITS.has(words[j + 1] ?? "")) return true;
       if (FALL_COUNT_WORDS.has(words[j + 1] ?? "") && FALL_TIME_UNITS.has(words[j + 2] ?? "")) return true;
     }
@@ -1622,6 +1686,14 @@ export function isEmergencySituation(text: string): boolean {
   // situación viva. La cláusula ha de venir tras el conector
   // adversativo: un «ya está bien» suelto no veta nada.
   if (RESOLVED_CLAUSES.some((x) => vetoHay.includes(` ${x}`))) return false;
+  // Tanda de narración (2026-11-25): el suceso contado con su
+  // marcador de distancia y sin ancla viva no es una situación:
+  // «ayer mi abuelo se desmayó», «ontem meu avô caiu», «last
+  // week my father fainted». Las anclas vivas (progresivo,
+  // inmovilidad en presente, «acaba de», síntoma en presente)
+  // mandan sobre el marcador: «ayer se cayó y ahora no se puede
+  // mover» sigue declarando. Ver isNarratedGateEvent.
+  if (isNarratedGateEvent(folded)) return false;
   const trimmed = folded.trim();
   // 0.1.111 (punto 11): el marco de definición o de prevención
   // ABRIENDO el texto es un tema, no un parte («What is

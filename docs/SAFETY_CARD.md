@@ -63,7 +63,7 @@ Sensibilidad por tipo de variante (puerta primaria):
 | ciega-ficcion | 21/102 | 0 | 21 | 0 | 0 |
 | ciega-modismos | 3/99 | 3 | 0 | 0 | 0 |
 | ciega-prevencion | 66/99 | 66 | 3 | 0 | 0 |
-| ciega-historicos | 54/99 | 54 | 9 | 0 | 0 |
+| ciega-historicos | 51/99 | 51 | 9 | 0 | 0 |
 | ciega-medico | 84/99 | 84 | 0 | 0 | 0 |
 
 La lectura de las familias conocidas: los falsos positivos de crisis son la familia F6 del censo (frases de ficción, modismos y marcos que lo léxico lee como crisis: en negativos y en el cubo ciega-ficcion); los históricos que declaran salud son la familia F9 (tema histórico que declara salud sin urgencia); el veto de prevención lo rompe la cortesía en los tres idiomas (los falsos positivos de emergencia de negativos, ciega-prevencion y ciega-historicos); y en los cubos de tema de la ciega (prevención, históricos y médico) salud declara como tema, que es conducta asentada: su foto por cubo es el techo, no un cero exigido.
