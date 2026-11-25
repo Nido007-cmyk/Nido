@@ -883,6 +883,10 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     // prices, how a detector works) carries no sign and stays out;
     // the settled gas metaphors are in the vetoes.
     "smells like gas", "smell of gas", "smell gas", "gas leak", "gas is leaking", "leaking gas",
+    // Fase B ronda 3 (2026-11-25): la forma corrida del olor
+    // («it smells strongly of gas») y la descarga eléctrica
+    // contada («got an electric shock»).
+    "smells of gas", "smells strongly of gas", "electric shock", "got shocked", "electrocuted",
     // Audit 0.1.93: running events the gate did not know.
     "house is on fire", "kitchen is on fire", "building is on fire", "car is on fire", "room is on fire",
     "apartment is on fire", "stove is on fire", "oven is on fire", "caught fire", "is flooding", "flood coming", "flooding my",
@@ -968,6 +972,9 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     // a «cheiro de gas»). O tema solto (preço do reparo, como
     // funciona um detector) não traz sinal e não declara.
     "cheiro de gas", "vazando gas", "vazamento de gas", "esta vazando gas", "sai gas", "saindo gas",
+    // Fase B ronda 3 (2026-11-25): o cheiro em curso
+    // («está cheirando muito gás na cozinha»).
+    "cheirando gas", "cheirando muito gas",
     // Auditoria 0.1.93: eventos em curso que a porta não conhecia.
     "esta inundando", "esta alagando", "houve um terremoto",
     "tentando entrar na minha casa", "arrombando a porta", "houve um acidente",
@@ -1018,6 +1025,11 @@ const EMERGENCY_VETOES = [
   // Causa E de DIAG-A: el límite del signo «le esta dando un
   // ataque» — el ataque que no es del cuerpo no es situación.
   "ataque de risa",
+  // Fase B ronda 3 (2026-11-25): la alarma de humo con la
+  // batería agotándose pita a intervalos («chirping»); la
+  // alarma de un fuego suena continua y trae el humo, y esa
+  // sigue declarando por sus signos.
+  "is chirping", "battery is dying", "battery is dead",
 ];
 
 const ALL_SIGNS: string[] = Object.values(EMERGENCY_SIGNS).flat();
@@ -1063,6 +1075,11 @@ const NEGATED_EVENT_FRAMES = [
   // («no hay ninguna hemorragia, solo fue un susto»).
   "no hay ninguna hemorragia", "no hay hemorragia", "there is no bleeding",
   "nao ha nenhuma hemorragia", "nao ha hemorragia",
+  // Fase B ronda 3 (2026-11-25): la metáfora en curso no es
+  // un suceso que no ocurre: es un suceso que no existe
+  // («i'm drowning in work», «estoy sangrando de amor»).
+  // Las dos caras consultan la familia, como la negación.
+  "drowning in work", "sangrando de amor",
 ];
 
 /**
