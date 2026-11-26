@@ -65,7 +65,8 @@
     "compat": {
       "green": "Runs well on this device",
       "yellow": "Needs a lot of memory",
-      "red": "Too heavy for this device"
+      "red": "Too heavy for this device",
+      "redMoment": "Not enough free memory right now"
     },
     "downloadingAsset": "Downloading",
     "eta": "ETA: {{eta}}",
@@ -156,6 +157,8 @@
     "benchRunning": "Measuring…",
     "benchNoModel": "No model is loaded yet. Open a conversation to load one, then measure again.",
     "benchFailed": "The measurement failed on this phone. The model is still loaded and your conversation was not touched.",
+    "benchUnavailable": "This build cannot measure speed on this phone.",
+    "benchExpectation": "About a minute on this phone.",
     "benchExecuted": "Measured: {{model}} · {{device}}",
     "benchRunResult": "Pass {{pp}}/{{tg}}: reads at {{speedPp}} tok/s and generates at {{speedTg}} tok/s",
     "benchPeak": "Peak memory during the measurement: {{mb}} MB",

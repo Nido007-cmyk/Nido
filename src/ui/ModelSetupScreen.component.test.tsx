@@ -25,6 +25,11 @@ import { fireEvent, render, screen } from "@testing-library/react-native";
 // teléfono no trae chip que la puerta reconozca.
 let mockNpuDevice: string | null = null;
 
+// La carga residente que el motor declara en cada prueba (tanda
+// too-heavy): null = ningún modelo cargado en el motor, aunque el
+// ajuste marque uno como activo.
+let mockResidentInfo: { filename: string; nCtx: number; memoryProfile?: string } | null = null;
+
 jest.mock("./theme", () => {
   const { daylightTheme } = require("./theme/colors");
   const { getTypography } = require("./theme/typography");
@@ -62,9 +67,11 @@ jest.mock("../services/haptics", () => ({
 jest.mock("../inference/LlamaEngine", () => ({
   llamaEngine: {
     probeNpuDevice: jest.fn(async () => mockNpuDevice),
-    getModelInfo: () => null,
+    getModelInfo: () => mockResidentInfo,
     benchLoadedModel: async () => null,
   },
+  BenchUnavailableError: class BenchUnavailableError extends Error {},
+  BenchTimeoutError: class BenchTimeoutError extends Error {},
 }));
 
 jest.mock("../models/ModelManager", () => ({
@@ -182,6 +189,7 @@ async function renderModelsSection() {
 describe("ModelSetupScreen · aceleración en la UI (0.1.112)", () => {
   beforeEach(() => {
     mockNpuDevice = null;
+    mockResidentInfo = null;
   });
 
   it("el texto de la GPU automática está siempre en la sección de modelos", async () => {
@@ -207,5 +215,31 @@ describe("ModelSetupScreen · aceleración en la UI (0.1.112)", () => {
     expect(toggle.props.value ?? toggle.props.accessibilityState?.checked ?? false).toBe(false);
     // La explicación de la GPU convive con la del NPU.
     expect(screen.getByText("settings.gpuAccelDesc")).toBeTruthy();
+  });
+});
+
+describe("ModelSetupScreen · medir velocidad (tanda too-heavy, 0.1.115)", () => {
+  beforeEach(() => {
+    mockResidentInfo = null;
+  });
+
+  it("sin modelo residente, medir nace deshabilitado y la nota «sin modelo» se pinta sin pulsar", async () => {
+    // La foto del dueño: la sección decía «No model is loaded yet»
+    // con el botón activo; lo pulsó y la medición se quedó en
+    // «Measuring…». Pulsar y esperar para aprender lo que la
+    // pantalla ya sabía es el defecto: sin residente, la nota se
+    // pinta antes y el botón no corre.
+    await renderModelsSection();
+    expect(screen.getByText("modelSetupScreen.benchNoModel")).toBeTruthy();
+    const btn = screen.getByLabelText("modelSetupScreen.benchRun");
+    expect(btn.props.disabled ?? btn.props.accessibilityState?.disabled).toBe(true);
+  });
+
+  it("con modelo residente, el botón nace habilitado y sin la nota previa", async () => {
+    mockResidentInfo = { filename: "qwen3-0.6b-q4_k_m.gguf", nCtx: 2048, memoryProfile: "default" };
+    await renderModelsSection();
+    const btn = screen.getByLabelText("modelSetupScreen.benchRun");
+    expect(btn.props.disabled ?? btn.props.accessibilityState?.disabled ?? false).toBe(false);
+    expect(screen.queryByText("modelSetupScreen.benchNoModel")).toBeNull();
   });
 });

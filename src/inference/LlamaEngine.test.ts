@@ -63,6 +63,11 @@ let mockBackendDevicesError: Error | null = null;
 // el registro de sus argumentos (la forma de la medición se cobra).
 let mockBenchResults: Array<{ speedPp: number; speedTg: number; nGpuLayers: number; nThreads: number; nBatch: number; nUBatch: number; flashAttn: number }> | null = null;
 const mockBenchCalls: Array<[number, number, number, number]> = [];
+// Tanda too-heavy (0.1.115): el bench nativo se cuelga (su promesa no
+// se asienta nunca) y el contexto nace SIN bench (builds sin la
+// función): los dos cuelgues del «Measuring…» eterno del dueño.
+let mockBenchHangs = false;
+let mockOmitBench = false;
 // T-07: stopCompletion lanza (m-76: la envoltura defensiva del motor).
 let mockStopCompletionThrows = false;
 // T-07: el contexto falso nace SIN isJinjaSupported (builds viejos, P-33).
@@ -121,15 +126,17 @@ vi.mock("llama.rn", () => ({
         if (mockStopCompletionThrows) throw new Error("native stop failed");
         finishes.splice(0).forEach((f) => f());
       },
-      bench: async (pp: number, tg: number, pl: number, nr: number) => {
+      bench: (pp: number, tg: number, pl: number, nr: number) => {
         mockBenchCalls.push([pp, tg, pl, nr]);
+        if (mockBenchHangs) return new Promise<never>(() => {});
         const r = mockBenchResults?.[mockBenchCalls.length - 1];
-        return (
-          r ?? { speedPp: 100, speedTg: 10, nGpuLayers: 0, nThreads: 4, nBatch: 512, nUBatch: 256, flashAttn: 0 }
+        return Promise.resolve(
+          r ?? { speedPp: 100, speedTg: 10, nGpuLayers: 0, nThreads: 4, nBatch: 512, nUBatch: 256, flashAttn: 0 },
         );
       },
     };
     if (mockOmitJinja) delete (ctx as { isJinjaSupported?: unknown }).isJinjaSupported;
+    if (mockOmitBench) delete (ctx as { bench?: unknown }).bench;
     if (mockAndroidLib) (ctx as FakeContext & { androidLib?: string }).androidLib = mockAndroidLib;
     created.push(ctx);
     return ctx;
@@ -240,7 +247,7 @@ vi.mock("../models/modelTrust", () => ({
   }),
 }));
 
-import { LlamaEngine, resolveSampling, SAMPLING_PRESETS, loadTimeSampling, LLAMA_CPP_SAMPLING_DEFAULTS } from "./LlamaEngine";
+import { LlamaEngine, resolveSampling, SAMPLING_PRESETS, loadTimeSampling, LLAMA_CPP_SAMPLING_DEFAULTS, BenchTimeoutError, BenchUnavailableError } from "./LlamaEngine";
 import { setFeatureOverrideForTests, resetFeatureFlagsForTests } from "../config/featureFlags";
 import { isNativeGateTaken } from "./nativeGate";
 import { refreshDevicePressure } from "./devicePressure";
@@ -282,6 +289,8 @@ beforeEach(() => {
   mockOmitJinja = false;
   mockBenchResults = null;
   mockBenchCalls.length = 0;
+  mockBenchHangs = false;
+  mockOmitBench = false;
   resetFeatureFlagsForTests();
   resetBackgroundIndexingHold();
 });
@@ -2336,6 +2345,47 @@ describe("T-07: VEL-5 acto 3 — la opción de NPU y la medición con bench()", 
     expect(report?.runs[0]).toMatchObject({ pp: 512, tg: 128, pl: 1, nr: 3, speedPp: 210.5, speedTg: 21.25 });
     expect(report?.runs[1]).toMatchObject({ pp: 128, tg: 32, pl: 1, nr: 3, speedPp: 320.75, speedTg: 24.5 });
     expect(report?.peakRssBytes).toBe(1024 ** 3);
+  });
+
+  // Tanda too-heavy (pasada del dueño sobre la 0.1.115): «Measure
+  // speed» se quedó en «Measuring…» sin medir nada. No había timeout
+  // en ninguna capa (las generaciones sí tienen el suyo) y el null
+  // del «bench no es función» enseñaba el mensaje del «sin modelo».
+  it("benchLoadedModel con el bench nativo colgado rechaza por su timeout y la cola sigue viva", async () => {
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    mockBenchHangs = true;
+    await expect(engine.benchLoadedModel(60)).rejects.toBeInstanceOf(BenchTimeoutError);
+    // La tarea colgada no se queda con la cola: con el bench sano,
+    // la siguiente medición corre y entrega su informe.
+    mockBenchHangs = false;
+    const report = await engine.benchLoadedModel(5000);
+    expect(report).not.toBeNull();
+    expect(report?.runs).toHaveLength(2);
+  });
+
+  it("benchLoadedModel en un contexto sin bench no devuelve el null del «sin modelo»: rechaza BenchUnavailableError", async () => {
+    mockOmitBench = true;
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    await expect(engine.benchLoadedModel()).rejects.toBeInstanceOf(BenchUnavailableError);
+    // Y el «sin modelo» de verdad sigue siendo null, distinguible.
+    await expect(new LlamaEngine().benchLoadedModel()).resolves.toBeNull();
+  });
+
+  it("una medición encolada detrás de otra que no se asienta tampoco se queda sin salida: manda su timeout", async () => {
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    mockBenchHangs = true;
+    // La primera medición ocupa la cola colgada dentro del bench
+    // nativo; la segunda ni siquiera empieza su tarea, y aun así su
+    // promesa se asienta con SU timeout: «Measuring…» no es eterno
+    // ni esperando turno. (No se usa una carga colgada para ocupar
+    // la cola: la puerta de carga nativa es global al proceso y un
+    // test no puede dejarla ocupada sin colgar los demás.)
+    const first = engine.benchLoadedModel(800);
+    await expect(engine.benchLoadedModel(60)).rejects.toBeInstanceOf(BenchTimeoutError);
+    await expect(first).rejects.toBeInstanceOf(BenchTimeoutError);
   });
 });
 
