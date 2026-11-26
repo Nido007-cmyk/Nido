@@ -206,26 +206,35 @@ export async function answerFromGuide(
     }
     // Tanda de precedencia de la guía (pieza 1): bajo una
     // emergencia DECLARADA por la puerta sobre la pregunta tal
-    // cual, la guía que se sirve es la de esa emergencia por su
-    // IDENTIDAD, no la que el coseno coronó. La foto del dueño
-    // (0.1.114 y 0.1.115): «Mi hijo se esta ahogando con un
-    // pedazo de comida» sirvió la guía de fiebre de NIDO Niños
-    // al 86 % — la capa B no la excluye porque la pregunta
-    // nombra a un niño, y el coseno no trae señal de tema. La
-    // elección por identidad (la misma que la puerta de
-    // coherencia juzga, electGuideByIdentity) sí la trae: si
-    // corona a otra guía, se sirve esa; si no corona a ninguna
-    // (la de la emergencia no está entre las candidatas), no
-    // se sirve guía literal y el turno sigue a la puerta
-    // (pieza 2, emergencyTurnOutcome en ChatScreen). Sin
-    // emergencia declarada, este bloque no corre y la vía es
-    // la de siempre, byte a byte.
+    // cual, si la elección por IDENTIDAD (la misma que la
+    // puerta de coherencia juzga, electGuideByIdentity) corona
+    // a OTRA guía distinta de la que el coseno eligió, se
+    // sirve la coronada: la identidad trae la señal de tema
+    // que el coseno no trae. La foto del dueño (0.1.114 y
+    // 0.1.115): «Mi hijo se esta ahogando con un pedazo de
+    // comida» sirvió la guía de fiebre de NIDO Niños al 86 % —
+    // la capa B no la excluye porque la pregunta nombra a un
+    // niño, y la guía de atragantamiento SÍ estaba entre las
+    // candidatas, fuera de la banda del coseno.
+    //
+    // La pieza NO veta: si la identidad no corona a ninguna
+    // guía, la vía sigue exactamente como siempre. La vara
+    // léxica no puede arbitrar las preguntas finas de la
+    // morfología española («Que hago si un niño se esta
+    // atragantando» cubre 0 de sus 2 términos por palabras
+    // contra las guías reales), y esas preguntas ya tienen su
+    // maquinaria gobernada — la elección limpia sobre la
+    // pregunta tal cual y el rescate de la 0.1.106, con sus
+    // baterías (cascara01105, secuencia01106) — que un veto
+    // aquí rompía: medido en la CI de esta tanda (6 casos).
+    // Sin emergencia declarada, este bloque no corre.
     if (isEmergencySituation(query)) {
       const elected = electGuideByIdentity(candidates, query, route);
-      if (!elected) return { answer: null, retrieved };
-      const pickGuideKey = `${parsePackChunkId(pick.chunkId)?.packId ?? ""}|${guideTitleOf(pick.title)}`;
-      if (`${elected.packId}|${elected.title}` !== pickGuideKey) {
-        pick = elected.best;
+      if (elected) {
+        const pickGuideKey = `${parsePackChunkId(pick.chunkId)?.packId ?? ""}|${guideTitleOf(pick.title)}`;
+        if (`${elected.packId}|${elected.title}` !== pickGuideKey) {
+          pick = elected.best;
+        }
       }
     }
     const doc = await readPackSource(pick.chunkId);
