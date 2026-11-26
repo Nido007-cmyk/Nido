@@ -48,6 +48,7 @@ import { classifyTask, isRetrievalIrrelevant, isCreativeRequest } from "../routi
 import { shouldReasonThisTurn } from "../routing/calculationQuestion";
 import { semanticDanger } from "../services/semanticDanger";
 import {
+  emergencyTurnOutcome,
   gatePreemptsDeepResearch,
   healthSafeProvenance,
   healthSafeText,
@@ -1861,6 +1862,9 @@ export function ChatScreen({
       let fixedGenWasCut = false;
       // 0.1.59: answered word for word from a NIDO Essentials guide (no model).
       let guideAnswered = false;
+      // Tanda de precedencia (pieza 2): la puerta sirvió el turno
+      // con el texto seguro tras el intento de guía, sin modelo.
+      let gateSafeServed = false;
       // Honest no-result flag for THIS reply (2026-09-28): true only when
       // retrieval was actually attempted and returned zero chunks — never
       // for greetings/other retrieval-irrelevant tasks where no retrieval
@@ -1968,6 +1972,27 @@ export function ChatScreen({
           }
         }
         retrievedChunks = preRetrieved ?? [];
+        // Tanda de precedencia de la guía (pieza 2, 2026-11-25): la
+        // guía literal ya tuvo su intento (con la pieza 1, eligiendo
+        // por identidad bajo una emergencia declarada). Si la puerta
+        // declara la situación y ninguna guía la sirve, manda la
+        // puerta ANTES de despachar a la ruta fija o a la adaptativa:
+        // se sirve el texto seguro, como la capa fija sirve el suyo
+        // al frente de send(). La foto que la ordena: «Se acaba de
+        // caer mi abuela y no se puede levantar» cayó al modelo en la
+        // 0.1.114 y la 0.1.115 con la recuperación llena. La decisión
+        // pura vive en emergencyTurnOutcome (emergencyGate.ts).
+        gateSafeServed =
+          emergencyTurnOutcome({
+            isEmergency: isEmergencySituation(query),
+            guideAnswered,
+          }) === "safe-text";
+        if (gateSafeServed) {
+          const safe = healthSafeText(uiLang);
+          assistantText = safe;
+          setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, text: safe } : m)));
+          chunks = retrievedChunks;
+        }
         const runFixedModelChat = async (): Promise<{ chunks: RetrievedChunk[]; retrieved: RetrievedChunk[]; noSourcesFound: boolean; genSpaceCut: boolean; genWasCut: boolean }> => {
           let c: RetrievedChunk[];
           fixedTaskType = classifyTask(query);
@@ -2124,6 +2149,11 @@ export function ChatScreen({
 
         if (guideAnswered) {
           noSourcesFound = false;
+        } else if (gateSafeServed) {
+          // Tanda de precedencia (pieza 2): la puerta ya sirvió el
+          // turno con el texto seguro; no se despacha a ninguna ruta
+          // de modelo.
+          noSourcesFound = false;
         } else if (adaptiveRoutingEnabled) {
           try {
             await requireChatModel();
@@ -2273,7 +2303,7 @@ export function ChatScreen({
         // 0.1.34: si el modelo entró en bucle, queda solo la primera vez.
         // Bounty tanda 8: una generación cortada (el usuario detuvo o
         // se agotó el presupuesto) no enseña una frase a medias.
-        let finalText = guideAnswered
+        let finalText = guideAnswered || gateSafeServed
           ? assistantText
           : trimToCompleteSentences(
               // m-78 (F2-m7): el recorte de bucle sobre lo transmitido
@@ -2288,6 +2318,13 @@ export function ChatScreen({
         if (guideAnswered) {
           // Verbatim guide text: nothing to verify or trim. Every sentence is the guide's (R1).
           provenance = guideAnswerProvenance(finalText);
+        } else if (gateSafeServed) {
+          // Tanda de precedencia (pieza 2): el texto servido es el
+          // texto seguro fijo de la casa, servido por la puerta
+          // antes de generar: no hay nada que recortar ni que
+          // juzgar, y su procedencia es la del texto seguro, la
+          // misma que la puerta de sin-fuentes asienta.
+          provenance = healthSafeProvenance(finalText);
         } else if (!deepTurn && judgeChunks.length > 0 && isCreativeRequest(query)) {
           // 2026-10-30 (prueba física del dueño): petición creativa
           // («Cuéntame un cuento largo sobre un zorro que vive en un
