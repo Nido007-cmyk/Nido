@@ -9,7 +9,7 @@ import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert, AppState }
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
 import { useTranslation } from "react-i18next";
 import { CatalogModel } from "../models/manifest";
-import { computeCompatibility, residentReleasableBytes } from "../models/compatibility";
+import { computeCompatibilityDetail, residentReleasableBytes, type Compatibility } from "../models/compatibility";
 import { defaultLlmForRam } from "../models/defaultModel";
 import type { LlmMemoryProfile } from "../inference/LlamaEngine";
 import { readRamSnapshot, type RamSnapshot } from "../inference/ramBudget";
@@ -88,14 +88,18 @@ interface Props {
   /** Some model is being loaded: Use and delete are unavailable until it finishes. */
   busy?: boolean;
   /**
-   * 0.1.108: la carga REALMENTE residente cuando esta tarjeta es la
-   * del modelo activo (la pantalla la lee del motor: su contexto
-   * cargado y el perfil de memoria aceptado). Con ella, la foto viva
-   * de ESTA tarjeta aplica el mismo crédito liberable que la carga
-   * (residentReleasableBytes): el activo no se juzga cargándose
-   * encima de sí mismo. Sin ella, la foto va como siempre.
+   * 0.1.108: la carga REALMENTE residente (la pantalla la lee del
+   * motor: qué modelo es, su contexto cargado y el perfil de memoria
+   * aceptado). En la 0.1.108 solo la tarjeta del residente la
+   * recibía y solo ella aplicaba el crédito liberable de la carga.
+   * Tanda too-heavy (0.1.115): la pantalla la pasa a TODAS las
+   * tarjetas, porque la carga real aplica ese crédito en cualquier
+   * sustitución: cada tarjeta se juzga contra la carga que de verdad
+   * ocurriría al usarla (el residente fuera, el candidato dentro),
+   * no cargada encima de todo lo residente. Sin ella (sin residente
+   * probado), la foto va sin crédito, como siempre.
    */
-  residentLoad?: { nCtx: number; memoryProfile?: LlmMemoryProfile } | null;
+  residentLoad?: { model: CatalogModel; nCtx: number; memoryProfile?: LlmMemoryProfile } | null;
   /**
    * G-1 (partida del móvil): el resumen de velocidad medida de este
    * modelo (la mediana de sus generaciones reales en este aparato,
@@ -163,30 +167,52 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
     return () => sub.remove();
   }, [refreshLivePhoto]);
 
-  // 0.1.108 (A1): SOLO en la tarjeta del residente, y solo cuando la
-  // pantalla declara su carga real, la foto viva lleva el crédito
-  // liberable que la carga sí aplica: su huella estimada completa.
+  // 0.1.108 (A1): la foto viva lleva el crédito liberable que la
+  // carga sí aplica: la huella estimada completa del residente.
+  // Tanda too-heavy: el crédito ya no es solo de la tarjeta del
+  // residente — la pantalla declara la carga residente del motor y
+  // TODAS las tarjetas la aplican, porque es el crédito de la
+  // sustitución que la carga haría al usar cualquiera de ellas.
   // La canónica nunca lleva crédito: sigue siendo el suelo.
-  const liveForBadge = useMemo<RamSnapshot | null>(() => {
-    if (!liveSnapshot || !isActive || !residentLoad || deviceRam <= 0) return liveSnapshot;
-    const credit = residentReleasableBytes(
-      item,
+  const residentCredit = useMemo(() => {
+    if (!residentLoad || deviceRam <= 0) return 0;
+    return residentReleasableBytes(
+      residentLoad.model,
       residentLoad.nCtx,
       residentLoad.memoryProfile === "kv-q8",
       deviceRam,
     );
-    return credit > 0 ? { ...liveSnapshot, releasableBytes: credit } : liveSnapshot;
-  }, [liveSnapshot, isActive, residentLoad, item, deviceRam]);
+  }, [residentLoad, deviceRam]);
+  const liveForBadge = useMemo<RamSnapshot | null>(() => {
+    if (!liveSnapshot || residentCredit <= 0) return liveSnapshot;
+    return { ...liveSnapshot, releasableBytes: residentCredit };
+  }, [liveSnapshot, residentCredit]);
 
   // M-1 (espejo del móvil): el veredicto de ajuste también se calcula
   // para la entrada de embeddings — su fila enseña la insignia y en
   // rojo frena el gesto, como las de LLM. Corpus se queda en
   // «unknown»: su vía no es la de carga de modelos y la pieza no la
   // toca. Ningún cálculo nuevo: es el mismo computeCompatibility.
-  const compatibility =
+  // Tanda too-heavy: la tarjeta consume el DETALLE, no solo el color:
+  // necesita saber de qué foto viene un rojo (la letra y el botón de
+  // descarga dependen de eso) y declarar el suelo de la activa —
+  // la tarjeta del modelo que el ajuste marca activo no se juzga
+  // por la foto viva cuando ningún crédito probado la acompaña.
+  const compatDetail =
     item.kind === "llm" || item.kind === "embedding"
-      ? computeCompatibility(item, deviceRam, liveForBadge)
-      : "unknown";
+      ? computeCompatibilityDetail(item, deviceRam, liveForBadge, {
+          canonicalFloor: isActive && residentCredit <= 0,
+        })
+      : ({ color: "unknown" } as { color: Compatibility; redSource?: "device" | "moment" });
+  const compatibility = compatDetail.color;
+  // Rojo de APARATO: ni en vacío cabe; manda la conducta histórica
+  // (sin botón de descarga, avisos acotados). Rojo de MOMENTO: la
+  // canónica admite el modelo y es este instante el que no tiene
+  // memoria libre; la letra lo dice y la descarga se sigue
+  // ofreciendo, porque el archivo podrá cargarse en un momento
+  // tranquilo.
+  const deviceRed = compatibility === "red" && compatDetail.redSource !== "moment";
+  const momentRed = compatibility === "red" && compatDetail.redSource === "moment";
 
   // 0.1.108 (A3): el chip «Default» nombra al default DE ESTE
   // APARATO, no a una bandera fija del catálogo: la bandera
@@ -231,10 +257,13 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
   };
 
   // 0.1.92: una descarga en pausa de un modelo que ya no ofrece botón.
+  // Tanda too-heavy: «sin botón» es solo el rojo de aparato; en rojo
+  // de momento el botón está y reanudar la descarga es el remedio,
+  // así que la parte varada no se trata como varada.
   const strandedPartial =
-    compatibility === "red" && !present && (row?.partialBytes ?? 0) > 0 ? row!.partialBytes! : null;
+    deviceRed && !present && (row?.partialBytes ?? 0) > 0 ? row!.partialBytes! : null;
   const durableNotice =
-    compatibility !== "red"
+    !deviceRed
       ? (row?.statusNotice ?? null)
       : strandedPartial !== null
         ? t("installNotice.pausedTooHeavy", { done: formatMB(strandedPartial) })
@@ -304,7 +333,9 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
           {compatibility === "red" && (
             <View style={[styles.compatPill, styles.compatRed]}>
               <NidoIcon name="error" size={12} color={colors.crimson[400]} />
-              <Text style={styles.compatRedText}>{t("catalogItemCard.compat.red")}</Text>
+              <Text style={styles.compatRedText}>
+                {momentRed ? t("catalogItemCard.compat.redMoment") : t("catalogItemCard.compat.red")}
+              </Text>
             </View>
           )}
         </View>
@@ -333,10 +364,12 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
 
       {/* 0.1.90 (familia 3): el motivo durable, cuando no hay un error
           en memoria más fresco que pintar ni una descarga en curso. */}
-      {/* 0.1.92: en rojo no hay botón de descarga, así que los avisos
-          que terminan en «si descargas otra vez…» prometían un botón
-          que no está: en rojo solo se dice lo que sí tiene remedio —
-          la parte descargada que ocupa sitio y se puede borrar. */}
+      {/* 0.1.92: en rojo de aparato no hay botón de descarga, así que
+          los avisos que terminan en «si descargas otra vez…»
+          prometían un botón que no está: en ese rojo solo se dice lo
+          que sí tiene remedio — la parte descargada que ocupa sitio
+          y se puede borrar. (En rojo de momento el botón sí está y
+          el aviso durable se pinta como en cualquier otro color.) */}
       {durableNotice && !row?.downloading && !row?.error && (
         <View style={styles.outdatedBox}>
           <NidoIcon name="warning" size={14} color={colors.text.accentAmber} />
@@ -401,8 +434,13 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
               así que el archivo descargado jamás podría usarse aquí.
               Ofrecer la descarga (o el reintento) era prometer 4,4 GB
               muertos: en rojo no hay botón. En «unknown» (RAM aún sin
-              leer, o no-LLM) el botón queda como siempre. */}
-          {!present && compatibility !== "red" && (
+              leer, o no-LLM) el botón queda como siempre.
+              Tanda too-heavy: eso manda solo en el rojo de APARATO.
+              En rojo de momento el modelo sí cabe en este aparato —
+              es el instante el que no tiene memoria libre — y la
+              descarga se ofrece: el archivo podrá cargarse cuando
+              el momento sea tranquilo. */}
+          {!present && !deviceRed && (
             <Pressable accessibilityRole="button"
               style={styles.downloadBtn}
               onPress={() => handleAction(() => onDownload(item))}

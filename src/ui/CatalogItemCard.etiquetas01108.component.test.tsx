@@ -108,23 +108,30 @@ describe("CatalogItemCard 0.1.108 · A1: el crédito del residente", () => {
         row={undefined}
         {...baseProps}
         isActive
-        residentLoad={{ nCtx: 2048, memoryProfile: "default" }}
+        residentLoad={{ model: byId("qwen3-0.6b-q4km"), nCtx: 2048, memoryProfile: "default" }}
       />
     );
     expect(await screen.findByText("catalogItemCard.compat.green")).toBeTruthy();
     expect(screen.queryByText("catalogItemCard.compat.yellow")).toBeNull();
   });
 
-  it("el crédito es SOLO de la tarjeta del residente: otra tarjeta con la prop no lo aplica", async () => {
+  // Sucesión (tanda too-heavy, pasada de la 0.1.115): el caso de la
+  // 0.1.108 decía «el crédito es SOLO de la tarjeta del residente».
+  // Aquella forma era el defecto: la carga real aplica el crédito
+  // del saliente en TODA sustitución, así que una tarjeta distinta
+  // de la del residente también se juzga con el crédito declarado —
+  // es la carga que de verdad ocurriría al tocar «Usar» en ella.
+  it("el crédito declarado también juzga a las demás tarjetas: es el de la sustitución real", async () => {
     await render(
       <CatalogItemCard
-        item={byId("qwen3-0.6b-q4km")}
+        item={byId("qwen2.5-0.5b-instruct-q4km")}
         row={undefined}
         {...baseProps}
-        residentLoad={{ nCtx: 2048, memoryProfile: "default" }}
+        residentLoad={{ model: byId("qwen3-0.6b-q4km"), nCtx: 2048, memoryProfile: "default" }}
       />
     );
-    expect(await screen.findByText("catalogItemCard.compat.yellow")).toBeTruthy();
+    expect(await screen.findByText("catalogItemCard.compat.green")).toBeTruthy();
+    expect(screen.queryByText("catalogItemCard.compat.yellow")).toBeNull();
   });
 });
 

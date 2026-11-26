@@ -65,6 +65,22 @@ import type { CatalogModel } from "./manifest";
  * credit the load path applies (residentReleasableBytes below): the
  * badge no longer judges the active model as if it loaded on top of
  * itself.
+ *
+ * Tanda too-heavy (pasada de la 0.1.115): aquella corrección dejaba
+ * el defecto a medias, y la tableta del dueño lo enseñó entero:
+ * «Too heavy» en los cinco modelos, incluido el activo corriendo.
+ * Tres piezas más, la fórmula de memoria intacta (ni la reserva de
+ * 2 GiB ni la escalera se tocan): (1) el crédito del residente entra
+ * en la foto de TODAS las tarjetas, no solo en la suya — es el
+ * crédito de la sustitución real que la carga aplica — y lo trae la
+ * pantalla calculado una vez (CatalogItemCard ya no lo reconstruye
+ * por tarjeta); (2) la activa sin crédito probado tiene por suelo
+ * su color canónico (computeCompatibilityDetail, canonicalFloor);
+ * (3) el detalle dice de qué foto viene un rojo (redSource), para
+ * que un momento ocupado no se lea como propiedad del aparato, y el
+ * registro getLastMomentRedBadge guarda la foto del último rojo de
+ * momento. El diagnóstico: DIAGNOSTICO-TOO-HEAVY.md en el papel de
+ * la tanda.
  */
 export type Compatibility = "green" | "yellow" | "red" | "unknown";
 
@@ -143,13 +159,54 @@ export function residentReleasableBytes(
 
 const SEVERITY: Record<Compatibility, number> = { unknown: -1, green: 0, yellow: 1, red: 2 };
 
-export function computeCompatibility(
+/**
+ * Tanda too-heavy (pasada del dueño sobre la 0.1.115): de qué foto
+ * viene un rojo. «device» = la canónica ya es roja: el modelo no
+ * cabe en este aparato ni en vacío. «moment» = la canónica no es
+ * roja y la foto viva de este momento lo impone: es una verdad del
+ * momento (el proceso hinchado, otras apps), no del aparato, y la
+ * letra de la tarjeta lo dice distinto.
+ */
+export type CompatibilityRedSource = "device" | "moment";
+
+export interface CompatibilityDetail {
+  color: Compatibility;
+  /** Solo con color «red»: la foto que impuso el rojo. */
+  redSource?: CompatibilityRedSource;
+}
+
+/**
+ * El registro del último rojo DE MOMENTO (instrumento mínimo de la
+ * tanda): la foto que lo impuso, con sus tres números y el crédito
+ * que llevaba (0 = ninguno). La foto del dueño de la 0.1.115 era
+ * indiagnosticable desde fuera porque ninguna pieza guardaba la
+ * foto que produjo la insignia; este registro es esa foto. Solo lo
+ * escribe un rojo de momento: un rojo de aparato no lo pisa.
+ */
+export interface MomentRedBadge {
+  modelId: string;
+  rssBytes: number;
+  availBytes: number;
+  lowMemThresholdBytes: number;
+  creditBytes: number;
+}
+
+let lastMomentRedBadge: MomentRedBadge | null = null;
+
+export function getLastMomentRedBadge(): MomentRedBadge | null {
+  return lastMomentRedBadge;
+}
+
+export function computeCompatibilityDetail(
   model: CatalogModel,
   deviceRamBytes: number,
   liveSnapshot?: RamSnapshot | null,
-): Compatibility {
-  if (deviceRamBytes <= 0) return "unknown";
+  opts?: { canonicalFloor?: boolean },
+): CompatibilityDetail {
+  if (deviceRamBytes <= 0) return { color: "unknown" };
   const canonical = colorOnSnapshot(model, deviceRamBytes, canonicalSnapshot(deviceRamBytes));
+  const canonicalDetail: CompatibilityDetail =
+    canonical === "red" ? { color: canonical, redSource: "device" } : { color: canonical };
   // La foto viva solo degrada, y solo si es DE ESTE aparato y trae
   // término en vivo (sin availBytes no es una foto del momento: es
   // otra foto canónica con otro RSS, y degradar por ella sería
@@ -160,9 +217,38 @@ export function computeCompatibility(
     liveSnapshot.availBytes === undefined ||
     liveSnapshot.availBytes <= 0
   ) {
-    return canonical;
+    return canonicalDetail;
+  }
+  // El suelo de la activa (tanda too-heavy): quien llama con
+  // canonicalFloor declara «esta tarjeta es la del modelo que el
+  // ajuste marca activo». Si la foto no trae crédito probado del
+  // residente, juzgarla con la foto viva sería juzgar al activo
+  // cargándose encima de sí mismo — la carga que la app nunca hace
+  // — y la degradación no se aplica: manda su canónica. Con el
+  // crédito dentro de la foto, la viva juzga como siempre (con el
+  // crédito aplicado, que es la forma de la 0.1.108).
+  if (opts?.canonicalFloor && !(liveSnapshot.releasableBytes && liveSnapshot.releasableBytes > 0)) {
+    return canonicalDetail;
   }
   const live = colorOnSnapshot(model, deviceRamBytes, liveSnapshot);
-  if (live === "unknown") return canonical;
-  return SEVERITY[live] > SEVERITY[canonical] ? live : canonical;
+  if (live === "unknown") return canonicalDetail;
+  const color = SEVERITY[live] > SEVERITY[canonical] ? live : canonical;
+  if (color !== "red") return { color };
+  if (canonical === "red") return { color, redSource: "device" };
+  lastMomentRedBadge = {
+    modelId: model.id,
+    rssBytes: liveSnapshot.rssBytes,
+    availBytes: liveSnapshot.availBytes,
+    lowMemThresholdBytes: liveSnapshot.lowMemThresholdBytes ?? 0,
+    creditBytes: Math.max(liveSnapshot.releasableBytes ?? 0, 0),
+  };
+  return { color, redSource: "moment" };
+}
+
+export function computeCompatibility(
+  model: CatalogModel,
+  deviceRamBytes: number,
+  liveSnapshot?: RamSnapshot | null,
+): Compatibility {
+  return computeCompatibilityDetail(model, deviceRamBytes, liveSnapshot).color;
 }

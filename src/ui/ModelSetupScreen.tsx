@@ -26,7 +26,7 @@ import { NidoMascot } from "./components/calm/NidoMascot";
 import { MODEL_CATALOG, CatalogModel, AssetKind, CORPUS_CATALOG, htpAcceleratesQuant } from "../models/manifest";
 import type { ModelBenchReport } from "../inference/modelBench";
 import { defaultLlmForDevice } from "../models/defaultModel";
-import { llamaEngine } from "../inference/LlamaEngine";
+import { llamaEngine, BenchUnavailableError } from "../inference/LlamaEngine";
 import { ModelManager } from "../models/ModelManager";
 import { getInstallRecord } from "../models/installState";
 import { installNoticeFor } from "../models/installNotice";
@@ -152,10 +152,21 @@ export function ModelSetupScreen(props: Props) {
   // crédito liberable de la carga. Se relee en cada render de la
   // pantalla: refreshStatus ya la vuelve a pintar tras cada carga o
   // descarga, que es cuando este dato cambia.
+  // Tanda too-heavy (0.1.115): el crédito dejó de ser solo de la
+  // tarjeta del residente. La carga real lo aplica en cualquier
+  // sustitución, así que la carga residente se calcula UNA vez aquí
+  // (con su entrada del catálogo, que es lo que el crédito estima) y
+  // se pasa a todas las tarjetas: cada una se juzga contra la carga
+  // que ocurriría al usarla. Si el motor no declara residente (o su
+  // filename no casa con el catálogo), no hay crédito para nadie y
+  // la activa se queda con su suelo canónico.
   const residentInfo = llamaEngine.getModelInfo();
-  const residentLoadFor = (item: CatalogModel) =>
-    residentInfo && residentInfo.filename === item.filename
-      ? { nCtx: residentInfo.nCtx, memoryProfile: residentInfo.memoryProfile }
+  const residentCatalogEntry = residentInfo
+    ? MODEL_CATALOG.find((m) => m.filename === residentInfo.filename)
+    : undefined;
+  const residentLoad =
+    residentInfo && residentCatalogEntry
+      ? { model: residentCatalogEntry, nCtx: residentInfo.nCtx, memoryProfile: residentInfo.memoryProfile }
       : null;
   const [toast, setToast] = useState<string | null>(null);
   const [dangerModalVisible, setDangerModalVisible] = useState(false);
@@ -247,7 +258,7 @@ export function ModelSetupScreen(props: Props) {
   const [npuDevice, setNpuDevice] = useState<string | null>(null);
   const [benchBusy, setBenchBusy] = useState(false);
   const [benchReport, setBenchReport] = useState<ModelBenchReport | null>(null);
-  const [benchNote, setBenchNote] = useState<"noModel" | "failed" | null>(null);
+  const [benchNote, setBenchNote] = useState<"noModel" | "failed" | "unavailable" | null>(null);
 
   useEffect(() => subscribeDownloads(() => forceRender((n) => n + 1)), []);
 
@@ -372,13 +383,24 @@ export function ModelSetupScreen(props: Props) {
         setBenchReport(null);
         setBenchNote("noModel");
       }
-    } catch {
+    } catch (err) {
       setBenchReport(null);
-      setBenchNote("failed");
+      // Tanda too-heavy: el «este build no puede medir» es un hecho
+      // distinto del fallo y del «sin modelo», y tiene su mensaje;
+      // todo lo demás (incluido el timeout del motor) es el fallo de
+      // siempre. La medición siempre sale: informe, nota o error.
+      setBenchNote(err instanceof BenchUnavailableError ? "unavailable" : "failed");
     } finally {
       setBenchBusy(false);
     }
   }, []);
+
+  // Tanda too-heavy: sin modelo residente en el motor, el botón de
+  // medir no corre y la nota «sin modelo» se pinta ANTES de cualquier
+  // pulsación — la pantalla ya lee la residencia para las tarjetas
+  // (residentInfo) y no necesita una corrida vacía para aprenderla.
+  // La nota asentada por una corrida manda sobre la previa.
+  const benchIdleNote = benchNote ?? (benchReport == null && residentInfo == null ? "noModel" : null);
 
   // 0.1.79: permitir capturas de pantalla (apagado por defecto). Las
   // pantallas con secretos siguen protegidas (src/security/screenCapture.ts).
@@ -887,7 +909,7 @@ export function ModelSetupScreen(props: Props) {
                   onDiscardPartial={discardPartial}
                   activating={activatingId === item.id}
                   busy={activatingId !== null}
-                  residentLoad={activeIds[item.kind] === item.id ? residentLoadFor(item) : undefined}
+                  residentLoad={residentLoad}
                   speedSummary={speedByModel[item.filename.split("/").pop() ?? item.filename] ?? null}
                 />
               )}
@@ -895,16 +917,18 @@ export function ModelSetupScreen(props: Props) {
             <Text style={styles.sectionHeading}>{t("modelSetupScreen.benchTitle")}</Text>
             <Text style={styles.hapticRowValue}>{t("modelSetupScreen.benchDesc")}</Text>
             <Pressable
-              style={[styles.wizardBtn, benchBusy && { opacity: 0.4 }]}
+              style={[styles.wizardBtn, (benchBusy || residentInfo == null) && { opacity: 0.4 }]}
               onPress={() => void runBench()}
-              disabled={benchBusy}
+              disabled={benchBusy || residentInfo == null}
               accessibilityRole="button"
               accessibilityLabel={t("modelSetupScreen.benchRun")}
             >
               <Text style={styles.wizardBtnText}>{benchBusy ? t("modelSetupScreen.benchRunning") : t("modelSetupScreen.benchRun")}</Text>
             </Pressable>
-            {benchNote === "noModel" && <Text style={styles.hapticRowValue}>{t("modelSetupScreen.benchNoModel")}</Text>}
-            {benchNote === "failed" && <Text style={styles.hapticRowValue}>{t("modelSetupScreen.benchFailed")}</Text>}
+            {benchBusy && <Text style={styles.hapticRowValue}>{t("modelSetupScreen.benchExpectation")}</Text>}
+            {benchIdleNote === "noModel" && <Text style={styles.hapticRowValue}>{t("modelSetupScreen.benchNoModel")}</Text>}
+            {benchIdleNote === "failed" && <Text style={styles.hapticRowValue}>{t("modelSetupScreen.benchFailed")}</Text>}
+            {benchIdleNote === "unavailable" && <Text style={styles.hapticRowValue}>{t("modelSetupScreen.benchUnavailable")}</Text>}
             {benchReport !== null && (
               <View>
                 <Text style={styles.hapticRowValue}>

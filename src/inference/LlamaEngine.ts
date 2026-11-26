@@ -484,6 +484,39 @@ export const MAX_GENERATIONS_IN_LINE = 8;
 export const MAX_GENERATION_WAIT_MS = 15 * 60_000;
 
 /**
+ * Tanda too-heavy (pasada del dueño sobre la 0.1.115): la medición de
+ * velocidad no tenía plazo en ninguna capa — ni en la pantalla, ni
+ * en el motor, ni alrededor del bench() nativo — y «Measuring…» se
+ * quedaba eterno si la cola del motor estaba ocupada por una tarea
+ * que no se asienta o si el bench nativo no resolvía. La medición
+ * honesta en esta clase de aparato ronda el minuto (dos pasadas a
+ * ~15 tok/s); el plazo es ~3× eso. Al vencer, la promesa rechaza con
+ * BenchTimeoutError y la pantalla enseña su «la medición falló» de
+ * siempre: la medición siempre sale, con informe o con error.
+ */
+export const BENCH_TIMEOUT_MS = 180_000;
+
+export class BenchTimeoutError extends Error {
+  constructor(timeoutMs: number) {
+    super(`Speed measurement timed out after ${timeoutMs} ms`);
+    this.name = "BenchTimeoutError";
+  }
+}
+
+/**
+ * El contexto residente no expone bench() (builds sin la función):
+ * un hecho distinto del «no hay modelo cargado», y con su propio
+ * error para que la pantalla no lo disfrace del mensaje del sin
+ * modelo, como hacía el null compartido.
+ */
+export class BenchUnavailableError extends Error {
+  constructor() {
+    super("This build cannot measure speed: the loaded context has no bench()");
+    this.name = "BenchUnavailableError";
+  }
+}
+
+/**
  * M-41 (auditoría 2026-11-13, F2-M6): el resumen de backend dice lo que
  * EJECUTÓ, no lo que había. Los dispositivos de getBackendDevicesInfo
  * van etiquetados como VISTOS: que el aparato tenga una GPU OpenCL no
@@ -1392,25 +1425,65 @@ export class LlamaEngine {
    * Va por la cola del motor: bench() corre sobre el mismo
    * contexto que las generaciones, y un contexto de llama.cpp no
    * admite una medición y una generación a la vez.
+   *
+   * Tanda too-heavy (0.1.115): la medición tiene plazo propio
+   * (BENCH_TIMEOUT_MS) cobrado DOS veces. Dentro de la tarea, la
+   * carrera contra el plazo libera el hueco de la cola aunque el
+   * bench nativo no se asiente nunca, y el resultado tardío que el
+   * nativo entregue después se descarta (la carrera ya se asentó:
+   * nadie lo lee como informe fresco). Fuera, la promesa que se
+   * devuelve corre la misma carrera, para que ni siquiera una tarea
+   * que nunca empieza (la cola ocupada por otra que no se asienta)
+   * deje al llamante esperando. Y el contexto sin bench() ya no
+   * devuelve el null del «sin modelo»: rechaza con
+   * BenchUnavailableError, que es otro hecho y tiene otro mensaje.
    */
-  benchLoadedModel(): Promise<ModelBenchReport | null> {
-    return this.enqueue(async () => {
-      const context = this.context;
-      const info = this.modelInfo;
-      if (!context || !info) return null;
-      const bench = (context as unknown as { bench?: unknown }).bench;
-      if (typeof bench !== "function") return null;
-      const startedAt = Date.now();
-      let peakRssBytes: number | null = null;
-      const sample = () => {
-        const rss = readRamSnapshot()?.rssBytes;
-        if (typeof rss === "number" && (peakRssBytes === null || rss > peakRssBytes)) {
-          peakRssBytes = rss;
-        }
-      };
+  benchLoadedModel(timeoutMs: number = BENCH_TIMEOUT_MS): Promise<ModelBenchReport | null> {
+    const work = this.enqueue(() => this.runBenchMeasurement(timeoutMs));
+    return new Promise<ModelBenchReport | null>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new BenchTimeoutError(timeoutMs)), timeoutMs);
+      work.then(
+        (report) => {
+          clearTimeout(timer);
+          resolve(report);
+        },
+        (err) => {
+          clearTimeout(timer);
+          reject(err);
+        },
+      );
+    });
+  }
+
+  private async runBenchMeasurement(timeoutMs: number): Promise<ModelBenchReport | null> {
+    const context = this.context;
+    const info = this.modelInfo;
+    if (!context || !info) return null;
+    const bench = (context as unknown as { bench?: unknown }).bench;
+    if (typeof bench !== "function") throw new BenchUnavailableError();
+    const startedAt = Date.now();
+    const deadline = startedAt + timeoutMs;
+    let peakRssBytes: number | null = null;
+    const sample = () => {
+      const rss = readRamSnapshot()?.rssBytes;
+      if (typeof rss === "number" && (peakRssBytes === null || rss > peakRssBytes)) {
+        peakRssBytes = rss;
+      }
+    };
+    sample();
+    // El muestreo se apaga solo al vencer el plazo: si el bench
+    // nativo no se asienta nunca, el intervalo no queda corriendo
+    // detrás de una medición ya rendida por timeout.
+    const timer = setInterval(() => {
+      if (Date.now() > deadline) {
+        clearInterval(timer);
+        return;
+      }
       sample();
-      const timer = setInterval(sample, 1000);
-      try {
+    }, 1000);
+    let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const run = (async (): Promise<ModelBenchReport> => {
         const raw: RawBenchResult[] = [];
         for (const cfg of BENCH_CONFIGS) {
           raw.push(
@@ -1430,10 +1503,15 @@ export class LlamaEngine {
           peakRssBytes,
           wallMs: Date.now() - startedAt,
         });
-      } finally {
-        clearInterval(timer);
-      }
-    });
+      })();
+      const timeout = new Promise<never>((_resolve, reject) => {
+        timeoutTimer = setTimeout(() => reject(new BenchTimeoutError(timeoutMs)), timeoutMs);
+      });
+      return await Promise.race([run, timeout]);
+    } finally {
+      if (timeoutTimer) clearTimeout(timeoutTimer);
+      clearInterval(timer);
+    }
   }
 
   /**

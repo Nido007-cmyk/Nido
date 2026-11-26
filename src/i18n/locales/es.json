@@ -56,6 +56,7 @@
     "compat": {
       "green": "Funciona bien en este dispositivo",
       "red": "Demasiado pesado para este dispositivo",
+      "redMoment": "Ahora mismo no hay memoria libre suficiente",
       "yellow": "Necesita mucha memoria"
     },
     "default": "Predeterminado",
@@ -533,6 +534,8 @@
     "benchRunning": "Midiendo…",
     "benchNoModel": "Todavía no hay un modelo cargado. Abre una conversación para cargarlo y vuelve a medir.",
     "benchFailed": "La medición falló en este teléfono. El modelo sigue cargado y tu conversación no se tocó.",
+    "benchUnavailable": "Esta versión no puede medir la velocidad en este teléfono.",
+    "benchExpectation": "En este teléfono tarda alrededor de un minuto.",
     "benchExecuted": "Medido: {{model}} · {{device}}",
     "benchRunResult": "Pasada {{pp}}/{{tg}}: lee a {{speedPp}} tok/s y genera a {{speedTg}} tok/s",
     "benchPeak": "Pico de memoria durante la medición: {{mb}} MB",

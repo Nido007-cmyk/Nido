@@ -52,8 +52,17 @@ jest.mock("react-i18next", () => ({
 // para que los casos de M-1 fijen aparatos más pequeños; cada caso que
 // la mueve la devuelve a la Tab al terminar (afterEach de su describe).
 let mockRamBytes = 3416 * 1024 * 1024;
+// La lectura en vivo que readRamSnapshot compone: por defecto la
+// foto tranquila (RSS en la base de la app y 2 GB libres), cuyo color
+// coincide con el canónico en todos los casos viejos de este fichero
+// (la cuenta por total manda y es la misma). Los casos de la tanda
+// too-heavy la mueven a la foto ocupada y la devuelven en afterEach.
+let mockLiveRssBytes = 512 * 1024 * 1024;
+let mockLiveAvailBytes = 2 * 1024 * 1024 * 1024;
 jest.mock("ram-monitor", () => ({
   getDeviceTotalRamBytes: () => mockRamBytes,
+  getMemoryInfo: () => ({ rssBytes: mockLiveRssBytes, totalPssBytes: mockLiveRssBytes }),
+  getAvailableMemory: () => ({ availBytes: mockLiveAvailBytes, thresholdBytes: 216 * 1024 * 1024 }),
 }));
 
 jest.mock("./components/icons/NidoIcon", () => ({ NidoIcon: () => null }));
@@ -210,6 +219,63 @@ describe("CatalogItemCard: un modelo en rojo con una parte ya descargada (0.1.92
   });
 });
 
+
+describe("CatalogItemCard · tanda too-heavy: crédito simétrico, suelo de la activa y rojo de momento", () => {
+  // La foto de la pasada (RSS 868 MiB, término en vivo holgado) y la
+  // ocupada del diagnóstico (RSS 950 MiB, 450 MiB libres): las dos
+  // fotos cobradas en src/models/compatibility.test.ts.
+  const pasadaPhoto = () => {
+    mockLiveRssBytes = 868 * 1024 * 1024;
+    mockLiveAvailBytes = 2 * 1024 * 1024 * 1024;
+  };
+  const busyPhoto = () => {
+    mockLiveRssBytes = 950 * 1024 * 1024;
+    mockLiveAvailBytes = 450 * 1024 * 1024;
+  };
+
+  afterEach(() => {
+    mockLiveRssBytes = 512 * 1024 * 1024;
+    mockLiveAvailBytes = 2 * 1024 * 1024 * 1024;
+  });
+
+  it("una tarjeta que NO es la del residente aplica el crédito del residente declarado: verde", async () => {
+    pasadaPhoto();
+    await render(
+      <CatalogItemCard
+        item={byId("qwen2.5-0.5b-instruct-q4km")}
+        row={undefined}
+        {...baseProps}
+        residentLoad={{ model: byId("qwen3-0.6b-q4km"), nCtx: 2048, memoryProfile: "default" }}
+      />
+    );
+    // Sin el crédito de sustitución, esta foto juzga al 0.5B en
+    // amarillo (cargado encima del residente); la carga real lo
+    // juzga con el residente ya fuera: verde, como su canónica.
+    expect(await screen.findByText("catalogItemCard.compat.green")).toBeTruthy();
+    expect(screen.queryByText("catalogItemCard.compat.yellow")).toBeNull();
+  });
+
+  it("la activa sin residencia probada no baja de su canónica con la foto ocupada", async () => {
+    busyPhoto();
+    await render(<CatalogItemCard item={byId("qwen3-0.6b-q4km")} row={undefined} {...baseProps} isActive />);
+    // La foto ocupada sin crédito la pintaría roja de momento; la
+    // activa no se juzga encima de sí misma sin crédito probado:
+    // manda su verde canónico.
+    expect(await screen.findByText("catalogItemCard.compat.green")).toBeTruthy();
+    expect(screen.queryByText("catalogItemCard.compat.red")).toBeNull();
+    expect(screen.queryByText("catalogItemCard.compat.redMoment")).toBeNull();
+  });
+
+  it("rojo de momento: la letra dice «ahora mismo» y el botón de descarga se queda", async () => {
+    busyPhoto();
+    await render(<CatalogItemCard item={byId("qwen3-0.6b-q4km")} row={undefined} {...baseProps} />);
+    expect(await screen.findByText("catalogItemCard.compat.redMoment")).toBeTruthy();
+    expect(screen.queryByText("catalogItemCard.compat.red")).toBeNull();
+    // El archivo podrá cargarse en un momento tranquilo: descargarlo
+    // no es prometer 4,4 GB muertos, y el botón no desaparece.
+    expect(screen.getByText("catalogItemCard.downloadAsset")).toBeTruthy();
+  });
+});
 
 describe("CatalogItemCard: la entrada de embeddings enseña su veredicto (M-1)", () => {
   // Los veredictos del e5 multilingüe (132 MB) medidos contra

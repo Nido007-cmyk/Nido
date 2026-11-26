@@ -28,6 +28,8 @@ import {
   APP_BASELINE_BYTES,
   canonicalSnapshot,
   computeCompatibility,
+  computeCompatibilityDetail,
+  getLastMomentRedBadge,
   residentReleasableBytes,
   type Compatibility,
 } from "./compatibility";
@@ -199,5 +201,89 @@ describe("0.1.108: el crédito liberable del residente en la tarjeta", () => {
     };
     const credited = { ...live, releasableBytes: residentReleasableBytes(m, 4096, false, TAB_RAM) };
     expect(computeCompatibility(m, TAB_RAM, credited)).toBe("red");
+  });
+});
+
+// Tanda too-heavy (pasada del dueño sobre la 0.1.115, Tab A9+): la
+// insignia pintaba «Too heavy for this device» en TODOS los modelos,
+// incluido el activo corriendo a 15,6 tok/s. El diagnóstico
+// (DIAGNOSTICO-TOO-HEAVY.md) cobró la causa: la foto canónica da
+// verde a los tres pequeños en la Tab; el rojo lo impone la foto viva
+// de un momento ocupado (RSS ≥ ~936 MiB deja el disponible por total
+// bajo el plan más barato del catálogo), y el crédito liberable que
+// la carga real aplica al sustituir al residente solo llegaba a la
+// tarjeta del propio residente. La cura, en el cálculo: el detalle
+// dice de qué foto viene un rojo (aparato o momento), el suelo de la
+// activa sin crédito probado es su canónica, y el registro guarda la
+// foto del último rojo de momento. La fórmula de memoria no cambia:
+// ni la reserva de 2 GiB ni ningún umbral se toca.
+describe("tanda too-heavy: el rojo dice su foto y el crédito es el de la carga", () => {
+  // La foto ocupada del diagnóstico: la app y el e5 residentes, el
+  // dueño viniendo de generar. Sin crédito, ni el peldaño de
+  // emergencia del modelo más barato cabe por la cuenta por total.
+  const busy = { totalRamBytes: TAB_RAM, rssBytes: 950 * MiB, availBytes: 450 * MiB, lowMemThresholdBytes: 300 * MiB };
+  // La foto de la pasada de la 0.1.108: manda la cuenta por total.
+  const pasada = { totalRamBytes: TAB_RAM, rssBytes: 868 * MiB, availBytes: 2 * GB, lowMemThresholdBytes: 216 * MiB };
+  const creditOfResident = () => residentReleasableBytes(byId("qwen3-0.6b-q4km"), 2048, false, TAB_RAM);
+
+  it("sin crédito, la foto ocupada pinta rojo DE MOMENTO a los pequeños (su canónica es verde)", () => {
+    for (const id of ["qwen2.5-0.5b-instruct-q4km", "qwen2.5-0.5b-instruct-q5km", "qwen3-0.6b-q4km"]) {
+      const d = computeCompatibilityDetail(byId(id), TAB_RAM, busy);
+      expect(d.color, id).toBe("red");
+      expect(d.redSource, id).toBe("moment");
+      // El color de la firma histórica no cambia: solo nace su fuente.
+      expect(computeCompatibility(byId(id), TAB_RAM, busy), id).toBe("red");
+    }
+  });
+
+  it("el rojo de aparato se dice de aparato: el 7B en la Tab, con foto viva y sin ella", () => {
+    const m = byId("qwen2.5-7b-instruct-q4km");
+    expect(computeCompatibilityDetail(m, TAB_RAM).redSource).toBe("device");
+    expect(computeCompatibilityDetail(m, TAB_RAM, busy).redSource).toBe("device");
+    expect(computeCompatibilityDetail(m, TAB_RAM, { ...busy, releasableBytes: creditOfResident() }).redSource).toBe(
+      "device",
+    );
+  });
+
+  it("con el crédito del residente en la foto, la ocupada ya no pinta rojo a los pequeños: amarillo", () => {
+    const credited = { ...busy, releasableBytes: creditOfResident() };
+    for (const id of ["qwen2.5-0.5b-instruct-q4km", "qwen2.5-0.5b-instruct-q5km", "qwen3-0.6b-q4km"]) {
+      const d = computeCompatibilityDetail(byId(id), TAB_RAM, credited);
+      expect(d.color, id).toBe("yellow");
+      expect(d.redSource, id).toBeUndefined();
+    }
+  });
+
+  it("con el crédito en la foto de la pasada, los pequeños vuelven a su verde canónico", () => {
+    const credited = { ...pasada, releasableBytes: creditOfResident() };
+    for (const id of ["qwen2.5-0.5b-instruct-q4km", "qwen2.5-0.5b-instruct-q5km", "qwen3-0.6b-q4km"]) {
+      expect(computeCompatibilityDetail(byId(id), TAB_RAM, credited).color, id).toBe("green");
+    }
+  });
+
+  it("el suelo de la activa: sin crédito probado manda su canónica; con crédito en la foto, la viva juzga", () => {
+    const m = byId("qwen3-0.6b-q4km");
+    // Sin crédito en la foto, la degradación por foto viva de la
+    // activa no se aplica: su suelo es el verde canónico, en la foto
+    // ocupada (sin suelo sería rojo de momento) y en la de la pasada
+    // (sin suelo sería amarillo).
+    expect(computeCompatibilityDetail(m, TAB_RAM, busy, { canonicalFloor: true }).color).toBe("green");
+    expect(computeCompatibilityDetail(m, TAB_RAM, pasada, { canonicalFloor: true }).color).toBe("green");
+    // Con el crédito dentro de la foto, la viva SÍ juzga (con el
+    // crédito aplicado): la ocupada da amarillo, no el suelo.
+    const credited = { ...busy, releasableBytes: creditOfResident() };
+    expect(computeCompatibilityDetail(m, TAB_RAM, credited, { canonicalFloor: true }).color).toBe("yellow");
+  });
+
+  it("el registro guarda la foto del último rojo de momento, y un rojo de aparato no lo pisa", () => {
+    computeCompatibilityDetail(byId("qwen3-0.6b-q4km"), TAB_RAM, busy);
+    computeCompatibilityDetail(byId("qwen2.5-7b-instruct-q4km"), TAB_RAM, busy);
+    expect(getLastMomentRedBadge()).toEqual({
+      modelId: "qwen3-0.6b-q4km",
+      rssBytes: 950 * MiB,
+      availBytes: 450 * MiB,
+      lowMemThresholdBytes: 300 * MiB,
+      creditBytes: 0,
+    });
   });
 });
