@@ -2453,6 +2453,40 @@ export function noSourcesOutcome(input: {
   return input.isHealth || input.isEmergency ? "safe-text" : "generate";
 }
 
+/** Desenlace de un turno cuando la puerta ya juzgó la
+ *  pregunta y la guía literal ya tuvo su intento (tanda de
+ *  precedencia, 2026-11-25): "safe-text" = se sirve el texto
+ *  seguro de salud sin pasar por el modelo; "generate" = el
+ *  turno sigue su ruta normal. */
+export type EmergencyTurnOutcome = "safe-text" | "generate";
+
+/**
+ * Precedencia de la puerta sobre el turno (tanda de
+ * precedencia de la guía, pieza 2). La puerta de sin-fuentes
+ * (noSourcesOutcome) da el texto seguro cuando la
+ * recuperación viene VACÍA, pero con fragmentos recuperados
+ * el turno generaba aunque la situación estuviera DECLARADA,
+ * y la doctrina del juez (lo «grounded» o «partial» se
+ * queda) dejaba en pie texto libre sobre una emergencia
+ * viva — la foto del dueño en su Tab A9+ sobre la 0.1.114 y
+ * la 0.1.115: «Se acaba de caer mi abuela y no se puede
+ * levantar» cayó al modelo con texto genérico. Esta
+ * decisión cierra ese hueco ANTES de generar, en el mismo
+ * espíritu con que la capa fija (matchSafetyAnswer) ejerce
+ * la suya al frente de send(): declarada la situación y sin
+ * guía que la sirva (la pieza 1 ya eligió por identidad, o
+ * ninguna era la suya), manda la puerta. Con guía servida o
+ * sin declaración, el turno sigue como siempre. La doctrina
+ * del juez no se toca: la cura actúa antes de que el modelo
+ * escriba, no sobre lo que el juez dejó.
+ */
+export function emergencyTurnOutcome(input: {
+  isEmergency: boolean;
+  guideAnswered: boolean;
+}): EmergencyTurnOutcome {
+  return input.isEmergency && !input.guideAnswered ? "safe-text" : "generate";
+}
+
 export function shouldSubstituteSafeText(input: SafeTextSubstitutionInput): boolean {
   if (input.deepTurn || input.sources.length === 0) return false;
   if (!input.isHealth && !input.isEmergency) return false;

@@ -17,6 +17,7 @@ import type { GroundingLang, GroundingResult } from "./grounding";
 import type { SentenceProvenance } from "./provenance";
 import { composeGuideAnswer, isLiteralGuideChunk, isLiteralGuidePack, pickGuideChunk, pickIsSignDenied, stripShortRequest, wantsShortGuide, type LiteralRouteContext } from "./guideAnswer";
 import { verifiedImportedPacks } from "../services/packImporter";
+import { isEmergencySituation } from "../routing/emergencyGate";
 
 export interface GuideAnswer {
   text: string;
@@ -203,6 +204,30 @@ export async function answerFromGuide(
         }
       }
     }
+    // Tanda de precedencia de la guía (pieza 1): bajo una
+    // emergencia DECLARADA por la puerta sobre la pregunta tal
+    // cual, la guía que se sirve es la de esa emergencia por su
+    // IDENTIDAD, no la que el coseno coronó. La foto del dueño
+    // (0.1.114 y 0.1.115): «Mi hijo se esta ahogando con un
+    // pedazo de comida» sirvió la guía de fiebre de NIDO Niños
+    // al 86 % — la capa B no la excluye porque la pregunta
+    // nombra a un niño, y el coseno no trae señal de tema. La
+    // elección por identidad (la misma que la puerta de
+    // coherencia juzga, electGuideByIdentity) sí la trae: si
+    // corona a otra guía, se sirve esa; si no corona a ninguna
+    // (la de la emergencia no está entre las candidatas), no
+    // se sirve guía literal y el turno sigue a la puerta
+    // (pieza 2, emergencyTurnOutcome en ChatScreen). Sin
+    // emergencia declarada, este bloque no corre y la vía es
+    // la de siempre, byte a byte.
+    if (isEmergencySituation(query)) {
+      const elected = electGuideByIdentity(candidates, query, route);
+      if (!elected) return { answer: null, retrieved };
+      const pickGuideKey = `${parsePackChunkId(pick.chunkId)?.packId ?? ""}|${guideTitleOf(pick.title)}`;
+      if (`${elected.packId}|${elected.title}` !== pickGuideKey) {
+        pick = elected.best;
+      }
+    }
     const doc = await readPackSource(pick.chunkId);
     if (!doc) return { answer: null, retrieved };
     const sameGuide = candidates.filter((c) => c !== pick && guideTitleOf(c.title) === doc.title);
@@ -214,6 +239,69 @@ export async function answerFromGuide(
     console.warn("[guideAnswer]", e instanceof Error ? e.message : String(e));
     return { answer: null, retrieved };
   }
+}
+
+interface GuideIdentityGroup {
+  packId: string;
+  title: string;
+  chunks: RetrievedChunk[];
+  identity: number;
+  chunkCoverage: number;
+  best: RetrievedChunk;
+}
+
+/**
+ * Elección de una guía por su IDENTIDAD (título + claves v2,
+ * cobertura de términos): la corona la única guía cuyo título
+ * o claves cubren los términos de la pregunta por encima del
+ * mínimo exigido (la mitad de los términos, mínimo 2), con
+ * desempate por cobertura de fragmento y SIN corona en un
+ * empate exacto en identidad y cobertura. Nació para la
+ * puerta de coherencia (coherenceSubstitute) y la comparten
+ * dos juicios: ella, sobre la guía ya entregada, y la pieza 1
+ * de la tanda de precedencia (2026-11-25), que la corre ANTES
+ * de servir bajo una emergencia declarada: un solo criterio
+ * de «cuál es la guía de esta pregunta» para las dos puertas,
+ * para que no puedan divergir.
+ */
+function electGuideByIdentity(
+  candidates: RetrievedChunk[],
+  query: string,
+  route?: LiteralRouteContext,
+): GuideIdentityGroup | null {
+  const lexical = buildLexicalQuery(query);
+  if (!lexical || lexical.terms.length === 0) return null;
+  const required = requiredTermMatches(lexical.terms.length);
+  const groups = new Map<string, GuideIdentityGroup>();
+  for (const c of candidates) {
+    if (!isLiteralGuideChunk(c.chunkId, route)) continue;
+    const parsed = parsePackChunkId(c.chunkId);
+    if (!parsed) continue;
+    const title = guideTitleOf(c.title);
+    const key = `${parsed.packId}|${title}`;
+    let g = groups.get(key);
+    if (!g) {
+      g = { packId: parsed.packId, title, chunks: [], identity: 0, chunkCoverage: 0, best: c };
+      groups.set(key, g);
+    }
+    g.chunks.push(c);
+    const cov = countMatchedTerms(c.keys ? `${c.title} ${c.body} ${c.keys}` : `${c.title} ${c.body}`, lexical.terms);
+    if (cov > g.chunkCoverage) {
+      g.chunkCoverage = cov;
+      g.best = c;
+    }
+  }
+  if (groups.size === 0) return null;
+  for (const g of groups.values()) {
+    const identityText = `${g.title} ${g.chunks.map((c) => c.keys ?? "").join(" ")}`;
+    g.identity = countMatchedTerms(identityText, lexical.terms);
+  }
+  const ranked = [...groups.values()].sort((a, b) => b.identity - a.identity || b.chunkCoverage - a.chunkCoverage);
+  const winner = ranked[0];
+  if (!winner || winner.identity < required) return null;
+  const runnerUp = ranked[1];
+  if (runnerUp && runnerUp.identity === winner.identity && runnerUp.chunkCoverage === winner.chunkCoverage) return null;
+  return winner;
 }
 
 /**
@@ -282,50 +370,14 @@ export async function coherenceSubstitute(input: {
 
     const lexical = buildLexicalQuery(input.query);
     if (!lexical || lexical.terms.length === 0) return null;
-    const required = requiredTermMatches(lexical.terms.length);
 
     // Las candidatas de la ganadora: las fuentes del turno más la
     // lista ancha de la elección (la guía pedida puede no estar
     // entre las citadas: en la pasada ni siquiera fue citada).
     const wide = await retrieve(input.query, GUIDE_PICK_CHUNKS).catch(() => null);
     const candidates = buildGuidePickCandidates([...input.sources], wide ?? []);
-    interface GuideGroup {
-      packId: string;
-      title: string;
-      chunks: RetrievedChunk[];
-      identity: number;
-      chunkCoverage: number;
-      best: RetrievedChunk;
-    }
-    const groups = new Map<string, GuideGroup>();
-    for (const c of candidates) {
-      if (!isLiteralGuideChunk(c.chunkId, route)) continue;
-      const parsed = parsePackChunkId(c.chunkId);
-      if (!parsed) continue;
-      const title = guideTitleOf(c.title);
-      const key = `${parsed.packId}|${title}`;
-      let g = groups.get(key);
-      if (!g) {
-        g = { packId: parsed.packId, title, chunks: [], identity: 0, chunkCoverage: 0, best: c };
-        groups.set(key, g);
-      }
-      g.chunks.push(c);
-      const cov = countMatchedTerms(c.keys ? `${c.title} ${c.body} ${c.keys}` : `${c.title} ${c.body}`, lexical.terms);
-      if (cov > g.chunkCoverage) {
-        g.chunkCoverage = cov;
-        g.best = c;
-      }
-    }
-    if (groups.size === 0) return null;
-    for (const g of groups.values()) {
-      const identityText = `${g.title} ${g.chunks.map((c) => c.keys ?? "").join(" ")}`;
-      g.identity = countMatchedTerms(identityText, lexical.terms);
-    }
-    const ranked = [...groups.values()].sort((a, b) => b.identity - a.identity || b.chunkCoverage - a.chunkCoverage);
-    const winner = ranked[0];
-    if (!winner || winner.identity < required) return null;
-    const runnerUp = ranked[1];
-    if (runnerUp && runnerUp.identity === winner.identity && runnerUp.chunkCoverage === winner.chunkCoverage) return null;
+    const winner = electGuideByIdentity(candidates, input.query, route);
+    if (!winner) return null;
 
     const guideKeyOf = (c: RetrievedChunk): string => `${parsePackChunkId(c.chunkId)?.packId ?? ""}|${guideTitleOf(c.title)}`;
     if (cited.some((c) => guideKeyOf(c) === `${winner.packId}|${winner.title}`)) return null;
