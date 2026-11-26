@@ -4,6 +4,45 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.116-alpha - 2026-11-25
+
+This release fixes the two things the owner's
+tablet pass over 0.1.115 caught, and both are
+about the app answering in the right order and
+telling the truth about the device.
+
+First, the order of answers in an emergency.
+When a message describes something happening
+right now (a child choking, a grandmother who
+fell and cannot get up), a guide from a pack
+could be shown first because its wording matched
+better, and on the tablet a choking message was
+answered with a fever guide. Now the emergency
+check speaks first: if the guide that matches is
+the guide for that emergency, it is shown; if
+not, the fixed safe answer is shown, and the
+model never improvises over a live emergency.
+Told in Spanish, English or Portuguese, choking
+and a fall that leaves someone unable to get up
+now reach the choking guide or the fixed safe
+text, and stories, prevention questions and
+denied events still reach no emergency answer.
+
+Second, the models screen. On the tablet every
+model was marked "Too heavy for this device",
+even the small ones the tablet runs fine, and
+the download button disappeared for the large
+ones. The mark was reading the memory busy at
+that moment as if it were the device's limit.
+Now a model that fits the device says so, a
+model that only fails because memory is busy
+right now says exactly that instead, and the
+download button stays. The speed measurement on
+the same screen could sit on "Measuring..."
+forever; it now always ends with its number or
+with a plain failure message, and its button is
+off when no model is loaded.
+
 ## 0.1.115-alpha - 2026-11-25
 
 This release is about the fixed safety answers
