@@ -13,11 +13,13 @@
 // GUIA.md): la elección por coseno corona a la vecina de NIDO
 // Niños porque la pregunta nombra a un niño (la capa B no la
 // excluye) y ninguna puerta mira la guía servida bajo una
-// emergencia DECLARADA. La cura: declarada la situación, la
-// guía que se sirve es la de esa emergencia por su IDENTIDAD
-// (título + claves v2, máximo único estricto — la misma
-// elección que la puerta de coherencia ya juzga), o no se
-// sirve ninguna y el turno sigue a la puerta (pieza 2).
+// emergencia DECLARADA. La cura: declarada la situación, si
+// la elección por IDENTIDAD (título + claves v2, máximo
+// único estricto — la misma que la puerta de coherencia ya
+// juzga) corona a otra guía, se sirve la coronada. La pieza
+// no veta: sin corona, la vía gobernada de siempre decide
+// (corrección medida en la CI de la tanda contra las
+// baterías de la 0.1.105/0.1.106; ver el caso de frontera).
 //
 // Aquí se prueba la vía real de la guía (answerFromGuide con
 // la recuperación simulada tal como el aparato la trajo: la
@@ -192,12 +194,23 @@ describe("pieza 1 · la frase del dueño y su familia (la recuperación del apar
     expect(out.answer?.text).not.toContain("Fiebre según la edad");
   });
 
-  it("ES · sin la guía de atragantamiento en la lista, no se sirve ninguna (el turno sigue a la puerta)", async () => {
+  it("ES · frontera de la pieza: sin corona de identidad, la vía no se veta (la maquinaria gobernada decide)", async () => {
+    // La primera forma de la pieza devolvía null cuando la
+    // identidad no coronaba a ninguna, y la CI de la tanda lo
+    // cobró: rompía 6 casos gobernados de cascara01105 y
+    // secuencia01106, cuyas preguntas finas la vara léxica no
+    // puede arbitrar (0 de 2 términos por morfología) y cuya
+    // elección ya gobiernan la elección limpia y el rescate
+    // de la 0.1.106. La pieza quedó como intervención solo
+    // con corona positiva de OTRA guía; sin corona, la vía es
+    // la de la base, byte a byte — aquí, la elección de
+    // siempre sirve su pick aunque la guía de la emergencia
+    // no esté entre las candidatas (en el aparato sí estaba:
+    // es el caso de las dos fotos, cubierto arriba).
     retrieveMock.mockResolvedValue([FIEBRE_ES, WIKI_1, WIKI_2]);
     const out = await answerFromGuide("Mi hijo se esta ahogando con un pedazo de comida", "es");
-    expect(out.answer).toBeNull();
-    expect(out.retrieved).toEqual([FIEBRE_ES, WIKI_1, WIKI_2]);
-    expect(readPackSourceMock).not.toHaveBeenCalled();
+    expect(out.answer).not.toBeNull();
+    expect(out.answer?.chunks[0]?.chunkId).toBe(FIEBRE_ES.chunkId);
   });
 
   it("EN · the owner's family in English serves the choking guide, not the fever guide", async () => {
