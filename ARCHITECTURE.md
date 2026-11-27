@@ -1,143 +1,208 @@
 > **Language:** English · [Español](ARCHITECTURE.es.md)
 
-# the upstream project — Adaptive Local Intelligence (Android)
+# NIDO architecture
 
-An offline-first mobile AI system for Android exploring adaptive model routing, local
-retrieval, selective verification, and resource-aware inference. Originally built for
-the "Best Offline AI Research App" bounty (inspired by @VitalikButerin's post). Hard
-constraints this design targets:
+NIDO is a personal AI assistant for Android that runs entirely on the
+phone. There is no account, no server and no cloud behind it: the
+language model, the knowledge base, the memory and every safety answer
+live on the device, and after a one-time setup the app works fully
+offline. This document describes how the app is put together today
+(version 0.1.117). For what the app does, read `README.md`; for how to
+build it, read `AGENTS.md`.
 
-- ≤ 12GB peak RAM during inference
-- ≤ 50GB total on-disk (app + weights + indexes)
-- Small, fast-to-build/install app; a mandatory one-time setup step downloads
-  the default models on first launch (the app's only required network use).
-  From then on it works completely offline — matching "work completely
-  offline once installed" (installed = app + one-time model setup done).
-- No Google Play Services dependency (runs on GrapheneOS)
-- Real Android device, not just emulator
+## Design rules the code enforces
+
+- **Offline is the normal state.** The only network requests the app
+  ever starts are downloads the user begins (models and knowledge
+  packs) and an optional update check. Every request goes through one
+  initiating API and is written to an append-only network log the user
+  can inspect in the app (`src/privacy/networkAudit.ts`).
+- **The model is for conversation; the help is not.** Emergencies,
+  crisis answers and a large share of everyday requests are answered
+  by deterministic code with fixed, verified texts. They never wait
+  for the model, and they work when the model cannot even load.
+- **What is kept is what was checked.** A model answer that reaches
+  the history, an export or the voice reader is the answer after the
+  grounding judge has checked it against its sources, not the raw
+  generation.
+- **Private by construction.** Personal data lives in databases
+  encrypted at rest. Nothing personal leaves the phone; the only
+  exception is the encrypted phone-to-phone channel the user opens
+  on purpose (see "Talking to another NIDO").
+- **Modest hardware decides.** The app is built and tested for
+  ordinary phones and tablets, not flagships: model choice, context
+  size and memory budgets all degrade honestly on smaller devices
+  instead of failing silently.
 
 ## Stack
 
-- **App shell**: Expo (React Native) + `expo-dev-client` (custom dev build, not Expo Go —
-  we need native modules Expo Go can't load).
-- **Inference engine**: [`llama.rn`](https://github.com/mybigday/llama.rn) — React Native
-  bindings to llama.cpp, supports GGUF, mmap weight streaming, Android NDK build, no GMS.
-- **Default model**: Qwen2.5-1.5B-Instruct (Apache-2.0, 1.5B, Q4_K_M, ~0.99GB), the
-  routing layer's `fast` role (`src/routing/`). Downloaded once on first launch with
-  the embedding model (see "First-run model setup" below), about 1 GB total, so setup
-  takes minutes. Suggested models in the same in-app catalog, all tested on a real
-  phone: Phi-3.5-mini-instruct (MIT, 3.8B), Qwen2.5-7B-Instruct, LFM2.5-8B-A1B
-  (mixture of experts, ~1.5B active) and Gemma 4 E4B (see `docs/MODELS.md`).
-- **Retrieval**: `expo-sqlite` with FTS5 for lexical search over a local offline knowledge
-  base, plus bge-small-en-v1.5 (MIT, 33M) for a local vector index (brute-force cosine) —
-  hybrid BM25 + vector RAG, fully local at query time.
-- **Storage**: model weights + FTS5 DB + vector index all live in
-  `FileSystem.documentDirectory`, verified via checksum/size against a manifest.
+- **App shell**: Expo (React Native 0.86, React 19) with TypeScript,
+  built as a custom native app. It cannot run in Expo Go: the app
+  ships fourteen local native modules (below) plus native inference.
+- **Inference**: `llama.rn` (React Native bindings for llama.cpp)
+  running GGUF models on the device, with memory-mapped weights and
+  streaming output (`src/inference/LlamaEngine.ts`). A routing layer
+  (`src/routing/`) plans each turn with plain rules, never with the
+  model itself, so the same message always takes the same route.
+- **Storage and retrieval**: SQLite through `expo-sqlite`, encrypted
+  with SQLCipher for personal data, with FTS5 for lexical search and
+  a bundled embedding model for vector search. A native module
+  (`modules/nido-vectors`) does exact vector search over a pack's
+  embeddings from a memory-mapped index.
+- **Languages**: the interface, the fixed answers and the guide are
+  fully written in Spanish, English and Portuguese
+  (`src/i18n/locales/`), with automated parity tests between them.
 
-## First-run model setup
+## How a message gets its answer
 
-The app itself stays small and fast to build (no multi-GB assets baked into the
-APK), and gets its default models the first time it's opened:
+1. **Safety and fixed routes first.** Deterministic detectors
+   (`src/routing/emergencyGate.ts`, `src/agent/loop/safetyAnswers.ts`)
+   recognise emergencies, self-harm, carbon monoxide and other urgent
+   topics and answer at once with fixed texts and verified numbers,
+   without loading the model. An emergency typed while another answer
+   is still generating can still be sent.
+2. **Deterministic tools.** Reminders, notes, memory, calendar,
+   calculations, timers and similar requests are handled by the
+   agent's routers and tools (`src/agent/`, `src/routing/`), which
+   act on the encrypted store and answer in the user's language.
+3. **Classification by meaning.** A semantic gate
+   (`src/routing/semanticGate.ts`) adds meaning-based classification
+   on top of the word lists for health and emergency topics, using
+   the same search vectors as retrieval.
+4. **Retrieval.** When a question needs knowledge, hybrid search
+   (FTS5 plus vectors) looks in the bundled corpus, the installed
+   knowledge packs and the user's own documents (`src/rag/`), and
+   the best sources travel with the question into the model's
+   context.
+5. **The model answers.** Generation streams token by token, with
+   budgets for context and output that the router sets per route
+   (`src/routing/router.ts`).
+6. **The judge checks it.** The grounding judge
+   (`src/rag/grounding.ts`) compares the answer with the sources it
+   was given: claims with no support are removed or the answer falls
+   back to a safe text, and a source check (`src/rag/sourceCheck.ts`)
+   flags numbers that contradict a source. Only the judged answer is
+   shown, saved, exported or read aloud.
 
-1. `App.tsx` checks `ModelManager.requiredModelsPresent()` on launch. If the
-   default LLM + embedding model aren't on disk yet, it shows
-   `ModelSetupScreen` in `mode="required"` instead of the chat UI.
-2. That screen auto-starts downloading both `required: true` catalog entries
-   (`src/models/manifest.ts`) via `ModelManager.downloadCatalogModel`, with a
-   progress bar per model, and verifies each download's size against the
-   catalog before accepting it.
-3. Once both are present, "Continue" unlocks and the app moves to the normal
-   chat UI. From this point on, no further network access is needed —
-   verified: turning off networking (airplane mode) doesn't affect chat,
-   retrieval, or generation, all of which are pure on-device code paths.
-4. The same screen, in `mode="optional"` (reached later via the chat screen's
-   "Models" button), lets the user browse/download additional/alternate
-   models, or remove ones they no longer want — still opt-in, still the only
-   network call site in the app.
+## Knowledge
 
-**Alternate build path (retired in 0.1.99):** `plugins/withBundledModels.js`
-used to let `modules/bundled-assets` bake the default models directly into
-the APK at build time (verified working via an actual `expo prebuild` run
-— see git history), for a build that needed zero network ever, at the cost
-of a much larger APK. The plugin was removed because it copied the weights
-without verifying them at copy time; the `bundled-assets` module remains
-(it only copies whatever a build already placed in the APK's assets —
-today, the corpus packs), but no registered plugin bakes models in anymore.
+- A starter corpus of 858 topics ships inside the app
+  (`assets/corpus/corpus.json`) and is indexed on first launch, so
+  the app answers knowledge questions offline from the first minute.
+- **Knowledge packs** are SQLite files holding texts, an FTS5 index
+  and embeddings. The setup offers four tiers (minimum, standard,
+  full, encyclopedia). Two packs, NIDO Essentials and NIDO Local,
+  travel inside the APK and are installed on first launch; the rest
+  download on demand. Every pack is verified by SHA-256 against a
+  signed catalog before it is accepted (`src/models/manifest.ts`,
+  `src/models/manifestSignature.ts`).
+- **The user's library**: documents the user imports (PDF text
+  extraction and OCR run on the device,
+  `src/services/documentImporter.ts`) are indexed the same way and
+  answer only to their owner.
+
+## Memory, the vault and backups
+
+- Chats, memory, notes, reminders and contacts are stored in
+  SQLCipher-encrypted databases (`src/security/databaseManager.ts`).
+  The database key is wrapped with a hardware key kept in the
+  Android Keystore; after a restart, using it asks for the user's
+  PIN, pattern or strong biometric (`src/security/keyVault.ts`,
+  `modules/nido-keyvault`).
+- A backup copies the database while it is still encrypted, with a
+  checksum manifest; the user keeps the key separately, on paper or
+  wherever they choose. Neither half is useful without the other,
+  and no server ever sees either (`src/security/backup.ts`).
+- The panic erase destroys the database, the vault and the P2P keys
+  before deleting anything else.
+
+## The agent and its permissions
+
+The agent (`src/agent/`) works through tools: it can set reminders,
+keep notes and memory, read the calendar, do calculations, manage
+scheduled tasks and more. Each tool has a permission the user
+controls, every action is written to an action log the user can
+review, and destructive actions ask first through a native
+confirmation dialog whose window is protected from screenshots
+(`modules/nido-secure-dialog`). Reminders fire with exact alarms
+(`modules/exact-alarm`, `modules/nido-notify`), with no Firebase and
+no Google services involved.
+
+The built-in guide ("Learn to use NIDO", `src/guide/`) teaches each
+feature with examples the user can send. Its lessons live in the
+locale files like the rest of the text, and tests send every example
+of every lesson, in the three languages, through the real routers:
+a lesson cannot promise something the app no longer does.
+
+## Talking to another NIDO
+
+Two phones with NIDO can exchange messages and delegated tasks over
+local Wi-Fi or Bluetooth (`src/p2p/`, `modules/nido-p2p`). The
+channel is end-to-end encrypted with NaCl: an X25519 identity key
+pair, an Ed25519-signed handshake, ephemeral session keys per
+connection and XSalsa20-Poly1305 for the messages
+(`src/p2p/crypto.ts`), with a post-quantum component in the key
+exchange (`src/p2p/pq.ts`). Pairing is confirmed by comparing a
+fingerprint in a native dialog, and incoming delegations land in an
+approval inbox: nothing from another phone runs unapproved.
+
+## Native modules
+
+Fourteen local modules under `modules/` cover what React Native
+cannot: `bundled-assets` (copies the packs baked into the APK to
+disk), `download-wake-lock`, `exact-alarm`, `nido-cpr` (the CPR
+practice metronome and camera rate meter), `nido-keyvault`,
+`nido-launch` (shortcuts, share target and the Quick Settings tile),
+`nido-notify`, `nido-ocr`, `nido-p2p` (Bluetooth transport; the
+cryptography lives in `src/p2p/`), `nido-pdf-text`,
+`nido-secure-dialog`, `nido-vectors`, `ram-monitor` (the real process
+memory the system monitor shows) and `voice-input` (offline speech
+recognition through the device's own recogniser).
+
+## Testing and verification
+
+Every pull request runs the type checker and the full automated
+suite in CI, plus secret scanning and the CPR motion parity check.
+The run that built 0.1.117 passed 9,975 automated tests: 9,808 in
+vitest across 559 files and 167 component tests in jest, with no
+failures. Behaviour rules that must never change quietly are written
+in the constitution (`docs/NIDO_CONSTITUTION.md`) and checked by
+script; `conformance/` and `formal/` hold the conformance and formal
+material. Automated tests do not replace a real phone: versions
+0.1.114 and 0.1.115 were also exercised on a physical Galaxy Tab A9+
+in the owner's hands.
 
 ## Directory layout
 
 ```
-boar-app/
-  App.tsx                  # checks required models -> setup screen or chat
-  src/
-    inference/              # llama.rn wrapper, streaming token bridge
-    rag/                    # FTS5 setup, embedding, retrieval + prompt assembly
-    models/                 # model catalog, checksum/size verify, download
-    ui/                     # chat UI, model setup/catalog UI, system monitor bar
-  modules/
-    ram-monitor/             # native module: real process RSS via /proc/self/status
-    bundled-assets/           # native module: copy APK-bundled assets to disk (corpus packs today)
-  plugins/
-    withBundledPacks.js       # config plugin: bakes the first-run corpus packs into the APK
-  android/                   # generated by `expo prebuild` (gitignored, regenerable)
-  assets/
-    models/                   # (gitignored) verified GGUF files, populated by setup-models.sh
-    corpus/corpus.json         # bundled Wikipedia-derived bootstrap knowledge base
-  docs/
-    MODELS.md                 # documented model/dataset/index choices
-    EVAL_QUERIES.md             # example queries for the bounty demo
-  scripts/
-    setup-models.sh            # dev-machine: fetches + verifies model weights
-    build-corpus.mjs            # dev-machine: builds the bundled knowledge base
-  eas.json / .easignore         # EAS Build config (cloud builds w/o local Android SDK)
+App.tsx / index.ts        entry points; setup gate, then the chat UI
+src/
+  routing/                route planning, emergency gate, semantic gate
+  agent/                  tools, action log, fixed safety answers
+  rag/                    retrieval, grounding judge, source check
+  inference/              llama.rn wrapper, memory and pressure budgets
+  models/                 model and pack catalogs, signed manifest, downloads
+  security/               encrypted databases, key vault, backup and restore
+  privacy/                key manager, the network audit log
+  p2p/                    phone-to-phone crypto, handshake, delegation
+  guide/                  the built-in guide's structure and promises
+  i18n/                   Spanish, English and Portuguese locale files
+  ui/                     screens and components
+  services/               chat history, document import, citations, research
+  voice/ cpr/ notify/     voice in and out, CPR practice, notifications
+modules/                  the fourteen local native modules
+knowledge-packs/          pack sources and the release ledger
+assets/corpus/            the bundled starter corpus
+docs/                     design, security and product documents
+scripts/                  build, pack and verification tooling
+.github/workflows/        CI, release and pack pipelines
 ```
 
-## Non-negotiables enforced in code
+## Origin and license
 
-1. No Firebase / GMS / Play Services libraries in `android/app/build.gradle`.
-2. The **only** network call site in `src/` is `ModelManager.downloadCatalogModel`,
-   invoked exclusively from `ModelSetupScreen` (both its required first-run mode and
-   its optional later mode) — chat, inference, and retrieval are fully local code
-   paths with no `fetch`/network calls anywhere in them.
-3. A visible system-monitor bar (RAM + storage) so the RAM/storage caps are auditable live
-   on-device, not just claimed.
-
-## Status
-
-- [x] Expo TS scaffold, `expo-dev-client`, `expo-sqlite`, `expo-file-system`, `llama.rn` installed
-- [x] ModelManager (download + checksum/size verification; optional bundled-install path)
-- [x] FTS5 schema + hybrid (lexical+semantic) retrieval + prompt assembly
-- [x] LlamaEngine/EmbeddingEngine wrappers over `llama.rn`, release previous
-      context before loading a new one (no native memory leak on model switch)
-- [x] Mandatory first-run setup wizard (tier picker + downloads) + optional
-      Settings screen (model catalog, active-model switch, corpus packs,
-      storage/RAM monitor) — `ModelSetupScreen`, the app's only network call site
-- [x] Chat UI: streaming tokens, citations, prompt-ideas onboarding carousel,
-      offline voice input button
-- [x] **Verified end-to-end on real Android hardware** (Xiaomi/Redmi,
-      Snapdragon/Adreno): `expo prebuild` + `expo run:android` actually compile
-      and install; first-run wizard downloads models on-device; app runs
-- [x] Primary (MIT) + secondary (Apache-2.0, `fast` routing role) + embedding
-      models required at first-run setup, + one further optional Apache-2.0
-      LLM alternative (Qwen2.5-7B-Instruct), all sha256-verified, GGUF
-      headers validated
-- [x] Three setup tiers (Minimum/Standard/Full) with downloadable corpus packs
-      (300/1,300/5,300 topics), hosted via `raw.githubusercontent.com` off this
-      public repo, sha256-verified like every other catalog asset
-- [x] Native modules: `ram-monitor` (real process RSS), `bundled-assets`
-      (copies APK-bundled assets to disk; its models config plugin was
-      retired in 0.1.99 — see the alternate build path note above),
-      `voice-input` (offline `SpeechRecognizer` wrapper) — all confirmed
-      discovered by Expo's Android autolinking, all built successfully in a
-      real `expo run:android` compile
-- [x] EAS Build configured (`eas.json`) and project linked (`boar-app`, previously
-      `ao-air` before the rebrand — may need re-linking on expo.dev if cloud builds
-      complain about a slug mismatch) for cloud builds without a local Android SDK
-- [x] Public GitHub repo: https://github.com/rferrari/boar-app
-- [x] Unit tests (vitest, 22 tests) for pure retrieval/manifest/tier logic + CI
-- [x] `Makefile` with `setup`/`start`/`run-android`/`build-eas`/`test`/`clean`
-      shortcuts for the commands above
-- [ ] Benchmark chosen models on real hardware (tokens/sec, RSS) — not yet measured
-- [ ] whisper.cpp binding for voice input on devices with no system speech
-      service (GrapheneOS) — documented as future work, not attempted
-- [ ] Public demo post (X/Farcaster) + poidh submission
+NIDO began as a fork of BOAR, an offline AI research app, and has
+been heavily extended since: the safety routes, the grounding judge,
+the encrypted memory, the knowledge packs, the guide and the
+phone-to-phone channel are NIDO's own. The project is released under
+the MIT license (see `LICENSE`); `ATTRIBUTION.md` keeps the credit
+for BOAR and for every third-party piece the app builds on.
