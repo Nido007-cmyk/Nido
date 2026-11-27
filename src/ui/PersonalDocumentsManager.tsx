@@ -27,6 +27,7 @@ import {
 import { CustomCollection } from "../rag/db";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import { EmptyState } from "./components/calm/EmptyState";
+import { fontFamilies } from "./theme/typography";
 
 function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes < 0) return "0KB";
@@ -397,7 +398,7 @@ export function PersonalDocumentsManager() {
 
 const getStyles = (colors: Colors) =>
   StyleSheet.create({
-    hint: { color: colors.text.muted, fontSize: 11, marginHorizontal: 12, marginTop: 4, lineHeight: 16 },
+    hint: { color: colors.text.muted, fontFamily: fontFamilies.sans, fontSize: 11, marginHorizontal: 12, marginTop: 4, lineHeight: 16 },
     list: { padding: 12, gap: 10 },
     importCard: {
       marginHorizontal: 12,
@@ -415,6 +416,7 @@ const getStyles = (colors: Colors) =>
       paddingHorizontal: 10,
       paddingVertical: 8,
       color: colors.text.primary,
+      fontFamily: fontFamilies.sans,
       fontSize: 13,
       borderWidth: 1,
       borderColor: colors.border.default,
@@ -428,11 +430,11 @@ const getStyles = (colors: Colors) =>
       justifyContent: "center",
     },
     importBtnDisabled: { backgroundColor: colors.border.default },
-    importBtnText: { color: colors.text.inverse, fontWeight: "700", fontSize: 13 },
+    importBtnText: { color: colors.text.inverse, fontWeight: "700", fontFamily: fontFamilies.sans, fontSize: 13 },
     importBtnRow: { flexDirection: "row", alignItems: "center", gap: 6 },
     exportBtnRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-    progressText: { color: colors.text.accentEmerald, fontSize: 11, textAlign: "center" },
-    empty: { color: colors.text.muted, fontSize: 12, marginHorizontal: 12, marginTop: 8 },
+    progressText: { color: colors.text.accentEmerald, fontFamily: fontFamilies.sans, fontSize: 11, textAlign: "center" },
+    empty: { color: colors.text.muted, fontFamily: fontFamilies.sans, fontSize: 12, marginHorizontal: 12, marginTop: 8 },
     collectionCard: {
       backgroundColor: colors.bg.card,
       borderRadius: 10,
@@ -443,18 +445,18 @@ const getStyles = (colors: Colors) =>
     },
     collectionCardInactive: { opacity: 0.55 },
     collectionHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-    collectionName: { color: colors.text.primary, fontSize: 14, fontWeight: "600", flex: 1 },
-    collectionMeta: { color: colors.text.accentEmerald, fontSize: 11 },
-    collectionWarning: { color: colors.amber[600], fontSize: 11, lineHeight: 15 },
+    collectionName: { color: colors.text.primary, fontFamily: fontFamilies.sans, fontSize: 14, fontWeight: "600", flex: 1 },
+    collectionMeta: { color: colors.text.accentEmerald, fontFamily: fontFamilies.sans, fontSize: 11 },
+    collectionWarning: { color: colors.amber[600], fontFamily: fontFamilies.sans, fontSize: 11, lineHeight: 15 },
     warningRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
     warningText: { flex: 1 },
     dismissBtn: { paddingVertical: 2 },
-    dismissText: { color: colors.text.accentEmerald, fontSize: 11, fontWeight: "600" },
+    dismissText: { color: colors.text.accentEmerald, fontFamily: fontFamilies.sans, fontSize: 11, fontWeight: "600" },
     importAnywayBtn: { alignSelf: "flex-start", paddingVertical: 2 },
-    importAnywayText: { color: colors.text.accentEmerald, fontSize: 11, fontWeight: "700" },
+    importAnywayText: { color: colors.text.accentEmerald, fontFamily: fontFamilies.sans, fontSize: 11, fontWeight: "700" },
     collectionActions: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 4 },
     exportBtn: { backgroundColor: colors.emerald.bgSubtle, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 6 },
-    exportBtnText: { color: colors.text.accentEmerald, fontSize: 12, fontWeight: "600" },
+    exportBtnText: { color: colors.text.accentEmerald, fontFamily: fontFamilies.sans, fontSize: 12, fontWeight: "600" },
     trashBtn: { marginLeft: "auto", padding: 4 },
-    trashIcon: { fontSize: 15 },
+    trashIcon: { fontFamily: fontFamilies.sans, fontSize: 15 },
   });

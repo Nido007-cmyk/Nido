@@ -12,6 +12,7 @@ import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
 import { spacing, radii } from "./theme/spacing";
 import { NidoIcon, isIconName, type IconName } from "./components/icons/NidoIcon";
+import { fontFamilies } from "./theme/typography";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -92,14 +93,14 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     alignItems: "center",
     justifyContent: "center",
   },
-  headerIcon: { fontSize: 16 },
+  headerIcon: { fontFamily: fontFamilies.sans, fontSize: 16 },
   headerTitle: {
     ...typography.ui.body,
     color: colors.text.primary,
     fontWeight: "600",
     flex: 1,
   },
-  chevron: { color: colors.text.dim, fontSize: 10 },
+  chevron: { color: colors.text.dim, fontFamily: fontFamilies.sans, fontSize: 10 },
   body: {
     paddingBottom: spacing.xs,
     borderTopWidth: 1,

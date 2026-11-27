@@ -24,6 +24,7 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "../../theme";
 import type { Colors } from "../../theme/colors";
 import type { TaskScope } from "../../../p2p/taskProtocol";
+import { fontFamilies } from "../../theme/typography";
 
 export interface TaskApprovalRequest {
   taskId: string;
@@ -135,17 +136,20 @@ function getStyles(colors: Colors) {
       borderColor: colors.text.accentAmber,
     },
     title: {
+      fontFamily: fontFamilies.sans,
       fontSize: 18,
       fontWeight: "700",
       color: colors.text.primary,
       marginBottom: 4,
     },
     peer: {
+      fontFamily: fontFamilies.sans,
       fontSize: 14,
       color: colors.text.dim,
       marginBottom: 12,
     },
     untrustedLabel: {
+      fontFamily: fontFamilies.sans,
       fontSize: 12,
       fontWeight: "600",
       color: colors.text.accentAmber,
@@ -158,17 +162,20 @@ function getStyles(colors: Colors) {
       marginBottom: 12,
     },
     quote: {
+      fontFamily: fontFamilies.sans,
       fontSize: 15,
       color: colors.text.primary,
       fontStyle: "italic",
     },
     scopesLabel: {
+      fontFamily: fontFamilies.sans,
       fontSize: 13,
       fontWeight: "600",
       color: colors.text.primary,
       marginBottom: 4,
     },
     scope: {
+      fontFamily: fontFamilies.sans,
       fontSize: 14,
       color: colors.text.primary,
       marginBottom: 2,

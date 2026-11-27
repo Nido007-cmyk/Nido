@@ -14,6 +14,7 @@ import type { Colors } from "../theme/colors";
 import { diagnose } from "./modelLoadDiagnosis";
 import type { Typography } from "../theme/typography";
 import { spacing, radii } from "../theme/spacing";
+import { fontFamilies } from "../theme/typography";
 
 export interface ModelLoadErrorCardProps {
   error: string;
@@ -144,6 +145,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     gap: spacing.xs,
   },
   icon: {
+    fontFamily: fontFamilies.sans,
     fontSize: 16,
   },
   badgeText: {

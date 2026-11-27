@@ -44,6 +44,7 @@ import {
   setMissedPhraseLog,
   type MissedPhrase,
 } from "../services/missedPhrases";
+import { fontFamilies } from "./theme/typography";
 
 interface Props {
   onClose?: () => void;
@@ -588,7 +589,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     ...calmShadows.none,
   },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: calmSpacing.cozy },
-  headerIcon: { fontSize: 20 },
+  headerIcon: { fontFamily: fontFamilies.sans, fontSize: 20 },
   closeBtn: {
     paddingHorizontal: calmSpacing.cozy,
     paddingVertical: calmSpacing.tight,
@@ -639,7 +640,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   outcomeLabel: { ...typography.mono.xs, fontSize: 9, fontWeight: "800" },
   rowMeta: { flexDirection: "row", alignItems: "center", gap: calmSpacing.cozy },
   metaText: { ...typography.mono.xs, fontSize: 10, color: colors.text.dim },
-  metaDot: { color: colors.text.dim, fontSize: 10 },
+  metaDot: { color: colors.text.dim, fontFamily: fontFamilies.sans, fontSize: 10 },
   adaptiveTag: { flexDirection: "row", alignItems: "center", gap: calmSpacing.tight },
   statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: calmSpacing.cozy },
   statCell: { minWidth: 70 },

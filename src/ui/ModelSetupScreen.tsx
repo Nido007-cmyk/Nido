@@ -77,6 +77,7 @@ import { CrashReportCard } from "./CrashReportCard";
 import { BackupScreen } from "./BackupScreen";
 import { matchesSearch } from "./navigation/search";
 import { useSecureScreen } from "./useSecureScreen";
+import { fontFamilies } from "./theme/typography";
 
 const modelManager = new ModelManager();
 const LLM_EMBEDDING_KINDS: AssetKind[] = ["llm", "embedding"];
@@ -1453,6 +1454,7 @@ const getStyles = (colors: Colors, typography: Typography) => {
     gap: 8,
   },
   mascotIcon: {
+    fontFamily: fontFamilies.sans,
     fontSize: 22,
   },
   title: ui.topBarTitle,
@@ -1498,6 +1500,7 @@ const getStyles = (colors: Colors, typography: Typography) => {
     gap: 6,
   },
   recoveryIcon: {
+    fontFamily: fontFamilies.sans,
     fontSize: 14,
   },
   recoveryTitle: { ...typography.ui.body, color: colors.text.heading, fontWeight: "700" },
@@ -1557,6 +1560,7 @@ const getStyles = (colors: Colors, typography: Typography) => {
     marginBottom: 4,
   },
   modalIconText: {
+    fontFamily: fontFamilies.sans,
     fontSize: 22,
   },
   modalTitle: { ...typography.ui.title, color: colors.text.heading, fontWeight: "700", textAlign: "center" },

@@ -8,6 +8,7 @@ import React, { useEffect, useRef } from "react";
 import { Animated, Text, StyleSheet } from "react-native";
 import { useTheme } from "./theme/ThemeContext";
 import type { Colors } from "./theme/colors";
+import { fontFamilies } from "./theme/typography";
 
 /** Simple auto-dismissing toast. Renders nothing when `message` is null. */
 export function Toast({ message, onHide }: { message: string | null; onHide: () => void }) {
@@ -50,5 +51,5 @@ const getStyles = (colors: Colors) =>
       borderWidth: 1,
       borderColor: colors.border.subtle,
     },
-    text: { color: colors.text.inverse, fontSize: 13, fontWeight: "600" },
+    text: { color: colors.text.inverse, fontFamily: fontFamilies.sans, fontSize: 13, fontWeight: "600" },
   });

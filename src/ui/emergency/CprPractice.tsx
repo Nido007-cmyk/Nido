@@ -60,6 +60,7 @@ import {
   type RateTrack,
 } from "../../cpr/rateEstimator";
 import { createPracticeClock, monotonicNow, originFromNativeStart } from "../../cpr/practiceClock";
+import { fontFamilies } from "../theme/typography";
 
 const KEEP_AWAKE_TAG = "nido-cpr-practice";
 
@@ -458,7 +459,7 @@ function getStyles(colors: Colors, typography: Typography) {
     },
     beatOn: { backgroundColor: colors.crimson[500], transform: [{ scale: 0.94 }] },
     beatBreaths: { borderColor: colors.emerald[500], backgroundColor: colors.emerald.bgSubtle },
-    beatCount: { fontSize: 72, fontWeight: "700", color: colors.text.heading },
+    beatCount: { fontFamily: fontFamilies.sans, fontSize: 72, fontWeight: "700", color: colors.text.heading },
     beatLabel: { ...typography.ui.titleSm, color: colors.text.secondary },
     elapsed: { ...typography.ui.title, color: colors.text.secondary, fontVariant: ["tabular-nums"] },
     row: { flexDirection: "row", gap: 12, marginTop: 12 },

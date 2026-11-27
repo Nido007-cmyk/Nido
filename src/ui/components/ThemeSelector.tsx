@@ -11,6 +11,7 @@ import { useTheme, THEMES, FONT_SCALES } from "../theme";
 import { useTranslation } from "react-i18next";
 import { ThemeId, FontScale } from "../../models/settings";
 import { spacing, radii } from "../theme/spacing";
+import { fontFamilies } from "../theme/typography";
 
 interface Props {
   compact?: boolean;
@@ -112,6 +113,7 @@ export function ThemeSelector({ compact = false }: Props) {
                   styles.fontSample,
                   {
                     color: isSelected ? colors.text.accentCyan : colors.text.muted,
+                    fontFamily: fontFamilies.sans,
                     fontSize: s.id === "compact" ? 12 : s.id === "standard" ? 15 : 19,
                   },
                 ]}
@@ -192,11 +194,13 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   sectionTitle: {
+    fontFamily: fontFamilies.sans,
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 0.6,
   },
   sectionSubtitle: {
+    fontFamily: fontFamilies.sans,
     fontSize: 11,
     lineHeight: 15,
   },
@@ -232,9 +236,11 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   themeIcon: {
+    fontFamily: fontFamilies.sans,
     fontSize: 12,
   },
   themeName: {
+    fontFamily: fontFamilies.sans,
     fontSize: 11,
     flex: 1,
   },
@@ -257,6 +263,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   fontLabel: {
+    fontFamily: fontFamilies.sans,
     fontSize: 11,
   },
   previewContainer: {
@@ -282,11 +289,13 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   previewHeaderTitle: {
+    fontFamily: fontFamilies.sans,
     fontSize: 9,
     fontWeight: "800",
     letterSpacing: 0.5,
   },
   previewBadge: {
+    fontFamily: fontFamilies.sans,
     fontSize: 9,
     fontWeight: "700",
   },

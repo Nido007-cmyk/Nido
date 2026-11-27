@@ -18,6 +18,7 @@ import { spacing, radii } from "./theme/spacing";
 import { PrivateTextInput } from "./components/PrivateTextInput";
 import { filterByTitle } from "./navigation/search";
 import { drawerWidthFor, visibleSessions } from "./drawerLayout";
+import { fontFamilies } from "./theme/typography";
 
 export interface DrawerItem {
   key: string;
@@ -278,7 +279,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     backgroundColor: colors.emerald[500],
     marginBottom: 16,
   },
-  newChatIcon: { color: colors.text.accentEmerald, fontSize: 16, fontWeight: "800" },
+  newChatIcon: { color: colors.text.accentEmerald, fontFamily: fontFamilies.sans, fontSize: 16, fontWeight: "800" },
   newChatLabel: { ...typography.ui.body, color: colors.text.inverse, fontWeight: "600" },
   sectionHeading: {
     ...typography.ui.micro,
@@ -321,7 +322,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   sessionRowActive: { backgroundColor: colors.emerald.bgSubtle },
   sessionTitle: { ...typography.ui.body, color: colors.text.primary, fontWeight: "500" },
   sessionTime: { ...typography.ui.micro, color: colors.text.dim, marginTop: 2 },
-  sessionTrash: { fontSize: 13, opacity: 0.7 },
+  sessionTrash: { fontFamily: fontFamilies.sans, fontSize: 13, opacity: 0.7 },
   divider: { height: 1, backgroundColor: colors.border.subtle, marginVertical: 12 },
   itemList: { gap: 4 },
   item: {
@@ -332,6 +333,6 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     paddingHorizontal: 12,
     borderRadius: 12,
   },
-  itemIcon: { fontSize: 18 },
+  itemIcon: { fontFamily: fontFamilies.sans, fontSize: 18 },
   itemLabel: { ...typography.ui.body, color: colors.text.primary, fontWeight: "500", flexShrink: 1 },
 });

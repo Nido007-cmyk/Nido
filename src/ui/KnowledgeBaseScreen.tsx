@@ -14,6 +14,7 @@ import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
+import { fontFamilies } from "./theme/typography";
 
 /**
  * Drawer shortcut straight to "manage my documents" — the same
@@ -70,6 +71,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     gap: calmSpacing.cozy,
   },
   headerIcon: {
+    fontFamily: fontFamilies.sans,
     fontSize: 18,
   },
   title: {

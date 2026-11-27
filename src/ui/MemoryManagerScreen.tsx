@@ -37,6 +37,7 @@ import {
 } from "../agent/memory/memoryStore";
 import type { Fact, Person } from "../agent/memory/types";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
+import { fontFamilies } from "./theme/typography";
 
 const capitalize = (s: string): string => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
@@ -345,6 +346,7 @@ const getStyles = (colors: Colors) =>
       gap: calmSpacing.cozy,
     },
     title: {
+      fontFamily: fontFamilies.sans,
       fontSize: 18,
       fontWeight: "700",
       color: colors.text.primary,
@@ -356,6 +358,7 @@ const getStyles = (colors: Colors) =>
     closeBtnText: {
       color: colors.emerald[500],
       fontWeight: "600",
+      fontFamily: fontFamilies.sans,
       fontSize: 16,
     },
     tabBar: {
@@ -376,6 +379,7 @@ const getStyles = (colors: Colors) =>
     },
     tabText: {
       color: colors.text.secondary,
+      fontFamily: fontFamilies.sans,
       fontSize: 14,
       fontWeight: "600",
     },
@@ -403,12 +407,14 @@ const getStyles = (colors: Colors) =>
       opacity: 0.6,
     },
     cardTitle: {
+      fontFamily: fontFamilies.sans,
       fontSize: 16,
       fontWeight: "700",
       color: colors.text.primary,
       marginBottom: 4,
     },
     cardText: {
+      fontFamily: fontFamilies.sans,
       fontSize: 14,
       color: colors.text.primary,
       lineHeight: 20,
@@ -418,6 +424,7 @@ const getStyles = (colors: Colors) =>
       color: colors.text.muted,
     },
     cardMeta: {
+      fontFamily: fontFamilies.sans,
       fontSize: 12,
       color: colors.text.muted,
       marginTop: 4,

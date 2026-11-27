@@ -14,6 +14,7 @@ import { PersonalDocumentsManager } from "./PersonalDocumentsManager";
 import { ImportedPacksSection } from "./ImportedPacksSection";
 import { MultilingualSearchCard } from "./MultilingualSearchCard";
 import { activeEmbeddingModel, embeddingIdForPack } from "../rag/embeddingSwitch";
+import { fontFamilies } from "./theme/typography";
 
 interface Props {
   corpusItems: CatalogModel[];
@@ -114,6 +115,7 @@ export function CorpusSettingsTab({ corpusItems, getRow, download, remove, onOpe
 
 const styles = StyleSheet.create({
   sectionHeading: {
+    fontFamily: fontFamilies.sans,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.8,
@@ -122,7 +124,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   list: { padding: 12, gap: 10 },
-  note: { fontSize: 12, marginTop: 4, marginHorizontal: 4 },
+  note: { fontFamily: fontFamilies.sans, fontSize: 12, marginTop: 4, marginHorizontal: 4 },
   libraryBtn: { marginHorizontal: 16, marginTop: 12, minHeight: 44, justifyContent: "center" },
-  libraryBtnText: { fontSize: 15, fontWeight: "600" },
+  libraryBtnText: { fontFamily: fontFamilies.sans, fontSize: 15, fontWeight: "600" },
 });

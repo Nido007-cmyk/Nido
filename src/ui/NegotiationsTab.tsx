@@ -32,6 +32,7 @@ import type { TaskScope } from "../p2p/taskProtocol";
 import { displayLang, formatDateTime } from "../utils/safeFormat";
 import { TASK_LIMITS } from "../p2p/taskProtocol";
 import { userFacingError } from "./userFacingError";
+import { fontFamilies } from "./theme/typography";
 
 interface P2PContact {
   pkHex: string;
@@ -590,6 +591,7 @@ const getStyles = (colors: Colors) =>
     },
     terminalText: {
       color: colors.text.secondary,
+      fontFamily: fontFamilies.sans,
       fontSize: 13,
     },
     deleteButton: {
@@ -600,6 +602,7 @@ const getStyles = (colors: Colors) =>
     },
     deleteButtonText: {
       color: colors.crimson[400],
+      fontFamily: fontFamilies.sans,
       fontSize: 13,
       fontWeight: "600",
     },
@@ -613,16 +616,19 @@ const getStyles = (colors: Colors) =>
     outgoingTitle: {
       color: colors.text.primary,
       fontWeight: "600",
+      fontFamily: fontFamilies.sans,
       fontSize: 14,
       marginBottom: 4,
     },
     outgoingDesc: {
       color: colors.text.secondary,
+      fontFamily: fontFamilies.sans,
       fontSize: 13,
       marginBottom: 6,
     },
     outgoingStatus: {
       color: colors.text.muted,
+      fontFamily: fontFamilies.sans,
       fontSize: 12,
       fontStyle: "italic",
     },
@@ -633,6 +639,7 @@ const getStyles = (colors: Colors) =>
     activeTitle: {
       color: colors.text.primary,
       fontWeight: "700",
+      fontFamily: fontFamilies.sans,
       fontSize: 14,
     },
     activeCard: {
@@ -645,16 +652,19 @@ const getStyles = (colors: Colors) =>
     activePeer: {
       color: colors.text.primary,
       fontWeight: "600",
+      fontFamily: fontFamilies.sans,
       fontSize: 14,
       marginBottom: 4,
     },
     activeDesc: {
       color: colors.text.secondary,
+      fontFamily: fontFamilies.sans,
       fontSize: 13,
       marginBottom: 6,
     },
     activeDate: {
       color: colors.text.muted,
+      fontFamily: fontFamilies.sans,
       fontSize: 12,
     },
     // TESTFIX-2026-10-08 (Fix 7): estilos de tareas delegadas.
@@ -670,6 +680,7 @@ const getStyles = (colors: Colors) =>
     taskRequestButtonText: {
       color: colors.text.inverse,
       fontWeight: "600",
+      fontFamily: fontFamilies.sans,
       fontSize: 13,
     },
     taskResultCard: {
@@ -681,6 +692,7 @@ const getStyles = (colors: Colors) =>
     },
     taskResultText: {
       color: colors.text.secondary,
+      fontFamily: fontFamilies.sans,
       fontSize: 13,
     },
     proposeButton: {
@@ -708,12 +720,14 @@ const getStyles = (colors: Colors) =>
       padding: calmSpacing.comfortable,
     },
     modalTitle: {
+      fontFamily: fontFamilies.sans,
       fontSize: 18,
       fontWeight: "700",
       marginBottom: 12,
       color: colors.text.primary,
     },
     modalLabel: {
+      fontFamily: fontFamilies.sans,
       fontSize: 14,
       fontWeight: "600",
       marginTop: 8,

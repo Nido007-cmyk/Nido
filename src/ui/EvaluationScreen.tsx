@@ -21,6 +21,7 @@ import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
 import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
+import { fontFamilies } from "./theme/typography";
 
 interface Props {
   onClose?: () => void;
@@ -397,7 +398,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     backgroundColor: colors.bg.cardElevated,
   },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: calmSpacing.cozy },
-  headerIcon: { fontSize: 20 },
+  headerIcon: { fontFamily: fontFamilies.sans, fontSize: 20 },
   headerTitle: { ...typography.ui.titleSm, color: colors.text.heading, letterSpacing: 0.5 },
   headerSubtitle: { ...typography.ui.caption, fontSize: 9, color: colors.text.dim },
   closeBtn: {
@@ -421,7 +422,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     borderColor: colors.border.default,
     ...calmShadows.none,
   },
-  checkbox: { fontSize: 16, color: colors.text.dim },
+  checkbox: { fontFamily: fontFamilies.sans, fontSize: 16, color: colors.text.dim },
   checkboxOn: { color: colors.text.accentEmerald },
   configLabel: { ...typography.ui.subtext, color: colors.text.primary, flex: 1 },
   note: { ...typography.ui.caption, fontSize: 10, color: colors.text.dim },

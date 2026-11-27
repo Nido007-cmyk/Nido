@@ -14,6 +14,7 @@ import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
 import { radii } from "./theme/spacing";
+import { fontFamilies } from "./theme/typography";
 
 function formatGB(bytes: number): string {
   if (bytes <= 0) return "0.0 GB";
@@ -197,6 +198,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   },
   tokDot: {
     color: colors.cyan[400],
+    fontFamily: fontFamilies.sans,
     fontSize: 8,
   },
   tokLine: {

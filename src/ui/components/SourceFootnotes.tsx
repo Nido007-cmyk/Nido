@@ -20,6 +20,7 @@ import { SourceReader } from "./SourceReader";
 import { sourceAccent } from "./sourceColors";
 import { summarizeProvenance, type ProvenanceLang, type SentenceProvenance } from "../../rag/provenance";
 import type { NumberConflict } from "../../rag/sourceCheck";
+import { fontFamilies } from "../theme/typography";
 
 interface Props {
   citations: RetrievedChunk[];
@@ -181,6 +182,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     gap: 4,
   },
   headerIcon: {
+    fontFamily: fontFamilies.sans,
     fontSize: 11,
   },
   headerTitle: {
@@ -260,6 +262,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     flexShrink: 0,
   },
   expandChevron: {
+    fontFamily: fontFamilies.sans,
     fontSize: 8,
     color: colors.text.dim,
   },

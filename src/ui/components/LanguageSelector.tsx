@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "../theme";
 import { spacing, radii } from "../theme/spacing";
 import { useLanguage, LANGUAGES } from "../../i18n/LanguageContext";
+import { fontFamilies } from "../theme/typography";
 
 interface Props {
   compact?: boolean;
@@ -67,7 +68,7 @@ export function LanguageSelector({ compact = false }: Props) {
 const styles = StyleSheet.create({
   container: { gap: spacing.sm },
   sectionHeader: { gap: 2 },
-  sectionTitle: { fontSize: 10, fontWeight: "800", letterSpacing: 0.6 },
+  sectionTitle: { fontFamily: fontFamilies.sans, fontSize: 10, fontWeight: "800", letterSpacing: 0.6 },
   row: { flexDirection: "row", gap: spacing.sm, marginTop: 4 },
   btn: {
     flex: 1,
@@ -79,5 +80,5 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
   },
-  flag: { fontSize: 15 },
+  flag: { fontFamily: fontFamilies.sans, fontSize: 15 },
 });

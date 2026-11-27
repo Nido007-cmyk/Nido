@@ -45,6 +45,7 @@ import {
 } from "./src/security/biometricGate";
 import { isPermissionFlowActive } from "./src/p2p/permissionGuard";
 import { loadFeatureFlags } from "./src/config/featureFlags";
+import { fontFamilies } from "./src/ui/theme/typography";
 
 // Auditoría completa 2026-10-31 (F1 B-9): la carga arranca en el
 // ámbito del módulo, pero nadie esperaba la promesa y la garantía
@@ -789,6 +790,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   libraryEntryText: {
+    fontFamily: fontFamilies.sans,
     fontSize: 15,
     fontWeight: "700",
   },
@@ -811,6 +813,7 @@ const styles = StyleSheet.create({
   },
   devPocButtonText: {
     color: "#FFFFFF",
+    fontFamily: fontFamilies.sans,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -821,16 +824,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   lockTitle: {
+    fontFamily: fontFamilies.sans,
     fontSize: 24,
     fontWeight: "700",
     marginBottom: 8,
   },
   lockSubtitle: {
+    fontFamily: fontFamilies.sans,
     fontSize: 14,
     textAlign: "center",
     marginBottom: 24,
   },
   lockWarning: {
+    fontFamily: fontFamilies.sans,
     fontSize: 13,
     textAlign: "center",
     marginBottom: 16,
@@ -850,6 +856,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   lockButtonText: {
+    fontFamily: fontFamilies.sans,
     fontSize: 16,
     fontWeight: "600",
   },

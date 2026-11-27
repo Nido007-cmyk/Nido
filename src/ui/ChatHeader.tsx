@@ -13,6 +13,7 @@ import { NidoIcon } from "./components/icons/NidoIcon";
 import { NidoMascot } from "./components/calm/NidoMascot";
 import type { Typography } from "./theme/typography";
 import { spacing, radii } from "./theme/spacing";
+import { fontFamilies } from "./theme/typography";
 
 interface Props {
   toneIcon: string;
@@ -187,6 +188,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   },
   hamburgerIcon: {
     color: colors.text.heading,
+    fontFamily: fontFamilies.sans,
     fontSize: 18,
     fontWeight: "700",
   },
@@ -254,6 +256,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     justifyContent: "center",
   },
   tonePillEmoji: {
+    fontFamily: fontFamilies.sans,
     fontSize: 14,
   },
   newChatBtn: {
@@ -268,6 +271,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   },
   newChatIcon: {
     color: colors.text.accentEmerald,
+    fontFamily: fontFamilies.sans,
     fontSize: 18,
     fontWeight: "700",
     marginTop: -1,
@@ -293,6 +297,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     borderColor: colors.frontier.badgeBorder,
   },
   deepResearchIcon: {
+    fontFamily: fontFamilies.sans,
     fontSize: 11,
   },
   deepResearchText: {
@@ -327,6 +332,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   },
   telemetryPulseDot: {
     color: colors.cyan[400],
+    fontFamily: fontFamilies.sans,
     fontSize: 8,
   },
   telemetryText: {

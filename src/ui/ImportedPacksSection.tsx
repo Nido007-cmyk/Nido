@@ -20,6 +20,7 @@ import {
   type PackImportRejectionReason,
 } from "../services/packImporter";
 import { activeEmbeddingModel } from "../rag/embeddingSwitch";
+import { fontFamilies } from "./theme/typography";
 
 function formatMB(bytes: number): string {
   if (bytes <= 0) return "0 MB";
@@ -182,6 +183,7 @@ export function ImportedPacksSection() {
 const getStyles = (colors: Colors, typography: Typography) =>
   StyleSheet.create({
     sectionHeading: {
+      fontFamily: fontFamilies.sans,
       fontSize: 11,
       fontWeight: "700",
       letterSpacing: 0.8,
