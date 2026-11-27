@@ -61,7 +61,7 @@ jobs:
             vitest-results.json
             jest-results.json
           if-no-files-found: warn
-          retention-days: 90
+          retention-days: 14
       # Desde 0.1.96: toda cifra de pruebas de las notas declara comando,
       # entorno y run (docs/release/RELEASE_MODEL.md, §Test figures).
       - run: node scripts/check-release-test-figures.mjs
