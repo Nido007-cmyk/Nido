@@ -84,7 +84,8 @@ import {
 } from "../models/settings";
 import { runDeepResearch, ResearchProgress } from "../services/orchestrator";
 import { runAdaptiveChat } from "../services/adaptiveChat";
-import { speakAloud } from "../voice/tts";
+import { speakAloud, stopSpeaking } from "../voice/tts";
+import { groundingBadge } from "./chat/groundingBadge";
 import { showSecureAlert } from "nido-secure-dialog";
 // NIDO agent: loop agéntico local con herramientas (Fase A).
 import { classifyIntent } from "../agent/loop/intent";
@@ -441,6 +442,22 @@ export function ChatScreen({
   activeModelRef.current = activeModel;
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  // 0.1.117: respuesta que se está leyendo con «Escuchar» (una a la vez).
+  const [speakingId, setSpeakingId] = useState<string | null>(null);
+  useEffect(() => () => {
+    // Al salir del chat no se sigue leyendo en segundo plano.
+    stopSpeaking();
+  }, []);
+  const toggleListen = useCallback((id: string, text: string) => {
+    impact(ImpactFeedbackStyle.Light);
+    if (speakingId === id) {
+      stopSpeaking();
+      setSpeakingId(null);
+      return;
+    }
+    setSpeakingId(id);
+    void speakAloud(text, () => setSpeakingId((cur) => (cur === id ? null : cur)));
+  }, [speakingId]);
   // Assistant messages whose model reasoning (<think>…</think>) is expanded.
   const [shownReasoning, setShownReasoning] = useState<Set<string>>(new Set());
   const toggleReasoning = useCallback((id: string) => {
@@ -3018,6 +3035,7 @@ export function ChatScreen({
           }}
           onNewChat={resetToNewChat}
           panicSlot={panicNode}
+          onOpenEmergency={() => selectTab("emergency")}
         />
 
         {/* Deep Research Mode Banner */}
@@ -3070,7 +3088,8 @@ export function ChatScreen({
           style={styles.flex}
           data={messages}
           keyExtractor={(m) => m.id}
-          contentContainerStyle={styles.list}
+          // 0.1.117: con el chat vacío el inicio ocupa la altura y se centra.
+          contentContainerStyle={messages.length === 0 ? [styles.list, styles.listEmpty] : styles.list}
           // Animated scrolling during active streaming fires on nearly every
           // token — each call starts a new scroll animation before the last
           // one finishes, so they fight each other and the view visibly
@@ -3223,6 +3242,31 @@ export function ChatScreen({
                     <Text style={[styles.callBtnText, { color: colors.text.inverse }]}>{t("chatScreen.openFullGuide")}</Text>
                   </Pressable>
                 ) : null}
+
+                {/* 0.1.117 (UI nueva): la franja dice lo que la
+                    comprobación de fundamentación dio (groundingBadge.ts). */}
+                {(() => {
+                  if (isStreamingThis) return null;
+                  const badge = groundingBadge(item.grounding, item.numberConflicts, item.citations?.length ?? 0);
+                  if (!badge) return null;
+                  const verified = badge.tone === "verified";
+                  return (
+                    <View
+                      testID="chat-grounding-badge"
+                      style={[
+                        styles.groundingBadge,
+                        verified
+                          ? { backgroundColor: colors.emerald.bgSubtle, borderColor: colors.emerald.border }
+                          : { backgroundColor: colors.amber.bgSubtle, borderColor: colors.amber.border },
+                      ]}
+                    >
+                      <NidoIcon name={verified ? "success" : "warning"} size={14} color={verified ? colors.text.accentEmerald : amberTextColor} />
+                      <Text style={[styles.groundingBadgeText, { color: verified ? colors.text.accentEmerald : amberTextColor }]}>
+                        {t(badge.key)}
+                      </Text>
+                    </View>
+                  );
+                })()}
 
                 {item.citations && item.citations.length > 0 && (
                   <SourceFootnotes citations={item.citations} grounding={item.grounding} provenance={item.provenance} numberConflicts={item.numberConflicts} />
@@ -3378,6 +3422,30 @@ export function ChatScreen({
 
                     <View style={styles.footerSpacer} />
 
+                    {/* 0.1.117 (UI nueva): «Escuchar» lee esta respuesta con
+                        la voz del teléfono (sin internet); otra vez, para. */}
+                    {!isStreamingThis && (
+                      <Pressable accessibilityRole="button"
+                        onPress={() => toggleListen(item.id, shownText)}
+                        hitSlop={6}
+                        accessibilityLabel={speakingId === item.id ? t("chatScreen.stopListeningA11y") : t("chatScreen.listenA11y")}
+                        accessibilityState={{ selected: speakingId === item.id }}
+                        testID="chat-listen"
+                        style={[
+                          styles.footerBtn,
+                          {
+                            backgroundColor: speakingId === item.id ? colors.emerald.bgSubtle : colors.bg.subtle,
+                            borderColor: speakingId === item.id ? colors.emerald.border : colors.border.subtle,
+                          },
+                        ]}
+                      >
+                        <NidoIcon name={speakingId === item.id ? "stop" : "play"} size={12} color={speakingId === item.id ? colors.text.accentEmerald : colors.text.dim} />
+                        <Text style={[styles.footerBtnLabel, { color: speakingId === item.id ? colors.text.accentEmerald : colors.text.secondary }]}>
+                          {speakingId === item.id ? t("chatScreen.stopListening") : t("chatScreen.listen")}
+                        </Text>
+                      </Pressable>
+                    )}
+
                     {split?.thinking && (
                       <Pressable accessibilityRole="button"
                         onPress={() => toggleReasoning(item.id)}
@@ -3432,50 +3500,72 @@ export function ChatScreen({
             );
           }}
           ListEmptyComponent={
+            // 0.1.117 (UI nueva): inicio del chat. Las mismas cuatro
+            // sugerencias de siempre (solo rellenan el campo), en
+            // cuadrícula, y un enlace a la guía.
             <View style={styles.emptyState}>
-              <NidoMascot role="guide" size={120} />
-              <Text style={[styles.emptyTitle, { color: colors.text.heading }]}>
+              <Text style={[styles.homeGreeting, { color: colors.text.secondary }]}>
                 {t("chatScreen.emptyTitle", "Hi, I'm NIDO")}
               </Text>
-              <Text style={[styles.emptySubtitle, { color: colors.text.dim }]}>
+              <Text style={[styles.homeTitle, { color: colors.text.heading }]} accessibilityRole="header">
+                {t("chatScreen.home.title")}
+              </Text>
+              <Text style={[styles.homeSubtitle, { color: colors.text.secondary }]}>
                 {t("chatScreen.emptySubtitle", "Your private agent. Everything stays on this device.")}
               </Text>
-              {/* Rediseño 2026-10-10: sugerencias tocables para que el
-                  usuario sepa qué puede pedir. Solo rellenan el campo. */}
               <View style={styles.suggestions}>
                 {(
                   [
-                    ["ideas", "reminder"],
-                    ["memory", "note"],
-                    ["knowledge", "documents"],
-                    ["pairing", "message"],
+                    ["ideas", "reminder", "amber"],
+                    ["memory", "note", "emerald"],
+                    ["knowledge", "documents", "cyan"],
+                    ["pairing", "message", "emerald"],
                   ] as const
-                ).map(([icon, key]) => (
+                ).map(([icon, key, tone]) => (
                   <Pressable
                     key={key}
                     onPress={() => {
                       updateInput(t(`chatScreen.suggestions.${key}.prompt`), "example");
                       requestAnimationFrame(() => inputRef.current?.focus());
                     }}
-                    style={[styles.suggestion, { backgroundColor: colors.bg.card, borderColor: colors.border.default }]}
+                    style={[styles.suggestion, { backgroundColor: colors.bg.card, borderColor: colors.border.subtle }]}
                     accessibilityRole="button"
                     accessibilityLabel={t(`chatScreen.suggestions.${key}.title`)}
+                    accessibilityHint={t(`chatScreen.suggestions.${key}.hint`)}
                   >
-                    <View style={[styles.suggestionIcon, { backgroundColor: colors.emerald.bgSubtle }]}>
-                      <NidoIcon name={icon} size={19} color={colors.text.accentEmerald} />
+                    <View style={[styles.suggestionIcon, { backgroundColor: colors[tone].bgSubtle }]}>
+                      <NidoIcon
+                        name={icon}
+                        size={19}
+                        color={tone === "amber" ? amberTextColor : tone === "cyan" ? colors.text.accentCyan : colors.text.accentEmerald}
+                      />
                     </View>
-                    <View style={styles.suggestionText}>
-                      <Text style={[styles.suggestionTitle, { color: colors.text.primary }]}>
-                        {t(`chatScreen.suggestions.${key}.title`)}
-                      </Text>
-                      <Text style={[styles.suggestionHint, { color: colors.text.secondary }]} numberOfLines={1}>
-                        {t(`chatScreen.suggestions.${key}.hint`)}
-                      </Text>
-                    </View>
-                    <NidoIcon name="chev-right" size={14} color={colors.text.dim} />
+                    <Text style={[styles.suggestionTitle, { color: colors.text.primary }]} numberOfLines={2}>
+                      {t(`chatScreen.suggestions.${key}.title`)}
+                    </Text>
+                    <Text style={[styles.suggestionHint, { color: colors.text.secondary }]} numberOfLines={2}>
+                      {t(`chatScreen.suggestions.${key}.hint`)}
+                    </Text>
                   </Pressable>
                 ))}
               </View>
+              <Pressable
+                onPress={() => {
+                  impact(ImpactFeedbackStyle.Light);
+                  setShowGuide(true);
+                }}
+                style={[styles.homeGuideLink, { borderColor: colors.border.default }]}
+                accessibilityRole="button"
+                accessibilityLabel={`${t("chatScreen.home.guideLead")} ${t("chatScreen.home.guideBody")}`}
+                testID="chat-home-guide"
+              >
+                <NidoIcon name="compass" size={18} color={colors.text.accentEmerald} />
+                <Text style={[styles.homeGuideText, { color: colors.text.primary }]}>
+                  <Text style={styles.homeGuideLead}>{t("chatScreen.home.guideLead")}</Text>
+                  {` ${t("chatScreen.home.guideBody")}`}
+                </Text>
+                <NidoIcon name="chev-right" size={14} color={colors.text.dim} />
+              </Pressable>
             </View>
           }
         />
@@ -3751,23 +3841,30 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     gap: spacing.md,
     paddingBottom: spacing.lg,
   },
+  listEmpty: { flexGrow: 1 },
   // Calm Agent empty state: warm welcome with mascot
   emptyState: {
     flex: 1,
-    alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: calmSpacing.comfortable,
-    paddingVertical: calmSpacing.spacious,
-    gap: calmSpacing.comfortable,
+    paddingHorizontal: calmSpacing.cozy,
+    paddingVertical: calmSpacing.comfortable,
+    gap: 6,
   },
-  emptyTitle: {
-    ...calmType.hero,
-    textAlign: "center",
+  homeGreeting: { ...typography.ui.body },
+  homeTitle: { ...calmType.hero },
+  homeSubtitle: { ...typography.ui.subtext, marginTop: 2 },
+  homeGuideLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    borderWidth: 1,
   },
-  emptySubtitle: {
-    ...calmType.body,
-    textAlign: "center",
-  },
+  homeGuideText: { ...typography.ui.subtext, flex: 1 },
+  homeGuideLead: { fontWeight: "700" },
   bubble: {
     paddingVertical: calmSpacing.cozy,
     paddingHorizontal: calmSpacing.comfortable,
@@ -3816,19 +3913,18 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   },
   userBody: {},
   userText: { ...typography.ui.bodyLg },
-  suggestions: { alignSelf: "stretch", gap: calmSpacing.cozy, marginTop: calmSpacing.comfortable },
+  suggestions: { alignSelf: "stretch", flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 14 },
   suggestion: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
+    flexGrow: 1,
+    flexBasis: "45%",
+    minHeight: 118,
+    gap: 8,
     borderWidth: 1,
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    borderRadius: 18,
+    padding: 14,
   },
   suggestionIcon: { width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  suggestionText: { flex: 1, minWidth: 0 },
-  suggestionTitle: { ...typography.ui.titleSm, fontWeight: "600" },
+  suggestionTitle: { ...typography.ui.titleSm, fontWeight: "700" },
   suggestionHint: { ...typography.ui.subtext },
   privacyHint: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, marginTop: 6 },
   privacyHintText: { ...typography.ui.micro, fontWeight: "400" },
@@ -3894,6 +3990,22 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   },
   footerSpacer: {
     flex: 1,
+  },
+  groundingBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    alignSelf: "stretch",
+    marginTop: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  groundingBadgeText: {
+    ...typography.ui.subtext,
+    fontWeight: "700",
+    flexShrink: 1,
   },
   stoppedBadge: {
     marginTop: 4,

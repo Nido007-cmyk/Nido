@@ -24,6 +24,7 @@ import { getEmergencyRegion, setEmergencyRegion } from "../models/settings";
 import { QUICK_GUIDES } from "./emergency/quickGuides";
 import { CprPractice } from "./emergency/CprPractice";
 import { fontFamilies } from "./theme/typography";
+import { emergencyRed, emergencyRedText, ON_EMERGENCY_RED } from "./theme/emergencyRed";
 
 interface Props {
   /**
@@ -105,26 +106,50 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title} accessibilityRole="header">
-          {t("emergency.title")}
-        </Text>
-        {hasPack && (
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      {/* 0.1.117 (UI nueva): cabecera roja con el título, el país y el
+          número principal a un toque. Las mismas opciones que antes. */}
+      <View style={styles.hero} testID="emergency-hero">
+        <View style={styles.header}>
+          <Text style={styles.title} accessibilityRole="header">
+            {t("emergency.title")}
+          </Text>
+          {hasPack && (
+            <Pressable
+              onPress={() => setPicking(true)}
+              style={styles.countryBtn}
+              accessibilityRole="button"
+              accessibilityLabel={code ? t("emergency.changeCountry", { name: countryName }) : t("emergency.pickCountry")}
+            >
+              <Text style={styles.countryText} numberOfLines={1}>
+                {code ? countryName : t("emergency.pickCountry")}
+              </Text>
+              <NidoIcon name="chev-down" size={14} color={ON_EMERGENCY_RED} />
+            </Pressable>
+          )}
+        </View>
+
+        {first && (
           <Pressable
-            onPress={() => setPicking(true)}
-            style={styles.countryBtn}
+            onPress={() => call(first.tel)}
+            style={styles.bigCall}
             accessibilityRole="button"
-            accessibilityLabel={code ? t("emergency.changeCountry", { name: countryName }) : t("emergency.pickCountry")}
+            accessibilityLabel={t("emergency.callA11y", { number: first.value, label: first.label })}
+            testID="emergency-call-primary"
           >
-            <Text style={styles.countryText} numberOfLines={1}>
-              {code ? countryName : t("emergency.pickCountry")}
-            </Text>
-            <NidoIcon name="chev-down" size={14} color={colors.text.primary} />
+            <View style={styles.bigCallText}>
+              <Text style={styles.bigCallNumber}>{first.value}</Text>
+              <Text style={styles.bigCallLabel}>{first.label}</Text>
+              {first.note ? <Text style={styles.bigCallNote}>{first.note}</Text> : null}
+            </View>
+            <View style={styles.bigCallActionPill}>
+              <Text style={styles.bigCallAction}>{t("emergency.call")}</Text>
+            </View>
           </Pressable>
         )}
       </View>
 
-      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+      <View style={styles.body}>
         {data && !hasPack && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{t("emergency.noPackTitle")}</Text>
@@ -151,23 +176,6 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
               <Text style={styles.primaryBtnText}>{t("emergency.pickCountry")}</Text>
             </Pressable>
           </View>
-        )}
-
-        {first && (
-          <Pressable
-            onPress={() => call(first.tel)}
-            style={styles.bigCall}
-            accessibilityRole="button"
-            accessibilityLabel={t("emergency.callA11y", { number: first.value, label: first.label })}
-            testID="emergency-call-primary"
-          >
-            <View style={styles.bigCallText}>
-              <Text style={styles.bigCallLabel}>{first.label}</Text>
-              <Text style={styles.bigCallNumber}>{first.value}</Text>
-              {first.note ? <Text style={styles.bigCallNote}>{first.note}</Text> : null}
-            </View>
-            <Text style={styles.bigCallAction}>{t("emergency.call")}</Text>
-          </Pressable>
         )}
 
         {rest.length > 0 && (
@@ -306,6 +314,7 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
           <Text style={styles.practiceBtnTitle}>{t("cpr.practice.open")}</Text>
           <Text style={styles.practiceBtnHint}>{t("cpr.practice.openHint")}</Text>
         </Pressable>
+      </View>
       </ScrollView>
 
       <CprPractice visible={cprPractice} onClose={() => setCprPractice(false)} />
@@ -344,10 +353,20 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
 const getStyles = (colors: Colors, typography: Typography) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.bg.black },
-    header: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingTop: 18, paddingBottom: 12 },
-    // 0.1.117 (UI nueva): el título de Emergencia lleva el rojo de
-    // emergencia (crimson.400 pasa AA en los dos temas).
-    title: { ...typography.ui.headline, color: colors.crimson[400], flex: 1 },
+    scroll: { paddingBottom: 16 },
+    // 0.1.117 (UI nueva): cabecera roja de emergencia con texto blanco
+    // (emergencyRed.ts; AA comprobado en los dos temas).
+    hero: {
+      backgroundColor: emergencyRed(colors),
+      paddingHorizontal: 16,
+      paddingTop: 14,
+      paddingBottom: 20,
+      gap: 16,
+      borderBottomLeftRadius: 24,
+      borderBottomRightRadius: 24,
+    },
+    header: { flexDirection: "row", alignItems: "center", gap: 8 },
+    title: { ...typography.ui.headline, color: ON_EMERGENCY_RED, flex: 1 },
     countryBtn: {
       minHeight: 44,
       maxWidth: 200,
@@ -355,13 +374,12 @@ const getStyles = (colors: Colors, typography: Typography) =>
       alignItems: "center",
       gap: 6,
       paddingHorizontal: 12,
-      borderRadius: 20,
+      borderRadius: 22,
       borderWidth: 1,
-      borderColor: colors.border.elevated,
-      backgroundColor: colors.bg.surface,
+      borderColor: "rgba(255,255,255,0.6)",
     },
-    countryText: { ...typography.ui.titleSm, color: colors.text.primary, flexShrink: 1 },
-    body: { padding: 16, paddingTop: 4, gap: 14 },
+    countryText: { ...typography.ui.titleSm, color: ON_EMERGENCY_RED, flexShrink: 1 },
+    body: { padding: 16, paddingTop: 16, gap: 14 },
     card: {
       backgroundColor: colors.bg.surface,
       borderWidth: 1,
@@ -393,19 +411,27 @@ const getStyles = (colors: Colors, typography: Typography) =>
     },
     primaryBtnText: { ...typography.ui.titleSm, color: colors.text.inverse },
     bigCall: {
-      minHeight: 84,
+      minHeight: 88,
       borderRadius: 20,
-      backgroundColor: colors.crimson[500],
+      backgroundColor: colors.bg.surface,
       flexDirection: "row",
       alignItems: "center",
       paddingHorizontal: 18,
       gap: 12,
     },
-    bigCallText: { flex: 1, paddingVertical: 10 },
-    bigCallLabel: { ...typography.ui.subtext, color: colors.text.inverse, opacity: 0.92 },
-    bigCallNumber: { fontFamily: fontFamilies.sans, fontSize: 32, lineHeight: 38, fontWeight: "800", color: colors.text.inverse, fontVariant: ["tabular-nums"] },
-    bigCallNote: { ...typography.ui.caption, color: colors.text.inverse, opacity: 0.9 },
-    bigCallAction: { ...typography.ui.title, color: colors.text.inverse },
+    bigCallText: { flex: 1, paddingVertical: 12, gap: 2 },
+    bigCallLabel: { ...typography.ui.subtext, color: colors.text.secondary },
+    bigCallNumber: { fontFamily: fontFamilies.sans, fontSize: 34, lineHeight: 40, fontWeight: "700", color: emergencyRedText(colors), fontVariant: ["tabular-nums"] },
+    bigCallNote: { ...typography.ui.caption, color: colors.text.secondary },
+    bigCallActionPill: {
+      minHeight: 44,
+      paddingHorizontal: 16,
+      borderRadius: 22,
+      backgroundColor: emergencyRed(colors),
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    bigCallAction: { ...typography.ui.titleSm, color: ON_EMERGENCY_RED, fontWeight: "700" },
     grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
     tile: {
       flexGrow: 1,

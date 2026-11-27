@@ -110,10 +110,25 @@ export function cleanForSpeech(text: string): string {
     .slice(0, 2000);
 }
 
-/** Lee un texto en voz alta en el idioma de la app. Corta lo anterior. */
-export async function speakAloud(text: string): Promise<void> {
+/**
+ * Lee un texto en voz alta en el idioma de la app. Corta lo anterior.
+ *
+ * 0.1.117: `onEnd` (opcional) avisa cuando la lectura termina, se para o
+ * falla, para que el botón «Escuchar» de cada respuesta vuelva a su estado.
+ * Se llama una sola vez, también si no hay nada que leer o el TTS falla.
+ */
+export async function speakAloud(text: string, onEnd?: () => void): Promise<void> {
+  let ended = false;
+  const end = () => {
+    if (ended) return;
+    ended = true;
+    onEnd?.();
+  };
   const clean = cleanForSpeech(text);
-  if (!clean) return;
+  if (!clean) {
+    end();
+    return;
+  }
   try {
     await Speech.stop();
     const locale = speechLocaleFor(i18n.language);
@@ -123,9 +138,13 @@ export async function speakAloud(text: string): Promise<void> {
       voice,
       rate: 1.0,
       pitch: 1.0,
+      onDone: end,
+      onStopped: end,
+      onError: end,
     });
   } catch {
     // TTS no disponible: se ignora en silencio, el texto sigue visible.
+    end();
   }
 }
 

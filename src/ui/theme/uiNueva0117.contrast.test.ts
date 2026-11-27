@@ -10,6 +10,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { daylightTheme, nightGardenTheme } from "./colors";
+import { emergencyRed, emergencyRedText, ON_EMERGENCY_RED } from "./emergencyRed";
 
 function lum(hex: string): number {
   const h = hex.replace("#", "");
@@ -20,6 +21,17 @@ function ratio(a: string, b: string): number {
   const x = lum(a);
   const y = lum(b);
   return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+}
+
+/** Mezcla un color rgba(...) sobre un fondo opaco y devuelve el hex resultante. */
+function over(rgba: string, bgHex: string): string {
+  const m = rgba.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/);
+  if (!m) return rgba;
+  const a = Number(m[4]);
+  const h = bgHex.replace("#", "");
+  const bg = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const mix = [1, 2, 3].map((i, k) => Math.round(Number(m[i]) * a + bg[k] * (1 - a)));
+  return "#" + mix.map((v) => v.toString(16).padStart(2, "0")).join("");
 }
 
 describe("UI nueva 0.1.117 · contraste AA", () => {
@@ -41,4 +53,18 @@ describe("UI nueva 0.1.117 · contraste AA", () => {
   it("Night Garden: texto oscuro sobre el verde de los botones", () => {
     expect(ratio(nightGardenTheme.text.inverse, nightGardenTheme.emerald[500])).toBeGreaterThanOrEqual(4.5);
   });
+  for (const t of [daylightTheme, nightGardenTheme]) {
+    it(`${t.name}: SOS y cabecera de Emergencia (blanco sobre el rojo, número rojo sobre la tarjeta)`, () => {
+      expect(ratio(ON_EMERGENCY_RED, emergencyRed(t))).toBeGreaterThanOrEqual(4.5);
+      expect(ratio(emergencyRedText(t), t.bg.surface)).toBeGreaterThanOrEqual(4.5);
+      expect(ratio(t.text.secondary, t.bg.surface)).toBeGreaterThanOrEqual(4.5);
+    });
+    it(`${t.name}: franja de fuentes comprobadas (texto sobre su fondo suave, mezclado con el del chat)`, () => {
+      const verdeBg = over(t.emerald.bgSubtle, t.bg.black);
+      expect(ratio(t.text.accentEmerald, verdeBg)).toBeGreaterThanOrEqual(4.5);
+      // El ámbar de la franja «en parte» es el amberTextColor del chat.
+      const amberText = t.id === "daylight" ? t.amber[600] : t.text.accentAmber;
+      expect(ratio(amberText, over(t.amber.bgSubtle, t.bg.black))).toBeGreaterThanOrEqual(4.5);
+    });
+  }
 });

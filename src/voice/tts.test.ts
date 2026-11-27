@@ -93,3 +93,31 @@ describe("bloque 3 (0.1.112): chooseVoice descarta las voces de red y prefiere l
     expect(chooseVoice(voices, "es-MX")).toBe("SMTm02");
   });
 });
+
+describe("speakAloud con onEnd (0.1.117, botón «Escuchar»)", () => {
+  it("pasa los avisos de fin a expo-speech y llama a onEnd una sola vez", async () => {
+    const Speech = await import("expo-speech");
+    const { speakAloud } = await import("./tts");
+    const speak = Speech.speak as unknown as ReturnType<typeof vi.fn>;
+    speak.mockClear();
+    const onEnd = vi.fn();
+    await speakAloud("Hola, esto es una prueba.", onEnd);
+    expect(speak).toHaveBeenCalledTimes(1);
+    const opts = speak.mock.calls[0][1] as { onDone: () => void; onStopped: () => void; onError: () => void };
+    opts.onDone();
+    opts.onStopped();
+    opts.onError();
+    expect(onEnd).toHaveBeenCalledTimes(1);
+  });
+
+  it("sin nada que leer avisa del fin sin llamar a expo-speech", async () => {
+    const Speech = await import("expo-speech");
+    const { speakAloud } = await import("./tts");
+    const speak = Speech.speak as unknown as ReturnType<typeof vi.fn>;
+    speak.mockClear();
+    const onEnd = vi.fn();
+    await speakAloud("```\ncódigo\n```", onEnd);
+    expect(speak).not.toHaveBeenCalled();
+    expect(onEnd).toHaveBeenCalledTimes(1);
+  });
+});
