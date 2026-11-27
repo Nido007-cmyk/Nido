@@ -47,10 +47,12 @@ export const GUIDE_MODULES: GuideModuleSpec[] = [
     lessons: [
       { id: "chat", routes: ["smallTalk", "smallTalk", "smallTalk"] },
       { id: "emergency", routes: ["knowledge"] },
+      // 0.1.117: la práctica de RCP de la pestaña Emergencia (sin chat).
+      { id: "cpr" },
       {
         id: "quick",
         tools: ["device_time", "calculate", "convert_units"],
-        routes: ["tool:time", "calc", "calc", "tool:convert"],
+        routes: ["tool:time", "calc", "calc", "tool:convert", "tool:countdown", "tool:weekday"],
       },
     ],
   },
@@ -59,6 +61,12 @@ export const GUIDE_MODULES: GuideModuleSpec[] = [
     lessons: [
       { id: "reminders", tools: ["create_reminder"], routes: ["reminderCreate", "reminderCreate", "reminderCreate", "tool:reminderList"] },
       { id: "notes", tools: ["save_note", "list_notes", "read_note"], routes: ["tool:noteSave", "tool:noteSave", "tool:noteList", "tool:noteRead"] },
+      // 0.1.117: borrar con palabras (las tres herramientas piden confirmación).
+      {
+        id: "cleanup",
+        tools: ["delete_reminder", "delete_note", "delete_memory"],
+        routes: ["tool:reminderDelete", "tool:noteDelete", "tool:memoryForget"],
+      },
       {
         id: "memory",
         tools: ["remember_fact"],
@@ -69,7 +77,7 @@ export const GUIDE_MODULES: GuideModuleSpec[] = [
         tools: ["list_calendar_events", "create_calendar_event"],
         routes: ["tool:calendarList", "tool:calendarList", "tool:calendarCreate"],
       },
-      { id: "contacts", tools: ["find_contact", "place_call"], routes: ["contact", "contact"] },
+      { id: "contacts", tools: ["find_contact", "place_call", "send_sms"], routes: ["contact", "contact", "contact"] },
     ],
   },
   {
@@ -81,19 +89,29 @@ export const GUIDE_MODULES: GuideModuleSpec[] = [
       { id: "scanned", routes: ["knowledge"] },
       { id: "multilingual" },
       { id: "linksFiles", tools: ["open_app", "read_picked_file"], routes: ["tool:openLink", "tool:pickFile"] },
+      // 0.1.117: la Biblioteca (paquetes, paquete firmado desde archivo, lector de guías).
+      { id: "library" },
     ],
   },
   {
     id: "connect",
-    lessons: [{ id: "p2p" }, { id: "outside" }, { id: "voice" }],
+    lessons: [
+      {
+        id: "p2p",
+        tools: ["nido_my_code", "nido_read_inbox", "nido_send_message", "nido_review_tasks"],
+        routes: ["tool:nidoCode", "tool:nidoInbox", "tool:nidoSend", "tool:nidoTasks"],
+      },
+      { id: "outside" },
+      { id: "voice" },
+    ],
   },
   {
     id: "privacy",
-    lessons: [{ id: "offline", routes: ["selfKnowledge"] }, { id: "hardware" }, { id: "backup" }, { id: "erase" }],
+    lessons: [{ id: "offline", routes: ["selfKnowledge"] }, { id: "hardware" }, { id: "backup" }, { id: "erase" }, { id: "panic" }],
   },
   {
     id: "personalize",
-    lessons: [{ id: "models" }, { id: "accel" }, { id: "tone" }, { id: "problems" }],
+    lessons: [{ id: "models" }, { id: "accel" }, { id: "tone" }, { id: "appearance" }, { id: "problems" }],
   },
 ];
 

@@ -27,6 +27,7 @@ import type { Typography } from "./theme/typography";
 import { makeSurfaces } from "./theme/surfaces";
 import { calmSpacing } from "./theme/calm";
 import { NidoIcon } from "./components/icons/NidoIcon";
+import type { IconName } from "./components/icons/iconRegistry";
 import { GUIDE_MODULES, allLessonIds } from "../guide/guideCatalog";
 import { getDisabledToolNames, getGuideVisited, markGuideVisited } from "../models/settings";
 
@@ -67,13 +68,15 @@ export function UserGuideScreen({ onClose, onTryExample }: Props) {
     return Array.isArray(v) ? v.length : 0;
   };
 
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <NidoIcon name="compass" size={20} />
-          <Text style={styles.title} numberOfLines={1}>
-            {t("guide.title")}
+          <NidoIcon name="compass" size={20} color={colors.text.accentEmerald} />
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {t("guide.drawer")}
           </Text>
         </View>
         <Pressable
@@ -91,12 +94,35 @@ export function UserGuideScreen({ onClose, onTryExample }: Props) {
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
-        <Text style={styles.subtitle}>{t("guide.subtitle")}</Text>
-        <Text style={styles.progress}>{t("guide.progress", { done: String(done), total: String(total) })}</Text>
+        {/* 0.1.117 (UI nueva): portada de la guía con el progreso a la vista. */}
+        <View style={styles.hero}>
+          <Text style={styles.title} accessibilityRole="header">
+            {t("guide.title")}
+          </Text>
+          <Text style={styles.subtitle}>{t("guide.subtitle")}</Text>
+          <View
+            style={styles.progressTrack}
+            accessible
+            accessibilityRole="progressbar"
+            accessibilityValue={{ min: 0, max: total, now: done }}
+            accessibilityLabel={t("guide.progress", { done: String(done), total: String(total) })}
+          >
+            <View style={[styles.progressFill, { width: `${pct}%` }]} />
+          </View>
+          <Text style={styles.progress}>{t("guide.progress", { done: String(done), total: String(total) })}</Text>
+        </View>
 
         {GUIDE_MODULES.map((mod, mi) => (
           <View key={mod.id} style={styles.module}>
-            <Text style={styles.moduleTitle}>{t(`guide.modules.${mi}.title`)}</Text>
+            <View style={styles.moduleHead}>
+              <View style={styles.moduleIcon}>
+                <NidoIcon name={MODULE_ICON[mod.id] ?? "compass"} size={16} color={colors.text.accentEmerald} />
+              </View>
+              <Text style={styles.moduleTitle} accessibilityRole="header">
+                {t(`guide.modules.${mi}.title`)}
+              </Text>
+            </View>
+            <View style={styles.moduleCard}>
             {mod.lessons.map((lesson, li) => {
               const id = `${mod.id}.${lesson.id}`;
               const base = `guide.modules.${mi}.lessons.${li}`;
@@ -107,7 +133,7 @@ export function UserGuideScreen({ onClose, onTryExample }: Props) {
               const nExamples = count(`${base}.examples`);
               const tip = i18n.exists(`${base}.tip`) ? t(`${base}.tip`) : "";
               return (
-                <View key={id} style={styles.lesson}>
+                <View key={id} style={[styles.lesson, li > 0 && styles.lessonDivider]}>
                   <Pressable
                     style={styles.lessonHead}
                     onPress={() => toggle(id)}
@@ -115,9 +141,11 @@ export function UserGuideScreen({ onClose, onTryExample }: Props) {
                     accessibilityState={{ expanded: isOpen }}
                     accessibilityLabel={t(`${base}.title`)}
                   >
-                    <Text style={[styles.check, seen && styles.checkSeen]}>{seen ? "✓" : "○"}</Text>
+                    <View style={[styles.check, seen && styles.checkSeen]}>
+                      {seen ? <NidoIcon name="check" size={12} color={colors.text.inverse} /> : null}
+                    </View>
                     <Text style={styles.lessonTitle}>{t(`${base}.title`)}</Text>
-                    <NidoIcon name={isOpen ? "chev-up" : "chev-down"} size={14} />
+                    <NidoIcon name={isOpen ? "chev-up" : "chev-down"} size={14} color={colors.text.dim} />
                   </Pressable>
 
                   {isOpen && (
@@ -134,9 +162,12 @@ export function UserGuideScreen({ onClose, onTryExample }: Props) {
                         <View style={styles.block}>
                           <Text style={styles.label}>{t("guide.steps")}</Text>
                           {Array.from({ length: nSteps }, (_, i) => (
-                            <Text key={i} style={styles.text}>
-                              {`${i + 1}. ${t(`${base}.steps.${i}`)}`}
-                            </Text>
+                            <View key={i} style={styles.stepRow}>
+                              <View style={styles.stepNum}>
+                                <Text style={styles.stepNumText}>{i + 1}</Text>
+                              </View>
+                              <Text style={[styles.text, styles.stepText]}>{t(`${base}.steps.${i}`)}</Text>
+                            </View>
                           ))}
                         </View>
                       )}
@@ -158,6 +189,7 @@ export function UserGuideScreen({ onClose, onTryExample }: Props) {
                                   accessibilityRole="button"
                                   accessibilityLabel={`${t("guide.try")}: ${ex}`}
                                 >
+                                  <NidoIcon name="chat" size={13} color={colors.text.accentEmerald} />
                                   <Text style={styles.exampleText}>{ex}</Text>
                                 </Pressable>
                               );
@@ -168,7 +200,8 @@ export function UserGuideScreen({ onClose, onTryExample }: Props) {
 
                       {tip.length > 0 && (
                         <View style={styles.note}>
-                          <Text style={styles.noteText}>{`${t("guide.tip")}: ${tip}`}</Text>
+                          <NidoIcon name="info" size={16} color={colors.text.accentEmerald} />
+                          <Text style={[styles.noteText, styles.noteTextFlex]}>{`${t("guide.tip")}: ${tip}`}</Text>
                         </View>
                       )}
                     </View>
@@ -176,12 +209,23 @@ export function UserGuideScreen({ onClose, onTryExample }: Props) {
                 </View>
               );
             })}
+            </View>
           </View>
         ))}
       </ScrollView>
     </View>
   );
 }
+
+/** 0.1.117: un icono por módulo de la guía (solo iconos que ya existen). */
+const MODULE_ICON: Record<string, IconName> = {
+  start: "chat",
+  organize: "ideas",
+  knowledge: "knowledge",
+  connect: "pairing",
+  privacy: "security",
+  personalize: "appearance",
+};
 
 const getStyles = (colors: Colors, typography: Typography) => {
   const ui = makeSurfaces(colors, typography);
@@ -192,34 +236,79 @@ const getStyles = (colors: Colors, typography: Typography) => {
       justifyContent: "space-between",
       alignItems: "center",
       paddingHorizontal: calmSpacing.comfortable,
-      paddingVertical: calmSpacing.comfortable,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border.default,
-      backgroundColor: colors.bg.cardElevated,
+      paddingVertical: 10,
+      backgroundColor: colors.bg.black,
     },
     headerLeft: { flexDirection: "row", alignItems: "center", gap: calmSpacing.cozy, flexShrink: 1 },
-    title: { ...typography.ui.title, color: colors.text.heading, flexShrink: 1 },
+    headerTitle: { ...typography.ui.titleSm, color: colors.text.secondary, flexShrink: 1 },
     closeBtn: ui.topBarAction,
     closeBtnText: ui.topBarActionText,
-    body: { padding: calmSpacing.comfortable, gap: calmSpacing.cozy, paddingBottom: calmSpacing.generous },
-    subtitle: ui.body,
-    progress: { ...ui.caption, color: colors.text.dim },
-    module: { marginTop: calmSpacing.cozy, gap: 8 },
-    moduleTitle: ui.sectionLabel,
-    lesson: { ...ui.card, gap: 0, padding: 0 },
-    lessonHead: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14, minHeight: 48 },
-    check: { ...typography.ui.body, color: colors.text.dim, width: 18, textAlign: "center" },
-    checkSeen: { color: colors.emerald[600], fontWeight: "700" },
-    lessonTitle: { ...typography.ui.body, color: colors.text.primary, fontWeight: "600", flex: 1 },
-    lessonBody: { paddingHorizontal: 14, paddingBottom: 14, gap: 10 },
-    block: { gap: 6 },
+    body: { paddingHorizontal: calmSpacing.comfortable, paddingTop: 4, gap: 18, paddingBottom: calmSpacing.generous },
+    hero: { gap: 8 },
+    title: { ...typography.ui.headline, color: colors.text.heading },
+    subtitle: { ...ui.body, color: colors.text.secondary },
+    progressTrack: { height: 8, borderRadius: 4, backgroundColor: colors.bg.cardElevated, overflow: "hidden", marginTop: 6 },
+    progressFill: { height: 8, borderRadius: 4, backgroundColor: colors.emerald[500] },
+    progress: { ...ui.caption, color: colors.text.secondary },
+    module: { gap: 10 },
+    moduleHead: { flexDirection: "row", alignItems: "center", gap: 10 },
+    moduleIcon: {
+      width: 30,
+      height: 30,
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.emerald.bgSubtle,
+    },
+    moduleTitle: { ...typography.ui.title, color: colors.text.heading, flex: 1 },
+    moduleCard: { ...ui.card, gap: 0, padding: 0, overflow: "hidden" },
+    lesson: {},
+    lessonDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border.default },
+    lessonHead: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, minHeight: 52 },
+    check: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      borderWidth: 1.5,
+      borderColor: colors.border.elevated,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    checkSeen: { backgroundColor: colors.emerald[500], borderColor: colors.emerald[500] },
+    lessonTitle: { ...typography.ui.body, color: colors.text.primary, fontWeight: "700", flex: 1 },
+    lessonBody: { paddingHorizontal: 16, paddingBottom: 16, gap: 12 },
+    block: { gap: 8 },
     label: ui.sectionLabel,
     text: ui.body,
+    stepRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+    stepNum: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.emerald.bgSubtle,
+      marginTop: 1,
+    },
+    stepNumText: { ...typography.ui.caption, color: colors.text.accentEmerald, fontWeight: "700" },
+    stepText: { flex: 1 },
     examples: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-    example: { ...ui.secondaryButton, minHeight: 40, paddingVertical: 8, paddingHorizontal: 14 },
-    exampleText: { ...ui.secondaryButtonText, fontWeight: "500" },
-    note: ui.note,
+    example: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      minHeight: 40,
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.emerald.border,
+      backgroundColor: colors.emerald.bgSubtle,
+    },
+    exampleText: { ...typography.ui.subtext, color: colors.text.accentEmerald, fontWeight: "700", flexShrink: 1 },
+    note: { ...ui.note, flexDirection: "row", alignItems: "flex-start", gap: 10 },
     noteText: ui.noteText,
+    noteTextFlex: { flex: 1 },
     warning: ui.warning,
     warningText: ui.warningText,
   });

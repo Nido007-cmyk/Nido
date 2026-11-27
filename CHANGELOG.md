@@ -32,6 +32,33 @@ soft red card. Cards across the app are rounder, with
 lighter borders and a gentle shadow, and the bottom
 tabs are clearer about which one is open.
 
+New in the chat: a red SOS button at the top opens the
+Emergency tab in one tap. An empty chat now greets you
+with "How can I help today?", the same four ideas to
+start with in a grid of cards, and a link to the
+guide. Under each answer, a Listen button reads it
+aloud with the phone's own voice, without internet;
+tap it again to stop. When every sentence of an answer
+is backed by its sources, a green "Checked against the
+sources" strip says so; when sentences without support
+were removed, the strip says that in amber; and when a
+number does not match the source, there is no strip.
+The sources show as a row of cards: tap one to read
+its excerpt and open the whole guide.
+
+The Emergency tab has a red header with the main
+emergency number in large type and its Call button;
+everything else on the tab is where it was.
+
+The in-app guide has a new design, with your progress
+at the top and each part of the app in its own group,
+and it teaches more: CPR practice, deleting reminders,
+notes and memories by asking, the library and adding a
+signed pack from a file, the panic button, theme, text
+size and language, countdowns and weekdays, SMS, and
+NIDO-to-NIDO by chat (your code, your messages,
+sending and pending tasks).
+
 ## 0.1.116-alpha - 2026-11-25
 
 This release fixes the two things the owner's
