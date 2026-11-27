@@ -17,9 +17,9 @@ A private AI assistant that runs entirely on your Android phone.</p>
 </p>
 
 <p align="center">
-  <img src="docs/visual/ui-chat-design.png" alt="NIDO chat: first screen, a conversation, and dark theme" width="820">
+  <img src="docs/visual/ui-chat-design.png" alt="Design of NIDO 0.1.117: chat start, an answer with sources, dark theme, and the Emergency tab" width="820">
 </p>
-<p align="center"><sub>Design mockups of the chat in v0.1.1-alpha. The shipped screens can differ in details.</sub></p>
+<p align="center"><sub>Design of the 0.1.117 interface (not screenshots). Some elements in the design are not in the app yet, and the shipped screens can differ in details.</sub></p>
 
 ## What NIDO is
 
