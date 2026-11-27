@@ -48,14 +48,14 @@ archivo `bge-small-en-v1.5-q8_0.gguf` (~35MB, sha256 abajo).
   sostener dentro del presupuesto de almacenamiento; reconsiderar con un índice ANN
   de verdad (p. ej. HNSW cuantizado) solo si el tamaño del corpus hace la fuerza bruta
   demasiado lenta en el dispositivo.
-- **Fuente del corpus**: `assets/corpus/corpus.json` — 300 docs: ~58 resúmenes de
+- **Fuente del corpus**: `assets/corpus/corpus.json` — 858 docs: ~58 resúmenes de
   artículos curados sobre temas de IA/sistemas relevantes para las propias preguntas
   de eval del bounty (MoE, cuantización, RAG, BM25, mmap, transformers) más temas
   generales de investigación en ciencia, historia, geografía, biología y economía,
-  completados con artículos aleatorios de **Wikipedia** (CC BY-SA 4.0) hasta 300.
+  completados con artículos aleatorios de **Wikipedia** (CC BY-SA 4.0) hasta 858.
   Construido por `scripts/build-corpus.mjs` + `scripts/build-corpus-tier.mjs`
   (solo máquina de desarrollo, online, se ejecuta una vez para curar/actualizar el
-  corpus — no lo ejecuta la app distribuida). ~188KB de texto; los embeddings se
+  corpus — no lo ejecuta la app distribuida). ~1,4 MB de texto; los embeddings se
   calculan en el dispositivo en el primer arranque vía `src/rag/seedCorpus.ts`,
   no precomputados, así que siempre coinciden con el modelo de embeddings distribuido.
 - **Atribución**: según la licencia CC BY-SA 4.0 de Wikipedia, cada fragmento guardado
@@ -128,15 +128,16 @@ previo antes de cargar uno nuevo, evitando una fuga de memoria nativa al cambiar
 
 ## Tiers de configuración y packs de corpus
 
-La primera ejecución ofrece tres tiers (`src/models/manifest.ts` `TIERS`, elegidos en
+La primera ejecución ofrece cuatro tiers (`src/models/manifest.ts` `TIERS`, elegidos en
 el wizard de `ModelSetupScreen`) — todos descargan los mismos modelos requeridos, solo
 la base de conocimiento difiere, y los tiers superiores son superconjuntos estrictos:
 
 | Tier | Knowledge base | Extra download |
 |---|---|---|
-| Minimum | 300 bundled topics (in the JS bundle, no download) | none |
-| Standard | + 1,000 more Wikipedia-derived topics | ~600KB |
-| Full | + 4,000 more on top of Standard (5,300 total) | ~3MB total |
+| Minimum | The built-in 858-topic knowledge base (in the app, no download) | none |
+| Standard | + 1,000 more Wikipedia-derived topics, and NIDO's Essentials guides | ~1.91MB |
+| Full | + 5,000 more Wikipedia-derived topics in total, and the Essentials guides | ~4.44MB total |
+| Encyclopedia | Full, plus Wikipedia's ~50,000 Vital Articles | ~169MB |
 
 Los packs de corpus (`corpus-standard`, `corpus-full`) los construye
 `scripts/build-corpus-tier.mjs`, que usa la API `generator=random` por lotes de

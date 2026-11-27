@@ -10,7 +10,7 @@
 Un asistente de IA privado que funciona por completo en tu teléfono Android.</p>
 
 <p align="center">
-  <a href="https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.112-alpha"><img alt="Versión: 0.1.112-alpha" src="https://img.shields.io/badge/versi%C3%B3n-0.1.112--alpha-3A563F"></a>
+  <a href="https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.117-alpha"><img alt="Versión: 0.1.117-alpha" src="https://img.shields.io/badge/versi%C3%B3n-0.1.117--alpha-3A563F"></a>
   <a href="https://github.com/Nido007-cmyk/Nido/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Nido007-cmyk/Nido/actions/workflows/ci.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="Licencia: MIT" src="https://img.shields.io/badge/licencia-MIT-green"></a>
   <img alt="Plataforma: Android" src="https://img.shields.io/badge/plataforma-Android-3A563F">
@@ -324,7 +324,7 @@ La interfaz está disponible en español, inglés y portugués.
 ## Instalación
 
 1. Descarga `app-release.apk` desde la
-   [versión v0.1.109-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.109-alpha).
+   [versión v0.1.117-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.117-alpha).
 2. Compruébalo con el archivo `app-release.apk.sha256` publicado a su lado.
 3. Instálalo en un teléfono Android (arm64).
 4. En el primer arranque NIDO descarga su modelo de lenguaje, entre 0,4 y
