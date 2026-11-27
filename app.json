@@ -101,6 +101,7 @@
       "./plugins/withLeanManifest",
       "./plugins/withLlamaTrim",
       "./plugins/withBundledPacks",
+      "./plugins/withNidoFonts",
       [
         "expo-build-properties",
         {
