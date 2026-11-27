@@ -1,4 +1,4 @@
-# Ficha de seguridad · NIDO 0.1.116
+# Ficha de seguridad · NIDO 0.1.117
 
 > Generada por `scripts/generate-safety-card.mjs` desde
 > `eval/gates/baseline.json` y la medida de este árbol.
