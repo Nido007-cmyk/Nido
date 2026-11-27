@@ -72,6 +72,14 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   respuestas muestran los artículos de donde salen, con una línea que cuenta
   qué frases salen de ellos y cuáles del modelo sin fuente; si nada de la base
   encaja de verdad, no se muestra ninguna fuente.
+- **Emergencia a un toque, respuestas que se escuchan y se comprueban**
+  (0.1.117): un botón SOS arriba del chat abre la pestaña Emergencia, cuya
+  cabecera roja pone primero el número de emergencias principal; cada
+  respuesta tiene un botón Escuchar que la lee en voz alta con la voz del
+  propio teléfono, sin internet; y cuando todas las frases de una respuesta
+  tienen respaldo en sus fuentes, una franja «Comprobada con las fuentes» lo
+  dice (en ámbar si se quitaron frases sin respaldo). Las fuentes salen en
+  una fila de tarjetas que se abren.
 - **Añade packs firmados desde un archivo** (0.1.80): Ajustes → Base de
   conocimiento → «Añadir un pack desde un archivo» añade un paquete de
   conocimiento que tengas como archivo, por ejemplo uno publicado por

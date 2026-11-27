@@ -483,7 +483,9 @@
     "newChatSession": "New chat",
     "deepResearch": "Deep Research",
     "deepResearchActive": "Deep Research Active",
-    "statusLine": "Offline · private"
+    "statusLine": "Offline · private",
+    "sos": "SOS",
+    "sosA11y": "Open Emergency: numbers and quick guides"
   },
   "chatScreen": {
     "roleAssistant": "🎭 NIDO",
@@ -568,7 +570,16 @@
     "researchChip": "Research",
     "researchOn": "Deep research on",
     "researchOff": "Deep research off",
-    "openFullGuide": "Open the full guide"
+    "openFullGuide": "Open the full guide",
+    "home": {
+      "title": "How can I help today?",
+      "guideLead": "First time?",
+      "guideBody": "The guide shows you everything NIDO can do."
+    },
+    "listen": "Listen",
+    "stopListening": "Stop",
+    "listenA11y": "Read the answer aloud",
+    "stopListeningA11y": "Stop reading"
   },
   "aboutScreen": {
     "title": "About NIDO",
@@ -1589,6 +1600,10 @@
             "id": "chat",
             "title": "Talk to NIDO",
             "what": "Chat like you would with anyone. Greetings and small talk get an instant answer.",
+            "steps": [
+              "With an empty chat you'll see four ideas to start with: tapping one types it into the box, and you send it.",
+              "The “$t(chatScreen.home.guideLead)” link below opens this guide."
+            ],
             "examples": [
               "hello",
               "thanks",
@@ -1604,7 +1619,8 @@
               "Pick your country with $t(emergency.pickCountry): the numbers come from the Local guide stored on your phone, with its source and check date on show.",
               "Tap the big number or a service in the grid: your phone's dialer opens with the number typed in. You make the call by pressing call.",
               "Right on the tab, type what's happening in “$t(emergency.describeLabel)” and tap Ask: the question goes to the chat and is answered from the guides on your phone.",
-              "Or tap one of the $t(emergency.quickGuides): CPR, bleeding, choking, burns, earthquake and hurricane."
+              "Or tap one of the $t(emergency.quickGuides): CPR, bleeding, choking, burns, earthquake and hurricane.",
+              "From the chat, the $t(chatHeader.sos) button at the top opens this tab right away."
             ],
             "examples": [
               "what is the emergency number in Mexico?"
@@ -1699,6 +1715,10 @@
             "id": "wikipedia",
             "title": "Ask without internet",
             "what": "NIDO answers with Wikipedia articles stored on your device and shows you the sources.",
+            "steps": [
+              "When every sentence of the answer is backed by the sources, you'll see “$t(groundingBadge.verified)” under it.",
+              "If NIDO removed sentences that had no support, the strip says so in amber. If a number doesn't match the source, there is no strip and the sources box shows you what the source says."
+            ],
             "examples": [
               "how do plants make their food?",
               "what is inflation?"
@@ -1805,7 +1825,8 @@
             "what": "Dictate your messages and, if you like, hear the answers.",
             "steps": [
               "Tap the microphone in the chat bar and speak.",
-              "To hear answers: $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.voice) → $t(voiceSettings.readAloudLabel)."
+              "To hear answers: $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.voice) → $t(voiceSettings.readAloudLabel).",
+              "Under each answer, “$t(chatScreen.listen)” reads it aloud; tap it again to stop."
             ],
             "tip": "Needs microphone permission. Dictation depends on your device's speech recognition."
           }
@@ -2139,5 +2160,9 @@
     "standard": "+ 1,000 more Wikipedia-derived topics and NIDO's first aid, disaster and survival guides (~1.87MB extra download).",
     "full": "+ 5,000 more Wikipedia-derived topics total and NIDO's first aid, disaster and survival guides (~4.40MB extra download).",
     "encyclopedia": "Full, plus Wikipedia's ~50,000 Vital Articles (~169MB extra download)."
+  },
+  "groundingBadge": {
+    "verified": "Checked against the sources",
+    "partial": "Partly checked: sentences without support were removed"
   }
 }

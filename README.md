@@ -71,6 +71,13 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   they come from, with a line that counts which sentences come from them and
   which come from the model with no source; when nothing in the base really
   matches, no source is shown.
+- **Emergency one tap away, answers you can hear and check** (0.1.117):
+  an SOS button at the top of the chat opens the Emergency tab, whose red
+  header puts the main emergency number first; every answer has a Listen
+  button that reads it aloud with the phone's own voice, offline; and when
+  every sentence of an answer is backed by its sources, a "Checked against
+  the sources" strip says so (amber when unsupported sentences were
+  removed). The sources show as a row of cards you can open.
 - **Adds signed packs from a file** (0.1.80): Settings → Knowledge base →
   "Add a pack from a file" adds a knowledge pack you have as a file, for
   example one published by SALVORA PACKS. Before anything is copied, the

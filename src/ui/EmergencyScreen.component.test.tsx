@@ -17,7 +17,7 @@ import { render, screen, fireEvent } from "@testing-library/react-native";
 const mockRegions = { list: [{ code: "US", name: "United States" }] };
 
 jest.mock("../rag/packs", () => ({
-  loadAllPackFacts: async () => ({ regions: [], facts: [] }),
+  loadAllPackFacts: async () => ({ regions: [], facts: [], outdatedPacks: [] }),
 }));
 
 jest.mock("../rag/packFacts", () => ({
@@ -150,3 +150,28 @@ describe("EmergencyScreen sin NIDO Local", () => {
   });
 });
 
+
+// 0.1.117 (UI nueva): la cabecera roja lleva el título, el país y el
+// número principal. El número sigue siendo un botón que abre el marcador.
+describe("EmergencyScreen · cabecera nueva (0.1.117)", () => {
+  const { EmergencyScreen } = require("./EmergencyScreen");
+  it("el número principal está en la cabecera y abre el marcador", async () => {
+    const { Linking } = require("react-native");
+    const open = jest.spyOn(Linking, "openURL").mockResolvedValue(true as never);
+    await render(<EmergencyScreen onAsk={() => {}} onOpenLibrary={() => {}} />);
+    fireEvent.press(await screen.findByLabelText("emergency.pickCountry"));
+    fireEvent.press(await screen.findByText("United States"));
+    const hero = await screen.findByTestId("emergency-hero");
+    const call = await screen.findByTestId("emergency-call-primary");
+    // El botón de llamar vive dentro de la cabecera.
+    const inHero = (node: any): boolean => !!node && (node === hero || inHero(node.parent));
+    expect(inHero(call)).toBe(true);
+    fireEvent.press(call);
+    expect(open).toHaveBeenCalledWith("tel:911");
+    // Las demás opciones de la pestaña siguen ahí.
+    expect(screen.getByTestId("emergency-describe-card")).toBeTruthy();
+    expect(screen.getByTestId("emergency-cpr-practice")).toBeTruthy();
+    expect(screen.getByText("emergency.guides.cpr")).toBeTruthy();
+    open.mockRestore();
+  });
+});

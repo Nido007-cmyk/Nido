@@ -94,7 +94,9 @@
     "localLlmCore": "Modelo local",
     "newChatSession": "Nuevo chat",
     "openDrawer": "Historial de chats y atajos",
-    "statusLine": "Sin conexión · privado"
+    "statusLine": "Sin conexión · privado",
+    "sos": "SOS",
+    "sosA11y": "Abrir Emergencia: números y guías rápidas"
   },
   "chatScreen": {
     "roleAssistant": "🎭 NIDO",
@@ -179,7 +181,16 @@
     "researchChip": "Investigar",
     "researchOn": "Investigación profunda activada",
     "researchOff": "Investigación profunda desactivada",
-    "openFullGuide": "Abrir la guía completa"
+    "openFullGuide": "Abrir la guía completa",
+    "home": {
+      "title": "¿En qué te ayudo hoy?",
+      "guideLead": "¿Primera vez?",
+      "guideBody": "La guía te enseña todo lo que NIDO sabe hacer."
+    },
+    "listen": "Escuchar",
+    "stopListening": "Parar",
+    "listenA11y": "Escuchar la respuesta en voz alta",
+    "stopListeningA11y": "Parar la lectura"
   },
   "common": {
     "cancel": "Cancelar",
@@ -1589,6 +1600,10 @@
             "id": "chat",
             "title": "Hablar con NIDO",
             "what": "Conversa como con cualquier persona. Los saludos y la charla corta tienen respuesta al instante.",
+            "steps": [
+              "Con el chat vacío verás cuatro ideas para empezar: al tocar una se escribe en el campo, y la envías tú.",
+              "El enlace «$t(chatScreen.home.guideLead)» de abajo abre esta guía."
+            ],
             "examples": [
               "hola",
               "gracias",
@@ -1604,7 +1619,8 @@
               "Elige tu país con $t(emergency.pickCountry): los números salen de la guía Local guardada en tu teléfono, con su fuente y su fecha a la vista.",
               "Toca el número grande o un servicio del mosaico: se abre el marcador del teléfono con el número escrito. La llamada la haces tú pulsando llamar.",
               "Sin salir de la pestaña, escribe lo que pasa en «$t(emergency.describeLabel)» y pulsa Preguntar: la pregunta va al chat y se responde con las guías del teléfono.",
-              "O toca una de las $t(emergency.quickGuides): RCP, hemorragia, atragantamiento, quemaduras, terremoto y huracán."
+              "O toca una de las $t(emergency.quickGuides): RCP, hemorragia, atragantamiento, quemaduras, terremoto y huracán.",
+              "Desde el chat, el botón $t(chatHeader.sos) de arriba abre esta pestaña al instante."
             ],
             "examples": [
               "¿qué número llamo en una emergencia en México?"
@@ -1699,6 +1715,10 @@
             "id": "wikipedia",
             "title": "Preguntar sin internet",
             "what": "NIDO responde con artículos de Wikipedia guardados en tu dispositivo y te muestra las fuentes.",
+            "steps": [
+              "Cuando todas las frases de la respuesta tienen respaldo en las fuentes, debajo verás «$t(groundingBadge.verified)».",
+              "Si NIDO quitó frases que no tenían respaldo, la franja lo dice en ámbar. Si una cifra no coincide con la fuente, no hay franja y la caja de fuentes te enseña lo que dice la fuente."
+            ],
             "examples": [
               "¿cómo hacen las plantas su comida?",
               "¿qué es la inflación?"
@@ -1805,7 +1825,8 @@
             "what": "Dicta tus mensajes y, si quieres, escucha las respuestas.",
             "steps": [
               "Toca el micrófono en la barra del chat y habla.",
-              "Para escuchar las respuestas: $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.voice) → $t(voiceSettings.readAloudLabel)."
+              "Para escuchar las respuestas: $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.voice) → $t(voiceSettings.readAloudLabel).",
+              "Debajo de cada respuesta, «$t(chatScreen.listen)» la lee en voz alta; tócalo otra vez para parar."
             ],
             "tip": "Necesita permiso de micrófono. El dictado depende del reconocimiento de voz de tu dispositivo."
           }
@@ -2139,5 +2160,9 @@
     "standard": "+ 1.000 temas más sacados de Wikipedia y las guías de primeros auxilios, desastres y supervivencia de NIDO (~1,87 MB de descarga extra).",
     "full": "+ 5.000 temas más sacados de Wikipedia en total y las guías de primeros auxilios, desastres y supervivencia de NIDO (~4,40 MB de descarga extra).",
     "encyclopedia": "Completo, más los ~50.000 Artículos Vitales de Wikipedia (~169 MB de descarga extra)."
+  },
+  "groundingBadge": {
+    "verified": "Comprobada con las fuentes",
+    "partial": "Comprobada en parte: se quitaron frases sin respaldo"
   }
 }

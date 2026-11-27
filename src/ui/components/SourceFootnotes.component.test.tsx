@@ -135,3 +135,26 @@ describe("SourceFootnotes: caja de comprobación (bounty, tanda 8)", () => {
     expect(screen.queryByText("sourceFootnotes.numberConflict")).toBeNull();
   });
 });
+
+// 0.1.117 (UI nueva): las fuentes van en una fila de tarjetas; al tocar
+// una, su extracto se abre debajo con «Leer la guía entera», y al tocarla
+// otra vez se cierra. Las mismas opciones que la lista de antes.
+describe("SourceFootnotes: fila de tarjetas (0.1.117)", () => {
+  const { fireEvent } = require("@testing-library/react-native");
+  const two = [
+    citations[0],
+    { chunkId: "pack:nido-esencial:13", docId: "d2", title: "Fiebre", body: "Medir la temperatura con termómetro.", score: 1, rawScore: 0.7, matchType: "semantic" },
+  ];
+
+  it("todas las fuentes salen en la fila y el extracto se abre y se cierra", async () => {
+    await render(<SourceFootnotes citations={two} grounding="grounded" />);
+    expect(screen.getByTestId("source-cards-row")).toBeTruthy();
+    expect(screen.getByText("Fiebre")).toBeTruthy();
+    expect(screen.queryByText("Medir la temperatura con termómetro.")).toBeNull();
+    await fireEvent.press(screen.getByText("Fiebre"));
+    expect(screen.getByText("Medir la temperatura con termómetro.")).toBeTruthy();
+    expect(screen.getByLabelText("sourceFootnotes.readWhole")).toBeTruthy();
+    await fireEvent.press(screen.getByText("Fiebre"));
+    expect(screen.queryByText("Medir la temperatura con termómetro.")).toBeNull();
+  });
+});

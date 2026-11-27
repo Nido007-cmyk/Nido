@@ -14,6 +14,7 @@ import { NidoMascot } from "./components/calm/NidoMascot";
 import type { Typography } from "./theme/typography";
 import { spacing, radii } from "./theme/spacing";
 import { fontFamilies } from "./theme/typography";
+import { emergencyRed, ON_EMERGENCY_RED } from "./theme/emergencyRed";
 
 interface Props {
   toneIcon: string;
@@ -26,6 +27,12 @@ interface Props {
   onToggleDeepResearch?: () => void;
   /** 0.1.46: botón de pánico (solo si el usuario lo activó). */
   panicSlot?: React.ReactNode;
+  /**
+   * 0.1.117 (UI nueva): botón SOS que abre la pestaña Emergencia. Navega,
+   * no llama ni borra nada: no se confunde con el botón de pánico (que
+   * borra datos al mantenerlo pulsado y solo aparece si se activó).
+   */
+  onOpenEmergency?: () => void;
 }
 
 /**
@@ -41,6 +48,7 @@ export function ChatHeader({
   onNewChat,
   onToggleDeepResearch,
   panicSlot,
+  onOpenEmergency,
 }: Props) {
   const { t } = useTranslation();
   const { colors, typography } = useTheme();
@@ -93,6 +101,19 @@ export function ChatHeader({
 
         {/* Right Action Controls */}
         <View style={styles.rightActions}>
+          {onOpenEmergency && (
+            <Pressable
+              accessibilityRole="button"
+              style={styles.sosBtn}
+              onPress={() => handlePress(onOpenEmergency, ImpactFeedbackStyle.Medium)}
+              hitSlop={6}
+              accessibilityLabel={t("chatHeader.sosA11y")}
+              testID="chat-header-sos"
+            >
+              <NidoIcon name="security" size={15} color={ON_EMERGENCY_RED} />
+              <Text style={styles.sosText}>{t("chatHeader.sos")}</Text>
+            </Pressable>
+          )}
           {panicSlot}
           {/* Tone Selector Pill (only when the screen still wants it here) */}
           {onCycleTone && (
@@ -159,6 +180,21 @@ export function ChatHeader({
 }
 
 const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
+  sosBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    height: 38,
+    paddingHorizontal: 12,
+    borderRadius: 19,
+    backgroundColor: emergencyRed(colors),
+  },
+  sosText: {
+    ...typography.ui.titleSm,
+    color: ON_EMERGENCY_RED,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+  },
   headerContainer: {
     backgroundColor: colors.bg.black,
     borderBottomWidth: 0,
