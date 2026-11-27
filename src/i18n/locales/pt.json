@@ -1628,6 +1628,17 @@
             "tip": "Sem o pacote Local (na $t(tabs.library), cerca de 0,4 MB) a aba não consegue mostrar os números do seu país. E se um dia você escrever uma emergência no chat, mesmo sem pacotes o NIDO responde com um texto de segurança fixo: não inventa uma resposta."
           },
           {
+            "id": "cpr",
+            "title": "Prática de RCP",
+            "what": "Aprenda o ritmo da RCP sobre uma almofada firme ou um manequim, nunca sobre uma pessoa: um bipe marca 110 compressões por minuto, um círculo pulsa com ele e a voz do telefone guia você.",
+            "steps": [
+              "Na aba $t(tabs.emergency), toque em «$t(cpr.practice.open)».",
+              "Deixe o telefone no chão ao lado da almofada e siga o bipe e o círculo.",
+              "Se escolher dar ventilações, o NIDO conta 30 compressões e 2 ventilações, e avisa para revezar a cada 2 minutos."
+            ],
+            "tip": "É só prática: numa emergência de verdade, ligue para o número de emergência. A tela não apaga enquanto você pratica, e não precisa de internet nem de modelo de IA."
+          },
+          {
             "id": "quick",
             "title": "Hora, contas e conversões",
             "what": "Respostas exatas: a hora vem do dispositivo e as contas são feitas pelo app, não pelo modelo de IA.",
@@ -1635,7 +1646,9 @@
               "que horas são",
               "quanto é 245 * 38",
               "quanto é (100 + 50) * 2",
-              "converte 5 metros para pés"
+              "converte 5 metros para pés",
+              "quantos dias faltam para o Natal?",
+              "que dia da semana cai 25 de dezembro?"
             ],
             "tip": "A calculadora entende +, -, *, /, %, potências (^), sqrt e pi, até 50 caracteres."
           }
@@ -1670,6 +1683,20 @@
             "tip": "Uma palavra do título basta para abrir uma nota."
           },
           {
+            "id": "cleanup",
+            "title": "Apagar e corrigir",
+            "what": "Peça com suas palavras que o NIDO apague um lembrete, uma nota ou algo que ele lembra sobre você.",
+            "steps": [
+              "Você também pode ver tudo e apagar à mão em $t(chatScreen.drawerItems.memory)."
+            ],
+            "examples": [
+              "apague o lembrete de ligar para a mamãe",
+              "apague a nota do aniversário",
+              "esqueça minha cor favorita"
+            ],
+            "tip": "Antes de apagar, o NIDO mostra o que vai apagar e pede confirmação: apagar não tem volta."
+          },
+          {
             "id": "memory",
             "title": "Memória",
             "what": "Sua memória funciona assim. O que você me conta fica em quatro gavetas: em Dados ficam os fatos sobre você, como seu nome, onde você mora ou sua cor favorita. Em Pessoas ficam os outros: sua mãe, seu parceiro, seus amigos. Em Notas fica o que você me pede para anotar, palavra por palavra. E em Lembretes, o que tem data ou hora. Você também pode me perguntar de volta com suas palavras: “como se chama minha mãe?”, “qual é minha cor favorita?”. Eu respondo a partir do que você me contou. Tudo vive neste dispositivo, criptografado. Nada é enviado para servidor nenhum, e o que você quiser apagar, é apagado.",
@@ -1701,9 +1728,10 @@
             "what": "Procure nos seus contatos e ligue sem procurar o número.",
             "examples": [
               "procura o contato Ana",
-              "liga para a Ana"
+              "liga para a Ana",
+              "mande um sms para a Ana dizendo que vou me atrasar"
             ],
-            "tip": "Antes de ligar o NIDO mostra o número e pede para confirmar. Precisa de permissão de contatos."
+            "tip": "Antes de ligar ou enviar um SMS, o NIDO mostra o número e pede para confirmar. Precisa de permissão de contatos."
           }
         ]
       },
@@ -1790,6 +1818,17 @@
               "analisa um csv"
             ],
             "tip": "O NIDO pede confirmação antes de abrir um link, e você escolhe o arquivo."
+          },
+          {
+            "id": "library",
+            "title": "A biblioteca: pacotes e guias",
+            "what": "Na $t(tabs.library) você baixa pacotes de conhecimento, adiciona um pacote assinado a partir de um arquivo e lê qualquer guia do começo ao fim.",
+            "steps": [
+              "Em «$t(library.tabPacks)» baixe os pacotes que quiser. Os dois pacotes básicos já vêm dentro do app.",
+              "Se você tem um pacote num arquivo, toque em «$t(packImport.addButton)»: o NIDO confere a assinatura antes de copiar qualquer coisa e recusa o pacote que não passar.",
+              "Lá embaixo, «$t(guideLibrary.open)» abre qualquer guia dos pacotes instalados, inteiro, como um documento."
+            ],
+            "tip": "Ler um guia não usa internet nem carrega o modelo de IA: funciona mesmo antes de você baixar algum."
           }
         ]
       },
@@ -1806,6 +1845,12 @@
               "Na aba $t(nido.tabContacts), mostre seu código QR e cole o código do outro como texto.",
               "Confiram juntos a impressão digital de verificação.",
               "Na aba $t(nido.tabLink) toque em $t(nido.connectButton) em qualquer um e escreva em $t(nido.tabChats)."
+            ],
+            "examples": [
+              "qual é o meu código NIDO?",
+              "leia minhas mensagens do NIDO",
+              "mande uma mensagem NIDO para a Ana: já saí",
+              "mostre minhas tarefas pendentes"
             ],
             "tip": "Se o outro NIDO estiver fora de alcance, a mensagem espera criptografada e é enviada quando ele aparecer. Se desconectar depois de um tempo com o NIDO fechado, toque em “Permitir” no aviso de bateria da tela NIDO."
           },
@@ -1872,6 +1917,16 @@
               "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.recovery) → $t(modelSetupScreen.recovery.dangerBadge)."
             ],
             "tip": "Não pode ser desfeito. Se quiser manter algo, faça um backup antes."
+          },
+          {
+            "id": "panic",
+            "title": "Botão de pânico",
+            "what": "Um botão para apagar todos os dados do NIDO de uma vez, se precisar: chats, contatos, chaves, memória e modelos.",
+            "steps": [
+              "Ative em $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.security) → $t(panic.settingTitle).",
+              "Aparece um escudo vermelho com «$t(panic.short)» no alto do chat. Segure por 3 segundos e tudo é apagado, sem pedir digital nem confirmação. Se soltar antes, nada acontece."
+            ],
+            "tip": "Não tem volta: faça um backup antes. Não confunda com o botão $t(chatHeader.sos), que só abre a aba de emergência."
           }
         ]
       },
@@ -1907,6 +1962,16 @@
             "steps": [
               "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.tone)."
             ]
+          },
+          {
+            "id": "appearance",
+            "title": "Tema, texto e idioma",
+            "what": "Ajuste como o NIDO aparece e em que idioma ele fala com você.",
+            "steps": [
+              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.displayTheme): escolha o $t(themeSelector.paletteTitle) (Daylight para o dia, Night Garden para pouca luz) e o $t(themeSelector.textTitle).",
+              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.language): español, English ou português."
+            ],
+            "tip": "O tamanho do texto muda no app inteiro, não só no chat."
           },
           {
             "id": "problems",

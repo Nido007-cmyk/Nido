@@ -1628,6 +1628,17 @@
             "tip": "Without the Local pack (in the $t(tabs.library), about 0.4 MB) the tab can't show your country's numbers. And if you ever type an emergency in the chat, even with no packs NIDO answers with a fixed safety text: it doesn't make an answer up."
           },
           {
+            "id": "cpr",
+            "title": "CPR practice",
+            "what": "Learn the rhythm of CPR on a firm cushion or a manikin, never on a person: a beep marks 110 compressions a minute, a circle pulses with it and the phone's voice guides you.",
+            "steps": [
+              "In the $t(tabs.emergency) tab, tap “$t(cpr.practice.open)”.",
+              "Put the phone on the floor next to the cushion and follow the beep and the circle.",
+              "If you choose to give breaths, NIDO counts 30 compressions and 2 breaths, and reminds you to swap every 2 minutes."
+            ],
+            "tip": "It's practice only: in a real emergency, call the emergency number. The screen stays on while you practise, and it needs no internet and no AI model."
+          },
+          {
             "id": "quick",
             "title": "Time, math and conversions",
             "what": "Exact answers: the time comes from your device and the math is done by the app, not the AI model.",
@@ -1635,7 +1646,9 @@
               "what time is it",
               "what is 245 * 38",
               "what is (100 + 50) * 2",
-              "convert 5 meters to feet"
+              "convert 5 meters to feet",
+              "how many days until Christmas?",
+              "what day of the week is December 25?"
             ],
             "tip": "The calculator understands +, -, *, /, %, powers (^), sqrt and pi, up to 50 characters."
           }
@@ -1670,6 +1683,20 @@
             "tip": "One word from the title is enough to open a note."
           },
           {
+            "id": "cleanup",
+            "title": "Delete and correct",
+            "what": "Ask NIDO in your own words to delete a reminder, a note or something it remembers about you.",
+            "steps": [
+              "You can also see everything and delete it by hand in $t(chatScreen.drawerItems.memory)."
+            ],
+            "examples": [
+              "delete the reminder to call mom",
+              "delete the birthday note",
+              "forget my favorite color"
+            ],
+            "tip": "Before deleting, NIDO shows you what it will delete and asks you to confirm: deleting can't be undone."
+          },
+          {
             "id": "memory",
             "title": "Memory",
             "what": "Your memory works like this. What you tell me is kept in four drawers: Facts holds things about you, like your name, where you live or your favorite color. People holds everyone else: your mom, your partner, your friends. Notes holds what you ask me to write down, word for word. And Reminders holds anything with a date or a time. You can also ask me back in your own words: “What's my mom's name?”, “What's my favorite color?”. I answer from what you told me. Everything lives on this device, encrypted. Nothing is uploaded to any server, and whatever you want deleted, gets deleted.",
@@ -1701,9 +1728,10 @@
             "what": "Search your contacts and call without looking up the number.",
             "examples": [
               "find contact Ana",
-              "call Ana"
+              "call Ana",
+              "send an sms to Ana saying I'm running late"
             ],
-            "tip": "Before calling NIDO shows you the number and asks you to confirm. Needs contacts permission."
+            "tip": "Before calling or sending an SMS, NIDO shows you the number and asks you to confirm. Needs contacts permission."
           }
         ]
       },
@@ -1790,6 +1818,17 @@
               "analyze a csv"
             ],
             "tip": "NIDO asks you to confirm before opening a link, and you pick the file."
+          },
+          {
+            "id": "library",
+            "title": "The library: packs and guides",
+            "what": "In the $t(tabs.library) you download knowledge packs, add a signed one from a file and read any guide from start to finish.",
+            "steps": [
+              "In “$t(library.tabPacks)” download the packs you want. The two basic packs already come inside the app.",
+              "If you have a pack in a file, tap “$t(packImport.addButton)”: NIDO checks its signature before copying anything and refuses any pack that fails.",
+              "At the very bottom, “$t(guideLibrary.open)” opens any guide from the installed packs, whole, as a document."
+            ],
+            "tip": "Reading a guide uses no internet and doesn't load the AI model: it works even before you've downloaded one."
           }
         ]
       },
@@ -1806,6 +1845,12 @@
               "In the $t(nido.tabContacts) tab, show your QR code and paste the other one as text.",
               "Check the verification fingerprint together.",
               "In the $t(nido.tabLink) tab tap $t(nido.connectButton) on either tablet and write in $t(nido.tabChats)."
+            ],
+            "examples": [
+              "what is my NIDO code?",
+              "read my NIDO messages",
+              "send a NIDO message to Ana: on my way",
+              "show my pending tasks"
             ],
             "tip": "If the other NIDO is out of range, the message waits encrypted and is sent when it shows up. If it disconnects after a while with NIDO closed, tap “Allow” on the battery notice in the NIDO screen."
           },
@@ -1872,6 +1917,16 @@
               "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.recovery) → $t(modelSetupScreen.recovery.dangerBadge)."
             ],
             "tip": "This can't be undone. If you want to keep something, make a backup first."
+          },
+          {
+            "id": "panic",
+            "title": "Panic button",
+            "what": "A button to erase all of NIDO's data at once if you need to: chats, contacts, keys, memory and models.",
+            "steps": [
+              "Turn it on in $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.security) → $t(panic.settingTitle).",
+              "A red shield with “$t(panic.short)” appears at the top of the chat. Hold it for 3 seconds and everything is erased, with no fingerprint and no confirmation. Let go earlier and nothing happens."
+            ],
+            "tip": "It can't be undone: make a backup first. Don't confuse it with the $t(chatHeader.sos) button, which only opens the emergency tab."
           }
         ]
       },
@@ -1907,6 +1962,16 @@
             "steps": [
               "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.tone)."
             ]
+          },
+          {
+            "id": "appearance",
+            "title": "Theme, text and language",
+            "what": "Adjust how NIDO looks and which language it speaks to you in.",
+            "steps": [
+              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.displayTheme): choose the $t(themeSelector.paletteTitle) (Daylight for the day, Night Garden for low light) and the $t(themeSelector.textTitle).",
+              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.language): español, English or português."
+            ],
+            "tip": "The text size changes across the whole app, not just the chat."
           },
           {
             "id": "problems",

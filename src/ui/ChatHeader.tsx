@@ -110,7 +110,7 @@ export function ChatHeader({
               accessibilityLabel={t("chatHeader.sosA11y")}
               testID="chat-header-sos"
             >
-              <NidoIcon name="security" size={15} color={ON_EMERGENCY_RED} />
+              <NidoIcon name="warning" size={15} color={ON_EMERGENCY_RED} />
               <Text style={styles.sosText}>{t("chatHeader.sos")}</Text>
             </Pressable>
           )}
