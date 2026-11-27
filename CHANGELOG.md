@@ -4,6 +4,34 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.117-alpha - 2026-11-26
+
+This release is a new look for the whole app. Nothing
+was taken away: every screen, button and setting is
+where it was, and everything works offline as before.
+
+The colours are new. Pages sit on a warm paper tone,
+the main colour is a deep pine green, and red is kept
+for emergencies only, so it stands out when it
+matters. The dark theme gets the same care, with
+softer greens that are easy on the eyes at night.
+Every text colour was checked to stay easy to read on
+its background in both themes.
+
+The letters are new too. Text uses Atkinson
+Hyperlegible Next, a typeface made to be easy to read
+for people with low vision, and titles use Source
+Serif 4. Both travel inside the app, so they work
+without internet. Small labels are a little bigger
+and no longer written in capital letters.
+
+The chat is easier on the eye: rounder message
+bubbles, a larger text box with a green send button,
+and answers that called a safety tool are shown in a
+soft red card. Cards across the app are rounder, with
+lighter borders and a gentle shadow, and the bottom
+tabs are clearer about which one is open.
+
 ## 0.1.116-alpha - 2026-11-25
 
 This release fixes the two things the owner's
