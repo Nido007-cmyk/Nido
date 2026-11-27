@@ -130,6 +130,9 @@ export function summarizeLeak(samples: readonly RouterSample[]): RouterLeak {
   for (const s of samples) {
     // Un chip caído no resolvió nada: no es un turno resuelto por el código.
     if (!s.route || s.outcome === "chat" || s.outcome === "stageDropped" || !isRouterOutcome(s.outcome)) continue;
+    // 0.1.118: la misma criba de tiempos que summarizeRouterSamples, para
+    // que el desglose y el resumen cuenten las mismas muestras.
+    if (!Number.isFinite(s.classifyMs) || s.classifyMs < 0) continue;
     measured++;
     if (s.route !== "model") {
       router++;
@@ -170,8 +173,12 @@ export function summarizeRouterSamples(samples: readonly RouterSample[]): Router
       if (isStageDropReason(s.route)) drops[s.route]++;
       continue;
     }
+    // 0.1.118: una muestra con un desenlace que no se reconoce (fila
+    // vieja o dañada) no cuenta: antes sumaba en «mensajes» y en los
+    // tiempos pero en ningún desenlace, y los porcentajes no cuadraban.
+    if (!isRouterOutcome(s.outcome)) continue;
     times.push(s.classifyMs);
-    if (isRouterOutcome(s.outcome)) outcomes[s.outcome]++;
+    outcomes[s.outcome]++;
   }
   times.sort((a, b) => a - b);
   return {

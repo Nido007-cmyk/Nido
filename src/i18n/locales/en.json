@@ -89,7 +89,7 @@
     "updateAsset": "⬆️ Update",
     "outdatedNote": "A newer version of this pack is available. Until then the one you have keeps working, offline too; the new one only replaces it once it has finished downloading and been verified.",
     "measuredRowSpeed": "{{rate}} tok/s here",
-    "measuredBasis": "The median of your last {{count}} replies with this model"
+    "measuredBasis": "The median of this model's last {{count}} generations on this device"
   },
   "modelLoadErrorCard": {
     "corrupt": {
@@ -129,8 +129,8 @@
   "usageStatsScreen": {},
   "systemMonitor": {},
   "drawerFooterStats": {
-    "ram": "RAM",
-    "disk": "DISK",
+    "ram": "RAM (NIDO)",
+    "disk": "Disk",
     "lastQuery": "{{rate}} tok/s last query"
   },
   "modelSetupScreen": {
@@ -1118,7 +1118,8 @@
     "deviceRamDetail": "{{advertised}} ({{usable}} usable)",
     "deviceRamUsable": "{{usable}} usable",
     "swap": "Swap (virtual RAM)",
-    "swapValue": "{{free}} free of {{total}}"
+    "swapValue": "{{free}} free of {{total}}",
+    "segSearchModel": "Search model"
   },
   "calm": {
     "model": "Model",
