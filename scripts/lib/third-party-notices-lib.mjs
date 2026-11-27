@@ -69,6 +69,21 @@ export const NATIVE_COMPONENTS = [
     where: "modules/nido-p2p (ML-KEM-768, compiled into libnidomlkem.so)",
     licenseFile: "modules/nido-p2p/android/src/main/cpp/mlkem-native/LICENSE",
   },
+  // 0.1.117 (UI nueva): tipografías empaquetadas en el APK (plugins/withNidoFonts.js).
+  {
+    name: "Atkinson Hyperlegible Next",
+    version: "Google Fonts (via @expo-google-fonts/atkinson-hyperlegible-next 0.4.1)",
+    license: "OFL-1.1",
+    where: "assets/fonts (copied into the APK's assets/fonts)",
+    licenseFile: "assets/fonts/OFL-AtkinsonHyperlegibleNext.txt",
+  },
+  {
+    name: "Source Serif 4",
+    version: "Google Fonts (via @expo-google-fonts/source-serif-4 0.4.2)",
+    license: "OFL-1.1",
+    where: "assets/fonts (copied into the APK's assets/fonts)",
+    licenseFile: "assets/fonts/OFL-SourceSerif4.txt",
+  },
 ];
 
 /** Nombre del paquete a partir de su ruta en el lockfile. */
