@@ -33,14 +33,15 @@ describe("H-A11-1 · outcomeColor de la telemetría", () => {
   it("cancelled en Daylight usa el ámbar corregido de S-03 y pasa AA", () => {
     const colors = daylightTheme as Colors;
     const fg = outcomeColor(colors, "cancelled");
-    expect(fg).toBe("#875E1E");
+    // 0.1.117 (UI nueva): el ámbar de texto de Daylight es #8A5A12.
+    expect(fg).toBe("#8A5A12");
     expect(fg).toBe(colors.amber[600]);
     // La superficie real de la etiqueta es cardElevated.
     const ratio = contrastRatio(fg, colors.bg.cardElevated);
     expect(ratio).toBeGreaterThanOrEqual(4.5);
-    expect(ratio).toBeCloseTo(4.92, 1);
-    // El par viejo, fijado como lo que ya no puede volver:
-    expect(contrastRatio(colors.text.accentAmber, colors.bg.cardElevated)).toBeCloseTo(3.12, 1);
+    expect(ratio).toBeCloseTo(5.01, 1);
+    // Desde 0.1.117 el texto ámbar de Daylight también pasa AA en esa superficie.
+    expect(contrastRatio(colors.text.accentAmber, colors.bg.cardElevated)).toBeGreaterThanOrEqual(4.5);
   });
 
   it("cancelled en Night conserva accentAmber", () => {
