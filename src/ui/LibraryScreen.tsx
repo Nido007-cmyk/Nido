@@ -17,6 +17,7 @@ import type { Typography } from "./theme/typography";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import { PersonalDocumentsManager } from "./PersonalDocumentsManager";
 import { ModelSetupScreen } from "./ModelSetupScreen";
+import { fontFamilies } from "./theme/typography";
 
 export type LibrarySection = "documents" | "learn" | "packs";
 type Section = LibrarySection;
@@ -144,7 +145,7 @@ const getStyles = (colors: Colors, typography: Typography) =>
     libraryBtnText: { ...typography.ui.titleSm, color: colors.emerald[400] },
     // 0.1.88: la banda final de la pestaña (patrón libraryEntry de App).
     libraryEntry: { alignItems: "center", paddingVertical: 14, borderTopWidth: 1 },
-    libraryEntryText: { fontSize: 15, fontWeight: "700" },
+    libraryEntryText: { fontFamily: fontFamilies.sans, fontSize: 15, fontWeight: "700" },
     segment: {
       flexDirection: "row",
       marginHorizontal: 16,

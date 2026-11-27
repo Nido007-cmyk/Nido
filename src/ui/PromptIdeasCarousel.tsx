@@ -14,6 +14,7 @@ import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
 import { spacing, radii } from "./theme/spacing";
+import { fontFamilies } from "./theme/typography";
 
 export interface PromptIdea {
   category: string;
@@ -172,6 +173,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     gap: 6,
   },
   headerIcon: {
+    fontFamily: fontFamilies.sans,
     fontSize: 14,
   },
   headerTitle: {
@@ -184,6 +186,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   },
   closeBtnText: {
     color: colors.text.dim,
+    fontFamily: fontFamilies.sans,
     fontSize: 16,
   },
   body: {
@@ -192,6 +195,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     gap: 8,
   },
   categoryIcon: {
+    fontFamily: fontFamilies.sans,
     fontSize: 32,
   },
   categoryPill: {

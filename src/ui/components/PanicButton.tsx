@@ -20,6 +20,7 @@ import { useTheme } from "../theme/ThemeContext";
 import { NidoIcon } from "./icons/NidoIcon";
 import { impact, ImpactFeedbackStyle, notification, NotificationFeedbackType } from "../../services/haptics";
 import { userFacingError } from "../userFacingError";
+import { fontFamilies } from "../theme/typography";
 
 export const PANIC_HOLD_MS = 3000;
 
@@ -91,7 +92,7 @@ export function PanicButton({ onWiped, onError }: Props) {
           paddingHorizontal: 10,
         },
         fill: { position: "absolute", left: 0, top: 0, bottom: 0, backgroundColor: colors.crimson.border },
-        label: { color: crimsonTextColor, fontSize: 12, fontWeight: "700" },
+        label: { color: crimsonTextColor, fontFamily: fontFamilies.sans, fontSize: 12, fontWeight: "700" },
       }),
     [colors],
   );

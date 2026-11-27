@@ -22,6 +22,7 @@ import { spacing, radii } from "./theme/spacing";
 import { getCorpusIndexStatus, onCorpusIndexStatus, type CorpusIndexStatus } from "../rag/corpusIndexStatus";
 import type { ModelSpeedSummary } from "../inference/telemetry";
 import { displayLang, formatInt } from "../utils/safeFormat";
+import { fontFamilies } from "./theme/typography";
 
 function formatMB(bytes: number): string {
   if (bytes <= 0) return "0 MB";
@@ -658,6 +659,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     gap: 5,
   },
   compatIcon: {
+    fontFamily: fontFamilies.sans,
     fontSize: 10,
   },
   compatGreen: {
@@ -731,6 +733,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     fontWeight: "800",
   },
   errorIcon: {
+    fontFamily: fontFamilies.sans,
     fontSize: 12,
   },
   errorText: {
@@ -867,6 +870,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     backgroundColor: colors.bg.subtle,
   },
   trashIcon: {
+    fontFamily: fontFamilies.sans,
     fontSize: 14,
   },
   badge: {

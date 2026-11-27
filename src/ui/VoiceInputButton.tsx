@@ -12,6 +12,7 @@ import { NidoIcon } from "./components/icons/NidoIcon";
 import { voiceInputAvailability, startListening, stopListening, VoiceEvent } from "../voice/VoiceInput";
 import type { VoiceAvailability } from "../voice/voicePolicy";
 import { useTheme } from "./theme/ThemeContext";
+import { fontFamilies } from "./theme/typography";
 
 interface Props {
   disabled?: boolean;
@@ -167,7 +168,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   btnDisabled: { opacity: 0.4 },
-  icon: { fontSize: 16, color: "#fff" },
+  icon: { fontFamily: fontFamilies.sans, fontSize: 16, color: "#fff" },
   ring: {
     position: "absolute",
     width: 40,

@@ -68,6 +68,7 @@ import {
 import { extractLanAddress, extractMac } from "../p2p/nativeTransport";
 import { describeP2PError } from "../p2p/p2pErrorText";
 import { useSecureScreen } from "./useSecureScreen";
+import { fontFamilies } from "./theme/typography";
 
 type Tab = "chats" | "contactos" | "enlace" | "negociaciones" | "packs";
 
@@ -2018,7 +2019,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     paddingVertical: calmSpacing.cozy,
   },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: calmSpacing.cozy },
-  headerIcon: { fontSize: 24 },
+  headerIcon: { fontFamily: fontFamilies.sans, fontSize: 24 },
   title: { ...typography.ui.titleLg, color: colors.text.primary },
   closeBtn: {
     minHeight: 40,
@@ -2207,7 +2208,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   contactInfo: { flex: 1 },
   contactName: { ...typography.ui.body, color: colors.text.primary, fontWeight: "600" },
   contactSub: { ...typography.ui.caption, color: colors.text.muted },
-  chevron: { fontSize: 20, color: colors.text.muted },
+  chevron: { fontFamily: fontFamilies.sans, fontSize: 20, color: colors.text.muted },
   primaryBtn: {
     backgroundColor: colors.emerald[500],
     borderRadius: calmRadii.soft,
@@ -2324,5 +2325,5 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     justifyContent: "center",
   },
   sendBtnDisabled: { opacity: 0.4 },
-  sendBtnText: { color: colors.text.inverse, fontSize: 20 },
+  sendBtnText: { color: colors.text.inverse, fontFamily: fontFamilies.sans, fontSize: 20 },
 });

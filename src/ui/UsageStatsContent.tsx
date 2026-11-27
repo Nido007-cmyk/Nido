@@ -23,6 +23,7 @@ import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import { spacing, radii } from "./theme/spacing";
+import { fontFamilies } from "./theme/typography";
 
 const modelManager = new ModelManager();
 
@@ -493,6 +494,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     gap: 6,
   },
   cardIcon: {
+    fontFamily: fontFamilies.sans,
     fontSize: 14,
   },
   cardTitle: {

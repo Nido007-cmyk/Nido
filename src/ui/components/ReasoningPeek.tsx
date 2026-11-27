@@ -9,6 +9,7 @@ import { Pressable, StyleSheet, Text } from "react-native";
 import { useTranslation } from "react-i18next";
 import { ProcessingIndicator } from "../ProcessingIndicator";
 import { useTheme } from "../theme";
+import { fontFamilies } from "../theme/typography";
 
 const PEEK_CHARS = 140;
 
@@ -64,6 +65,7 @@ export function ReasoningPeek({
 
 const styles = StyleSheet.create({
   peek: {
+    fontFamily: fontFamilies.sans,
     fontSize: 12,
     fontStyle: "italic",
     opacity: 0.7,

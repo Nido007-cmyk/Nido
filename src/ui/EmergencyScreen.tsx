@@ -23,6 +23,7 @@ import { crisisCard, emergencyCard, emergencyRegions, outdatedPackNote, type Fac
 import { getEmergencyRegion, setEmergencyRegion } from "../models/settings";
 import { QUICK_GUIDES } from "./emergency/quickGuides";
 import { CprPractice } from "./emergency/CprPractice";
+import { fontFamilies } from "./theme/typography";
 
 interface Props {
   /**
@@ -402,7 +403,7 @@ const getStyles = (colors: Colors, typography: Typography) =>
     },
     bigCallText: { flex: 1, paddingVertical: 10 },
     bigCallLabel: { ...typography.ui.subtext, color: colors.text.inverse, opacity: 0.92 },
-    bigCallNumber: { fontSize: 32, lineHeight: 38, fontWeight: "800", color: colors.text.inverse, fontVariant: ["tabular-nums"] },
+    bigCallNumber: { fontFamily: fontFamilies.sans, fontSize: 32, lineHeight: 38, fontWeight: "800", color: colors.text.inverse, fontVariant: ["tabular-nums"] },
     bigCallNote: { ...typography.ui.caption, color: colors.text.inverse, opacity: 0.9 },
     bigCallAction: { ...typography.ui.title, color: colors.text.inverse },
     grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
@@ -418,7 +419,7 @@ const getStyles = (colors: Colors, typography: Typography) =>
       gap: 2,
     },
     tileLabel: { ...typography.ui.subtext, color: colors.text.secondary },
-    tileNumber: { fontSize: 24, lineHeight: 30, fontWeight: "800", color: colors.text.primary, fontVariant: ["tabular-nums"] },
+    tileNumber: { fontFamily: fontFamilies.sans, fontSize: 24, lineHeight: 30, fontWeight: "800", color: colors.text.primary, fontVariant: ["tabular-nums"] },
     tileNote: { ...typography.ui.caption, color: colors.text.secondary },
     crisisRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 4 },
     crisisText: { flex: 1, gap: 2 },

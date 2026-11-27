@@ -46,6 +46,7 @@ import {
   type RecoveryAction,
   type RecoveryPhase,
 } from "./keyLossRecovery";
+import { fontFamilies } from "./theme/typography";
 
 export interface KeyLossRecoveryScreenProps {
   /** The typed contract — consumed, never re-derived. */
@@ -223,18 +224,21 @@ const styles = StyleSheet.create({
     paddingVertical: calmSpacing.generous,
   },
   title: {
+    fontFamily: fontFamilies.sans,
     fontSize: 24,
     fontWeight: "700",
     marginBottom: calmSpacing.comfortable,
     textAlign: "center",
   },
   body: {
+    fontFamily: fontFamilies.sans,
     fontSize: 14,
     textAlign: "center",
     marginBottom: calmSpacing.comfortable,
     lineHeight: 20,
   },
   warning: {
+    fontFamily: fontFamilies.sans,
     fontSize: 14,
     fontWeight: "600",
     textAlign: "center",
@@ -242,6 +246,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   sectionLabel: {
+    fontFamily: fontFamilies.sans,
     fontSize: 13,
     fontWeight: "700",
     textAlign: "center",
@@ -266,6 +271,7 @@ const styles = StyleSheet.create({
     ...calmShadows.none,
   },
   confirmTitle: {
+    fontFamily: fontFamilies.sans,
     fontSize: 18,
     fontWeight: "700",
     textAlign: "center",
@@ -280,6 +286,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   buttonText: {
+    fontFamily: fontFamilies.sans,
     fontSize: 16,
     fontWeight: "700",
   },
@@ -288,6 +295,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   secondaryButtonText: {
+    fontFamily: fontFamilies.sans,
     fontSize: 15,
     fontWeight: "600",
   },

@@ -191,6 +191,7 @@ import { EmergencyScreen } from "./EmergencyScreen";
 import { LibraryScreen } from "./LibraryScreen";
 import { userFacingError } from "./userFacingError";
 import { historyForModel, planRetry } from "./chatRetry";
+import { fontFamilies } from "./theme/typography";
 
 interface Message {
   id: string;
@@ -3722,6 +3723,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     gap: 6,
   },
   deepBannerIcon: {
+    fontFamily: fontFamilies.sans,
     fontSize: 10,
   },
   deepBannerText: {
@@ -3848,6 +3850,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     color: colors.text.secondary,
   },
   copyIcon: {
+    fontFamily: fontFamilies.sans,
     fontSize: 14,
     paddingHorizontal: 4,
   },
@@ -3869,6 +3872,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     borderWidth: 1,
   },
   footerGlyph: {
+    fontFamily: fontFamilies.sans,
     fontSize: 10,
     lineHeight: 12,
     fontWeight: "700",
@@ -3880,6 +3884,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     letterSpacing: 0.2,
   },
   reasoningText: {
+    fontFamily: fontFamilies.sans,
     fontSize: 12,
     fontStyle: "italic",
     lineHeight: 17,
@@ -3945,9 +3950,9 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
-  stagedText: { flexShrink: 1, fontSize: 14, fontWeight: "600" },
+  stagedText: { flexShrink: 1, fontFamily: fontFamilies.sans, fontSize: 14, fontWeight: "600" },
   stagedDismiss: { padding: 4 },
-  stagedHint: { fontSize: 12, paddingHorizontal: 4 },
+  stagedHint: { fontFamily: fontFamilies.sans, fontSize: 12, paddingHorizontal: 4 },
   callRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 },
   callBtn: { minHeight: 44, paddingHorizontal: 16, borderRadius: 22, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   callBtnText: { ...typography.ui.titleSm },
@@ -4001,6 +4006,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   sendBtnText: {
     color: colors.text.inverse,
     fontWeight: "800",
+    fontFamily: fontFamilies.sans,
     fontSize: 16,
     marginLeft: 2,
   },
@@ -4028,6 +4034,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   stopBtnText: {
     color: colors.text.inverse,
     fontWeight: "800",
+    fontFamily: fontFamilies.sans,
     fontSize: 14,
   },
 });
