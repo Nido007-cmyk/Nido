@@ -3120,7 +3120,10 @@ export function ChatScreen({
                 {/* Rediseño 2026-10-10: sin etiqueta «Tú» (la posición y el color
                     ya dicen quién habla). NIDO lleva su mascota como avatar. */}
                 {item.role === "assistant" && <NidoMascot role="brand" size={26} />}
-                <View style={item.role === "assistant" ? styles.assistantBody : styles.userBody}>
+                {/* 0.1.117 (UI nueva): una respuesta fija con números que
+                    llamar se pinta como tarjeta de emergencia (borde y fondo
+                    carmesí suaves), para que no se confunda con texto del modelo. */}
+                <View style={item.role === "assistant" ? [styles.assistantBody, item.calls && item.calls.length > 0 && styles.safetyCard] : styles.userBody}>
 
                 {showProcessing ? (
                   <ProcessingIndicator
@@ -3775,7 +3778,9 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   userBubble: {
     // (backgroundColor set inline at the usage site)
     alignSelf: "flex-end",
+    borderRadius: 22,
     borderBottomRightRadius: 6,
+    paddingVertical: 11,
     maxWidth: "78%",
   },
   assistantBubble: {
@@ -3799,6 +3804,14 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     gap: 9,
   },
   assistantBody: { flex: 1, minWidth: 0 },
+  safetyCard: {
+    backgroundColor: colors.crimson.bgSubtle,
+    borderWidth: 1,
+    borderColor: colors.crimson.border,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
   userBody: {},
   userText: { ...typography.ui.bodyLg },
   suggestions: { alignSelf: "stretch", gap: calmSpacing.cozy, marginTop: calmSpacing.comfortable },
@@ -3917,7 +3930,8 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     borderTopColor: colors.border.default,
     backgroundColor: colors.bg.cardElevated,
     paddingHorizontal: spacing.md,
-    paddingVertical: 8,
+    paddingTop: 8,
+    paddingBottom: 10,
   },
   stagedWrap: { marginBottom: 6, gap: 4 },
   stagedRow: { flexDirection: "row", alignItems: "center", gap: 8 },
@@ -3954,10 +3968,10 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     alignItems: "center",
     gap: 6,
     borderWidth: 1,
-    borderRadius: 26,
-    paddingVertical: 5,
-    paddingLeft: 6,
-    paddingRight: 5,
+    borderRadius: 28,
+    paddingVertical: 6,
+    paddingLeft: 8,
+    paddingRight: 6,
     ...calmShadows.whisper,
   },
   input: {
@@ -3969,7 +3983,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     paddingHorizontal: 6,
     paddingVertical: 8,
     ...typography.ui.body,
-    fontSize: 15,
+    fontSize: 16,
     maxHeight: 120,
     textAlignVertical: "center",
   },
@@ -3977,7 +3991,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.emerald[600],
+    backgroundColor: colors.emerald[500],
     alignItems: "center",
     justifyContent: "center",
   },
@@ -3990,11 +4004,13 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     fontSize: 16,
     marginLeft: 2,
   },
+  // 0.1.117 (UI nueva): «parar» es tinta, no rojo; el rojo queda solo
+  // para emergencias (el envío de emergencia de abajo).
   stopBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.crimson[600],
+    backgroundColor: colors.text.primary,
     alignItems: "center",
     justifyContent: "center",
   },

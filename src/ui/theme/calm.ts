@@ -4,6 +4,8 @@
  * See LICENSE file for details.
  */
 
+import { fontFamilies } from "./typography";
+
 /**
  * Calm Agent Design Tokens
  *
@@ -88,20 +90,23 @@ export const calmShadows = {
 export const calmType = {
   /** Hero: empty states, welcome (28px, bold) */
   hero: {
+    fontFamily: fontFamilies.serif,
     fontSize: 28,
     lineHeight: 34,
-    fontWeight: "700" as const,
+    fontWeight: "normal" as const,
     letterSpacing: -0.5,
   },
   /** Title: screen titles (22px, semibold) */
   title: {
-    fontSize: 22,
-    lineHeight: 28,
-    fontWeight: "600" as const,
+    fontFamily: fontFamilies.serif,
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: "normal" as const,
     letterSpacing: -0.3,
   },
   /** Headline: section headers (17px, semibold) */
   headline: {
+    fontFamily: fontFamilies.sans,
     fontSize: 17,
     lineHeight: 22,
     fontWeight: "600" as const,
@@ -109,6 +114,7 @@ export const calmType = {
   },
   /** Body: conversation, content (16px, regular) */
   body: {
+    fontFamily: fontFamilies.sans,
     fontSize: 16,
     lineHeight: 24,
     fontWeight: "400" as const,
@@ -116,6 +122,7 @@ export const calmType = {
   },
   /** Callout: secondary info (14px, regular) */
   callout: {
+    fontFamily: fontFamilies.sans,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "400" as const,
@@ -123,6 +130,7 @@ export const calmType = {
   },
   /** Caption: metadata, timestamps (12px, regular) */
   caption: {
+    fontFamily: fontFamilies.sans,
     fontSize: 12,
     lineHeight: 16,
     fontWeight: "400" as const,
@@ -130,6 +138,7 @@ export const calmType = {
   },
   /** Tiny: badges, labels (11px, medium) */
   tiny: {
+    fontFamily: fontFamilies.sans,
     fontSize: 11,
     lineHeight: 14,
     fontWeight: "500" as const,
@@ -137,15 +146,17 @@ export const calmType = {
   },
   /** Micro: dense metadata, stats (9px, medium) - use sparingly */
   micro: {
-    fontSize: 9,
-    lineHeight: 12,
+    fontFamily: fontFamilies.sans,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: "500" as const,
     letterSpacing: 0.4,
   },
   /** Small: compact labels (10px, regular) */
   small: {
-    fontSize: 10,
-    lineHeight: 13,
+    fontFamily: fontFamilies.sans,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: "400" as const,
     letterSpacing: 0.3,
   },

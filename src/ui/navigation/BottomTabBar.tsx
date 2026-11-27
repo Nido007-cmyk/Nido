@@ -43,7 +43,7 @@ export function BottomTabBar({ active, onSelect }: { active: MainTab; onSelect: 
             style={styles.item}
           >
             <View style={[styles.pill, selected && (emergency ? styles.pillEmergency : styles.pillSelected)]}>
-              <NidoIcon name={TAB_ICON[tab]} size={20} color={ink} />
+              <NidoIcon name={TAB_ICON[tab]} size={22} color={ink} />
             </View>
             {/* Auditoría 0.1.79: en pantallas de 320 dp o con letra grande,
                 «Emergência»/«Biblioteca» se cortaban con «…»: la letra se
@@ -71,8 +71,8 @@ const getStyles = (colors: Colors, typography: Typography) =>
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.border.default,
       backgroundColor: colors.bg.surface,
-      paddingTop: 6,
-      paddingBottom: 6,
+      paddingTop: 8,
+      paddingBottom: 10,
     },
     item: {
       flex: 1,
@@ -83,9 +83,9 @@ const getStyles = (colors: Colors, typography: Typography) =>
       paddingHorizontal: 2,
     },
     pill: {
-      width: 52,
-      height: 28,
-      borderRadius: 14,
+      width: 56,
+      height: 32,
+      borderRadius: 16,
       alignItems: "center",
       justifyContent: "center",
     },
@@ -98,6 +98,6 @@ const getStyles = (colors: Colors, typography: Typography) =>
     },
     labelSelected: {
       fontWeight: "700",
-      color: colors.text.primary,
+      color: colors.emerald[600],
     },
   });
