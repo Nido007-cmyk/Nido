@@ -21,6 +21,8 @@ export interface MemoryInfo {
   rssBytes: number;
   /** Proportional set size in bytes, via ActivityManager (cross-check figure). */
   totalPssBytes: number;
+  /** 0.1.118: pico de RSS del proceso según el kernel (VmHWM); ausente en builds anteriores. */
+  peakRssBytes?: number;
 }
 
 /** Un cierre del proceso registrado por Android (ApplicationExitInfo, 11+). */

@@ -1855,7 +1855,8 @@ export function ChatScreen({
           flushTokenBuffer();
         } else {
           const elapsedSinceFirst = (now - firstTokenTime) / 1000;
-          if (elapsedSinceFirst > 0) setLiveTokPerSec(tokensGenerated / elapsedSinceFirst);
+          // 0.1.118: tras el primer token van tokensGenerated − 1.
+          if (elapsedSinceFirst > 0) setLiveTokPerSec((tokensGenerated - 1) / elapsedSinceFirst);
           if (now - lastFlushTime >= 100) {
             flushTokenBuffer();
           }

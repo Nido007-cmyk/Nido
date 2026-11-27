@@ -85,7 +85,7 @@
     "updateAsset": "⬆️ Actualizar",
     "outdatedNote": "Hay una versión más nueva de este paquete. Mientras tanto se sigue usando la que tienes, también sin conexión; la nueva solo la reemplaza cuando termina de descargarse y se comprueba.",
     "measuredRowSpeed": "{{rate}} tok/s aquí",
-    "measuredBasis": "La mediana de tus últimas {{count}} respuestas con este modelo"
+    "measuredBasis": "La mediana de las últimas {{count}} generaciones de este modelo en este aparato"
   },
   "chatHeader": {
     "cycleTone": "Cambiar el tono del asistente",
@@ -242,9 +242,9 @@
     "deleteBusy": "Espera a que termine la respuesta para borrar este chat."
   },
   "drawerFooterStats": {
-    "disk": "DISCO",
+    "disk": "Disco",
     "lastQuery": "{{rate}} tok/s en la última consulta",
-    "ram": "RAM"
+    "ram": "RAM (NIDO)"
   },
   "errors": {
     "unexpected": "Algo salió mal. Detalle técnico: {{detail}}",
@@ -1118,7 +1118,8 @@
     "deviceRamDetail": "{{advertised}} ({{usable}} usables)",
     "deviceRamUsable": "{{usable}} usables",
     "swap": "Intercambio (RAM virtual)",
-    "swapValue": "{{free}} libres de {{total}}"
+    "swapValue": "{{free}} libres de {{total}}",
+    "segSearchModel": "Modelo de búsqueda"
   },
   "calm": {
     "model": "Modelo",

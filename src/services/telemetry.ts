@@ -140,8 +140,11 @@ export function startAppMemoryTracking(intervalMs = 2000): void {
   trackingStarted = true;
   const poll = () => {
     try {
-      const rss = getMemoryInfo().rssBytes;
-      if (rss > appPeakRssBytes) appPeakRssBytes = rss;
+      const info = getMemoryInfo();
+      // 0.1.118: el pico del kernel (VmHWM) cuando el build lo trae; el
+      // muestreo cada 2 s se perdía los picos cortos de una carga.
+      const peak = Math.max(info.rssBytes, info.peakRssBytes ?? 0);
+      if (peak > appPeakRssBytes) appPeakRssBytes = peak;
     } catch {
       // native module not linked; leave peak at whatever we've seen
     }
@@ -151,5 +154,13 @@ export function startAppMemoryTracking(intervalMs = 2000): void {
 }
 
 export function getAppPeakRssBytes(): number {
+  // 0.1.118: se relee el pico del kernel al consultarlo, para que la
+  // pantalla no espere al siguiente muestreo.
+  try {
+    const hwm = getMemoryInfo().peakRssBytes ?? 0;
+    if (hwm > appPeakRssBytes) appPeakRssBytes = hwm;
+  } catch {
+    // sin módulo nativo: el pico muestreado
+  }
   return appPeakRssBytes;
 }

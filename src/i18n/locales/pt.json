@@ -89,7 +89,7 @@
     "updateAsset": "⬆️ Atualizar",
     "outdatedNote": "Há uma versão mais nova deste pacote. Enquanto isso, a que você tem continua funcionando, também sem conexão; a nova só a substitui quando terminar de baixar e for verificada.",
     "measuredRowSpeed": "{{rate}} tok/s aqui",
-    "measuredBasis": "A mediana das suas últimas {{count}} respostas com este modelo"
+    "measuredBasis": "A mediana das últimas {{count}} gerações deste modelo neste aparelho"
   },
   "modelLoadErrorCard": {
     "corrupt": {
@@ -129,8 +129,8 @@
   "usageStatsScreen": {},
   "systemMonitor": {},
   "drawerFooterStats": {
-    "ram": "RAM",
-    "disk": "DISCO",
+    "ram": "RAM (NIDO)",
+    "disk": "Disco",
     "lastQuery": "{{rate}} tok/s na última consulta"
   },
   "modelSetupScreen": {
@@ -1118,7 +1118,8 @@
     "deviceRamDetail": "{{advertised}} ({{usable}} utilizáveis)",
     "deviceRamUsable": "{{usable}} utilizáveis",
     "swap": "Troca (RAM virtual)",
-    "swapValue": "{{free}} livres de {{total}}"
+    "swapValue": "{{free}} livres de {{total}}",
+    "segSearchModel": "Modelo de busca"
   },
   "calm": {
     "model": "Modelo",

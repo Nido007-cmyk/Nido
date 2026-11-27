@@ -156,3 +156,22 @@ describe("0.1.43: el chip que cae (stageDropped)", () => {
     expect(isStageDropReason("create_reminder")).toBe(false);
   });
 });
+
+describe("routerStats · cuentas que cuadran (0.1.118)", () => {
+  it("una muestra con desenlace desconocido no suma en mensajes ni en tiempos", () => {
+    const rows = [s(1, "router"), s(2, "model"), { classifyMs: 99, outcome: "algo-viejo" } as any];
+    const sum = summarizeRouterSamples(rows);
+    expect(sum.count).toBe(2);
+    expect(sum.maxMs).toBe(2);
+    const o = sum.outcomes;
+    expect(o.router + o.model + o.notUnderstood + o.chat).toBe(sum.count);
+  });
+
+  it("el desglose de fugas usa la misma criba de tiempos que el resumen", () => {
+    const rows = [
+      { classifyMs: 1, outcome: "model", route: "model" },
+      { classifyMs: Number.NaN, outcome: "model", route: "model" },
+    ] as any;
+    expect(summarizeRouterSamples(rows).leak.measured).toBe(1);
+  });
+});

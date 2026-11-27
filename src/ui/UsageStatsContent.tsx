@@ -44,10 +44,29 @@ function formatMs(ms: number): string {
   return ms < 1000 ? `${ms.toFixed(0)} ms` : `${(ms / 1000).toFixed(2)} s`;
 }
 
+/** 0.1.118: tamaño de una carpeta (recursivo, sin seguir más de 4 niveles). */
+async function dirSizeBytes(uri: string, depth = 0): Promise<number> {
+  if (!uri || depth > 4) return 0;
+  try {
+    const info = await FileSystem.getInfoAsync(uri);
+    if (!info.exists) return 0;
+    if (!info.isDirectory) return "size" in info && typeof info.size === "number" ? info.size : 0;
+    const names = await FileSystem.readDirectoryAsync(uri);
+    let total = 0;
+    for (const name of names) total += await dirSizeBytes(`${uri.endsWith("/") ? uri : uri + "/"}${name}`, depth + 1);
+    return total;
+  } catch {
+    return 0;
+  }
+}
+
 interface StorageBreakdown {
   ggufBytes: number;
   corpusBytes: number;
+  /** Los demás modelos del catálogo (el de búsqueda multilingüe). */
   otherBytes: number;
+  /** 0.1.118: la base de datos cifrada de la app (chats, memoria, notas…). */
+  appDataBytes: number;
   freeDeviceBytes: number;
   totalAppBytes: number;
 }
@@ -73,6 +92,7 @@ export function UsageStatsContent() {
     ggufBytes: 0,
     corpusBytes: 0,
     otherBytes: 0,
+    appDataBytes: 0,
     freeDeviceBytes: 0,
     totalAppBytes: 0,
   });
@@ -82,8 +102,7 @@ export function UsageStatsContent() {
   useEffect(() => {
     let cancelled = false;
 
-    async function pollTelemetry() {
-      // Memory info
+    function pollMemory() {
       try {
         const mem = getMemoryInfo();
         if (!cancelled && mem.rssBytes > 0) setAppRss(mem.rssBytes);
@@ -91,8 +110,11 @@ export function UsageStatsContent() {
         // Native module not linked
       }
       if (!cancelled) setAppPeakRss(getAppPeakRssBytes());
+    }
 
-      // Disk storage breakdown
+    // 0.1.118: el disco se lee al abrir y cada 30 s (antes cada 3 s, con
+    // un recorrido de carpetas que no cambia tan deprisa).
+    async function pollStorage() {
       try {
         const statuses = await modelManager.statusAll();
         let gguf = 0;
@@ -121,13 +143,19 @@ export function UsageStatsContent() {
           freeBytes = 0;
         }
 
+        // 0.1.118: «Datos de la app» enseñaba el modelo de búsqueda
+        // (el resto del catálogo). Los datos de verdad — la base cifrada
+        // con chats, memoria y notas — viven en la carpeta SQLite.
+        const appData = await dirSizeBytes(`${FileSystem.documentDirectory ?? ""}SQLite/`);
+
         if (!cancelled) {
           setStorage({
             ggufBytes: gguf,
             corpusBytes: corpus,
             otherBytes: other,
+            appDataBytes: appData,
             freeDeviceBytes: freeBytes,
-            totalAppBytes: gguf + corpus + other,
+            totalAppBytes: gguf + corpus + other + appData,
           });
         }
       } catch {
@@ -142,12 +170,15 @@ export function UsageStatsContent() {
       // Not linked
     }
 
-    pollTelemetry();
-    const interval = setInterval(pollTelemetry, 3000);
+    pollMemory();
+    void pollStorage();
+    const interval = setInterval(pollMemory, 3000);
+    const storageInterval = setInterval(() => void pollStorage(), 30000);
 
     return () => {
       cancelled = true;
       clearInterval(interval);
+      clearInterval(storageInterval);
     };
   }, []);
 
@@ -180,6 +211,7 @@ export function UsageStatsContent() {
   const ggufPct = Math.min((storage.ggufBytes / storageScale) * 100, 100);
   const corpusPct = Math.min((storage.corpusBytes / storageScale) * 100, 100);
   const otherPct = Math.min((storage.otherBytes / storageScale) * 100, 100);
+  const appDataPct = Math.min((storage.appDataBytes / storageScale) * 100, 100);
 
   return (
     <View style={styles.container}>
@@ -319,6 +351,9 @@ export function UsageStatsContent() {
             {otherPct > 0 && (
               <View style={[styles.segmentOther, { width: `${Math.max(otherPct, 1)}%` }]} />
             )}
+            {appDataPct > 0 && (
+              <View style={[styles.segmentOther, { backgroundColor: colors.amber[400], width: `${Math.max(appDataPct, 1)}%` }]} />
+            )}
           </View>
         </View>
 
@@ -338,8 +373,14 @@ export function UsageStatsContent() {
 
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: colors.frontier.glow }]} />
-            <Text style={styles.legendLabel}>{t("usageStats.segAppData")}</Text>
+            <Text style={styles.legendLabel}>{t("usageStats.segSearchModel")}</Text>
             <Text style={styles.legendValue}>{formatMB(storage.otherBytes)}</Text>
+          </View>
+
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: colors.amber[400] }]} />
+            <Text style={styles.legendLabel}>{t("usageStats.segAppData")}</Text>
+            <Text style={styles.legendValue}>{formatMB(storage.appDataBytes)}</Text>
           </View>
 
           <View style={styles.legendItem}>

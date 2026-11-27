@@ -99,7 +99,11 @@ class RamMonitorModule : Module() {
       val pss = readTotalPssBytes()
       mapOf(
         "rssBytes" to rss,
-        "totalPssBytes" to pss
+        "totalPssBytes" to pss,
+        // 0.1.118: el pico de RSS que el kernel guarda para el proceso
+        // (VmHWM). Exacto: no depende de muestrear cada pocos segundos y
+        // no se pierde los picos cortos de una carga.
+        "peakRssBytes" to readStatusKb("VmHWM:")
       )
     }
 
@@ -423,6 +427,23 @@ class RamMonitorModule : Module() {
       val info = ActivityManager.MemoryInfo()
       am.getMemoryInfo(info)
       info.totalMem
+    } catch (e: Exception) {
+      0L
+    }
+  }
+
+  private fun readStatusKb(field: String): Long {
+    return try {
+      RandomAccessFile("/proc/self/status", "r").use { reader ->
+        var line: String?
+        while (reader.readLine().also { line = it } != null) {
+          if (line!!.startsWith(field)) {
+            val kb = line!!.replace(Regex("[^0-9]"), "").toLongOrNull() ?: 0L
+            return kb * 1024L
+          }
+        }
+        0L
+      }
     } catch (e: Exception) {
       0L
     }

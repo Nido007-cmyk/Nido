@@ -36,6 +36,20 @@ they were. An answer that came from a tool or the
 knowledge base, without the AI model, no longer shows
 "0.0 tok/s" as if it were a measurement.
 
+Every number the app shows was checked against how
+it is calculated. Also fixed: the live speed while an
+answer is being written had the same first-token
+error; "peak this session" now uses the peak the
+system itself records for NIDO, so short spikes while
+a model loads are no longer missed; storage shows the
+app's own data (your encrypted chats, memory and
+notes) instead of labelling the search model as "app
+data"; the speed on each model card says it is the
+median of that model's last generations on this device;
+the drawer says the RAM figure is NIDO's; and the
+router statistics no longer count unreadable old
+entries as messages.
+
 The last section titles in capital letters are now
 written normally, like the rest of the app.
 
