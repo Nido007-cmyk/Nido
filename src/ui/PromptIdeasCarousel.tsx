@@ -5,7 +5,8 @@
  */
 
 import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, Switch } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Switch } from "react-native";
+import { Pressable } from "./components/Pressable";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
 import { useTranslation } from "react-i18next";
 import { NidoIcon } from "./components/icons/NidoIcon";

@@ -16,7 +16,8 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
+import { Pressable } from "./components/Pressable";
 import * as Clipboard from "expo-clipboard";
 import { useTranslation } from "react-i18next";
 import { getCrashReport, clearCrashReport, type CrashReport } from "ram-monitor";

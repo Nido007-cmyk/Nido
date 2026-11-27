@@ -5,7 +5,8 @@
  */
 
 import React, { useEffect, useRef, useState } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
+import { Pressable } from "../components/Pressable";
 import { getThemeColors } from "../theme/colors";
 import { frameIndexAtTime, frameOffset, SpriteSheetLayout } from "./spriteSheet";
 

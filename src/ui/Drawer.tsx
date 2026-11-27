@@ -5,7 +5,8 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, Pressable, Animated, ScrollView, Image, useWindowDimensions } from "react-native";
+import { View, Text, StyleSheet, Animated, ScrollView, Image, useWindowDimensions } from "react-native";
+import { Pressable } from "./components/Pressable";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
 import { useTranslation } from "react-i18next";
 import { ChatSession } from "../services/chatHistory";
@@ -282,11 +283,11 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   newChatIcon: { color: colors.text.accentEmerald, fontFamily: fontFamilies.sans, fontSize: 16, fontWeight: "800" },
   newChatLabel: { ...typography.ui.body, color: colors.text.inverse, fontWeight: "600" },
   sectionHeading: {
-    ...typography.ui.micro,
-    color: colors.text.dim,
+    // 0.1.118 (UI nueva): rótulo en minúscula de frase, como surfaces.sectionLabel.
+    ...typography.ui.caption,
+    color: colors.text.secondary,
     fontWeight: "700",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
+    letterSpacing: 0.2,
     marginBottom: 6,
     marginTop: 4,
     marginLeft: 4,

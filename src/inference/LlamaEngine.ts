@@ -1895,7 +1895,11 @@ export class LlamaEngine {
         completionTokens: tokenCount,
         ttftMs,
         totalMs,
-        tokensPerSec: genMs > 0 && tokenCount > 0 ? (tokenCount / genMs) * 1000 : null,
+        // 0.1.118: genMs empieza en el PRIMER token, así que en ese
+        // tramo se generan tokenCount − 1 tokens. Dividir tokenCount
+        // entero inflaba la tasa (≈3 % con 32 tokens, más en respuestas
+        // cortas).
+        tokensPerSec: genMs > 0 && tokenCount > 1 ? ((tokenCount - 1) / genMs) * 1000 : null,
         stopReason,
         samplingPreset,
         temperature,

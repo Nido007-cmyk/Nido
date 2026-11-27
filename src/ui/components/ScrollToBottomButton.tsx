@@ -15,7 +15,8 @@
  * pinta nada: ni ocupa sitio ni compite con la conversación.
  */
 import React, { useMemo } from "react";
-import { Pressable, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
+import { Pressable } from "./Pressable";
 import { useTheme } from "../theme";
 import { NidoIcon } from "./icons/NidoIcon";
 import { spacing, radii } from "../theme/spacing";

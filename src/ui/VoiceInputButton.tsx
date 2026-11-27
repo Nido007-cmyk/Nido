@@ -6,7 +6,8 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, Text, StyleSheet, Animated, Alert, View } from "react-native";
+import { Text, StyleSheet, Animated, Alert, View } from "react-native";
+import { Pressable } from "./components/Pressable";
 import { LinearGradient } from "expo-linear-gradient";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import { voiceInputAvailability, startListening, stopListening, VoiceEvent } from "../voice/VoiceInput";

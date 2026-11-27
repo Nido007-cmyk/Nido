@@ -25,7 +25,8 @@
  * tenga su regresión de componente directa.
  */
 import React, { useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, Text } from "react-native";
+import { ScrollView, StyleSheet, Text } from "react-native";
+import { Pressable } from "./components/Pressable";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";

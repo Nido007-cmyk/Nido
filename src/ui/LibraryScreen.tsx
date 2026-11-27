@@ -9,7 +9,8 @@
  * so no control changes behaviour; only where it lives.
  */
 import React, { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable } from "./components/Pressable";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme/ThemeContext";
 import type { Colors } from "./theme/colors";

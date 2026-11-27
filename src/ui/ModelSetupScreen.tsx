@@ -11,7 +11,6 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  Pressable,
   ScrollView,
   Modal,
   ActivityIndicator,
@@ -19,6 +18,7 @@ import {
   Alert,
   BackHandler,
 } from "react-native";
+import { Pressable } from "./components/Pressable";
 import { PrivateTextInput as TextInput } from "./components/PrivateTextInput";
 import { impact, notification, ImpactFeedbackStyle, NotificationFeedbackType, setHapticsEnabledCache } from "../services/haptics";
 import { useTranslation } from "react-i18next";
@@ -911,6 +911,7 @@ export function ModelSetupScreen(props: Props) {
                   activating={activatingId === item.id}
                   busy={activatingId !== null}
                   residentLoad={residentLoad}
+                  residentLoaded={residentInfo != null}
                   speedSummary={speedByModel[item.filename.split("/").pop() ?? item.filename] ?? null}
                 />
               )}
@@ -1421,11 +1422,11 @@ const getStyles = (colors: Colors, typography: Typography) => {
   const ui = makeSurfaces(colors, typography);
   return StyleSheet.create({
   groupHeading: {
-    ...typography.ui.micro,
-    color: colors.text.dim,
+    // 0.1.118 (UI nueva): rótulo en minúscula de frase, como surfaces.sectionLabel.
+    ...typography.ui.caption,
+    color: colors.text.secondary,
     fontWeight: "700",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
+    letterSpacing: 0.2,
     marginTop: 14,
     marginBottom: 2,
     marginLeft: 4,

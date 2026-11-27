@@ -1112,7 +1112,13 @@
     "threads": "Hilos",
     "license": "Licencia",
     "inference": "Inferencia",
-    "emptyEngine": "Ningún modelo cargado."
+    "emptyEngine": "Ningún modelo cargado.",
+    "appTotal": "Usa {{size}}",
+    "noModelAnswer": "Esta respuesta no usó el modelo de IA: la dio una herramienta o la base de conocimiento, así que no hay velocidad que medir.",
+    "deviceRamDetail": "{{advertised}} ({{usable}} usables)",
+    "deviceRamUsable": "{{usable}} usables",
+    "swap": "Intercambio (RAM virtual)",
+    "swapValue": "{{free}} libres de {{total}}"
   },
   "calm": {
     "model": "Modelo",

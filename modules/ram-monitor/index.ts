@@ -66,9 +66,22 @@ export interface MemoryPressureEvent {
   level: number;
 }
 
+/**
+ * 0.1.118: lo que el aparato dice de su RAM. `advertisedBytes` es la cifra
+ * del fabricante (Android 14+; 0 si no la hay); `totalBytes`, la que el
+ * sistema deja usar; la swap (zram, «RAM Plus») solo se informa.
+ */
+export interface DeviceRamInfo {
+  totalBytes: number;
+  advertisedBytes: number;
+  swapTotalBytes: number;
+  swapFreeBytes: number;
+}
+
 interface RamMonitorNativeModule {
   getMemoryInfo(): MemoryInfo;
   getDeviceTotalRamBytes(): number;
+  getDeviceRamInfo?(): DeviceRamInfo;
   getProcessorCount?(): number;
   getAvailableMemory?(): AvailableMemory;
   installCrashRecorder?(): boolean;
@@ -105,6 +118,16 @@ export function getDeviceTotalRamBytes(): number {
     return RamMonitor.getDeviceTotalRamBytes();
   } catch {
     return 0;
+  }
+}
+
+/** La RAM anunciada, la usable y la swap del aparato; null en builds nativos anteriores. */
+export function getDeviceRamInfo(): DeviceRamInfo | null {
+  try {
+    const r = RamMonitor.getDeviceRamInfo?.();
+    return r && r.totalBytes > 0 ? r : null;
+  } catch {
+    return null;
   }
 }
 

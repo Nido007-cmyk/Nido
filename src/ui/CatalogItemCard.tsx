@@ -5,7 +5,8 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert, AppState } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, Alert, AppState } from "react-native";
+import { Pressable } from "./components/Pressable";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
 import { useTranslation } from "react-i18next";
 import { CatalogModel } from "../models/manifest";
@@ -102,6 +103,13 @@ interface Props {
    */
   residentLoad?: { model: CatalogModel; nCtx: number; memoryProfile?: LlmMemoryProfile } | null;
   /**
+   * 0.1.118: si el motor tiene AHORA un modelo cargado (aunque su
+   * crédito no se pueda calcular, p. ej. un archivo fuera del catálogo).
+   * Sin modelo cargado, la tarjeta del activo no se carga «encima de sí
+   * misma»: se juzga con la foto viva como las demás.
+   */
+  residentLoaded?: boolean;
+  /**
    * G-1 (partida del móvil): el resumen de velocidad medida de este
    * modelo (la mediana de sus generaciones reales en este aparato,
    * desde la telemetría persistida), que la pantalla del gestor lee
@@ -111,7 +119,7 @@ interface Props {
   speedSummary?: ModelSpeedSummary | null;
 }
 
-export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemove, onDiscardPartial, activating, busy, residentLoad, speedSummary }: Props) {
+export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemove, onDiscardPartial, activating, busy, residentLoad, residentLoaded, speedSummary }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
@@ -202,7 +210,13 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
   const compatDetail =
     item.kind === "llm" || item.kind === "embedding"
       ? computeCompatibilityDetail(item, deviceRam, liveForBadge, {
-          canonicalFloor: isActive && residentCredit <= 0,
+          // 0.1.118 (foto del dueño, Tab A9+ sin modelo cargado): el
+          // suelo solo vale con un modelo CARGADO cuyo crédito no se
+          // conoce. Sin nada cargado, el activo pintaba «Runs well»
+          // por la foto en vacío mientras un modelo más ligero salía
+          // «Needs a lot of memory» por la foto del momento: dos
+          // varas de medir en la misma pantalla.
+          canonicalFloor: isActive && residentCredit <= 0 && (residentLoaded ?? residentLoad != null),
         })
       : ({ color: "unknown" } as { color: Compatibility; redSource?: "device" | "moment" });
   const compatibility = compatDetail.color;

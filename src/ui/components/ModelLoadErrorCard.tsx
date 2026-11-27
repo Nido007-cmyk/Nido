@@ -5,7 +5,8 @@
  */
 
 import React, { useMemo } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
+import { Pressable } from "./Pressable";
 import { impact, ImpactFeedbackStyle } from "../../services/haptics";
 import { useTranslation } from "react-i18next";
 import { NidoIcon } from "./icons/NidoIcon";

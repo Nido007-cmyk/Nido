@@ -5,7 +5,8 @@
  */
 
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, Switch, Pressable, Alert } from "react-native";
+import { View, Text, StyleSheet, Switch, Alert } from "react-native";
+import { Pressable } from "./components/Pressable";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";

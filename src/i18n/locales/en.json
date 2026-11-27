@@ -1112,7 +1112,13 @@
     "threads": "Threads",
     "license": "License",
     "inference": "Inference",
-    "emptyEngine": "No model loaded."
+    "emptyEngine": "No model loaded.",
+    "appTotal": "Uses {{size}}",
+    "noModelAnswer": "This answer didn't use the AI model: a tool or the knowledge base gave it, so there's no speed to measure.",
+    "deviceRamDetail": "{{advertised}} ({{usable}} usable)",
+    "deviceRamUsable": "{{usable}} usable",
+    "swap": "Swap (virtual RAM)",
+    "swapValue": "{{free}} free of {{total}}"
   },
   "calm": {
     "model": "Model",

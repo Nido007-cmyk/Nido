@@ -5,7 +5,8 @@
  */
 
 import React, { useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text } from "react-native";
+import { StyleSheet, Text } from "react-native";
+import { Pressable } from "./Pressable";
 import { useTranslation } from "react-i18next";
 import { ProcessingIndicator } from "../ProcessingIndicator";
 import { useTheme } from "../theme";

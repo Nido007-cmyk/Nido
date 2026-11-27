@@ -5,7 +5,8 @@
  */
 
 import React, { useMemo, useState } from "react";
-import { View, Text, Pressable, StyleSheet, LayoutAnimation, Platform, UIManager } from "react-native";
+import { View, Text, StyleSheet, LayoutAnimation, Platform, UIManager } from "react-native";
+import { Pressable } from "./components/Pressable";
 import { impact } from "../services/haptics";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";

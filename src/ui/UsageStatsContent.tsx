@@ -16,8 +16,10 @@ import {
 } from "../services/telemetry";
 import { llamaEngine } from "../inference/LlamaEngine";
 import { MODEL_CATALOG, RAM_BUDGET_BYTES, STORAGE_BUDGET_BYTES } from "../models/manifest";
+import { SYSTEM_HEADROOM_BYTES } from "../inference/ramBudget";
 import { ModelManager } from "../models/ModelManager";
-import { getMemoryInfo, getDeviceTotalRamBytes } from "ram-monitor";
+import { getMemoryInfo, getDeviceTotalRamBytes, getDeviceRamInfo, type DeviceRamInfo } from "ram-monitor";
+import { advertisedRamGb } from "./deviceRamLabel";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
@@ -65,6 +67,8 @@ export function UsageStatsContent() {
   const [appRss, setAppRss] = useState(0);
   const [appPeakRss, setAppPeakRss] = useState(getAppPeakRssBytes());
   const [deviceTotalRam, setDeviceTotalRam] = useState(0);
+  // 0.1.118: la ficha del aparato (RAM anunciada, usable y swap).
+  const [ramInfo, setRamInfo] = useState<DeviceRamInfo | null>(null);
   const [storage, setStorage] = useState<StorageBreakdown>({
     ggufBytes: 0,
     corpusBytes: 0,
@@ -133,6 +137,7 @@ export function UsageStatsContent() {
 
     try {
       setDeviceTotalRam(getDeviceTotalRamBytes());
+      setRamInfo(getDeviceRamInfo());
     } catch {
       // Not linked
     }
@@ -151,19 +156,30 @@ export function UsageStatsContent() {
     ? MODEL_CATALOG.find((m) => m.filename === modelInfo.filename)
     : undefined;
 
-  // 12GB Bounty RAM Audit calculations
-  const bountyRamBudget = RAM_BUDGET_BYTES; // 12GB
-  const rssToBountyRatio = Math.min(appRss / bountyRamBudget, 1);
-  const peakToBountyRatio = Math.min(appPeakRss / bountyRamBudget, 1);
-  const withinRamLimit = appPeakRss <= bountyRamBudget;
+  // 0.1.118 (foto del dueño: «Device RAM 3.34 GB · Headroom 11.58 GB»):
+  // la barra y el margen se medían contra el tope de 12 GB del programa,
+  // no contra el aparato, y en una tableta de 3,3 GB enseñaban más margen
+  // que RAM. Ahora la escala es la RAM real del aparato, y «dentro del
+  // límite» es el mismo presupuesto que usa la carga de modelos (la RAM
+  // total menos la reserva del sistema, SYSTEM_HEADROOM_BYTES). Sin
+  // lectura del aparato, queda el tope del programa como antes.
+  const ramScale = deviceTotalRam > 0 ? deviceTotalRam : RAM_BUDGET_BYTES;
+  const ramLimit = deviceTotalRam > 0 ? Math.max(deviceTotalRam - SYSTEM_HEADROOM_BYTES, 0) : RAM_BUDGET_BYTES;
+  const rssToBountyRatio = Math.min(appRss / ramScale, 1);
+  const peakToBountyRatio = Math.min(appPeakRss / ramScale, 1);
+  const withinRamLimit = appPeakRss <= Math.min(ramLimit, RAM_BUDGET_BYTES);
 
   // 50GB Bounty Storage Audit calculations
   const bountyStorageBudget = STORAGE_BUDGET_BYTES; // 50GB
   const withinStorageLimit = storage.totalAppBytes <= bountyStorageBudget;
 
-  const ggufPct = Math.min((storage.ggufBytes / bountyStorageBudget) * 100, 100);
-  const corpusPct = Math.min((storage.corpusBytes / bountyStorageBudget) * 100, 100);
-  const otherPct = Math.min((storage.otherBytes / bountyStorageBudget) * 100, 100);
+  // 0.1.118: la barra se mide contra el espacio que el aparato tiene para
+  // NIDO (lo que ya ocupa + lo libre), no contra los 50 GB del programa.
+  const storageScale =
+    storage.freeDeviceBytes > 0 ? storage.totalAppBytes + storage.freeDeviceBytes : bountyStorageBudget;
+  const ggufPct = Math.min((storage.ggufBytes / storageScale) * 100, 100);
+  const corpusPct = Math.min((storage.corpusBytes / storageScale) * 100, 100);
+  const otherPct = Math.min((storage.otherBytes / storageScale) * 100, 100);
 
   return (
     <View style={styles.container}>
@@ -201,7 +217,7 @@ export function UsageStatsContent() {
         <View style={styles.gaugeContainer}>
           <View style={styles.gaugeHeader}>
             <Text style={styles.gaugeLabel}>{t("usageStats.appMemory")}</Text>
-            <Text style={styles.gaugeValue}>{formatGB(appRss)} / 12.00 GB</Text>
+            <Text style={styles.gaugeValue}>{`${formatGB(appRss)} / ${formatGB(ramScale)}`}</Text>
           </View>
           <View style={styles.gaugeTrack}>
             {/* Peak RSS Shadow */}
@@ -222,8 +238,8 @@ export function UsageStatsContent() {
           </View>
           <View style={styles.gaugeScaleRow}>
             <Text style={styles.gaugeScaleText}>0 GB</Text>
-            <Text style={styles.gaugeScaleText}>6 GB</Text>
-            <Text style={styles.gaugeScaleText}>12 GB</Text>
+            <Text style={styles.gaugeScaleText}>{formatGB(ramScale / 2)}</Text>
+            <Text style={styles.gaugeScaleText}>{formatGB(ramScale)}</Text>
           </View>
         </View>
 
@@ -241,11 +257,28 @@ export function UsageStatsContent() {
           />
           <TelemetryRow
             label={t("usageStats.deviceRam")}
-            value={deviceTotalRam > 0 ? formatGB(deviceTotalRam) : t("usageStats.detecting")}
+            value={
+              deviceTotalRam <= 0
+                ? t("usageStats.detecting")
+                : advertisedRamGb(ramInfo?.advertisedBytes ?? 0) !== null
+                  ? t("usageStats.deviceRamDetail", {
+                      advertised: `${advertisedRamGb(ramInfo?.advertisedBytes ?? 0)} GB`,
+                      usable: formatGB(deviceTotalRam),
+                    })
+                  : t("usageStats.deviceRamUsable", { usable: formatGB(deviceTotalRam) })
+            }
           />
+          {ramInfo && ramInfo.swapTotalBytes > 0 ? (
+            <TelemetryRow
+              label={t("usageStats.swap")}
+              value={t("usageStats.swapValue", { free: formatGB(ramInfo.swapFreeBytes), total: formatGB(ramInfo.swapTotalBytes) })}
+            />
+          ) : null}
           <TelemetryRow
             label={t("usageStats.headroom")}
-            value={formatGB(Math.max(0, bountyRamBudget - appPeakRss))}
+            // 0.1.118: margen = la RAM del aparato que el pico de NIDO
+            // dejó sin usar (antes: 12 GB menos el pico).
+            value={deviceTotalRam > 0 ? formatGB(Math.max(0, deviceTotalRam - appPeakRss)) : t("usageStats.detecting")}
             highlight={colors.text.accentEmerald}
           />
         </View>
@@ -270,7 +303,7 @@ export function UsageStatsContent() {
                 withinStorageLimit ? styles.statusTextEmerald : styles.statusTextCrimson,
               ]}
             >
-              {formatGB(storage.totalAppBytes)} / 50 GB
+              {t("usageStats.appTotal", { size: formatGB(storage.totalAppBytes) })}
             </Text>
           </View>
         </View>
@@ -328,14 +361,20 @@ export function UsageStatsContent() {
 
         {stats ? (
           <View style={styles.statsTable}>
+            {/* 0.1.118: una respuesta sin tokens del modelo (una
+                herramienta o la base de conocimiento contestó sola)
+                enseñaba «0.0 tok/s» y «0 ms» como si fueran medidas. */}
+            {stats.tokensGenerated === 0 ? (
+              <Text style={styles.emptyNotice}>{t("usageStats.noModelAnswer")}</Text>
+            ) : null}
             <TelemetryRow
               label={t("usageStats.speed")}
-              value={`${stats.tokPerSec.toFixed(1)} tok/s`}
+              value={stats.tokensGenerated > 1 && stats.tokPerSec > 0 ? `${stats.tokPerSec.toFixed(1)} tok/s` : "—"}
               highlight={colors.text.accentCyan}
             />
             <TelemetryRow
               label={t("usageStats.firstToken")}
-              value={formatMs(stats.ttftMs)}
+              value={stats.tokensGenerated > 0 ? formatMs(stats.ttftMs) : "—"}
               highlight={colors.text.accentEmerald}
             />
             <TelemetryRow label={t("usageStats.tokensOut")} value={`${stats.tokensGenerated} tokens`} />

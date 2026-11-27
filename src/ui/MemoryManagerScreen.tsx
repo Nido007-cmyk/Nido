@@ -9,11 +9,11 @@ import {
   View,
   Text,
   StyleSheet,
-  Pressable,
   ScrollView,
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { Pressable } from "./components/Pressable";
 import { useTranslation } from "react-i18next";
 import { reminderWhen } from "../agent/loop/toolRouter";
 import { displayLang } from "../utils/safeFormat";
