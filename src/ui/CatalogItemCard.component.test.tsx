@@ -257,13 +257,25 @@ describe("CatalogItemCard · tanda too-heavy: crédito simétrico, suelo de la a
 
   it("la activa sin residencia probada no baja de su canónica con la foto ocupada", async () => {
     busyPhoto();
-    await render(<CatalogItemCard item={byId("qwen3-0.6b-q4km")} row={undefined} {...baseProps} isActive />);
+    // 0.1.118: «sin residencia probada» = hay un modelo cargado pero su
+    // crédito no se puede calcular (residentLoaded sin residentLoad).
+    await render(<CatalogItemCard item={byId("qwen3-0.6b-q4km")} row={undefined} {...baseProps} isActive residentLoaded />);
     // La foto ocupada sin crédito la pintaría roja de momento; la
     // activa no se juzga encima de sí misma sin crédito probado:
     // manda su verde canónico.
     expect(await screen.findByText("catalogItemCard.compat.green")).toBeTruthy();
     expect(screen.queryByText("catalogItemCard.compat.red")).toBeNull();
     expect(screen.queryByText("catalogItemCard.compat.redMoment")).toBeNull();
+  });
+
+  it("0.1.118: sin ningún modelo cargado, la activa se juzga con la foto del momento como las demás", async () => {
+    busyPhoto();
+    await render(
+      <CatalogItemCard item={byId("qwen3-0.6b-q4km")} row={undefined} {...baseProps} isActive residentLoaded={false} />
+    );
+    // Misma foto, misma vara que la tarjeta no activa del test de abajo.
+    expect(await screen.findByText("catalogItemCard.compat.redMoment")).toBeTruthy();
+    expect(screen.queryByText("catalogItemCard.compat.green")).toBeNull();
   });
 
   it("rojo de momento: la letra dice «ahora mismo» y el botón de descarga se queda", async () => {

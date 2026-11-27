@@ -5,7 +5,8 @@
  */
 
 import React from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
+import { Pressable } from "./Pressable";
 import { impact, ImpactFeedbackStyle } from "../../services/haptics";
 import { useTheme, THEMES, FONT_SCALES } from "../theme";
 import { useTranslation } from "react-i18next";

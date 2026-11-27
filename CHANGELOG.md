@@ -4,6 +4,41 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.118-alpha - 2026-11-27
+
+Every button and option now answers your finger: it
+dims while you press it and shows a ripple, so you
+always know what you tapped. Buttons that already
+showed their own pressed look keep it.
+
+The memory badges on the models are measured the same
+way for every model. With no model loaded, the active
+model used to say "Runs well" from an empty-phone
+estimate while a lighter model said "Needs a lot of
+memory" from the real moment; now all of them are
+judged against the memory your phone has free right
+now.
+
+Settings → Measurements reads your device better. The
+memory bar, the headroom and "within limit" now use
+your device's own RAM instead of a fixed 12 GB, so a
+3.3 GB tablet no longer shows 11.6 GB of headroom. On
+Android 14 and later it also shows the RAM printed on
+the box next to the RAM the system lets apps use (for
+example "4 GB (3.34 GB usable)"), and the virtual RAM
+(swap) if the phone has it. Storage is measured
+against your phone's space, not a fixed 50 GB.
+
+Speeds are more exact: tokens per second no longer
+counts the first token inside the time that starts
+after it, which made short answers look faster than
+they were. An answer that came from a tool or the
+knowledge base, without the AI model, no longer shows
+"0.0 tok/s" as if it were a measurement.
+
+The last section titles in capital letters are now
+written normally, like the rest of the app.
+
 ## 0.1.117-alpha - 2026-11-26
 
 This release is a new look for the whole app. Nothing

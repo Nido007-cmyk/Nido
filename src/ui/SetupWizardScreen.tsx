@@ -20,12 +20,12 @@ import {
   View,
   Text,
   StyleSheet,
-  Pressable,
   ScrollView,
   ActivityIndicator,
   AppState,
   StatusBar,
 } from "react-native";
+import { Pressable } from "./components/Pressable";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { impact, notification, ImpactFeedbackStyle, NotificationFeedbackType } from "../services/haptics";
 import { useTranslation } from "react-i18next";

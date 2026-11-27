@@ -5,7 +5,8 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, Alert, Switch } from "react-native";
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert, Switch } from "react-native";
+import { Pressable } from "./components/Pressable";
 import * as Clipboard from "expo-clipboard";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
 import { useTranslation } from "react-i18next";

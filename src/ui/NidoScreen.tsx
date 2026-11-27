@@ -9,7 +9,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Pressable,
   ScrollView,
   FlatList,
   ActivityIndicator,
@@ -17,6 +16,7 @@ import {
   Keyboard,
   AppState,
 } from "react-native";
+import { Pressable } from "./components/Pressable";
 import { PrivateTextInput as TextInput } from "./components/PrivateTextInput";
 import { showSecureAlert } from "nido-secure-dialog";
 import { copyPrivate } from "../utils/secretClipboard";

@@ -11,7 +11,8 @@
  */
 
 import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, Pressable, Modal, ScrollView } from "react-native";
+import { View, Text, StyleSheet, Modal, ScrollView } from "react-native";
+import { Pressable } from "./components/Pressable";
 import { useTranslation } from "react-i18next";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
 import { useTheme } from "./theme";

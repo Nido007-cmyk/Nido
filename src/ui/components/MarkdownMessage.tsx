@@ -5,7 +5,8 @@
  */
 
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable, Share } from "react-native";
+import { View, Text, StyleSheet, Share } from "react-native";
+import { Pressable } from "./Pressable";
 import { impact, ImpactFeedbackStyle } from "../../services/haptics";
 import { useTheme } from "../theme";
 import { spacing, radii } from "../theme/spacing";

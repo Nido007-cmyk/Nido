@@ -86,9 +86,16 @@ export function buildFixedModelPlan(query: string, modelId: string, maxTokens: n
   };
 }
 
+/**
+ * Velocidad de generación. `generationLatencyMs` se mide desde el PRIMER
+ * token hasta el final, así que en ese tramo salen tokensGenerated − 1
+ * tokens (0.1.118: antes se dividía el total y la tasa salía inflada,
+ * ≈3 % con 32 tokens y bastante más en respuestas cortas). Con un solo
+ * token no hay tramo que medir.
+ */
 export function tokensPerSecond(tokensGenerated: number, generationLatencyMs: number | undefined): number | undefined {
-  if (!generationLatencyMs || generationLatencyMs <= 0 || tokensGenerated <= 0) return undefined;
-  return tokensGenerated / (generationLatencyMs / 1000);
+  if (!generationLatencyMs || generationLatencyMs <= 0 || tokensGenerated <= 1) return undefined;
+  return (tokensGenerated - 1) / (generationLatencyMs / 1000);
 }
 
 export function expectedKbHit(expected: string[], retrieved: string[]): boolean | null {

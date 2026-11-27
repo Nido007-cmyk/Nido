@@ -5,7 +5,8 @@
  */
 
 import React from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
+import { Pressable } from "./Pressable";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../theme";
 import { spacing, radii } from "../theme/spacing";

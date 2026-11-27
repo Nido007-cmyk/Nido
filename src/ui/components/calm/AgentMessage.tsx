@@ -21,7 +21,8 @@
 
 import React, { useState, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
+import { Pressable } from "../Pressable";
 import { useTheme } from "../../theme/ThemeContext";
 import { calmSpacing, calmRadii, calmType } from "../../theme/calm";
 import { MemoryChip } from "./MemoryChip";

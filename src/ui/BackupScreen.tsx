@@ -19,10 +19,10 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Pressable,
   Alert,
   ActivityIndicator,
 } from "react-native";
+import { Pressable } from "./components/Pressable";
 import { BackupKeyModal } from "./BackupKeyModal";
 import { saveBackupToFolder, pruneLocalBackups } from "./backupShare";
 import { backupErrorText } from "./backupErrorText";

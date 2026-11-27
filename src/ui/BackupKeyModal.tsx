@@ -29,7 +29,8 @@
  */
 
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, Pressable, BackHandler, ScrollView } from "react-native";
+import { View, Text, StyleSheet, BackHandler, ScrollView } from "react-native";
+import { Pressable } from "./components/Pressable";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import { makeSurfaces } from "./theme/surfaces";

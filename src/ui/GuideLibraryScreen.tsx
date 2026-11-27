@@ -15,7 +15,8 @@
  * modelo solo carga cuando el usuario entra al chat, como siempre.
  */
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable } from "./components/Pressable";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";

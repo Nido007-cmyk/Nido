@@ -16,7 +16,8 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { AppState, View, Text, StyleSheet, Pressable } from "react-native";
+import { AppState, View, Text, StyleSheet } from "react-native";
+import { Pressable } from "./components/Pressable";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import { makeSurfaces } from "./theme/surfaces";

@@ -5,7 +5,8 @@
  */
 
 import React, { useCallback, useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, Pressable } from "react-native";
+import { View, Text, StyleSheet, FlatList } from "react-native";
+import { Pressable } from "./components/Pressable";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import { CatalogModel } from "../models/manifest";
@@ -116,10 +117,10 @@ export function CorpusSettingsTab({ corpusItems, getRow, download, remove, onOpe
 const styles = StyleSheet.create({
   sectionHeading: {
     fontFamily: fontFamilies.sans,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
+    // 0.1.118 (UI nueva): minúscula de frase, nada en MAYÚSCULAS.
+    letterSpacing: 0.2,
     marginHorizontal: 16,
     marginTop: 12,
   },

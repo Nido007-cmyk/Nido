@@ -23,7 +23,8 @@
  * dura. Sin red, sin modelo de IA.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AppState, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { AppState, Modal, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable } from "../components/Pressable";
 import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { activateKeepAwake, deactivateKeepAwake } from "expo-keep-awake";

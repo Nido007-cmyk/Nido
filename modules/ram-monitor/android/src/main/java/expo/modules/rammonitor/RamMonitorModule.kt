@@ -110,6 +110,16 @@ class RamMonitorModule : Module() {
       readDeviceTotalRamBytes()
     }
 
+    // 0.1.118 (lectura exacta del aparato): la RAM que el fabricante
+    // anuncia (MemoryInfo.advertisedMem, Android 14+; 0 si no hay) junto
+    // a la que el sistema deja usar (totalMem, lo que el presupuesto ya
+    // usaba), y la memoria de intercambio comprimida (zram, «RAM Plus»
+    // en Samsung) de /proc/meminfo. La swap se informa, no se presupuesta:
+    // es RAM comprimida y lenta, no RAM libre para un modelo.
+    Function("getDeviceRamInfo") {
+      readDeviceRamInfo()
+    }
+
     // 2026-11-06 (prueba física, tableta de 3,3 GB): la memoria que el
     // sistema tiene libre AHORA (ActivityManager.MemoryInfo). El pre-flight
     // solo miraba la RAM total menos una reserva fija y dejó cargar un
@@ -369,6 +379,41 @@ class RamMonitorModule : Module() {
     } catch (e: Exception) {
       mapOf("availBytes" to 0L, "thresholdBytes" to 0L, "lowMemory" to false)
     }
+  }
+
+  private fun readDeviceRamInfo(): Map<String, Long> {
+    var total = 0L
+    var advertised = 0L
+    try {
+      val context = appContext.reactContext
+      if (context != null) {
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val info = ActivityManager.MemoryInfo()
+        am.getMemoryInfo(info)
+        total = info.totalMem
+        if (Build.VERSION.SDK_INT >= 34) advertised = info.advertisedMem
+      }
+    } catch (_: Exception) {
+    }
+    var swapTotal = 0L
+    var swapFree = 0L
+    try {
+      RandomAccessFile("/proc/meminfo", "r").use { reader ->
+        var line: String?
+        while (reader.readLine().also { line = it } != null) {
+          val l = line!!
+          if (l.startsWith("SwapTotal:")) swapTotal = (l.replace(Regex("[^0-9]"), "").toLongOrNull() ?: 0L) * 1024L
+          if (l.startsWith("SwapFree:")) swapFree = (l.replace(Regex("[^0-9]"), "").toLongOrNull() ?: 0L) * 1024L
+        }
+      }
+    } catch (_: Exception) {
+    }
+    return mapOf(
+      "totalBytes" to total,
+      "advertisedBytes" to advertised,
+      "swapTotalBytes" to swapTotal,
+      "swapFreeBytes" to swapFree,
+    )
   }
 
   private fun readDeviceTotalRamBytes(): Long {

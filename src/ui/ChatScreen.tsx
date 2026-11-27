@@ -11,7 +11,6 @@ import { verifiedImportedPacks } from "../services/packImporter";
 import {
   View,
   Text,
-  Pressable,
   FlatList,
   StyleSheet,
   Keyboard,
@@ -23,6 +22,7 @@ import {
   NativeSyntheticEvent,
   Linking,
 } from "react-native";
+import { Pressable } from "./components/Pressable";
 import { VaultOfferBanner } from "./VaultOfferBanner";
 import { PanicButton } from "./components/PanicButton";
 import { ScrollToBottomButton } from "./components/ScrollToBottomButton";
@@ -86,6 +86,7 @@ import { runDeepResearch, ResearchProgress } from "../services/orchestrator";
 import { runAdaptiveChat } from "../services/adaptiveChat";
 import { speakAloud, stopSpeaking } from "../voice/tts";
 import { groundingBadge } from "./chat/groundingBadge";
+import { tokensPerSecond } from "../eval/evalHarness.pure";
 import { showSecureAlert } from "nido-secure-dialog";
 // NIDO agent: loop agéntico local con herramientas (Fase A).
 import { classifyIntent } from "../agent/loop/intent";
@@ -2250,7 +2251,7 @@ export function ChatScreen({
               if (result.ttftMs !== undefined) {
                 adaptiveTelemetry.ttftMs = result.ttftMs;
                 if (result.generationLatencyMs && result.generationLatencyMs > 0) {
-                  adaptiveTelemetry.tokPerSec = tokensGenerated / (result.generationLatencyMs / 1000);
+                  adaptiveTelemetry.tokPerSec = tokensPerSecond(tokensGenerated, result.generationLatencyMs) ?? 0;
                 }
               }
             }
@@ -2591,10 +2592,9 @@ export function ChatScreen({
         tokensGenerated,
         durationMs,
         ttftMs,
-        tokPerSec:
-          tokensGenerated > 0 && durationMs - ttftMs - turnModelLoadMs > 0
-            ? tokensGenerated / ((durationMs - ttftMs - turnModelLoadMs) / 1000)
-            : 0,
+        // 0.1.118: misma cuenta que la telemetría (tokensPerSecond):
+        // tras el primer token salen tokensGenerated − 1.
+        tokPerSec: tokensPerSecond(tokensGenerated, durationMs - ttftMs - turnModelLoadMs) ?? 0,
         peakRssBytes: peakRss.stop(),
         timestamp: Date.now(),
         totalLatencyMs: durationMs,

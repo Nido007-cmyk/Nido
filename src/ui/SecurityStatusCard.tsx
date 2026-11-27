@@ -13,7 +13,8 @@
  * solo estados (nunca claves): lo que no se puede comprobar se dice tal cual.
  */
 import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import { Pressable } from "./components/Pressable";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";

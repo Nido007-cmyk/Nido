@@ -6,7 +6,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { StatusBar } from "expo-status-bar";
-import { AppState, BackHandler, Image, StyleSheet, ActivityIndicator, Pressable, Text, View } from "react-native";
+import { AppState, BackHandler, Image, StyleSheet, ActivityIndicator, Text, View } from "react-native";
+import { Pressable } from "./src/ui/components/Pressable";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import i18n from "./src/i18n";

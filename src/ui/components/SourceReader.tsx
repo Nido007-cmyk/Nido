@@ -10,7 +10,8 @@
  * dónde sale lo que dice NIDO. Idea vista en BOAR; código propio de NIDO.
  */
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable } from "./Pressable";
 import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../theme";

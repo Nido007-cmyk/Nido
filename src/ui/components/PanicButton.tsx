@@ -14,7 +14,8 @@
  * aparece si el usuario lo activó en Ajustes.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, StyleSheet, Text, View } from "react-native";
+import { Pressable } from "./Pressable";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../theme/ThemeContext";
 import { NidoIcon } from "./icons/NidoIcon";

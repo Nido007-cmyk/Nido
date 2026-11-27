@@ -136,7 +136,9 @@ describe("result helpers", () => {
   it("ids configs, computes tok/s and KB hits", () => {
     expect(evalConfigId({ kind: "model", modelId: "x", label: "X" })).toBe("model:x");
     expect(evalConfigId({ kind: "adaptive", label: "A" })).toBe("adaptive");
-    expect(tokensPerSecond(20, 2000)).toBe(10);
+    // 0.1.118: 21 tokens = el primero + 20 en los 2 s posteriores.
+    expect(tokensPerSecond(21, 2000)).toBe(10);
+    expect(tokensPerSecond(1, 2000)).toBeUndefined();
     expect(tokensPerSecond(0, 2000)).toBeUndefined();
     expect(tokensPerSecond(20, undefined)).toBeUndefined();
     expect(expectedKbHit([], ["A"])).toBeNull();

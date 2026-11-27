@@ -5,7 +5,8 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
+import { Pressable } from "./components/Pressable";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
@@ -184,10 +185,10 @@ const getStyles = (colors: Colors, typography: Typography) =>
   StyleSheet.create({
     sectionHeading: {
       fontFamily: fontFamilies.sans,
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: "700",
-      letterSpacing: 0.8,
-      textTransform: "uppercase",
+      // 0.1.118 (UI nueva): minúscula de frase, nada en MAYÚSCULAS.
+      letterSpacing: 0.2,
       marginHorizontal: 16,
       marginTop: 12,
     },

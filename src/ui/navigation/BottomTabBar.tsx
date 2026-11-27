@@ -8,7 +8,8 @@
  * The Emergency icon is always red: it has to be findable in a hurry.
  */
 import React, { useMemo } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { Pressable } from "../components/Pressable";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../theme/ThemeContext";
 import type { Colors } from "../theme/colors";
