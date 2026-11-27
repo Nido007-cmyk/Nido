@@ -82,6 +82,7 @@ jobs:
           name: apk-${{ matrix.copy }}
           path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
+          retention-days: 7
 
   compare:
     needs: build
