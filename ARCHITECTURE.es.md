@@ -1,172 +1,230 @@
 > **Idioma:** [English](ARCHITECTURE.md) · Español
 
-# el proyecto original — Inteligencia Local Adaptativa (Android)
+# Arquitectura de NIDO
 
-Un sistema móvil de IA offline-first para Android que explora el enrutamiento
-adaptativo de modelos, la recuperación local, la verificación selectiva y la
-inferencia consciente de recursos. Construido originalmente para el bounty
-"Best Offline AI Research App" (inspirado por la publicación de
-@VitalikButerin). Restricciones duras a las que apunta este diseño:
+NIDO es un asistente personal con IA para Android que funciona por
+completo en el teléfono. No hay cuenta, ni servidor, ni nube detrás:
+el modelo de lenguaje, la base de conocimiento, la memoria y todas
+las respuestas de seguridad viven en el aparato, y tras la
+configuración inicial la app trabaja sin conexión. Este documento
+describe cómo está construida la app hoy (versión 0.1.117). Para
+saber qué hace, lee `README.es.md`; para compilarla, `AGENTS.es.md`.
 
-- ≤ 12 GB de RAM pico durante la inferencia
-- ≤ 50 GB totales en disco (app + pesos + índices)
-- App pequeña, rápida de compilar/instalar; un paso obligatorio de
-  configuración única descarga los modelos por defecto en el primer arranque
-  (el único uso de red requerido por la app). A partir de entonces funciona
-  completamente offline — cumpliendo "work completely offline once installed"
-  (instalado = app + configuración única de modelos hecha).
-- Sin dependencia de Google Play Services (funciona en GrapheneOS)
-- Dispositivo Android real, no solo emulador
+## Reglas de diseño que el código hace cumplir
 
-## Stack
+- **Sin conexión es el estado normal.** Las únicas peticiones de red
+  que la app inicia son las descargas que empieza la propia persona
+  (modelos y paquetes de conocimiento) y una comprobación opcional
+  de actualizaciones. Toda petición pasa por una única API de salida
+  y queda escrita en un registro de red que la persona puede
+  consultar dentro de la app (`src/privacy/networkAudit.ts`).
+- **El modelo es para conversar; la ayuda, no.** Las emergencias,
+  las respuestas de crisis y buena parte de las peticiones de cada
+  día las responde código determinista con textos fijos y
+  verificados. Nunca esperan al modelo y funcionan aunque el modelo
+  ni siquiera pueda cargarse.
+- **Lo que se guarda es lo que pasó la revisión.** Una respuesta del
+  modelo que llega al historial, a una exportación o a la lectura en
+  voz alta es la respuesta después de que el juez de fundamentación
+  la contrastó con sus fuentes, no la generación en bruto.
+- **Privado por construcción.** Los datos personales viven en bases
+  de datos cifradas en reposo. Nada personal sale del teléfono; la
+  única excepción es el canal cifrado entre dos teléfonos que la
+  persona abre a propósito (ver «Hablar con otro NIDO»).
+- **Manda el hardware modesto.** La app se construye y se prueba
+  pensando en teléfonos y tabletas corrientes, no en buques
+  insignia: la elección de modelo, el tamaño de contexto y los
+  presupuestos de memoria se reducen con honestidad en los aparatos
+  pequeños en vez de fallar en silencio.
 
-- **App shell**: Expo (React Native) + `expo-dev-client` (build de desarrollo
-  personalizado, no Expo Go — necesitamos módulos nativos que Expo Go no puede
-  cargar).
-- **Motor de inferencia**: [`llama.rn`](https://github.com/mybigday/llama.rn) —
-  bindings de React Native para llama.cpp, soporta GGUF, streaming de pesos por
-  mmap, build con Android NDK, sin GMS.
-- **Modelo por defecto**: Qwen2.5-1.5B-Instruct (Apache-2.0, 1.5B, Q4_K_M,
-  ~0.99 GB), el rol `fast` de la capa de enrutamiento (`src/routing/`).
-  Descargado una vez en el primer arranque junto con el modelo de embeddings
-  (ver "Configuración de modelos en el primer arranque" más abajo), alrededor
-  de 1 GB en total, así que la configuración toma minutos. Modelos sugeridos en
-  el mismo catálogo dentro de la app, todos probados en un teléfono real:
-  Phi-3.5-mini-instruct (MIT, 3.8B), Qwen2.5-7B-Instruct, LFM2.5-8B-A1B
-  (mixture of experts, ~1.5B activos) y Gemma 4 E4B (ver
-  `docs/es/MODELS.md`).
-- **Recuperación**: `expo-sqlite` con FTS5 para búsqueda léxica sobre una base
-  de conocimiento offline local, más bge-small-en-v1.5 (MIT, 33M) para un
-  índice vectorial local (coseno por fuerza bruta) — RAG híbrido BM25 +
-  vectorial, totalmente local en el momento de la consulta.
-- **Almacenamiento**: los pesos de los modelos + la DB FTS5 + el índice
-  vectorial viven en `FileSystem.documentDirectory`, verificados por
-  checksum/tamaño contra un manifiesto.
+## Pila técnica
 
-## Configuración de modelos en el primer arranque
+- **Carcasa**: Expo (React Native 0.86, React 19) con TypeScript,
+  compilada como app nativa a medida. No puede correr en Expo Go:
+  la app trae catorce módulos nativos propios (abajo) además de la
+  inferencia nativa.
+- **Inferencia**: `llama.rn` (los bindings de llama.cpp para React
+  Native) ejecuta modelos GGUF en el aparato, con los pesos
+  mapeados en memoria y la salida por flujo
+  (`src/inference/LlamaEngine.ts`). Una capa de enrutado
+  (`src/routing/`) planifica cada turno con reglas sencillas, nunca
+  con el propio modelo, así que el mismo mensaje toma siempre la
+  misma ruta.
+- **Almacenamiento y búsqueda**: SQLite mediante `expo-sqlite`,
+  cifrado con SQLCipher para los datos personales, con FTS5 para la
+  búsqueda por palabras y un modelo de embeddings integrado para la
+  búsqueda por vectores. Un módulo nativo (`modules/nido-vectors`)
+  hace la búsqueda vectorial exacta sobre los embeddings de un
+  paquete desde un índice mapeado en memoria.
+- **Idiomas**: la interfaz, las respuestas fijas y la guía están
+  escritas por completo en español, inglés y portugués
+  (`src/i18n/locales/`), con pruebas automáticas de paridad entre
+  los tres.
 
-La propia app sigue siendo pequeña y rápida de compilar (sin assets de varios
-GB embebidos en el APK), y obtiene sus modelos por defecto la primera vez que
-se abre:
+## Cómo obtiene respuesta un mensaje
 
-1. `App.tsx` comprueba `ModelManager.requiredModelsPresent()` al arrancar. Si
-   el LLM por defecto + el modelo de embeddings aún no están en disco, muestra
-   `ModelSetupScreen` en `mode="required"` en lugar de la UI de chat.
-2. Esa pantalla inicia automáticamente la descarga de ambas entradas del
-   catálogo marcadas `required: true` (`src/models/manifest.ts`) vía
-   `ModelManager.downloadCatalogModel`, con una barra de progreso por modelo, y
-   verifica el tamaño de cada descarga contra el catálogo antes de aceptarla.
-3. Una vez que ambos están presentes, "Continue" se desbloquea y la app pasa a
-   la UI normal de chat. A partir de este punto no se necesita más acceso a la
-   red — verificado: desactivar la red (modo avión) no afecta al chat, la
-   recuperación ni la generación, que son todos rutas de código puramente
-   on-device.
-4. La misma pantalla, en `mode="optional"` (accesible luego vía el botón
-   "Models" de la pantalla de chat), permite al usuario explorar/descargar
-   modelos adicionales o alternativos, o eliminar los que ya no quiera — sigue
-   siendo opt-in, sigue siendo el único punto de llamada a red de la app.
+1. **Primero, la seguridad y las rutas fijas.** Detectores
+   deterministas (`src/routing/emergencyGate.ts`,
+   `src/agent/loop/safetyAnswers.ts`) reconocen emergencias,
+   autolesión, monóxido de carbono y otros temas urgentes y
+   responden al momento con textos fijos y números verificados, sin
+   cargar el modelo. Una emergencia escrita mientras otra respuesta
+   se está generando también puede enviarse.
+2. **Herramientas deterministas.** Recordatorios, notas, memoria,
+   calendario, cálculos, temporizadores y peticiones parecidas las
+   atienden los enrutadores y las herramientas del agente
+   (`src/agent/`, `src/routing/`), que actúan sobre el almacén
+   cifrado y responden en el idioma de la persona.
+3. **Clasificación por significado.** Una puerta semántica
+   (`src/routing/semanticGate.ts`) suma clasificación por
+   significado a las listas de palabras en los temas de salud y
+   emergencia, usando los mismos vectores de búsqueda que la
+   recuperación.
+4. **Recuperación.** Cuando una pregunta necesita conocimiento, la
+   búsqueda híbrida (FTS5 más vectores) mira en el corpus integrado,
+   en los paquetes de conocimiento instalados y en los documentos
+   de la propia persona (`src/rag/`), y las mejores fuentes viajan
+   con la pregunta dentro del contexto del modelo.
+5. **Responde el modelo.** La generación sale token a token, con
+   presupuestos de contexto y de salida que el enrutador fija según
+   la ruta (`src/routing/router.ts`).
+6. **El juez la revisa.** El juez de fundamentación
+   (`src/rag/grounding.ts`) compara la respuesta con las fuentes
+   que recibió: lo que no tiene apoyo se retira o la respuesta cae
+   a un texto seguro, y una comprobación de fuentes
+   (`src/rag/sourceCheck.ts`) señala las cifras que contradicen a
+   una fuente. Solo la respuesta juzgada se enseña, se guarda, se
+   exporta o se lee en voz alta.
 
-**Ruta de build alternativa (retirada en la 0.1.99):** `plugins/withBundledModels.js`
-permitía a `modules/bundled-assets` embeber los modelos por defecto
-directamente en el APK en tiempo de build (verificado funcionando vía una
-ejecución real de `expo prebuild` — ver el historial de git), para un build que
-no necesitaba red nunca, al costo de un APK mucho más grande. El plugin se
-retiró porque copiaba los pesos sin verificarlos al copiar; el módulo
-`bundled-assets` permanece (solo copia lo que una build ya haya puesto en
-los assets del APK — hoy, los packs de corpus), pero ya ningún plugin
-registrado embebe modelos.
+## Conocimiento
 
-## Estructura de directorios
+- Dentro de la app viaja un corpus inicial de 858 temas
+  (`assets/corpus/corpus.json`) que se indexa en el primer
+  arranque, así que la app responde preguntas de conocimiento sin
+  conexión desde el primer minuto.
+- **Los paquetes de conocimiento** son ficheros SQLite con los
+  textos, un índice FTS5 y los embeddings. La configuración ofrece
+  cuatro niveles (mínimo, estándar, completo, enciclopedia). Dos
+  paquetes, NIDO Esencial y NIDO Local, viajan dentro del APK y se
+  instalan en el primer arranque; el resto se descarga cuando se
+  pide. Cada paquete se verifica por SHA-256 contra un catálogo
+  firmado antes de aceptarse (`src/models/manifest.ts`,
+  `src/models/manifestSignature.ts`).
+- **La biblioteca de la persona**: los documentos que importa (la
+  extracción de texto de PDF y el OCR corren en el aparato,
+  `src/services/documentImporter.ts`) se indexan de la misma manera
+  y solo responden ante su dueño.
+
+## Memoria, bóveda y respaldos
+
+- Los chats, la memoria, las notas, los recordatorios y los
+  contactos se guardan en bases de datos cifradas con SQLCipher
+  (`src/security/databaseManager.ts`). La clave de la base se
+  envuelve con una clave de hardware guardada en el Android
+  Keystore; tras un reinicio, usarla pide el PIN, el patrón o la
+  huella fuerte de la persona (`src/security/keyVault.ts`,
+  `modules/nido-keyvault`).
+- Un respaldo copia la base todavía cifrada, con un manifiesto de
+  sumas de verificación; la persona guarda la clave aparte, en
+  papel o donde elija. Ninguna mitad sirve sin la otra, y ningún
+  servidor ve jamás ninguna de las dos (`src/security/backup.ts`).
+- El borrado de pánico destruye primero la base, la bóveda y las
+  claves de la conexión entre teléfonos, y después todo lo demás.
+
+## El agente y sus permisos
+
+El agente (`src/agent/`) trabaja mediante herramientas: puede poner
+recordatorios, guardar notas y memoria, leer el calendario, hacer
+cálculos, gestionar tareas programadas y más. Cada herramienta tiene
+un permiso que la persona controla, cada acción queda escrita en un
+registro que puede revisar, y las acciones destructivas preguntan
+antes mediante un diálogo nativo cuya ventana está protegida contra
+capturas de pantalla (`modules/nido-secure-dialog`). Los
+recordatorios suenan con alarmas exactas (`modules/exact-alarm`,
+`modules/nido-notify`), sin Firebase y sin servicios de Google de
+por medio.
+
+La guía integrada («Aprende a usar NIDO», `src/guide/`) enseña cada
+función con ejemplos que la persona puede enviar. Sus lecciones
+viven en los ficheros de idioma como el resto del texto, y las
+pruebas envían cada ejemplo de cada lección, en los tres idiomas,
+por los enrutadores reales: una lección no puede prometer algo que
+la app ya no hace.
+
+## Hablar con otro NIDO
+
+Dos teléfonos con NIDO pueden intercambiar mensajes y tareas
+delegadas por Wi-Fi local o Bluetooth (`src/p2p/`,
+`modules/nido-p2p`). El canal va cifrado de extremo a extremo con
+NaCl: un par de claves de identidad X25519, un handshake firmado con
+Ed25519, claves de sesión efímeras por conexión y XSalsa20-Poly1305
+para los mensajes (`src/p2p/crypto.ts`), con un componente
+poscuántico en el intercambio de claves (`src/p2p/pq.ts`). El
+emparejamiento se confirma comparando una huella en un diálogo
+nativo, y las delegaciones que llegan caen en una bandeja de
+aprobación: nada de otro teléfono se ejecuta sin aprobación.
+
+## Módulos nativos
+
+Catorce módulos locales bajo `modules/` cubren lo que React Native
+no alcanza: `bundled-assets` (copia a disco los paquetes que viajan
+en el APK), `download-wake-lock`, `exact-alarm`, `nido-cpr` (el
+metrónomo de la práctica de RCP y el medidor de ritmo por cámara),
+`nido-keyvault`, `nido-launch` (accesos directos, destino de
+compartir y el mosaico de ajustes rápidos), `nido-notify`,
+`nido-ocr`, `nido-p2p` (el transporte Bluetooth; la criptografía
+vive en `src/p2p/`), `nido-pdf-text`, `nido-secure-dialog`,
+`nido-vectors`, `ram-monitor` (la memoria real del proceso que
+enseña el monitor del sistema) y `voice-input` (reconocimiento de
+voz sin conexión mediante el reconocedor propio del aparato).
+
+## Pruebas y verificación
+
+Cada pull request corre en CI el comprobador de tipos y la suite
+automática entera, además del escaneo de secretos y la paridad de
+movimiento de la práctica de RCP. La corrida que construyó la
+0.1.117 pasó 9.975 pruebas automáticas: 9.808 en vitest repartidas
+en 559 ficheros y 167 pruebas de componentes en jest, sin ningún
+fallo. Las reglas de comportamiento que nunca deben cambiar en
+silencio están escritas en la constitución
+(`docs/NIDO_CONSTITUTION.md`) y se comprueban por script;
+`conformance/` y `formal/` guardan el material de conformidad y el
+formal. Las pruebas automáticas no sustituyen a un teléfono de
+verdad: las versiones 0.1.114 y 0.1.115 también pasaron por las
+manos del dueño en una Galaxy Tab A9+ física.
+
+## Estructura de carpetas
 
 ```
-boar-app/
-  App.tsx                  # checks required models -> setup screen or chat
-  src/
-    inference/              # llama.rn wrapper, streaming token bridge
-    rag/                    # FTS5 setup, embedding, retrieval + prompt assembly
-    models/                 # model catalog, checksum/size verify, download
-    ui/                     # chat UI, model setup/catalog UI, system monitor bar
-  modules/
-    ram-monitor/             # native module: real process RSS via /proc/self/status
-    bundled-assets/           # native module: copy APK-bundled assets to disk (corpus packs today)
-  plugins/
-    withBundledPacks.js       # config plugin: bakes the first-run corpus packs into the APK
-  android/                   # generated by `expo prebuild` (gitignored, regenerable)
-  assets/
-    models/                   # (gitignored) verified GGUF files, populated by setup-models.sh
-    corpus/corpus.json         # bundled Wikipedia-derived bootstrap knowledge base
-  docs/
-    MODELS.md                 # documented model/dataset/index choices
-    EVAL_QUERIES.md             # example queries for the bounty demo
-  scripts/
-    setup-models.sh            # dev-machine: fetches + verifies model weights
-    build-corpus.mjs            # dev-machine: builds the bundled knowledge base
-  eas.json / .easignore         # EAS Build config (cloud builds w/o local Android SDK)
+App.tsx / index.ts        puntos de entrada; la puerta de configuración y luego el chat
+src/
+  routing/                planificación de rutas, puerta de emergencia, puerta semántica
+  agent/                  herramientas, registro de acciones, respuestas fijas de seguridad
+  rag/                    recuperación, juez de fundamentación, comprobación de fuentes
+  inference/              la envoltura de llama.rn, presupuestos de memoria y presión
+  models/                 catálogos de modelos y paquetes, manifiesto firmado, descargas
+  security/               bases cifradas, bóveda de claves, respaldo y restauración
+  privacy/                gestor de claves, el registro de auditoría de red
+  p2p/                    cripto entre teléfonos, handshake, delegación
+  guide/                  la estructura y las promesas de la guía integrada
+  i18n/                   los ficheros de idioma: español, inglés y portugués
+  ui/                     pantallas y componentes
+  services/               historial de chat, importación de documentos, citas, investigación
+  voice/ cpr/ notify/     voz de entrada y salida, práctica de RCP, notificaciones
+modules/                  los catorce módulos nativos locales
+knowledge-packs/          las fuentes de los paquetes y el libro de releases
+assets/corpus/            el corpus inicial integrado
+docs/                     documentos de diseño, seguridad y producto
+scripts/                  herramientas de construcción, paquetes y verificación
+.github/workflows/        los flujos de CI, releases y paquetes
 ```
 
-## No negociables aplicados en código
+## Origen y licencia
 
-1. Sin librerías de Firebase / GMS / Play Services en
-   `android/app/build.gradle`.
-2. El **único** punto de llamada a red en `src/` es
-   `ModelManager.downloadCatalogModel`, invocado exclusivamente desde
-   `ModelSetupScreen` (tanto en su modo obligatorio de primer arranque como en
-   su modo opcional posterior) — chat, inferencia y recuperación son rutas de
-   código totalmente locales sin llamadas `fetch`/de red en ningún lugar.
-3. Una barra visible de monitor del sistema (RAM + almacenamiento) para que los
-   límites de RAM/almacenamiento sean auditables en vivo en el dispositivo, no
-   solo declarados.
-
-## Estado
-
-- [x] Scaffold Expo TS, `expo-dev-client`, `expo-sqlite`, `expo-file-system`,
-      `llama.rn` instalados
-- [x] ModelManager (descarga + verificación de checksum/tamaño; ruta opcional
-      de instalación embebida)
-- [x] Esquema FTS5 + recuperación híbrida (léxica+semántica) + ensamblado de
-      prompts
-- [x] Wrappers LlamaEngine/EmbeddingEngine sobre `llama.rn`, liberan el
-      contexto previo antes de cargar uno nuevo (sin fuga de memoria nativa al
-      cambiar de modelo)
-- [x] Asistente obligatorio de configuración en el primer arranque (selector de
-      nivel + descargas) + pantalla opcional de Ajustes (catálogo de modelos,
-      cambio de modelo activo, packs de corpus, monitor de
-      almacenamiento/RAM) — `ModelSetupScreen`, el único punto de llamada a
-      red de la app
-- [x] UI de chat: streaming de tokens, citas, carrusel de onboarding con ideas
-      de prompts, botón de entrada de voz offline
-- [x] **Verificado de extremo a extremo en hardware Android real**
-      (Xiaomi/Redmi, Snapdragon/Adreno): `expo prebuild` + `expo run:android`
-      compilan e instalan de verdad; el asistente de primer arranque descarga
-      los modelos en el dispositivo; la app funciona
-- [x] Modelos primario (MIT) + secundario (Apache-2.0, rol `fast` de
-      enrutamiento) + de embeddings requeridos en la configuración de primer
-      arranque, + una alternativa LLM Apache-2.0 opcional adicional
-      (Qwen2.5-7B-Instruct), todos verificados por sha256, cabeceras GGUF
-      validadas
-- [x] Tres niveles de configuración (Minimum/Standard/Full) con packs de
-      corpus descargables (300/1.300/5.300 temas), alojados vía
-      `raw.githubusercontent.com` desde este repo público, verificados por
-      sha256 como cualquier otro asset del catálogo
-- [x] Módulos nativos: `ram-monitor` (RSS real del proceso),
-      `bundled-assets` (copia los assets embebidos en el APK a disco; su
-      plugin de config de modelos se retiró en la 0.1.99 — ver la nota de
-      la ruta de build alternativa), `voice-input` (wrapper offline de
-      `SpeechRecognizer`) — todos confirmados descubiertos por el autolinking
-      de Android de Expo, todos compilados con éxito en una compilación real
-      de `expo run:android`
-- [x] EAS Build configurado (`eas.json`) y proyecto enlazado (`boar-app`, antes
-      `ao-air` previo al rebrand — puede necesitar re-enlace en expo.dev si los
-      builds en la nube se quejan de un slug distinto) para builds en la nube
-      sin Android SDK local
-- [x] Repo público de GitHub: https://github.com/rferrari/boar-app
-- [x] Tests unitarios (vitest, 22 tests) para la lógica pura de
-      recuperación/manifiesto/niveles + CI
-- [x] `Makefile` con atajos `setup`/`start`/`run-android`/`build-eas`/`test`/`clean`
-      para los comandos anteriores
-- [ ] Medir el rendimiento de los modelos elegidos en hardware real
-      (tokens/seg, RSS) — aún no medido
-- [ ] Binding de whisper.cpp para entrada de voz en dispositivos sin servicio
-      de voz del sistema (GrapheneOS) — documentado como trabajo futuro, no
-      intentado
-- [ ] Post público de demo (X/Farcaster) + envío a poidh
+NIDO nació como un fork de BOAR, una app de investigación de IA sin
+conexión, y desde entonces se ha extendido mucho: las rutas de
+seguridad, el juez de fundamentación, la memoria cifrada, los
+paquetes de conocimiento, la guía y el canal entre teléfonos son
+obra de NIDO. El proyecto se publica bajo la licencia MIT (ver
+`LICENSE`); `ATTRIBUTION.md` conserva el crédito de BOAR y de cada
+pieza de terceros sobre la que se apoya la app.
