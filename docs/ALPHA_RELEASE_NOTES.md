@@ -327,7 +327,7 @@ Fixes from the 2026-10-10 code audit:
 
 - **The new look has not been checked on a device yet (0.1.117).** It was built and tested in code, but no one has looked at it on a phone or tablet before this release. On Android, the semi-bold weight of the new typeface may be drawn by the system from the regular one, so some medium-weight labels can look slightly heavier or lighter than intended.
 - The 0.5B model is small and will sometimes give wrong or made-up answers. Since 0.1.36 NIDO shows no source when nothing in its knowledge base really matches, but the model can still answer wrongly from its own knowledge.
-- On low-end phones the first word of a long answer can take a while (about 20 seconds measured on a Galaxy Tab A9+ running 0.1.68, when several sources are used; no later version has been measured on a device yet).
+- On low-end phones the first word of a long answer can take a while when several sources are used. Later versions have been run on a Galaxy Tab A9+ since, and they answer faster than the 0.1.68 build an older note cited (about 20 seconds there); the current version has not had its own first-word timing taken on a device yet.
 - P2P Bluetooth behavior varies by phone manufacturer. See the in-app troubleshooting guide if you have connection issues.
 - **A backup restored on a new installation needs the exported key.** If you reinstall or change phones, a backup can be restored with the exported database key. Without that key a backup cannot be opened anywhere, so keep the key somewhere safe and separate from the backup file.
 - **Voice input uses Android's system speech recognizer** with the prefer-offline flag. On devices without an offline model, the system service may process audio online.
