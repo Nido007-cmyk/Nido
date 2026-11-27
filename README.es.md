@@ -17,9 +17,9 @@ Un asistente de IA privado que funciona por completo en tu teléfono Android.</p
 </p>
 
 <p align="center">
-  <img src="docs/visual/ui-chat-design.png" alt="Chat de NIDO: pantalla inicial, una conversación y tema oscuro" width="820">
+  <img src="docs/visual/ui-chat-design.png" alt="Diseño de NIDO 0.1.117: inicio del chat, una respuesta con fuentes, tema oscuro y la pestaña Emergencia" width="820">
 </p>
-<p align="center"><sub>Maquetas de diseño del chat en v0.1.1-alpha. Las pantallas publicadas pueden diferir en detalles.</sub></p>
+<p align="center"><sub>Diseño de la interfaz 0.1.117 (no son capturas). Algunos elementos del diseño todavía no están en la app y las pantallas publicadas pueden diferir en detalles.</sub></p>
 
 ## Qué es NIDO
 
