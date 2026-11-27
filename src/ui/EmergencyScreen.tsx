@@ -343,8 +343,10 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
 const getStyles = (colors: Colors, typography: Typography) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.bg.black },
-    header: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 },
-    title: { ...typography.ui.headline, color: colors.text.heading, flex: 1 },
+    header: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingTop: 18, paddingBottom: 12 },
+    // 0.1.117 (UI nueva): el título de Emergencia lleva el rojo de
+    // emergencia (crimson.400 pasa AA en los dos temas).
+    title: { ...typography.ui.headline, color: colors.crimson[400], flex: 1 },
     countryBtn: {
       minHeight: 44,
       maxWidth: 200,
