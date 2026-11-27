@@ -88,20 +88,26 @@ export function makeSurfaces(colors: Colors, typography: Typography): Surfaces {
       color: colors.emerald[600],
       fontWeight: "700",
     },
+    // 0.1.117 (UI nueva): rótulos de sección en minúscula de frase, nada
+    // en MAYÚSCULAS, a tamaño legible.
     sectionLabel: {
-      ...typography.ui.micro,
-      color: colors.text.dim,
+      ...typography.ui.caption,
+      color: colors.text.secondary,
       fontWeight: "700",
-      letterSpacing: 0.8,
-      textTransform: "uppercase",
+      letterSpacing: 0.2,
     },
     card: {
       backgroundColor: colors.bg.card,
-      borderRadius: 16,
+      borderRadius: 18,
       borderWidth: 1,
-      borderColor: colors.border.default,
+      borderColor: colors.border.subtle,
       padding: 16,
       gap: 8,
+      shadowColor: "#15201A",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 3,
+      elevation: 1,
     },
     inset: {
       backgroundColor: colors.bg.cardElevated,
@@ -136,7 +142,7 @@ export function makeSurfaces(colors: Colors, typography: Typography): Surfaces {
     dangerButtonText: { ...buttonText, color: colors.crimson[500] },
     note: {
       backgroundColor: colors.emerald.bgSubtle,
-      borderRadius: 14,
+      borderRadius: 16,
       padding: 12,
     },
     noteText: {
