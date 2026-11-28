@@ -114,30 +114,39 @@ export function DrawerFooterStats() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.row}>
-        <Text style={styles.label} numberOfLines={1}>{t("drawerFooterStats.ram")}</Text>
+      {/* 0.1.119 (foto del dueño, Tab A9+ con letra grande): con
+          «RAM (NIDO)» la etiqueta, la barra y la cifra ya no cabían en
+          una fila: la cifra se cortaba («3.3..») y la barra desaparecía.
+          Ahora cada medida va en dos líneas: etiqueta y cifra arriba, la
+          barra debajo a todo el ancho. */}
+      <View style={styles.stat}>
+        <View style={styles.row}>
+          <Text style={styles.label} numberOfLines={1}>{t("drawerFooterStats.ram")}</Text>
+          <Text style={styles.value} numberOfLines={1} testID="drawer-ram-value">
+            {totalRamBytes > 0
+              ? `${formatGB(rssBytes)} / ${formatGB(totalRamBytes)}`
+              : formatGB(rssBytes)}
+          </Text>
+        </View>
         <MiniBar
           fraction={ramFraction}
           over={ramFraction > 1}
           color={colors.emerald[400]}
         />
-        <Text style={styles.value} numberOfLines={1}>
-          {totalRamBytes > 0
-            ? `${formatGB(rssBytes)}/${formatGB(totalRamBytes)}`
-            : formatGB(rssBytes)}
-        </Text>
       </View>
       {disk != null && (
-        <View style={styles.row}>
-          <Text style={styles.label} numberOfLines={1}>{t("drawerFooterStats.disk")}</Text>
+        <View style={styles.stat}>
+          <View style={styles.row}>
+            <Text style={styles.label} numberOfLines={1}>{t("drawerFooterStats.disk")}</Text>
+            <Text style={styles.value} numberOfLines={1} testID="drawer-disk-value">
+              {`${formatGB(disk.used)} / ${formatGB(disk.total)}`}
+            </Text>
+          </View>
           <MiniBar
             fraction={storageFraction}
             over={storageFraction > 1}
             color={colors.cyan[400]}
           />
-          <Text style={styles.value} numberOfLines={1}>
-            {formatGB(disk.used)}/{formatGB(disk.total)}
-          </Text>
         </View>
       )}
       {tokPerSec != null && (
@@ -160,7 +169,8 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     borderTopWidth: 1,
     borderTopColor: colors.border.subtle,
   },
-  row: { flexDirection: "row", alignItems: "center", gap: 6 },
+  stat: { gap: 4 },
+  row: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 8 },
   label: {
     ...typography.ui.caption,
     color: colors.text.dim,
@@ -172,7 +182,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     fontWeight: "700",
   },
   track: {
-    flex: 1,
+    alignSelf: "stretch",
     height: 5,
     borderRadius: radii.xs,
     backgroundColor: colors.bg.modalOverlay,
@@ -186,9 +196,10 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     ...typography.ui.caption,
     color: colors.text.muted,
     fontVariant: ["tabular-nums"],
-    // Con la fuente del sistema agrandada, el valor cede (una línea,
-    // con elipsis) antes que la etiqueta o la barra.
+    // 0.1.119: la cifra ya no comparte fila con la barra; con la
+    // letra del sistema muy grande cede antes que la etiqueta.
     flexShrink: 1,
+    textAlign: "right",
   },
   tokRow: {
     flexDirection: "row",
