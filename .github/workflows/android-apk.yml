@@ -173,7 +173,7 @@ jobs:
         run: npm run verify:pins
 
       - name: Verify manifest signature (CICD-01 gate)
-        run: npm run verify:manifest-sig || echo "TEMPORAL: firma pendiente del dueño (rama de solo compilación)"
+        run: npm run verify:manifest-sig || echo "TEMPORAL - firma pendiente del dueño, rama de solo compilación"
 
       - name: Deep-clean runner disk (after tool setup)
         run: |
