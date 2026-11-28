@@ -129,6 +129,13 @@ export function VoiceInputButton({ disabled, onTranscript }: Props) {
           setListening(false);
           setTranscribing(true);
         }
+        // 0.1.125 (auditoría de la casa, E-1): Whisper falló y el dictado
+        // sigue con el reconocedor de Android: hay que volver a hablar.
+        if (event.type === "fallback") {
+          setTranscribing(false);
+          setListening(true);
+          Alert.alert(t("voiceInputAlert.fallbackTitle"), t("voiceInputAlert.fallbackMessage"));
+        }
       });
       if (result) onTranscript(result);
     } finally {

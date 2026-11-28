@@ -1220,7 +1220,9 @@
     "onlineOnlyMessage": "Este telefone não consegue reconhecer a voz sem internet, e o NIDO está configurado para não enviar o seu áudio para fora. Digite a sua pergunta, ou permita o serviço de voz do sistema em Ajustes › Voz (pode enviar o áudio pela internet).",
     "startLabel": "Ditar por voz",
     "stopLabel": "Parar o ditado",
-    "transcribingLabel": "Transcrevendo no telefone…"
+    "transcribingLabel": "Transcrevendo no telefone…",
+    "fallbackTitle": "O Whisper não conseguiu com este ditado",
+    "fallbackMessage": "Segue o reconhecedor do Android do telefone: diga de novo. Se o Whisper falhar duas vezes seguidas, o ditado usará o Android diretamente até a próxima versão do app."
   },
   "tasks": {
     "approvalTitle": "Solicitação de tarefa",
@@ -1900,7 +1902,7 @@
               "Para ouvir as respostas: $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.voice) → $t(voiceSettings.readAloudLabel).",
               "Embaixo de cada resposta, «$t(chatScreen.listen)» a lê em voz alta; toque de novo para parar."
             ],
-            "tip": "Precisa de permissão de microfone. Com o Whisper baixado, o ditado funciona em qualquer telefone e sem internet; se naquele momento não couber na memória, usa-se o reconhecedor do Android."
+            "tip": "Precisa de permissão de microfone. Com o Whisper baixado, o ditado funciona em qualquer telefone e sem internet; se naquele momento não couber na memória ou falhar, segue o reconhecedor do Android."
           }
         ]
       },

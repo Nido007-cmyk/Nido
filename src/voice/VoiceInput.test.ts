@@ -52,6 +52,15 @@ vi.mock("expo-modules-core", () => ({
 }));
 vi.mock("../models/settings", () => ({
   getVoiceOnDeviceOnly: async () => true,
+  getWhisperFailures: async () => null,
+  setWhisperFailures: async () => {},
+}));
+vi.mock("expo-file-system/legacy", () => ({
+  documentDirectory: "file:///docs/",
+  cacheDirectory: "file:///cache/",
+  readDirectoryAsync: async () => [],
+  getInfoAsync: async () => ({ exists: false }),
+  deleteAsync: async () => {},
 }));
 
 import { startListening, type VoiceEvent } from "./VoiceInput";
@@ -64,7 +73,10 @@ import { startListening, type VoiceEvent } from "./VoiceInput";
  */
 async function begin(onEvent?: (e: VoiceEvent) => void): Promise<{ p: Promise<string | null> }> {
   const p = startListening(onEvent);
-  for (let i = 0; i < 20 && nativeFake.startListening.mock.calls.length === 0; i++) await Promise.resolve();
+  for (let i = 0; i < 50 && nativeFake.startListening.mock.calls.length === 0; i++) {
+    await vi.dynamicImportSettled();
+    await Promise.resolve();
+  }
   return { p };
 }
 

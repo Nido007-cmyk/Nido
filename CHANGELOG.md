@@ -18,7 +18,10 @@ any phone, even one without Android's recognizer or
 without the language installed. With it downloaded,
 dictation uses Whisper first; if it does not fit in the
 memory free at that moment, it uses Android's recognizer
-as before.
+as before. If Whisper fails during a dictation, the
+Android recognizer takes over in that same dictation (you
+say it again), and after two failures in a row it goes
+straight to Android until the next version of the app.
 
 With Whisper, tap the microphone, speak and tap again
 when you finish (or wait 30 seconds). The button shows

@@ -72,6 +72,12 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   respuestas muestran los artículos de donde salen, con una línea que cuenta
   qué frases salen de ellos y cuáles del modelo sin fuente; si nada de la base
   encaja de verdad, no se muestra ninguna fuente.
+- **Dictado con Whisper, en el teléfono** (0.1.125): descarga el modelo de
+  voz Whisper (unos 145 MB, español, inglés y portugués) en Ajustes → Voz y
+  el dictado funciona en cualquier teléfono sin internet, incluso sin el
+  reconocedor de Android; el audio se borra en cuanto sale el texto. Si
+  Whisper no cabe en la memoria de ese momento o falla, sigue el
+  reconocedor de Android del teléfono.
 - **Emergencia a un toque, respuestas que se escuchan y se comprueban**
   (0.1.117): un botón SOS arriba del chat abre la pestaña Emergencia, cuya
   cabecera roja pone primero el número de emergencias principal; cada

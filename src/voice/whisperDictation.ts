@@ -75,6 +75,27 @@ export function cleanWhisperText(raw: string | null | undefined): string {
     .trim();
 }
 
+/**
+ * 0.1.125 (auditoría de la casa, E-1): fallos seguidos a partir de los
+ * cuales Whisper se aparta en este aparato y versión de la app.
+ */
+export const WHISPER_SUSPEND_AFTER = 2;
+
+/** ¿Está Whisper apartado por fallos seguidos en esta versión de la app? */
+export function whisperSuspended(record: { count: number; appVersion: string } | null, appVersion: string): boolean {
+  return record !== null && record.appVersion === appVersion && record.count >= WHISPER_SUSPEND_AFTER;
+}
+
+/** El registro tras un fallo: suma en la misma versión, empieza de 1 en otra. */
+export function afterWhisperFailure(record: { count: number; appVersion: string } | null, appVersion: string) {
+  return { count: record && record.appVersion === appVersion ? record.count + 1 : 1, appVersion };
+}
+
+/** ¿Es un WAV temporal del dictado? (para barrer los que quedaron de una sesión cortada). */
+export function isDictationWav(name: string): boolean {
+  return /^dictation-\d+\.wav$/.test(name);
+}
+
 /** Ruta del WAV temporal de una sesión de dictado (en la caché, que el borrado total elimina). */
 export function dictationWavPath(cacheDir: string, now: number = Date.now()): string {
   return `${cacheDir}dictation-${now}.wav`;
@@ -105,7 +126,8 @@ export async function transcribeWithWhisper(
     const ctx = await runtime.initWhisper({ filePath: `${FileSystem.documentDirectory}${asset.filename}` });
     try {
       const lang = whisperLanguageFor(opts.uiLanguage);
-      const { promise } = ctx.transcribe(wavPath, {
+      // whisper.cpp abre una ruta del sistema de ficheros, sin «file://».
+      const { promise } = ctx.transcribe(wavPath.replace(/^file:\/\//, ""), {
         language: lang,
         translate: false,
         maxThreads: Math.max(1, Math.min(4, opts.threads ?? 4)),
@@ -116,6 +138,9 @@ export async function transcribeWithWhisper(
       await ctx.release().catch(() => {});
     }
   } finally {
-    await FileSystem.deleteAsync(wavPath, { idempotent: true }).catch(() => {});
+    // deleteAsync de expo solo acepta URIs: una ruta desnuda fallaría en
+    // silencio y el audio se quedaría en la caché.
+    const uri = wavPath.startsWith("file://") ? wavPath : `file://${wavPath}`;
+    await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
   }
 }

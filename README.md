@@ -78,6 +78,12 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   every sentence of an answer is backed by its sources, a "Checked against
   the sources" strip says so (amber when unsupported sentences were
   removed). The sources show as a row of cards you can open.
+- **Dictation with Whisper, on the phone** (0.1.125): download the Whisper
+  voice model (about 145 MB, Spanish, English and Portuguese) in Settings →
+  Voice and dictation works on any phone without internet, even without
+  Android's recognizer; the audio is deleted as soon as the text is ready.
+  If Whisper does not fit in memory at that moment or fails, the phone's
+  Android recognizer takes over.
 - **Adds signed packs from a file** (0.1.80): Settings → Knowledge base →
   "Add a pack from a file" adds a knowledge pack you have as a file, for
   example one published by SALVORA PACKS. Before anything is copied, the

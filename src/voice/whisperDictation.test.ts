@@ -106,6 +106,8 @@ describe("0.1.125 — transcribeWithWhisper", () => {
     );
     expect(trust.checked).toEqual(["whisper-base"]);
     expect(r.calls[0].opts).toMatchObject({ language: "es", translate: false });
+    // whisper.cpp recibe una ruta del sistema de ficheros, sin «file://».
+    expect(r.calls[0].path).toBe("/cache/d.wav");
     expect(r.released()).toBe(1);
     expect(fs.deleted).toEqual(["file:///cache/d.wav"]);
   });
@@ -115,6 +117,12 @@ describe("0.1.125 — transcribeWithWhisper", () => {
     await expect(transcribeWithWhisper("file:///cache/e.wav", { runtime: r.rt })).rejects.toThrow("boom");
     expect(r.released()).toBe(1);
     expect(fs.deleted).toEqual(["file:///cache/e.wav"]);
+  });
+
+  it("una ruta desnuda también se borra, como URI file:// (deleteAsync solo acepta URIs)", async () => {
+    const r = runtime("hola");
+    await transcribeWithWhisper("/data/user/0/team.nido.app/cache/dictation-9.wav", { runtime: r.rt });
+    expect(fs.deleted).toEqual(["file:///data/user/0/team.nido.app/cache/dictation-9.wav"]);
   });
 
   it("un modelo que no pasa la puerta de confianza no se abre, y el audio se borra igual", async () => {
