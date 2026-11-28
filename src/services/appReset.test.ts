@@ -192,6 +192,8 @@ function seedFullDevice(): void {
   fsx.files.set(`${DOC}corpus/pack.sqlite`, "corpus");
   fsx.files.set(`${DOC}eval/run-1.jsonl`, "eval");
   fsx.files.set(`${CACHE}export.json`, "temporal");
+  // 0.1.122: la caché del prompt en disco (solo texto público) vive aquí.
+  fsx.files.set(`${CACHE}prompt-cache/qwen.gguf-2048-cpu-1a2b3c4d-0011223344556677.bin`, "estado");
 }
 
 /** Crea las tres claves del Keystore como lo haría la app en uso real. */
@@ -605,6 +607,8 @@ describe("W-F1 — el journal de instalación no sobrevive al Clear All Data", (
     for (const p of [`${DOC}settings.json`, `${DOC}models`, `${DOC}corpus`, `${DOC}eval`, CACHE]) {
       expect(fsExists(p), `${p} debe haber desaparecido`).toBe(false);
     }
+    // 0.1.122: el borrado (y el pánico, que llama a lo mismo) se lleva la caché del prompt.
+    expect(fsExists(`${CACHE}prompt-cache/qwen.gguf-2048-cpu-1a2b3c4d-0011223344556677.bin`)).toBe(false);
     expect(fsExists(installStatePath())).toBe(false);
     expect(await peekDatabaseKey()).toBeNull();
     expect(await loadP2PPrivateKey()).toBeNull();

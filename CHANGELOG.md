@@ -4,6 +4,36 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.122-alpha - 2026-11-27
+
+Second stage of the work to match and beat the best
+on-device AI apps.
+
+Requests that use the assistant's tools (reminders,
+memory, notes) start answering sooner after the app
+opens. The first time a model handles one, NIDO saves on
+the phone the model's reading of the app's fixed
+instructions (the list of tools and its rules), so later
+starts skip that reading. Plain chat does not use it
+yet. Only the app's own text is
+saved, never your memory, the date or your
+conversations: the instructions now put the app's text
+first and your memory after it, and the saved reading
+is made before the model sees anything of yours.
+Erasing everything and the panic button delete it.
+
+Each model card now says the largest conversation
+memory it has answered with on this phone ("Tested on
+this device"). It is a measurement, not a promise, and
+it does not change which models you can load.
+
+The AI engine (llama.rn) moves from 0.13.0-rc.9 to
+0.13.0-rc.12: a failed answer no longer leaves the model
+stuck as "busy", the speed test starts from a clean
+state after an answer, engine errors show their real
+message, and the bundled llama.cpp is newer (b12445).
+The model loading path does not change.
+
 ## 0.1.121-alpha - 2026-11-27
 
 First stage of the work to match and beat the best

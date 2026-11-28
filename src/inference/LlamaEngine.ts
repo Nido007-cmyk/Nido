@@ -55,6 +55,17 @@ import { parseGemmaReasoning } from "./gemmaReasoning";
 import type { ModelSamplingDefaults } from "../routing/types";
 import { generationHitLimit, type NativeStopSignals } from "./generationCut";
 import { estimateTokens } from "../agent/loop/contextBudget";
+import {
+  PROMPT_CACHE_DIRNAME,
+  filesToPrune,
+  probeMessages,
+  promptCacheFileName,
+  publicSliceFromFormatted,
+  type PromptCacheOutcome,
+} from "./promptDiskCache";
+import { APP_VERSION } from "../security/backup";
+import { PROVEN_LOADS_FILE, parseProvenLoads, recordProvenLoad, type ProvenLoads } from "./provenLoads";
+import LLAMA_RN_PACKAGE from "llama.rn/package.json";
 
 export interface ChatMessageInput {
   role: string;
@@ -128,6 +139,12 @@ export interface GenerateOptions {
    * "research-generate", ...).
    */
   telemetryContext?: { taskType?: string };
+  /**
+   * 0.1.122: tramo público del prompt del sistema (texto fijo de la app,
+   * prefijo exacto de messages[0].content). Solo con él el motor usa la
+   * caché del prompt en disco (promptDiskCache.ts). Sin él, nada cambia.
+   */
+  publicPrefix?: string;
   /**
    * Safety-net budget, not a performance target — no per-generation timeout
    * existed anywhere in the app before this (see docs/ADAPTIVE_ROUTING.md
@@ -235,8 +252,8 @@ export function resolveSampling(opts: {
  * llama.rn arma cada completion sobre ctx->params.sampling, que es el
  * estado del contexto: cada parámetro que la petición no trae conserva el
  * valor de la completion anterior (cpp/jsi/JSIParams.cpp,
- * parseCompletionParams; igual en rc.7, rc.9, rc.10 y rc.11, re-leído
- * en la tanda T-22). Una llamada sin
+ * parseCompletionParams; igual en rc.7, rc.9, rc.10, rc.11 y rc.12,
+ * re-leído en la tanda T-22 y en la etapa 2 de la 0.1.122). Una llamada sin
  * preset detrás de una con preset heredaba su min_p 0 y su
  * penalty_repeat 1.1. Por eso NIDO manda siempre los cuatro que gestiona,
  * y lo que el llamante no fija vale lo de la carga.
@@ -651,6 +668,134 @@ export class LlamaEngine {
    * del sistema casi no cambia entre turnos.
    */
   private nKeepCache: { context: unknown; text: string; tokens: number } | null = null;
+  /**
+   * 0.1.122: el contexto recién creado que aún no ha generado nada. Solo
+   * sobre él se carga o se guarda la caché del prompt en disco: guardar
+   * después de una conversación escribiría también su memoria.
+   */
+  private freshContext: unknown = null;
+  private lastPromptCacheOutcome: PromptCacheOutcome | null = null;
+  /** 0.1.122: qué hizo la caché del prompt en el último arranque en frío. */
+  get lastPromptCache(): PromptCacheOutcome | null {
+    return this.lastPromptCacheOutcome;
+  }
+
+  /**
+   * 0.1.122: carga el estado público guardado o, si no existe, lo crea
+   * procesando SOLO el texto público y lo guarda antes de que el
+   * contexto vea el mensaje real. Nunca lanza: cualquier fallo deja el
+   * turno exactamente como sin caché.
+   */
+  private async applyPromptDiskCache(
+    messages: ChatMessageInput[],
+    publicPrefix: string,
+    enableThinking: boolean | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<void> {
+    const ctx = this.context as unknown as {
+      getFormattedChat?: (m: unknown[], t?: string | null, p?: Record<string, unknown>) => Promise<unknown>;
+      loadSession?: (path: string) => Promise<{ tokens_loaded?: number }>;
+      saveSession?: (path: string, o?: { tokenSize: number }) => Promise<number>;
+      tokenize?: (t: string) => Promise<{ tokens: unknown[] }>;
+      completion?: (p: Record<string, unknown>, cb?: (d: { token: string }) => void) => Promise<unknown>;
+    } | null;
+    const fresh = ctx !== null && this.freshContext === this.context;
+    this.freshContext = null;
+    const outcome = (o: PromptCacheOutcome) => {
+      this.lastPromptCacheOutcome = o;
+    };
+    if (!fresh) return;
+    const first = messages[0];
+    if (!first || first.role !== "system" || typeof first.content !== "string" || !first.content.startsWith(publicPrefix)) {
+      return outcome({ kind: "skipped", reason: "no-prefix" });
+    }
+    if (
+      !ctx ||
+      typeof ctx.getFormattedChat !== "function" ||
+      typeof ctx.loadSession !== "function" ||
+      typeof ctx.saveSession !== "function" ||
+      typeof ctx.tokenize !== "function" ||
+      typeof ctx.completion !== "function" ||
+      !FileSystem.cacheDirectory ||
+      !this.modelInfo
+    ) {
+      return outcome({ kind: "skipped", reason: "unsupported" });
+    }
+    const fmtParams: Record<string, unknown> = { jinja: true, ...(enableThinking !== undefined ? { enable_thinking: enableThinking } : {}) };
+    const promptOf = (r: unknown): string =>
+      typeof r === "string" ? r : typeof (r as { prompt?: unknown })?.prompt === "string" ? (r as { prompt: string }).prompt : "";
+    let slice: string | null;
+    try {
+      // Solo texto público entra aquí: el tramo fijo y el marcador.
+      slice = publicSliceFromFormatted(promptOf(await ctx.getFormattedChat(probeMessages(publicPrefix), null, fmtParams)), publicPrefix);
+      if (!slice) return outcome({ kind: "skipped", reason: "template" });
+      // Si el prompt real no empieza igual, la caché nunca encajaría.
+      const real = promptOf(await ctx.getFormattedChat(messages, null, fmtParams));
+      if (!real.startsWith(slice)) return outcome({ kind: "skipped", reason: "mismatch" });
+    } catch {
+      return outcome({ kind: "skipped", reason: "template" });
+    }
+    const dir = `${FileSystem.cacheDirectory}${PROMPT_CACHE_DIRNAME}/`;
+    const name = promptCacheFileName({
+      modelFile: this.modelInfo.filename,
+      nCtx: this.modelInfo.nCtx,
+      profile: String(this.modelInfo.memoryProfile ?? "cpu"),
+      engineVersion: String((LLAMA_RN_PACKAGE as { version?: string }).version ?? "?"),
+      appVersion: APP_VERSION,
+      publicSlice: slice,
+    });
+    const path = `${dir}${name}`;
+    const info = await FileSystem.getInfoAsync(path).catch(() => ({ exists: false }));
+    if (info.exists) {
+      try {
+        const r = await ctx.loadSession(path);
+        return outcome({ kind: "loaded", tokens: Number(r?.tokens_loaded) || 0 });
+      } catch {
+        await FileSystem.deleteAsync(path, { idempotent: true }).catch(() => {});
+        return outcome({ kind: "failed", stage: "load" });
+      }
+    }
+    if (signal?.aborted) return outcome({ kind: "skipped", reason: "aborted" });
+    try {
+      const tokens = (await ctx.tokenize(slice))?.tokens?.length ?? 0;
+      if (tokens <= 0) return outcome({ kind: "skipped", reason: "template" });
+      // El contexto procesa SOLO el texto público (y escribe un token).
+      await ctx.completion({ prompt: slice, n_predict: 1, temperature: 0 }, () => {});
+      await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => {});
+      // Escritura a un temporal y luego se mueve: un cierre a medias no
+      // deja un fichero roto con el nombre bueno.
+      const tmp = `${path}.tmp`;
+      const saved = await ctx.saveSession(tmp, { tokenSize: tokens });
+      await FileSystem.moveAsync({ from: tmp, to: path });
+      await this.prunePromptCache(dir);
+      return outcome({ kind: "saved", tokens: Number(saved) || tokens });
+    } catch {
+      await FileSystem.deleteAsync(`${path}.tmp`, { idempotent: true }).catch(() => {});
+      return outcome({ kind: "failed", stage: "save" });
+    }
+  }
+
+  /** 0.1.122: deja solo los ficheros más recientes de la caché del prompt. */
+  private async prunePromptCache(dir: string): Promise<void> {
+    try {
+      const names = await FileSystem.readDirectoryAsync(dir);
+      const files: { name: string; mtime: number }[] = [];
+      for (const name of names) {
+        if (!name.endsWith(".bin")) {
+          // Temporales huérfanos de un guardado interrumpido.
+          if (name.endsWith(".tmp")) await FileSystem.deleteAsync(`${dir}${name}`, { idempotent: true }).catch(() => {});
+          continue;
+        }
+        const i = (await FileSystem.getInfoAsync(`${dir}${name}`)) as { exists: boolean; modificationTime?: number };
+        if (i.exists) files.push({ name, mtime: i.modificationTime ?? 0 });
+      }
+      for (const name of filesToPrune(files)) {
+        await FileSystem.deleteAsync(`${dir}${name}`, { idempotent: true }).catch(() => {});
+      }
+    } catch {
+      // La poda es higiene: si falla, el próximo guardado lo reintenta.
+    }
+  }
 
   /**
    * n_keep = los tokens del prompt del sistema (más el margen de la
@@ -786,6 +931,47 @@ export class LlamaEngine {
     const record = this.crashGuard;
     if (!record || (record.crashes === 0 && record.pending === null)) return;
     void this.crashGuardWrite(confirmCrashGuardRecord(record));
+  }
+
+  // ---- 0.1.122: cargas probadas en este aparato (provenLoads.ts). Solo
+  // informan a la tarjeta del modelo; nunca cambian qué se deja cargar.
+
+  private provenLoads: ProvenLoads | null = null;
+
+  private provenLoadsPath(): string {
+    return `${FileSystem.documentDirectory}${PROVEN_LOADS_FILE}`;
+  }
+
+  /** Mayor contexto con el que cada modelo respondió en este aparato. Nunca lanza. */
+  async provenContexts(): Promise<ProvenLoads> {
+    if (this.provenLoads) return this.provenLoads;
+    let loads: ProvenLoads = {};
+    try {
+      loads = parseProvenLoads(await FileSystem.readAsStringAsync(this.provenLoadsPath()));
+    } catch {
+      // Sin fichero (primera vez) o ilegible: nada probado aún.
+    }
+    this.provenLoads = loads;
+    return loads;
+  }
+
+  private async recordProvenLoadNow(): Promise<void> {
+    const info = this.modelInfo;
+    if (!info) return;
+    const before = await this.provenContexts();
+    const after = recordProvenLoad(before, info.filename, info.nCtx);
+    if (after === before) return;
+    this.provenLoads = after;
+    try {
+      await FileSystem.writeAsStringAsync(this.provenLoadsPath(), JSON.stringify(after));
+    } catch {
+      // La copia en memoria manda; la siguiente respuesta reintenta.
+    }
+  }
+
+  /** Borrado total: olvida la copia en memoria (el wipe borra el fichero). */
+  resetProvenLoadsMemory(): void {
+    this.provenLoads = null;
   }
 
   // ---- Registro de sesión nativa (M2+M3 del diagnóstico del crash;
@@ -1369,6 +1555,8 @@ export class LlamaEngine {
             )
           : lastErr;
       }
+      // 0.1.122: contexto recién creado: aún no ha visto nada del usuario.
+      this.freshContext = this.context;
       this.loadSampling = loadTimeSampling(
         (this.context as unknown as { model?: { metadata?: Record<string, unknown> } } | null)?.model?.metadata,
       );
@@ -1697,6 +1885,8 @@ export class LlamaEngine {
       const text = await run;
       // CrashGuard: la carga que genera queda confirmada.
       this.crashGuardConfirm();
+      // 0.1.122: y queda anotada como probada en este aparato (solo informa).
+      void this.recordProvenLoadNow();
       return text;
     } finally {
       this.generationsInLine--;
@@ -1740,6 +1930,7 @@ export class LlamaEngine {
     signal,
     seed,
     telemetryContext,
+    publicPrefix,
   }: GenerateOptions): Promise<string> {
     // P2.4: telemetry measurement. All local, fire-and-forget, never throws.
     const tStart = Date.now();
@@ -1862,7 +2053,7 @@ export class LlamaEngine {
         // de reutilizarlo a ciegas. Dentro de la cola de carga, como el
         // propio arranque: el orden con load/unload no cambia.
         if (this.contextSuspect) await this.recreateContext();
-        return this.startCompletion({ prompt, messages, nPredict, temperature, topK, topP, minP, repeatPenalty, samplingPreset, responseFormat, grammar, enableThinking, onToken: wrappedOnToken, stop, timeoutMs, onTimeout: wrappedOnTimeout, signal, seed });
+        return this.startCompletion({ prompt, messages, nPredict, temperature, topK, topP, minP, repeatPenalty, samplingPreset, responseFormat, grammar, enableThinking, onToken: wrappedOnToken, stop, timeoutMs, onTimeout: wrappedOnTimeout, signal, seed, publicPrefix });
       });
       try {
         let result: { text?: string };
@@ -1996,6 +2187,7 @@ export class LlamaEngine {
     onTimeout,
     signal,
     seed,
+    publicPrefix,
   }: GenerateOptions): Promise<{ completion: Promise<{ text?: string }>; getFull: () => string; timer: ReturnType<typeof setTimeout> | null }> {
     if (!this.context) throw new Error("LlamaEngine: model not loaded");
     if (!prompt && !messages) {
@@ -2021,6 +2213,15 @@ export class LlamaEngine {
           `LlamaEngine.generate: el prompt solo (~${promptTokens} tokens estimados) no cabe en el contexto de ${nCtx}; acorta el texto o sube el contexto del modelo`,
         );
       }
+    }
+
+    // 0.1.122: caché del prompt en disco (solo texto público), antes de
+    // armar el temporizador: su lectura o su guardado no gastan el plazo
+    // de la respuesta.
+    if (messages && publicPrefix) {
+      await this.applyPromptDiskCache(messages, publicPrefix, enableThinking ?? (this.modelInfo?.noThink ? false : undefined), signal);
+    } else {
+      this.freshContext = null;
     }
 
     const timer = timeoutMs

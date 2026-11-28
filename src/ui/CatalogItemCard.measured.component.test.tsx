@@ -44,8 +44,9 @@ jest.mock("../services/haptics", () => ({
 jest.mock("react-i18next", () => ({
   useTranslation: () => ({
     // Interpola rate/count para que la tasa pintada sea observable.
-    t: (k: string, opts?: { defaultValue?: string; rate?: string; count?: number }) =>
-      opts?.defaultValue ?? (opts?.rate != null ? `${k}:${opts.rate}` : opts?.count != null ? `${k}:${opts.count}` : k),
+    t: (k: string, opts?: { defaultValue?: string; rate?: string; count?: number; ctx?: string }) =>
+      opts?.defaultValue ??
+      (opts?.rate != null ? `${k}:${opts.rate}` : opts?.count != null ? `${k}:${opts.count}` : opts?.ctx != null ? `${k}:${opts.ctx}` : k),
     i18n: { language: "es" },
   }),
 }));
@@ -106,5 +107,12 @@ describe("CatalogItemCard: la velocidad medida junto al modelo (G-1)", () => {
     await view.rerender(<CatalogItemCard item={item()} row={undefined} {...baseProps} speedSummary={after} />);
     expect(await screen.findByText("catalogItemCard.measuredRowSpeed:20.0")).toBeTruthy();
     expect(screen.queryByText("catalogItemCard.measuredRowSpeed:10.0")).toBeNull();
+  });
+
+  it("0.1.122: «probado en este aparato» con el contexto con que respondió; sin prueba, nada", async () => {
+    const view = await render(<CatalogItemCard item={item()} row={undefined} {...baseProps} provenCtx={2048} />);
+    expect(await screen.findByText("catalogItemCard.provenHere:2048")).toBeTruthy();
+    await view.rerender(<CatalogItemCard item={item()} row={undefined} {...baseProps} provenCtx={null} />);
+    expect(screen.queryByText(/provenHere/)).toBeNull();
   });
 });

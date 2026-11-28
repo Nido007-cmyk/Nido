@@ -7,7 +7,7 @@
  * detuvo por el TOPE, o terminó sola?
  *
  * Hasta la 0.1.91 el hecho se deducía contando llamadas de onToken:
- * `tokenCount >= nPredict`. Pero llama.rn (0.13.0-rc.7, y el mismo bucle en rc.9 y en rc.11, leído en su
+ * `tokenCount >= nPredict`. Pero llama.rn (0.13.0-rc.7, y el mismo bucle en rc.9, rc.11 y rc.12, leído en su
  * código: cpp/jsi/RNLlamaJSI.cpp, bucle de llamaCompletion; la rc.11 se
  * re-leyó en la tanda T-22 y el bucle conserva el salto por UTF-8 a
  * medias y la retención por STOP_PARTIAL) NO llama

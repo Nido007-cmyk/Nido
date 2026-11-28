@@ -89,7 +89,8 @@
     "updateAsset": "⬆️ Actualizar",
     "outdatedNote": "Hay una versión más nueva de este paquete. Mientras tanto se sigue usando la que tienes, también sin conexión; la nueva solo la reemplaza cuando termina de descargarse y se comprueba.",
     "measuredRowSpeed": "{{rate}} tok/s aquí",
-    "measuredBasis": "La mediana de las últimas {{count}} generaciones de este modelo en este aparato"
+    "measuredBasis": "La mediana de las últimas {{count}} generaciones de este modelo en este aparato",
+    "provenHere": "Probado en este aparato: respondió con {{ctx}} tokens de contexto"
   },
   "chatHeader": {
     "cycleTone": "Cambiar el tono del asistente",
@@ -1960,8 +1961,10 @@
             "steps": [
               "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.models).",
               "Si un modelo ya respondió en este teléfono, su tarjeta enseña su velocidad medida aquí: la mediana de sus últimas generaciones en este aparato, con los tiempos que mide el propio motor. Para elegir, eso vale más que cualquier cifra de catálogo.",
+              "Cuando un modelo ya respondió en este teléfono, su tarjeta dice también con cuánta memoria de conversación lo hizo («Probado en este aparato»). Es lo que pasó de verdad aquí; no cambia qué modelos puedes cargar.",
               "La etiqueta amarilla dice con cuánta memoria de conversación va el modelo ahora mismo (por ejemplo, 1024 de 2048 tokens). Si cierras otras apps y se libera memoria, puede ponerse verde.",
-              "«$t(modelSetupScreen.benchTitle)» mide el modelo cargado tres veces: enseña la velocidad de lectura y de escritura con su rango, y lo que tardó en cargar."
+              "«$t(modelSetupScreen.benchTitle)» mide el modelo cargado tres veces: enseña la velocidad de lectura y de escritura con su rango, y lo que tardó en cargar.",
+              "La primera vez que el asistente usa sus herramientas (recordatorios, memoria, notas) con un modelo, NIDO guarda en el teléfono la lectura de las instrucciones fijas de la app (nunca tu memoria ni tus conversaciones). La próxima vez que abras la app, esas peticiones empiezan a responder antes. El borrado total y el botón de pánico la eliminan."
             ],
             "tip": "Si una respuesta tarda mucho o la app se cierra, prueba un modelo más pequeño."
           },

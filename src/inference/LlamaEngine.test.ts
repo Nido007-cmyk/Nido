@@ -180,9 +180,32 @@ function flushAllSessionWrites(): void {
 function dropSessionWrites(): void {
   pendingSessionWrites = [];
 }
+// 0.1.122: caché del prompt en disco. null = sin carpeta de caché (los
+// tests de siempre: la caché queda «unsupported» y nada cambia).
+let mockCacheDir: string | null = null;
+const promptCacheFiles = new Map<string, number>();
+const fsOps: string[] = [];
 vi.mock("expo-file-system/legacy", () => ({
   documentDirectory: "file:///docs/",
-  getInfoAsync: async (path: string) => ({
+  get cacheDirectory() {
+    return mockCacheDir;
+  },
+  makeDirectoryAsync: async () => {},
+  deleteAsync: async (path: string) => {
+    fsOps.push(`delete:${path}`);
+    promptCacheFiles.delete(path);
+  },
+  moveAsync: async ({ from, to }: { from: string; to: string }) => {
+    fsOps.push(`move:${to}`);
+    promptCacheFiles.delete(from);
+    promptCacheFiles.set(to, Date.now());
+  },
+  readDirectoryAsync: async (dir: string) =>
+    [...promptCacheFiles.keys()].filter((p) => p.startsWith(dir)).map((p) => p.slice(dir.length)),
+  getInfoAsync: async (path: string) => mockCacheDir && path.startsWith(mockCacheDir) ? {
+    exists: promptCacheFiles.has(path),
+    modificationTime: promptCacheFiles.get(path),
+  } : ({
     exists: true,
     // 0.1.84: el tamaño declarado en el catálogo por fichero — el
     // pre-flight cobra el peso REAL del modelo pedido, no un genérico.
@@ -1189,6 +1212,128 @@ describe("P2.4 telemetry", () => {
       await engine.unload();
     } finally {
       mockStopVerdict = null;
+    }
+  });
+
+  it("0.1.122: una respuesta completa anota el contexto como probado en este aparato (solo informa)", async () => {
+    mockStopVerdict = { stopped_eos: true };
+    try {
+      const engine = new LlamaEngine();
+      engine.resetProvenLoadsMemory();
+      fsStore.delete("file:///docs/nido-proven-loads.json");
+      expect(await engine.provenContexts()).toEqual({});
+      await engine.load("models/qwen2.5-0.5b-instruct-q4km.gguf", { nCtx: 2048 });
+      await engine.generate({ prompt: "hola" });
+      await new Promise((r) => setTimeout(r, 0));
+      const loads = await engine.provenContexts();
+      expect(loads["qwen2.5-0.5b-instruct-q4km.gguf"]).toBe(engine.getModelInfo()?.nCtx);
+      expect(loads["qwen2.5-0.5b-instruct-q4km.gguf"]).toBeGreaterThan(0);
+      // Persistido: un motor nuevo lo lee del fichero.
+      expect(JSON.parse(fsStore.get("file:///docs/nido-proven-loads.json") ?? "{}")).toEqual(loads);
+      const fresh = new LlamaEngine();
+      expect(await fresh.provenContexts()).toEqual(loads);
+      await engine.unload();
+    } finally {
+      mockStopVerdict = null;
+      fsStore.delete("file:///docs/nido-proven-loads.json");
+    }
+  });
+
+  it("0.1.122: caché del prompt en disco — solo texto público, solo en contexto recién creado", async () => {
+    mockStopVerdict = { stopped_eos: true };
+    mockCacheDir = "file:///cache/";
+    promptCacheFiles.clear();
+    fsOps.length = 0;
+    const SECRET = "Mi hija se llama Lucía";
+    const publicPrefix = "Eres NIDO. Catálogo de herramientas fijo.\n";
+    const msgs = [
+      { role: "system", content: `${publicPrefix}## Memoria\n${SECRET}\nHoy es 27` },
+      { role: "user", content: "¿qué tengo hoy?" },
+    ];
+    // Plantilla ChatML falsa, como la que aplicaría llama.rn.
+    const fmt = (m: Array<{ role: string; content: string }>) =>
+      m.map((x) => `<|im_start|>${x.role}\n${x.content}<|im_end|>\n`).join("") + "<|im_start|>assistant\n";
+    const wire = (ctx: Record<string, unknown>, log: string[]) => {
+      ctx.tokenize = async (t: string) => ({ tokens: new Array(Math.max(1, Math.ceil(t.length / 4))).fill(0) });
+      ctx.getFormattedChat = async (m: Array<{ role: string; content: string }>) => ({ prompt: fmt(m) });
+      const realCompletion = ctx.completion as (p: unknown, cb: (d: { token: string }) => void) => Promise<unknown>;
+      ctx.completion = (p: Record<string, unknown>, cb: (d: { token: string }) => void) => {
+        log.push(`completion:${typeof p.prompt === "string" ? p.prompt : "messages"}`);
+        return realCompletion(p, cb);
+      };
+      ctx.saveSession = async (path: string, o: { tokenSize: number }) => {
+        log.push(`save:${path}:${o.tokenSize}`);
+        promptCacheFiles.set(path, Date.now());
+        return o.tokenSize;
+      };
+      ctx.loadSession = async (path: string) => {
+        log.push(`load:${path}`);
+        return { tokens_loaded: 11, prompt: "" };
+      };
+    };
+    try {
+      // 1) Primer arranque: no hay fichero → procesa SOLO lo público y guarda.
+      const engine = new LlamaEngine();
+      await engine.load("models/a.gguf");
+      const log: string[] = [];
+      wire(created[created.length - 1] as unknown as Record<string, unknown>, log);
+      await engine.generate({ messages: msgs, publicPrefix });
+      expect(engine.lastPromptCache?.kind).toBe("saved");
+      // Orden: calentamiento público → guardado → la respuesta real.
+      expect(log[0]).toBe(`completion:<|im_start|>system\n${publicPrefix}`);
+      expect(log[1]).toMatch(/^save:file:\/\/\/cache\/prompt-cache\/.*\.bin\.tmp:\d+$/);
+      expect(log[2]).toBe("completion:messages");
+      // Lo que se procesó antes de guardar NO contiene nada del usuario.
+      expect(log[0]).not.toContain(SECRET);
+      expect(log[0]).not.toContain("¿qué tengo hoy?");
+      expect(log[0]).not.toContain("Hoy es");
+      const saved = [...promptCacheFiles.keys()];
+      expect(saved).toHaveLength(1);
+      expect(saved[0]).toMatch(/\.bin$/);
+      // 2) Segundo turno, mismo contexto: ni carga ni guarda (ya no es nuevo).
+      log.length = 0;
+      await engine.generate({ messages: msgs, publicPrefix });
+      expect(log).toEqual(["completion:messages"]);
+      await engine.unload();
+
+      // 3) Arranque nuevo con el fichero en disco: lo carga, no guarda.
+      const engine2 = new LlamaEngine();
+      await engine2.load("models/a.gguf");
+      const log2: string[] = [];
+      wire(created[created.length - 1] as unknown as Record<string, unknown>, log2);
+      await engine2.generate({ messages: msgs, publicPrefix });
+      expect(engine2.lastPromptCache).toEqual({ kind: "loaded", tokens: 11 });
+      expect(log2).toEqual([`load:${saved[0]}`, "completion:messages"]);
+      await engine2.unload();
+
+      // 4) Un fichero que no carga se borra y el turno sigue sin caché.
+      const engine3 = new LlamaEngine();
+      await engine3.load("models/a.gguf");
+      const ctx3 = created[created.length - 1] as unknown as Record<string, unknown>;
+      const log3: string[] = [];
+      wire(ctx3, log3);
+      ctx3.loadSession = async () => {
+        throw new Error("Failed to load session");
+      };
+      await engine3.generate({ messages: msgs, publicPrefix });
+      expect(engine3.lastPromptCache).toEqual({ kind: "failed", stage: "load" });
+      expect(promptCacheFiles.has(saved[0])).toBe(false);
+      expect(log3).toEqual(["completion:messages"]);
+      await engine3.unload();
+
+      // 5) Un prefijo que no es el principio del prompt real: no hay caché.
+      const engine4 = new LlamaEngine();
+      await engine4.load("models/a.gguf");
+      const log4: string[] = [];
+      wire(created[created.length - 1] as unknown as Record<string, unknown>, log4);
+      await engine4.generate({ messages: msgs, publicPrefix: "otro texto\n" });
+      expect(engine4.lastPromptCache).toEqual({ kind: "skipped", reason: "no-prefix" });
+      expect(log4).toEqual(["completion:messages"]);
+      await engine4.unload();
+    } finally {
+      mockStopVerdict = null;
+      mockCacheDir = null;
+      promptCacheFiles.clear();
     }
   });
 
