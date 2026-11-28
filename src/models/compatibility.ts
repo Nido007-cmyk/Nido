@@ -11,7 +11,7 @@ import {
   type RamSnapshot,
   checkRamBudget,
 } from "../inference/ramBudget";
-import { planContext } from "../inference/memoryLadder";
+import { planModelLoad } from "../inference/memoryLadder";
 import { contextCeilingForDevice, contextSpecForModel } from "./defaultModel";
 import type { CatalogModel } from "./manifest";
 
@@ -98,7 +98,6 @@ export function canonicalSnapshot(deviceRamBytes: number): RamSnapshot {
   return { totalRamBytes: deviceRamBytes, rssBytes: APP_BASELINE_BYTES };
 }
 
-/** El color de UNA foto: la escalera entera (fp16 y luego q8) sobre ese snapshot. */
 /**
  * 0.1.119: el color con el contexto que el plan eligió de verdad, para que
  * el amarillo diga «va con N de M tokens» en lugar de «necesita mucha
@@ -111,7 +110,7 @@ interface SnapshotVerdict {
   kvCompressed?: boolean;
 }
 
-function verdictOnSnapshot(model: CatalogModel, deviceRamBytes: number, snapshot: RamSnapshot): SnapshotVerdict {
+function verdictOnSnapshot(model: CatalogModel, deviceRamBytes: number, snapshot: RamSnapshot, safety = 1): SnapshotVerdict {
   // 0.1.120: el modelo de búsqueda se carga siempre igual (contexto 512,
   // sin escalera) y con el margen proporcional (embed.ts). La insignia
   // usa esa misma carga: cabe (verde) o no cabe (rojo). Antes pasaba por
@@ -123,22 +122,16 @@ function verdictOnSnapshot(model: CatalogModel, deviceRamBytes: number, snapshot
   }
   const ceiling = contextCeilingForDevice(model.defaultNCtx, deviceRamBytes);
   const { nCtx: _declaredCtx, ...specBase } = contextSpecForModel(model, deviceRamBytes);
-  const plan = planContext(specBase, snapshot, { ceiling, safety: 1 });
-  if (!plan) return { color: "unknown" };
-  if (plan.verdict.fits && plan.nCtx === ceiling) return { color: "green", nCtx: plan.nCtx, ceiling };
-  if (plan.verdict.fits) return { color: "yellow", nCtx: plan.nCtx, ceiling, kvCompressed: false };
-  const q8Plan = planContext(
-    { ...specBase, kvBytesPerElement: KV_Q8_BYTES_PER_ELEMENT },
-    snapshot,
-    { ceiling, safety: 1 },
-  );
-  return q8Plan?.verdict.fits
-    ? { color: "yellow", nCtx: q8Plan.nCtx, ceiling, kvCompressed: true }
-    : { color: "red" };
-}
-
-function colorOnSnapshot(model: CatalogModel, deviceRamBytes: number, snapshot: RamSnapshot): Compatibility {
-  return verdictOnSnapshot(model, deviceRamBytes, snapshot).color;
+  // 0.1.123 (auditoría E-1): el plan es planModelLoad, el MISMO de la
+  // carga real, con el MISMO factor del CrashGuard (opts.safety). La
+  // insignia ya no tiene su propia copia del plan.
+  const load = planModelLoad(specBase, snapshot, { ceiling, safety });
+  if (!load) return { color: "unknown" };
+  const { plan, pinnedProfile } = load;
+  if (!plan.verdict.fits) return { color: "red" };
+  const kvCompressed = pinnedProfile === "kv-q8";
+  if (plan.nCtx === ceiling && !kvCompressed) return { color: "green", nCtx: plan.nCtx, ceiling };
+  return { color: "yellow", nCtx: plan.nCtx, ceiling, kvCompressed };
 }
 
 /**
@@ -232,10 +225,22 @@ export function computeCompatibilityDetail(
   model: CatalogModel,
   deviceRamBytes: number,
   liveSnapshot?: RamSnapshot | null,
-  opts?: { canonicalFloor?: boolean },
+  opts?: {
+    canonicalFloor?: boolean;
+    /**
+     * 0.1.123 (auditoría E-1): el factor del CrashGuard con que la
+     * próxima carga planificará (LlamaEngine.predictedCrashSafety). Sin
+     * él, 1: un aparato sin choques.
+     */
+    crashSafety?: number;
+  },
 ): CompatibilityDetail {
   if (deviceRamBytes <= 0) return { color: "unknown" };
-  const canonicalV = verdictOnSnapshot(model, deviceRamBytes, canonicalSnapshot(deviceRamBytes));
+  const safety =
+    opts?.crashSafety !== undefined && Number.isFinite(opts.crashSafety) && opts.crashSafety > 0 && opts.crashSafety <= 1
+      ? opts.crashSafety
+      : 1;
+  const canonicalV = verdictOnSnapshot(model, deviceRamBytes, canonicalSnapshot(deviceRamBytes), safety);
   const canonical = canonicalV.color;
   const yellowOf = (v: SnapshotVerdict, source: CompatibilityRedSource): CompatibilityDetail["yellow"] =>
     v.color === "yellow" && v.nCtx && v.ceiling
@@ -270,7 +275,7 @@ export function computeCompatibilityDetail(
   if (opts?.canonicalFloor && !(liveSnapshot.releasableBytes && liveSnapshot.releasableBytes > 0)) {
     return canonicalDetail;
   }
-  const liveV = verdictOnSnapshot(model, deviceRamBytes, liveSnapshot);
+  const liveV = verdictOnSnapshot(model, deviceRamBytes, liveSnapshot, safety);
   const live = liveV.color;
   if (live === "unknown") return canonicalDetail;
   const color = SEVERITY[live] > SEVERITY[canonical] ? live : canonical;

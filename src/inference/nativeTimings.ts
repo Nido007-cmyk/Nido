@@ -47,11 +47,25 @@ export function fromNativeTimings(raw: unknown): NativeTimings | null {
 }
 
 /**
- * La tasa de escritura que se guarda y se enseña: la del motor cuando hay
- * al menos dos tokens escritos (con uno no hay tramo que medir); si no,
- * la cuenta de la app (`fallback`).
+ * 0.1.123 (auditoría E-2): la tasa de escritura que se guarda y se enseña
+ * vuelve a la VARA SELLADA de la casa (0.1.118): tokens menos uno sobre el
+ * tiempo de generación, que empieza en el primer token. La 0.1.121 la
+ * cambió en silencio por la del motor (predicted_per_second: todos los
+ * tokens sobre su tiempo de decodificación), que en respuestas cortas da
+ * casi el doble (2 tokens: 2/t frente a 1/t) y que se mezclaba sin marca
+ * con la serie anterior en la mediana de «Medido en este aparato».
+ *
+ * Lo que sí queda del motor es la CUENTA de tokens (predicted_n), que es
+ * exacta; la de la app cuenta llamadas de onToken y llama.rn las retiene
+ * en saltos de línea y UTF-8 a medias. La tasa del motor sigue guardada
+ * aparte (inference_telemetry_timings) para quien la quiera comparar.
  */
-export function writeRate(timings: NativeTimings | null, fallback: number | null): number | null {
-  if (timings && timings.predictedN > 1 && timings.predictedPerSec > 0) return timings.predictedPerSec;
-  return fallback;
+export function generatedTokens(timings: NativeTimings | null, appCount: number): number {
+  return timings && timings.predictedN > 0 ? timings.predictedN : appCount;
+}
+
+/** La vara sellada: (tokens − 1) / tiempo de generación; null sin tramo que medir. */
+export function sealedWriteRate(tokens: number, genMs: number): number | null {
+  if (!Number.isFinite(tokens) || !Number.isFinite(genMs) || tokens <= 1 || genMs <= 0) return null;
+  return ((tokens - 1) / genMs) * 1000;
 }

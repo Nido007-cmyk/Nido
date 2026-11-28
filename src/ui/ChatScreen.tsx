@@ -87,7 +87,6 @@ import { runAdaptiveChat } from "../services/adaptiveChat";
 import { speakAloud, stopSpeaking } from "../voice/tts";
 import { groundingBadge } from "./chat/groundingBadge";
 import { tokensPerSecond } from "../eval/evalHarness.pure";
-import { writeRate } from "../inference/nativeTimings";
 import { showSecureAlert } from "nido-secure-dialog";
 // NIDO agent: loop agéntico local con herramientas (Fase A).
 import { classifyIntent } from "../agent/loop/intent";
@@ -1343,6 +1342,8 @@ export function ChatScreen({
     const startTime = performance.now();
     let ttftMs = 0;
     let tokensGenerated = 0;
+    // 0.1.123: las cifras de «Última respuesta» son solo de este turno.
+    llamaEngine.beginVisibleTurn();
     let assistantText = "";
 
     // --- Deterministic self-knowledge (2026-09-28) ---
@@ -2590,23 +2591,26 @@ export function ChatScreen({
       notification(wasStopped ? NotificationFeedbackType.Warning : NotificationFeedbackType.Success);
 
       const durationMs = performance.now() - startTime;
+      const visibleGen = llamaEngine.lastVisibleGeneration;
       const finalStats: QueryStats = {
         tokensGenerated,
         durationMs,
         ttftMs,
         // 0.1.118: misma cuenta que la telemetría (tokensPerSecond):
         // tras el primer token salen tokensGenerated − 1.
-        // 0.1.121: con tokens del modelo en este turno, manda la tasa que
-        // midió el motor en la respuesta visible; la de la app de respaldo.
+        // 0.1.123 (auditoría E-2 y sospecha del hueco global): la tasa de
+        // la ÚLTIMA generación que se vio escribirse en ESTE turno, en la
+        // vara sellada (la misma que guarda la telemetría); la cuenta de
+        // la pantalla queda de respaldo.
         tokPerSec:
-          (tokensGenerated > 0 ? writeRate(llamaEngine.lastGenerationTimings, null) : null) ??
+          (tokensGenerated > 0 && visibleGen ? visibleGen.tokensPerSec : null) ??
           tokensPerSecond(tokensGenerated, durationMs - ttftMs - turnModelLoadMs) ??
           0,
-        ...(tokensGenerated > 0 && llamaEngine.lastGenerationTimings
+        ...(tokensGenerated > 0 && visibleGen?.timings
           ? {
-              promptPerSec: llamaEngine.lastGenerationTimings.promptPerSec,
-              promptTokens: llamaEngine.lastGenerationTimings.promptN,
-              cachedPromptTokens: llamaEngine.lastGenerationTimings.cacheN,
+              promptPerSec: visibleGen.timings.promptPerSec,
+              promptTokens: visibleGen.timings.promptN,
+              cachedPromptTokens: visibleGen.timings.cacheN,
             }
           : {}),
         peakRssBytes: peakRss.stop(),

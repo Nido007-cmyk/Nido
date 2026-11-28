@@ -49,6 +49,7 @@
  */
 
 import {
+  KV_Q8_BYTES_PER_ELEMENT,
   checkRamBudget,
   estimateContextBytes,
   type BudgetVerdict,
@@ -155,6 +156,45 @@ export function planContext(
   // el llamador rechaza con sus cifras (las del menor coste posible).
   if (floor) floor.note = planNote(floor);
   return floor;
+}
+
+/**
+ * 0.1.123 (auditoría E-1): EL plan de una carga, el mismo para la carga
+ * real (LlamaEngine.loadNow) y para la insignia de la tarjeta
+ * (compatibility.ts). Hasta aquí la insignia tenía su propia copia del
+ * plan y divergía en dos mecanismos: planificaba siempre con factor 1
+ * aunque la carga usa el del CrashGuard, y probaba la KV q8 en cuanto el
+ * plan fp16 no cabía en ningún peldaño, mientras la carga solo la prueba
+ * cuando el plan fp16 cae en el peldaño de emergencia (y entonces fija el
+ * perfil kv-q8). Resultado: el amarillo podía anunciar más contexto del
+ * que la carga daría, o «comprimido» donde la carga rechaza.
+ *
+ * Regla (la de la carga desde la calibración 2026-11-08): plan fp16 bajo
+ * el techo con el factor del CrashGuard; si ese plan cae en el peldaño
+ * de emergencia, se prueba con la KV de q8 (mismo techo, mismo factor) y,
+ * si cabe, manda ese plan y la carga queda fijada al perfil kv-q8.
+ */
+export interface LoadPlan {
+  plan: LadderPlan;
+  /** "kv-q8" cuando el plan que manda es el de KV comprimida. */
+  pinnedProfile: "kv-q8" | null;
+}
+
+export function planModelLoad(
+  specBase: Omit<ContextSpec, "nCtx">,
+  snapshot: RamSnapshot,
+  opts: { ceiling: number; safety?: number },
+): LoadPlan | null {
+  const plan = planContext(specBase, snapshot, opts);
+  if (!plan) return null;
+  if (plan.nCtx === EMERGENCY_CONTEXT) {
+    // 0.1.86: el segundo plan conserva el techo del primero, no el 1024
+    // del peldaño de emergencia (dentro de planContext ese peldaño solo
+    // existe por debajo del techo).
+    const q8Plan = planContext({ ...specBase, kvBytesPerElement: KV_Q8_BYTES_PER_ELEMENT }, snapshot, opts);
+    if (q8Plan && q8Plan.verdict.fits) return { plan: q8Plan, pinnedProfile: "kv-q8" };
+  }
+  return { plan, pinnedProfile: null };
 }
 
 function planNote(plan: LadderPlan): string {

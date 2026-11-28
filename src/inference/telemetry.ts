@@ -84,7 +84,7 @@ const DB_MAX_ROWS = 1000;
 
 const ring: InferenceTelemetryEvent[] = [];
 
-import type { NativeTimings } from "./nativeTimings";
+import { sealedWriteRate, type NativeTimings } from "./nativeTimings";
 
 const TELEMETRY_DDL = `
 CREATE TABLE IF NOT EXISTS inference_telemetry (
@@ -417,6 +417,33 @@ export interface ModelSpeedRow {
   deterministic?: boolean;
   stopReason: string;
   ts: number;
+  /**
+   * 0.1.123 (auditoría E-2): la cuenta de tokens del motor y el tiempo de
+   * generación (total − primer token) de las filas con tiempos del motor
+   * (0.1.121 en adelante). Con ellos la fila se re-expresa en la vara
+   * sellada: las de la 0.1.121 y la 0.1.122 guardaron la tasa del motor y
+   * no deben mezclarse sin más con las demás en la mediana.
+   */
+  predictedN?: number | null;
+  genMs?: number | null;
+}
+
+/**
+ * 0.1.123 (auditoría E-2): la tasa de una fila en la vara sellada. Con
+ * tiempos del motor, (predicted_n − 1) / tiempo de generación (corrige las
+ * filas de la 0.1.121–0.1.122, que guardaron predicted_per_second, y es el
+ * mismo valor que guarda la 0.1.123); sin ellos, la tasa guardada, que ya
+ * era la vara sellada.
+ */
+export function sealedRowRate(r: ModelSpeedRow): number | null {
+  if (r.predictedN != null && r.predictedN > 0 && r.genMs != null) {
+    return sealedWriteRate(r.predictedN, r.genMs);
+  }
+  return r.tokensPerSec;
+}
+
+function rowTokens(r: ModelSpeedRow): number {
+  return r.predictedN != null && r.predictedN > 0 ? r.predictedN : r.completionTokens;
 }
 
 export interface ModelSpeedSummary {
@@ -435,12 +462,13 @@ const SPEED_WINDOW = 20;
 const SPEED_MIN_TOKENS = 32;
 
 function speedRowQualifies(r: ModelSpeedRow): boolean {
+  const rate = sealedRowRate(r);
   return (
     r.modelId !== null &&
     r.deterministic !== true &&
-    r.tokensPerSec !== null &&
-    r.tokensPerSec > 0 &&
-    r.completionTokens >= SPEED_MIN_TOKENS &&
+    rate !== null &&
+    rate > 0 &&
+    rowTokens(r) >= SPEED_MIN_TOKENS &&
     (r.stopReason === "completed" || r.stopReason === "stopped")
   );
 }
@@ -475,7 +503,7 @@ export function summarizeModelSpeeds(rows: ModelSpeedRow[]): ModelSpeedSummary[]
       acc = { rates: [], lastTs: r.ts };
       byModel.set(key, acc);
     }
-    if (acc.rates.length < SPEED_WINDOW) acc.rates.push(r.tokensPerSec as number);
+    if (acc.rates.length < SPEED_WINDOW) acc.rates.push(sealedRowRate(r) as number);
     if (r.ts > acc.lastTs) acc.lastTs = r.ts;
   }
   const out: ModelSpeedSummary[] = [];
@@ -502,6 +530,7 @@ export async function modelSpeedSummaries(): Promise<ModelSpeedSummary[]> {
     const { getDatabase } = await import("../security/databaseManager");
     const db = await getDatabase();
     await db.execAsync(TELEMETRY_DDL);
+    await db.execAsync(TIMINGS_DDL);
     const rows = await db.getAllAsync<{
       model_id: string | null;
       tokens_per_sec: number | null;
@@ -509,10 +538,15 @@ export async function modelSpeedSummaries(): Promise<ModelSpeedSummary[]> {
       deterministic: number;
       stop_reason: string;
       ts: number;
+      total_ms: number;
+      ttft_ms: number | null;
+      predicted_n: number | null;
     }>(
-      `SELECT model_id, tokens_per_sec, completion_tokens, deterministic, stop_reason, ts
-       FROM inference_telemetry
-       ORDER BY id DESC
+      `SELECT i.model_id, i.tokens_per_sec, i.completion_tokens, i.deterministic, i.stop_reason, i.ts,
+              i.total_ms, i.ttft_ms, t.predicted_n
+       FROM inference_telemetry i
+       LEFT JOIN inference_telemetry_timings t ON t.telemetry_id = i.id
+       ORDER BY i.id DESC
        LIMIT ${DB_MAX_ROWS}`,
     );
     return summarizeModelSpeeds(
@@ -523,6 +557,8 @@ export async function modelSpeedSummaries(): Promise<ModelSpeedSummary[]> {
         deterministic: r.deterministic === 1,
         stopReason: r.stop_reason,
         ts: r.ts,
+        predictedN: r.predicted_n,
+        genMs: r.predicted_n != null ? r.total_ms - (r.ttft_ms ?? 0) : null,
       })),
     );
   } catch {

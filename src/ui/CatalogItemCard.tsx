@@ -123,9 +123,15 @@ interface Props {
    * medida, no una promesa: nunca cambia qué se deja cargar.
    */
   provenCtx?: number | null;
+  /**
+   * 0.1.123 (auditoría E-1): el factor del CrashGuard con que la próxima
+   * carga planificará (LlamaEngine.predictedCrashSafety). La insignia usa
+   * el mismo plan y el mismo factor que la carga. Sin él, 1.
+   */
+  crashSafety?: number;
 }
 
-export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemove, onDiscardPartial, activating, busy, residentLoad, residentLoaded, speedSummary, provenCtx }: Props) {
+export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemove, onDiscardPartial, activating, busy, residentLoad, residentLoaded, speedSummary, provenCtx, crashSafety }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
@@ -223,6 +229,7 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
           // «Needs a lot of memory» por la foto del momento: dos
           // varas de medir en la misma pantalla.
           canonicalFloor: isActive && residentCredit <= 0 && (residentLoaded ?? residentLoad != null),
+          crashSafety,
         })
       : ({ color: "unknown" } as CompatibilityDetail);
   const compatibility = compatDetail.color;
