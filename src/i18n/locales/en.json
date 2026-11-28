@@ -203,7 +203,9 @@
       "title": "Startup error",
       "body": "Could not check the model status. This may be a temporary storage issue. Retry, or reinstall the app if it persists.",
       "retry": "Retry"
-    }
+    },
+    "benchRunRange": "Run {{pp}}/{{tg}}: reads at {{speedPp}} tok/s ({{ppMin}}–{{ppMax}}) and generates at {{speedTg}} tok/s ({{tgMin}}–{{tgMax}})",
+    "benchLoad": "Model load: {{s}} s"
   },
   "setupWizard": {
     "calculating": "Calculating…",
@@ -1123,7 +1125,13 @@
     "deviceRamUsable": "{{usable}} usable",
     "swap": "Swap (virtual RAM)",
     "swapValue": "{{free}} free of {{total}}",
-    "segSearchModel": "Search model"
+    "segSearchModel": "Search model",
+    "promptSpeed": "Prompt reading",
+    "promptTokens": "Prompt read",
+    "promptTokensValue": "{{read}} tokens · {{cached}} from cache",
+    "threadsValue": "{{n}} threads",
+    "cpu": "Processor",
+    "decimalSeparator": "."
   },
   "calm": {
     "model": "Model",
@@ -1951,7 +1959,9 @@
             "what": "Change the AI model for your device: small ones are fast, big ones reason better and use more memory.",
             "steps": [
               "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.models).",
-              "If a model has already answered on this phone, its card shows the speed measured here: the median of your last replies with that model. For choosing, that counts for more than any catalog figure."
+              "If a model has already answered on this phone, its card shows the speed measured here: the median of its last generations on this device, with the timings the engine itself measures. For choosing, that counts for more than any catalog figure.",
+              "The yellow badge says how much conversation memory the model runs with right now (for example, 1024 of 2048 tokens). If you close other apps and memory frees up, it can turn green.",
+              "“$t(modelSetupScreen.benchTitle)” measures the loaded model three times: it shows the reading and writing speed with their range, and how long it took to load."
             ],
             "tip": "If answers take too long or the app closes, try a smaller model."
           },

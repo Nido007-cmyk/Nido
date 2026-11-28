@@ -941,14 +941,31 @@ export function ModelSetupScreen(props: Props) {
                 </Text>
                 {benchReport.runs.map((r) => (
                   <Text key={`${r.pp}-${r.tg}`} style={styles.hapticRowValue}>
-                    {t("modelSetupScreen.benchRunResult", {
-                      pp: r.pp,
-                      tg: r.tg,
-                      speedPp: r.speedPp.toFixed(1),
-                      speedTg: r.speedTg.toFixed(1),
-                    })}
+                    {/* 0.1.121: media y, si hubo repeticiones, su rango. */}
+                    {r.ppStats && r.tgStats
+                      ? t("modelSetupScreen.benchRunRange", {
+                          pp: r.pp,
+                          tg: r.tg,
+                          speedPp: r.speedPp.toFixed(1),
+                          speedTg: r.speedTg.toFixed(1),
+                          ppMin: r.ppStats.min.toFixed(1),
+                          ppMax: r.ppStats.max.toFixed(1),
+                          tgMin: r.tgStats.min.toFixed(1),
+                          tgMax: r.tgStats.max.toFixed(1),
+                        })
+                      : t("modelSetupScreen.benchRunResult", {
+                          pp: r.pp,
+                          tg: r.tg,
+                          speedPp: r.speedPp.toFixed(1),
+                          speedTg: r.speedTg.toFixed(1),
+                        })}
                   </Text>
                 ))}
+                {benchReport.loadMs !== null && (
+                  <Text style={styles.hapticRowValue}>
+                    {t("modelSetupScreen.benchLoad", { s: (benchReport.loadMs / 1000).toFixed(1) })}
+                  </Text>
+                )}
                 {benchReport.peakRssBytes !== null && (
                   <Text style={styles.hapticRowValue}>
                     {t("modelSetupScreen.benchPeak", { mb: Math.round(benchReport.peakRssBytes / (1024 * 1024)) })}

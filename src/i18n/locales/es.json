@@ -582,7 +582,9 @@
       "partialDiscarded": "Se borró la parte descargada de {{name}}.",
       "resetFailed": "Falló el restablecimiento: {{error}}",
       "resetCancelled": "No se borró nada: se canceló el desbloqueo."
-    }
+    },
+    "benchRunRange": "Pasada {{pp}}/{{tg}}: lee a {{speedPp}} tok/s ({{ppMin}}–{{ppMax}}) y genera a {{speedTg}} tok/s ({{tgMin}}–{{tgMax}})",
+    "benchLoad": "Carga del modelo: {{s}} s"
   },
   "personalDocumentsManager": {
     "errors": {
@@ -1123,7 +1125,13 @@
     "deviceRamUsable": "{{usable}} usables",
     "swap": "Intercambio (RAM virtual)",
     "swapValue": "{{free}} libres de {{total}}",
-    "segSearchModel": "Modelo de búsqueda"
+    "segSearchModel": "Modelo de búsqueda",
+    "promptSpeed": "Lectura del prompt",
+    "promptTokens": "Prompt leído",
+    "promptTokensValue": "{{read}} tokens · {{cached}} de caché",
+    "threadsValue": "{{n}} hilos",
+    "cpu": "Procesador",
+    "decimalSeparator": ","
   },
   "calm": {
     "model": "Modelo",
@@ -1951,7 +1959,9 @@
             "what": "Cambia el modelo de IA según tu dispositivo: los pequeños son rápidos, los grandes razonan mejor y ocupan más memoria.",
             "steps": [
               "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.models).",
-              "Si un modelo ya respondió en este teléfono, su tarjeta enseña su velocidad medida aquí: la mediana de tus últimas respuestas con ese modelo. Para elegir, eso vale más que cualquier cifra de catálogo."
+              "Si un modelo ya respondió en este teléfono, su tarjeta enseña su velocidad medida aquí: la mediana de sus últimas generaciones en este aparato, con los tiempos que mide el propio motor. Para elegir, eso vale más que cualquier cifra de catálogo.",
+              "La etiqueta amarilla dice con cuánta memoria de conversación va el modelo ahora mismo (por ejemplo, 1024 de 2048 tokens). Si cierras otras apps y se libera memoria, puede ponerse verde.",
+              "«$t(modelSetupScreen.benchTitle)» mide el modelo cargado tres veces: enseña la velocidad de lectura y de escritura con su rango, y lo que tardó en cargar."
             ],
             "tip": "Si una respuesta tarda mucho o la app se cierra, prueba un modelo más pequeño."
           },

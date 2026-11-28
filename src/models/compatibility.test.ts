@@ -305,3 +305,4 @@ describe("amarillo con cifras (0.1.119)", () => {
     expect(d.yellow).toBeUndefined();
   });
 });
+

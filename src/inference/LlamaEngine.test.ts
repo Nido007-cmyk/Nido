@@ -327,7 +327,9 @@ describe("RAM-2026-10-11: perfiles de memoria del LLM", () => {
     await engine.load("models/a.gguf");
     expect(initCalls).toHaveLength(3);
     expect(Object.keys(initCalls[2]).sort()).toEqual(
-      ["model", "n_ctx", "n_gpu_layers", "n_threads", "use_mlock"].sort(),
+      // 0.1.121: + state_cache_budget_mb, el tope que el pre-flight cuenta
+      // (sin efecto en modelos de atención pura).
+      ["model", "n_ctx", "n_gpu_layers", "n_threads", "use_mlock", "state_cache_budget_mb"].sort(),
     );
     expect(engine.getModelInfo()?.memoryProfile).toBe("default");
   });
@@ -1167,6 +1169,66 @@ describe("P2.4 telemetry", () => {
     expect(e.stopReason).toBe("completed");
     expect(e.promptChars).toBeGreaterThan(0);
     expect(e.nPredict).toBe(512);
+  });
+
+  it("0.1.121: guarda la tasa y los tiempos que mide el motor (result.timings)", async () => {
+    const { clearTelemetry, getRecentTelemetry } = await import("./telemetry");
+    clearTelemetry();
+    mockStopVerdict = {
+      stopped_eos: true,
+      timings: { cache_n: 40, prompt_n: 300, prompt_per_second: 88.5, predicted_n: 50, predicted_per_second: 15.6 },
+    } as typeof mockStopVerdict;
+    try {
+      const engine = new LlamaEngine();
+      await engine.load("models/a.gguf");
+      await engine.generate({ messages: [{ role: "user", content: "hola" }] });
+      const e = getRecentTelemetry(10)[0];
+      expect(e.tokensPerSec).toBe(15.6);
+      expect(e.timings).toEqual({ promptN: 300, promptPerSec: 88.5, cacheN: 40, predictedN: 50, predictedPerSec: 15.6 });
+      expect(engine.lastGenerationTimings?.promptPerSec).toBe(88.5);
+      await engine.unload();
+    } finally {
+      mockStopVerdict = null;
+    }
+  });
+
+  it("0.1.121: n_keep protege el prompt del sistema (tokens + margen de plantilla)", async () => {
+    const { keepTokensFor, N_KEEP_TEMPLATE_MARGIN } = await import("./LlamaEngine");
+    expect(keepTokensFor(300, 2048)).toBe(300 + N_KEEP_TEMPLATE_MARGIN);
+    expect(keepTokensFor(5000, 2048)).toBe(2044);
+    mockStopVerdict = { stopped_eos: true };
+    try {
+      const engine = new LlamaEngine();
+      await engine.load("models/a.gguf");
+      const ctx = created[created.length - 1] as unknown as Record<string, unknown>;
+      let calls = 0;
+      ctx.tokenize = async () => {
+        calls++;
+        return { tokens: new Array(120).fill(0) };
+      };
+      const msgs = [
+        { role: "system", content: "Eres NIDO. Reglas de seguridad." },
+        { role: "user", content: "hola" },
+      ];
+      await engine.generate({ messages: msgs });
+      expect((ctx.lastParams as Record<string, unknown>).n_keep).toBe(120 + N_KEEP_TEMPLATE_MARGIN);
+      await engine.generate({ messages: msgs });
+      expect(calls).toBe(1); // el mismo prompt del sistema no se vuelve a contar
+      // Sin mensaje de sistema, la llamada nativa no lleva n_keep.
+      await engine.generate({ messages: [{ role: "user", content: "hola" }] });
+      expect((ctx.lastParams as Record<string, unknown>).n_keep).toBeUndefined();
+      await engine.unload();
+    } finally {
+      mockStopVerdict = null;
+    }
+  });
+
+  it("0.1.121: la carga fija state_cache_budget_mb (sin efecto en atención pura)", async () => {
+    const { llmInitParamsForProfile } = await import("./LlamaEngine");
+    const p = llmInitParamsForProfile("kv-q8", { model: "m", n_ctx: 2048, n_threads: 4, state_cache_budget_mb: 64 }) as Record<string, unknown>;
+    expect(p.state_cache_budget_mb).toBe(64);
+    const legacy = llmInitParamsForProfile("default", { model: "m", n_ctx: 2048, n_threads: 4 }) as Record<string, unknown>;
+    expect("state_cache_budget_mb" in legacy).toBe(false);
   });
 
   it("records timeout stopReason when the timer fires", async () => {
@@ -2327,24 +2389,32 @@ describe("T-07: VEL-5 acto 3 — la opción de NPU y la medición con bench()", 
   });
 
   it("benchLoadedModel mide el contexto residente en la forma del estudio: (512,128,1,3) y (128,32,1,3), con su foto", async () => {
-    mockBenchResults = [
-      { speedPp: 210.5, speedTg: 21.25, nGpuLayers: 0, nThreads: 4, nBatch: 512, nUBatch: 256, flashAttn: 0 },
-      { speedPp: 320.75, speedTg: 24.5, nGpuLayers: 0, nThreads: 4, nBatch: 512, nUBatch: 256, flashAttn: 0 },
-    ];
+    // 0.1.121: cada repetición es su propia llamada nativa (nr = 1), tres
+    // por configuración: el mismo trabajo, con la dispersión a la vista.
+    const r = (speedPp: number, speedTg: number) => ({ speedPp, speedTg, nGpuLayers: 0, nThreads: 4, nBatch: 512, nUBatch: 256, flashAttn: 0 });
+    mockBenchResults = [r(200, 20), r(210, 21), r(221.5, 22.75), r(310, 24), r(320, 24.5), r(332.25, 25)];
     const engine = new LlamaEngine();
     await engine.load("models/a.gguf");
     const report = await engine.benchLoadedModel();
     expect(mockBenchCalls).toEqual([
-      [512, 128, 1, 3],
-      [128, 32, 1, 3],
+      [512, 128, 1, 1],
+      [512, 128, 1, 1],
+      [512, 128, 1, 1],
+      [128, 32, 1, 1],
+      [128, 32, 1, 1],
+      [128, 32, 1, 1],
     ]);
     expect(report).not.toBeNull();
     expect(report?.modelFilename).toBe("models/a.gguf");
     expect(report?.executed).toBe("CPU");
     expect(report?.runs).toHaveLength(2);
     expect(report?.runs[0]).toMatchObject({ pp: 512, tg: 128, pl: 1, nr: 3, speedPp: 210.5, speedTg: 21.25 });
+    expect(report?.runs[0].ppStats).toMatchObject({ min: 200, max: 221.5, n: 3 });
     expect(report?.runs[1]).toMatchObject({ pp: 128, tg: 32, pl: 1, nr: 3, speedPp: 320.75, speedTg: 24.5 });
+    expect(report?.runs[1].tgStats).toMatchObject({ min: 24, max: 25, n: 3 });
     expect(report?.peakRssBytes).toBe(1024 ** 3);
+    // La duración de la carga viaja con la medida.
+    expect(typeof report?.loadMs).toBe("number");
   });
 
   // Tanda too-heavy (pasada del dueño sobre la 0.1.115): «Measure

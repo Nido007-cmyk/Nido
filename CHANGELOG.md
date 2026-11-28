@@ -4,6 +4,34 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.121-alpha - 2026-11-27
+
+First stage of the work to match and beat the best
+on-device AI apps.
+
+Speeds are now the ones the AI engine itself measures,
+not counted by the app. Settings → Measurements shows,
+for the last answer, how fast the model read your
+question and its context, how many of those tokens it
+read and how many it reused from memory instead of
+reading again.
+
+The safety instructions that open every conversation can
+no longer be pushed out when a long answer fills the
+model's memory: the engine is told to keep them.
+
+On phones with 6 GB of RAM or less, the hybrid models
+(LFM2.5 and Gemma 4) reserve 64 MB for their memory
+between turns instead of 160 MB.
+
+"Measure speed on this phone" runs each test three
+times and shows the average with its range (slowest to
+fastest), plus how long the model took to load.
+
+Measurements also shows your processor: how many fast
+cores and how many power-saving cores it has, and their
+speed. The thread count is now written in your language.
+
 ## 0.1.120-alpha - 2026-11-27
 
 The search model (the one that understands a question

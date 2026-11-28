@@ -590,3 +590,15 @@ describe("margen en vivo proporcional (0.1.120)", () => {
     expect(checkRamBudget(spec, snap, { proportionalMargin: true })!.availableBytes).toBe(1100 * MiB - 216 * MiB - 256 * MiB);
   });
 });
+
+describe("caché de estados entre turnos (0.1.121)", () => {
+  const MiB = 1024 * 1024;
+  const GiB = 1024 * MiB;
+  it("64 MiB en aparatos de 6 GiB o menos; los 160 de fábrica por encima o sin lectura", async () => {
+    const { stateCacheBudgetMb } = await import("./ramBudget");
+    expect(stateCacheBudgetMb(3416 * MiB)).toBe(64);
+    expect(stateCacheBudgetMb(6 * GiB)).toBe(64);
+    expect(stateCacheBudgetMb(8 * GiB)).toBe(160);
+    expect(stateCacheBudgetMb(null)).toBe(160);
+  });
+});

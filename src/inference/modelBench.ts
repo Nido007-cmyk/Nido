@@ -59,12 +59,40 @@ export interface BenchLoadPhoto {
   nThreads: number;
   memoryProfile?: string;
   accelDevice?: string;
+  /** 0.1.121: duración de la carga que se está midiendo (ms). */
+  loadMs?: number;
+}
+
+/**
+ * 0.1.121 (etapa 1; guía: AI Edge Gallery enseña cada velocidad con su
+ * dispersión): la media y el rango de las repeticiones de una medida.
+ */
+export interface SeriesStats {
+  mean: number;
+  min: number;
+  max: number;
+  /** Desviación típica muestral (0 con una sola repetición). */
+  stdev: number;
+  n: number;
+}
+
+/** Media, mínimo, máximo y desviación típica de unas repeticiones; null sin valores válidos. */
+export function summarizeSeries(values: readonly number[]): SeriesStats | null {
+  const v = values.filter((x) => Number.isFinite(x) && x >= 0);
+  if (v.length === 0) return null;
+  const mean = v.reduce((a, b) => a + b, 0) / v.length;
+  const variance = v.length > 1 ? v.reduce((a, b) => a + (b - mean) ** 2, 0) / (v.length - 1) : 0;
+  return { mean, min: Math.min(...v), max: Math.max(...v), stdev: Math.sqrt(variance), n: v.length };
 }
 
 /** Una corrida medida: su configuración y sus dos velocidades (tok/s). */
 export interface BenchRunReport extends BenchConfig {
+  /** Media de las repeticiones (tok/s). */
   speedPp: number;
   speedTg: number;
+  /** 0.1.121: rango de las repeticiones; ausente si solo hubo una. */
+  ppStats?: SeriesStats;
+  tgStats?: SeriesStats;
 }
 
 /** El resultado entero de una medición, con su foto de parámetros. */
@@ -80,6 +108,8 @@ export interface ModelBenchReport {
   flashAttn: number;
   /** Pico de RSS muestreado a 1 s durante la corrida; null si no se pudo leer. */
   peakRssBytes: number | null;
+  /** 0.1.121: lo que tardó la última carga de este modelo (ms); null si no se midió. */
+  loadMs: number | null;
   wallMs: number;
   runs: BenchRunReport[];
 }
@@ -105,16 +135,30 @@ export function executedLabelFor(photo: BenchLoadPhoto): string {
  */
 export function buildBenchReport(args: {
   photo: BenchLoadPhoto;
-  raw: readonly RawBenchResult[];
+  /**
+   * Una lista por configuración (BENCH_CONFIGS) con el resultado de cada
+   * repetición (0.1.121: el nativo se llama con nr = 1, una vez por
+   * repetición, para tener la dispersión). Una lista de un elemento por
+   * configuración es la forma anterior (nr agregado en el nativo).
+   */
+  raw: readonly (RawBenchResult | readonly RawBenchResult[])[];
   peakRssBytes: number | null;
   wallMs: number;
 }): ModelBenchReport {
-  const runs: BenchRunReport[] = args.raw.map((r, i) => ({
-    ...(BENCH_CONFIGS[i] ?? BENCH_CONFIGS[BENCH_CONFIGS.length - 1]),
-    speedPp: r.speedPp,
-    speedTg: r.speedTg,
-  }));
-  const last = args.raw[args.raw.length - 1];
+  const groups = args.raw.map((g) => (Array.isArray(g) ? (g as readonly RawBenchResult[]) : [g as RawBenchResult]));
+  const runs: BenchRunReport[] = groups.map((reps, i) => {
+    const pp = summarizeSeries(reps.map((r) => r.speedPp));
+    const tg = summarizeSeries(reps.map((r) => r.speedTg));
+    return {
+      ...(BENCH_CONFIGS[i] ?? BENCH_CONFIGS[BENCH_CONFIGS.length - 1]),
+      speedPp: pp?.mean ?? 0,
+      speedTg: tg?.mean ?? 0,
+      ...(pp && pp.n > 1 ? { ppStats: pp } : {}),
+      ...(tg && tg.n > 1 ? { tgStats: tg } : {}),
+    };
+  });
+  const lastGroup = groups[groups.length - 1];
+  const last = lastGroup?.[lastGroup.length - 1];
   return {
     modelFilename: args.photo.filename,
     executed: executedLabelFor(args.photo),
@@ -123,6 +167,7 @@ export function buildBenchReport(args: {
     nGpuLayers: last?.nGpuLayers ?? 0,
     flashAttn: last?.flashAttn ?? 0,
     peakRssBytes: args.peakRssBytes,
+    loadMs: typeof args.photo.loadMs === "number" && args.photo.loadMs >= 0 ? args.photo.loadMs : null,
     wallMs: args.wallMs,
     runs,
   };
