@@ -247,11 +247,25 @@ jobs:
           # (las que sus autores compilaron con el SDK y el postinstall
           # descarga de la release fijada) y CMake compila solo el
           # puente JNI enlazado contra ellas. El juez no se toca.
-          ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a -PrnllamaBuildFromSource=false --stacktrace 2>&1 | tee "$RUNNER_TEMP/gradle.log" || {
+          # 0.1.122: reintento SOLO ante fallos de red al resolver
+          # complementos o dependencias (plugins.gradle.org). Las
+          # publicaciones de la 0.1.121 y la 0.1.122 cayeron la primera vez
+          # por «Plugin [id: 'org.gradle.toolchains.foojay-resolver-convention']
+          # was not found» con el mismo código que compiló bien en la rama.
+          # Cualquier otro fallo (de compilación) corta a la primera.
+          for attempt in 1 2 3; do
+            if ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a -PrnllamaBuildFromSource=false --stacktrace 2>&1 | tee "$RUNNER_TEMP/gradle.log"; then
+              break
+            fi
+            if [ "$attempt" -lt 3 ] && grep -qE "could not resolve plugin artifact|Could not resolve all (files|dependencies|artifacts)|Could not GET 'https://|Read timed out|Connection reset" "$RUNNER_TEMP/gradle.log"; then
+              echo "::warning title=gradle::fallo de red al resolver (intento $attempt de 3); se reintenta en 60 s"
+              sleep 60
+              continue
+            fi
             grep -A12 "What went wrong" "$RUNNER_TEMP/gradle.log" | head -40 | while IFS= read -r l; do echo "::error title=gradle::$l"; done
             grep -iE "^e: |error:|ERROR:|FAILURE" "$RUNNER_TEMP/gradle.log" | head -20 | while IFS= read -r l; do echo "::error title=gradle::$l"; done
             exit 1
-          }
+          done
 
       - name: Manifest summary (permissions and exported components)
         # 0.1.47 (auditoría): el manifiesto FINAL (tras fusionar los de todas
