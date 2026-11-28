@@ -9,6 +9,7 @@ import {
   estimateContextBytes,
   KV_Q8_BYTES_PER_ELEMENT,
   type RamSnapshot,
+  checkRamBudget,
 } from "../inference/ramBudget";
 import { planContext } from "../inference/memoryLadder";
 import { contextCeilingForDevice, contextSpecForModel } from "./defaultModel";
@@ -111,6 +112,15 @@ interface SnapshotVerdict {
 }
 
 function verdictOnSnapshot(model: CatalogModel, deviceRamBytes: number, snapshot: RamSnapshot): SnapshotVerdict {
+  // 0.1.120: el modelo de búsqueda se carga siempre igual (contexto 512,
+  // sin escalera) y con el margen proporcional (embed.ts). La insignia
+  // usa esa misma carga: cabe (verde) o no cabe (rojo). Antes pasaba por
+  // la escalera de los modelos de chat y podía decir otra cosa.
+  if (model.kind === "embedding") {
+    const v = checkRamBudget({ fileSizeBytes: model.sizeBytes, nCtx: 512 }, snapshot, { proportionalMargin: true });
+    if (!v) return { color: "unknown" };
+    return { color: v.fits ? "green" : "red" };
+  }
   const ceiling = contextCeilingForDevice(model.defaultNCtx, deviceRamBytes);
   const { nCtx: _declaredCtx, ...specBase } = contextSpecForModel(model, deviceRamBytes);
   const plan = planContext(specBase, snapshot, { ceiling, safety: 1 });

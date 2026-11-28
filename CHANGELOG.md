@@ -4,6 +4,24 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.120-alpha - 2026-11-27
+
+The search model (the one that understands a question
+asked in other words) no longer gets refused on phones
+with little free memory. Before loading anything, NIDO
+keeps a safety margin on top of what Android needs; that
+margin was a fixed 256 MB, bigger than the search model
+itself (about 170 MB). On a 3.3 GB tablet with 624 MB
+free, the model was refused and search fell back to
+plain keyword matching. The margin is now half of what
+is being loaded, between 64 and 256 MB. The chat models
+keep exactly the same rule as before.
+
+The search model's badge in Settings now says what its
+real load does: it fits or it does not. Before, it could
+show yellow ("shorter memory"), which never applied to
+it.
+
 ## 0.1.119-alpha - 2026-11-27
 
 The yellow badge on a model now says what really

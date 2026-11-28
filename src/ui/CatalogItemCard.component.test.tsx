@@ -307,10 +307,16 @@ describe("CatalogItemCard: la entrada de embeddings enseña su veredicto (M-1)",
     expect(screen.getByText("catalogItemCard.downloadAsset")).toBeTruthy();
   });
 
-  it("en amarillo (2,8 GB): pinta la insignia amarilla", async () => {
+  it("a 2,8 GB: verde, porque carga tal cual (0.1.120)", async () => {
+    // Hasta la 0.1.119 la insignia pasaba el modelo de búsqueda por la
+    // escalera de los de chat y pintaba amarillo («menos contexto»),
+    // pero embed.ts siempre lo carga a 512 y sin escalera: con 2,8 GB
+    // cabe (presupuesto 307 MiB, carga ≈170). La insignia dice ahora lo
+    // que hace la carga de verdad.
     mockRamBytes = Math.floor(2.8 * 1024 * 1024 * 1024);
     await render(<CatalogItemCard item={e5()} row={undefined} {...baseProps} />);
-    expect(await screen.findByText(/^catalogItemCard\.compat\.yellow/)).toBeTruthy();
+    expect(await screen.findByText("catalogItemCard.compat.green")).toBeTruthy();
+    expect(screen.queryByText(/^catalogItemCard\.compat\.yellow/)).toBeNull();
   });
 
   it("en rojo (2 GB): pinta la insignia roja y NO ofrece descargar", async () => {

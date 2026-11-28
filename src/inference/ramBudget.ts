@@ -77,6 +77,27 @@ export interface RamSnapshot {
  */
 export const LIVE_MARGIN_BYTES = 256 * 1024 * 1024;
 
+/**
+ * 0.1.120 (foto del dueño, Tab A9+, 16/11): el modelo de búsqueda de
+ * 173 MB se rechazaba con 624 MB libres (624 − 216 umbral − 256 margen =
+ * 152). Un margen fijo de 256 MiB es mayor que la propia carga cuando la
+ * carga es pequeña, y además el modelo de búsqueda no tiene el peldaño
+ * de emergencia que sí tienen los de chat. El margen pasa a ser la mitad
+ * de la carga, entre 64 y 256 MiB: una carga de 512 MiB o más sigue con
+ * los 256 de siempre; una pequeña lleva un
+ * margen a su medida. El umbral de Android se sigue restando entero.
+ *
+ * Solo lo pide quien carga algo pequeño y sin peldaño de emergencia (el
+ * modelo de búsqueda, opts.proportionalMargin en checkRamBudget): los
+ * modelos de chat siguen byte a byte con los 256 MiB y su escalera.
+ */
+export const LIVE_MARGIN_MIN_BYTES = 64 * 1024 * 1024;
+
+export function liveMarginFor(neededBytes: number): number {
+  const half = Math.max(neededBytes, 0) / 2;
+  return Math.min(LIVE_MARGIN_BYTES, Math.max(LIVE_MARGIN_MIN_BYTES, half));
+}
+
 export interface ContextSpec {
   /** On-disk GGUF size in bytes (0 when unknown — estimate degrades gracefully). */
   fileSizeBytes: number;
@@ -281,7 +302,7 @@ export function estimateContextBytes(spec: ContextSpec): RamEstimate {
 export function checkRamBudget(
   spec: ContextSpec,
   snapshot: RamSnapshot,
-  opts?: { emergencyLive?: boolean },
+  opts?: { emergencyLive?: boolean; proportionalMargin?: boolean },
 ): BudgetVerdict | null {
   if (snapshot.totalRamBytes <= 0) return null;
   const estimate = estimateContextBytes(spec);
@@ -310,7 +331,10 @@ export function checkRamBudget(
     snapshot.availBytes !== undefined
       ? opts?.emergencyLive
         ? snapshot.availBytes + releasable
-        : snapshot.availBytes + releasable - (snapshot.lowMemThresholdBytes ?? 0) - LIVE_MARGIN_BYTES
+        : snapshot.availBytes +
+          releasable -
+          (snapshot.lowMemThresholdBytes ?? 0) -
+          (opts?.proportionalMargin ? liveMarginFor(estimate.totalBytes) : LIVE_MARGIN_BYTES)
       : Number.POSITIVE_INFINITY;
   const availableBytes = Math.max(Math.min(byTotal, live), 0);
   return {
