@@ -4,6 +4,29 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.125-alpha - 2026-11-28
+
+Dictation with Whisper, on the phone and without
+internet (third stage of the work to match and beat the
+best on-device AI apps).
+
+NIDO already dictated with Android's on-device speech
+recognizer. Now you can also download Whisper (about
+145 MB, once) in Settings → Voice: a voice model that
+understands Spanish, English and Portuguese and works on
+any phone, even one without Android's recognizer or
+without the language installed. With it downloaded,
+dictation uses Whisper first; if it does not fit in the
+memory free at that moment, it uses Android's recognizer
+as before.
+
+With Whisper, tap the microphone, speak and tap again
+when you finish (or wait 30 seconds). The button shows
+"Transcribing on the phone…" and the text appears in the
+box. The audio is recorded inside the app and deleted as
+soon as the text is ready. The model goes through the
+same signed-catalog checks as the chat models.
+
 ## 0.1.124-alpha - 2026-11-28
 
 Two more points from the audit.

@@ -90,7 +90,8 @@
     "outdatedNote": "Hay una versión más nueva de este paquete. Mientras tanto se sigue usando la que tienes, también sin conexión; la nueva solo la reemplaza cuando termina de descargarse y se comprueba.",
     "measuredRowSpeed": "{{rate}} tok/s aquí",
     "measuredBasis": "La mediana de las últimas {{count}} generaciones de este modelo en este aparato",
-    "provenHere": "Probado en este aparato: respondió con {{ctx}} tokens de contexto"
+    "provenHere": "Probado en este aparato: respondió con {{ctx}} tokens de contexto",
+    "speechReadyNote": "Listo: el dictado lo usa primero"
   },
   "chatHeader": {
     "cycleTone": "Cambiar el tono del asistente",
@@ -800,14 +801,17 @@
     "speechEngineLabel": "Motor de voz a texto",
     "title": "Entrada de voz",
     "unavailable": "No disponible en este dispositivo",
-    "unavailableNote": "No se encontró ningún servicio de reconocimiento de voz del sistema, común en GrapheneOS / versiones sin Google. Un modelo whisper.cpp integrado eliminaría esta dependencia, pero es un proyecto aparte de la escala de la propia integración de llama.rn; no está implementado en esta versión.",
+    "unavailableNote": "No se encontró ningún servicio de reconocimiento de voz del sistema, algo común en GrapheneOS y en versiones sin Google. Descarga el modelo de voz Whisper de esta sección para dictar sin depender de él.",
     "readAloudLabel": "Lectura en voz alta",
     "readAloudValue": "Lee las respuestas del asistente con la voz del sistema. NIDO descarta las voces que tu motor de voz marca como de red y prefiere las que funcionan en el teléfono; si el motor no lo indica, puede usar una voz que mande el texto a internet.",
     "engineOnDevice": "Reconocedor en el teléfono: el audio no sale de aquí",
     "engineSystem": "Solo el servicio de voz del sistema (de Google o del fabricante): puede mandar el audio a internet",
     "onDeviceOnlyLabel": "Solo reconocimiento en el teléfono",
     "onDeviceOnlyValue": "Encendido, el dictado solo funciona si tu teléfono puede reconocer la voz sin internet (Android 12 o posterior con reconocedor en el teléfono). Si lo apagas, NIDO puede usar el servicio de voz del sistema, que puede mandar tu audio a internet.",
-    "onlineOnlyNote": "Este teléfono no tiene reconocedor de voz en el teléfono, así que el dictado está apagado. Si aceptas que el servicio del sistema pueda mandar tu audio a internet, apaga «Solo reconocimiento en el teléfono»."
+    "onlineOnlyNote": "Este teléfono no tiene reconocedor de voz en el teléfono, así que el dictado está apagado. Si aceptas que el servicio del sistema pueda mandar tu audio a internet, apaga «Solo reconocimiento en el teléfono».",
+    "engineWhisper": "Whisper en el teléfono: el audio no sale de aquí (si no cabe en la memoria de ese momento, se usa el reconocedor de Android)",
+    "whisperLabel": "Dictado con Whisper (sin internet)",
+    "whisperValue": "Un modelo de voz de unos 145 MB que entiende español, inglés y portugués y funciona en cualquier teléfono, sin depender del reconocedor de Android. Con él descargado, el dictado lo usa primero."
   },
   "lockScreen": {
     "title": "NIDO bloqueado",
@@ -1215,7 +1219,8 @@
     "unavailableMessage": "No se encontró un servicio de reconocimiento de voz en este dispositivo (común en GrapheneOS / builds sin Google). Escribe tu pregunta en su lugar.",
     "onlineOnlyMessage": "Este teléfono no puede reconocer la voz sin internet, y NIDO está configurado para no mandar tu audio fuera. Escribe tu pregunta, o permite el servicio de voz del sistema en Ajustes › Voz (puede mandar el audio a internet).",
     "startLabel": "Dictar por voz",
-    "stopLabel": "Detener el dictado"
+    "stopLabel": "Detener el dictado",
+    "transcribingLabel": "Transcribiendo en el teléfono…"
   },
   "tasks": {
     "approvalTitle": "Solicitud de tarea",
@@ -1890,10 +1895,12 @@
             "what": "Dicta tus mensajes y, si quieres, escucha las respuestas.",
             "steps": [
               "Toca el micrófono en la barra del chat y habla.",
+              "Para dictar sin depender del teléfono: $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.voice) → $t(voiceSettings.whisperLabel) → descarga el modelo (unos 145 MB, una sola vez).",
+              "Con Whisper, toca el micrófono, habla y vuelve a tocarlo al terminar (o espera 30 segundos): verás «$t(voiceInputAlert.transcribingLabel)» y el texto aparece en el cuadro. El audio se borra al acabar.",
               "Para escuchar las respuestas: $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.voice) → $t(voiceSettings.readAloudLabel).",
               "Debajo de cada respuesta, «$t(chatScreen.listen)» la lee en voz alta; tócalo otra vez para parar."
             ],
-            "tip": "Necesita permiso de micrófono. El dictado depende del reconocimiento de voz de tu dispositivo."
+            "tip": "Necesita permiso de micrófono. Con Whisper descargado, el dictado funciona en cualquier teléfono y sin internet; si en ese momento no cabe en la memoria, se usa el reconocedor de Android."
           }
         ]
       },
