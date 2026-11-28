@@ -1220,7 +1220,9 @@
     "onlineOnlyMessage": "This phone can’t recognize speech without the internet, and NIDO is set not to send your audio anywhere. Type your question, or allow the system voice service in Settings › Voice (it may send the audio over the internet).",
     "startLabel": "Dictate by voice",
     "stopLabel": "Stop dictation",
-    "transcribingLabel": "Transcribing on the phone…"
+    "transcribingLabel": "Transcribing on the phone…",
+    "fallbackTitle": "Whisper could not handle this dictation",
+    "fallbackMessage": "The phone's Android recognizer takes over: say it again. If Whisper fails twice in a row, dictation will use Android directly until the next version of the app."
   },
   "tasks": {
     "approvalTitle": "Task request",
@@ -1900,7 +1902,7 @@
               "To hear answers: $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.voice) → $t(voiceSettings.readAloudLabel).",
               "Under each answer, “$t(chatScreen.listen)” reads it aloud; tap it again to stop."
             ],
-            "tip": "Needs microphone permission. With Whisper downloaded, dictation works on any phone and without internet; if it does not fit in memory at that moment, the Android recognizer is used."
+            "tip": "Needs microphone permission. With Whisper downloaded, dictation works on any phone and without internet; if it does not fit in memory at that moment or fails, the Android recognizer takes over."
           }
         ]
       },

@@ -13,6 +13,11 @@ export type VoiceEvent =
   | { type: "end" }
   /** 0.1.125: Whisper terminó de grabar y está transcribiendo. */
   | { type: "transcribing" }
+  /**
+   * 0.1.125 (auditoría de la casa, E-1): Whisper falló en esta sesión y el
+   * dictado sigue con el reconocedor de Android (hay que volver a hablar).
+   */
+  | { type: "fallback"; stage: "record" | "transcribe"; message: string }
   | { type: "partial"; text: string }
   | { type: "result"; text: string }
   | { type: "error"; code: string; message: string };
@@ -107,20 +112,65 @@ let whisperSession: { stop: () => void } | null = null;
 
 /**
  * 0.1.125 (decisión del dueño: «Whisper primero, Android de respaldo»):
- * Whisper si su modelo está descargado y cabe en la memoria de ahora; si
- * no, el reconocedor de Android como hasta ahora.
+ * Whisper si su modelo está descargado, cabe en la memoria de ahora y no
+ * está apartado por fallos seguidos; si no, el reconocedor de Android como
+ * hasta ahora. Auditoría de la casa (E-1): el respaldo cubre también el
+ * FALLO de Whisper en la sesión (grabar o transcribir), no solo el modelo
+ * ausente o la falta de memoria.
  */
 export async function startListening(onEvent?: (event: VoiceEvent) => void): Promise<string | null> {
   if (!VoiceInputNative) return null;
+  // E-2: barre los WAV que quedaron de una sesión cortada (proceso muerto
+  // grabando): el audio no sobrevive a la sesión que lo grabó.
+  await sweepDictationWavs();
   if (await whisperModelPresent()) {
-    const { whisperAsset, whisperFitsNow } = await import("./whisperDictation");
+    const { whisperAsset, whisperFitsNow, whisperSuspended } = await import("./whisperDictation");
     const { readRamSnapshot } = await import("../inference/ramBudget");
+    const { getWhisperFailures } = await import("../models/settings");
+    const { APP_VERSION } = await import("../security/backup");
     const asset = whisperAsset();
-    if (asset && whisperFitsNow(readRamSnapshot(), asset.sizeBytes)) {
+    const suspended = whisperSuspended(await getWhisperFailures().catch(() => null), APP_VERSION);
+    if (asset && !suspended && whisperFitsNow(readRamSnapshot(), asset.sizeBytes)) {
       return listenWithWhisper(onEvent);
     }
   }
   return listenWithAndroid(onEvent);
+}
+
+/** E-2: borra los WAV de dictado que haya en la caché. Nunca lanza. */
+async function sweepDictationWavs(): Promise<void> {
+  try {
+    const FileSystem = await import("expo-file-system/legacy");
+    const dir = FileSystem.cacheDirectory;
+    if (!dir || typeof FileSystem.readDirectoryAsync !== "function") return;
+    const { isDictationWav } = await import("./whisperDictation");
+    for (const name of await FileSystem.readDirectoryAsync(dir)) {
+      if (isDictationWav(name)) await FileSystem.deleteAsync(`${dir}${name}`, { idempotent: true }).catch(() => {});
+    }
+  } catch {
+    // Higiene: si falla, el próximo dictado lo reintenta.
+  }
+}
+
+/** E-1: anota un fallo de Whisper (con 2 seguidos en esta versión se aparta). */
+async function noteWhisperFailure(): Promise<void> {
+  try {
+    const { afterWhisperFailure } = await import("./whisperDictation");
+    const { getWhisperFailures, setWhisperFailures } = await import("../models/settings");
+    const { APP_VERSION } = await import("../security/backup");
+    await setWhisperFailures(afterWhisperFailure(await getWhisperFailures(), APP_VERSION));
+  } catch {
+    // Sin registro, el siguiente dictado vuelve a intentar Whisper.
+  }
+}
+
+async function noteWhisperSuccess(): Promise<void> {
+  try {
+    const { getWhisperFailures, setWhisperFailures } = await import("../models/settings");
+    if (await getWhisperFailures()) await setWhisperFailures(null);
+  } catch {
+    // Nada que limpiar.
+  }
 }
 
 function listenWithWhisper(onEvent?: (event: VoiceEvent) => void): Promise<string | null> {
@@ -128,6 +178,7 @@ function listenWithWhisper(onEvent?: (event: VoiceEvent) => void): Promise<strin
   return new Promise((resolve) => {
     let finished = false;
     let limitSub: EventSubscription | null = null;
+    let wavPath: string | null = null;
     const done = (text: string | null) => {
       if (finished) return;
       finished = true;
@@ -135,37 +186,70 @@ function listenWithWhisper(onEvent?: (event: VoiceEvent) => void): Promise<strin
       whisperSession = null;
       resolve(text);
     };
+    // E-2: el audio se borra al acabar, salga bien o mal (transcribeWithWhisper
+    // ya lo borra; esto cubre stopRecording fallido o sin transcripción).
+    const deleteWav = async () => {
+      if (!wavPath) return;
+      const FileSystem = await import("expo-file-system/legacy");
+      await FileSystem.deleteAsync(wavPath, { idempotent: true }).catch(() => {});
+    };
+    // E-1: si Whisper falla, la sesión cae al reconocedor de Android.
+    const fallBackToAndroid = async (stage: "record" | "transcribe", e: unknown) => {
+      await noteWhisperFailure();
+      onEvent?.({ type: "fallback", stage, message: e instanceof Error ? e.message : String(e) });
+      done(await listenWithAndroid(onEvent));
+    };
     const stopAndTranscribe = async () => {
       if (whisperSession === null) return;
       whisperSession = null;
+      let rec: { path: string; durationMs: number } | null;
       try {
-        const rec = await native.stopRecording!();
-        onEvent?.({ type: "end" });
-        if (!rec) return done(null);
-        onEvent?.({ type: "transcribing" });
+        rec = await native.stopRecording!();
+      } catch (e) {
+        await deleteWav();
+        return fallBackToAndroid("record", e);
+      }
+      onEvent?.({ type: "end" });
+      if (!rec) {
+        await deleteWav();
+        return done(null);
+      }
+      onEvent?.({ type: "transcribing" });
+      try {
         const { transcribeWithWhisper } = await import("./whisperDictation");
         const i18n = (await import("../i18n")).default as { language?: string };
-        const text = await transcribeWithWhisper(rec.path, { uiLanguage: i18n.language });
+        // La URI que creó esta sesión (file://…), no la ruta que devuelve el
+        // nativo: con ella se transcribe y, sobre todo, se BORRA (deleteAsync
+        // de expo solo acepta URIs file://).
+        const text = await transcribeWithWhisper(wavPath ?? rec.path, { uiLanguage: i18n.language });
+        await noteWhisperSuccess();
         onEvent?.({ type: "result", text });
         done(text.length > 0 ? text : null);
       } catch (e) {
-        onEvent?.({ type: "error", code: "whisper", message: e instanceof Error ? e.message : String(e) });
-        done(null);
+        await deleteWav();
+        return fallBackToAndroid("transcribe", e);
       }
     };
     void (async () => {
       try {
         const FileSystem = await import("expo-file-system/legacy");
         const { dictationWavPath, WHISPER_MAX_RECORD_MS } = await import("./whisperDictation");
-        const path = dictationWavPath(FileSystem.cacheDirectory ?? "");
+        wavPath = dictationWavPath(FileSystem.cacheDirectory ?? "");
         limitSub = native.addListener("onRecordLimit", () => void stopAndTranscribe());
         whisperSession = { stop: () => void stopAndTranscribe() };
-        await native.startRecording!(path, WHISPER_MAX_RECORD_MS);
+        await native.startRecording!(wavPath, WHISPER_MAX_RECORD_MS);
         onEvent?.({ type: "start" });
       } catch (e) {
         whisperSession = null;
-        onEvent?.({ type: "error", code: "record", message: e instanceof Error ? e.message : String(e) });
-        done(null);
+        limitSub?.remove();
+        await deleteWav();
+        // El permiso de micrófono denegado no es un fallo de Whisper: Android
+        // también lo necesita, así que ahí no hay respaldo posible.
+        if ((e as { code?: string })?.code === "E_PERMISSION_DENIED") {
+          onEvent?.({ type: "error", code: "E_PERMISSION_DENIED", message: e instanceof Error ? e.message : String(e) });
+          return done(null);
+        }
+        await fallBackToAndroid("record", e);
       }
     })();
   });

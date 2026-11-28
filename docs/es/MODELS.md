@@ -221,10 +221,18 @@ provisto por el sistema (el de Google, o el de un OEM) instalado en el dispositi
 La mayoría de builds stock de Android/OEM traen uno; **GrapheneOS y otras builds
 de-Googled típicamente no**, así que la entrada de voz no funcionará ahí de serie —
 `isAvailable()` lo detecta y la UI muestra un mensaje claro de "no disponible"
-en lugar de fingir que escucha. Una garantía verdadera multi-dispositivo implicaría
-empaquetar un modelo `whisper.cpp` con un binding personalizado, que es un proyecto
-de la escala de la propia integración `llama.rn` — documentado como trabajo futuro,
-no intentado en esta versión. Escribir siempre funciona en todas partes.
+en lugar de fingir que escucha. Escribir siempre funciona en todas partes.
+
+**Whisper (0.1.125)**: la entrada opcional del catálogo `whisper-base` (whisper.cpp
+base, multilingüe, ~148 MB, MIT) da un dictado que funciona en cualquier teléfono sin
+el reconocedor de Android. Con ella descargada, el dictado graba un WAV de 16 kHz mono
+en la caché de la app (`modules/voice-input`, `startRecording`), lo transcribe con
+`whisper.rn` después de que el modelo pase la puerta de confianza, libera el modelo y
+borra el audio, salga bien o mal (`src/voice/whisperDictation.ts`). Si Whisper no cabe
+en la memoria libre de ese momento (~388 MB, la cifra que publica whisper.cpp para
+base), o falla al grabar o al transcribir, el dictado sigue con el reconocedor de
+Android en el teléfono (decisión del dueño: Whisper primero, Android de respaldo); con
+dos fallos seguidos en la misma versión de la app, va directo a Android.
 
 ## Entrega: descarga única en la primera ejecución
 

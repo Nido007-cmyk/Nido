@@ -252,6 +252,10 @@ releases the model and deletes the audio (`src/voice/whisperDictation.ts`).
 If Whisper does not fit in the memory free at that moment (~388 MB, the
 figure whisper.cpp publishes for base), dictation falls back to the Android
 on-device recognizer (owner's decision: Whisper first, Android as fallback).
+The fallback also covers a Whisper failure in the session (recording or
+transcription): dictation continues with the Android recognizer, the audio is
+deleted either way, and after two failures in a row in the same app version
+dictation goes straight to Android.
 
 ## Delivery: one-time first-run download
 

@@ -40,6 +40,7 @@ Documentamos qué está verificado, qué es experimental, qué está incompleto 
 - Fortalecer la experiencia NIDO-a-NIDO
 - Mensajes de amigo en amigo (0.1.76, experimental): probarlos con tres teléfonos físicos y después una revisión externa de la criptografía nueva
 - Práctica de RCP (0.1.76): comprobar el pitido, la voz y el medidor de ritmo por cámara en teléfonos reales
+- Dictado con Whisper (0.1.125): medir la velocidad de transcripción y la memoria real en la Tab A9+ en modo avión
 - Continuar mejorando voz e interacción local
 - Pulir la experiencia en inglés, español y portugués
 - Mejorar accesibilidad y la experiencia del usuario nuevo

@@ -37,6 +37,13 @@ interface Settings {
   screenCaptureAllowed?: boolean;
   /** Dictation only with the phone's on-device recognizer (default true). */
   voiceOnDeviceOnly?: boolean;
+  /**
+   * 0.1.125 (auditoría de la casa, E-1): fallos seguidos de Whisper en
+   * este aparato y la versión de la app en que ocurrieron. Con 2 o más en
+   * la misma versión, el dictado va directo al reconocedor de Android
+   * (whisperSuspended); un éxito o una versión nueva lo reinician.
+   */
+  whisperFailures?: { count: number; appVersion: string };
   readAloudEnabled?: boolean;
   /** 0.1.60: resumen diario de las 8:00. Opt-in (constitución §9). */
   dailySummaryEnabled?: boolean;
@@ -442,6 +449,19 @@ export async function getVoiceOnDeviceOnly(): Promise<boolean> {
 export async function setVoiceOnDeviceOnly(onDeviceOnly: boolean): Promise<void> {
   return mutateSettings((s) => {
     s.voiceOnDeviceOnly = onDeviceOnly;
+  });
+}
+
+/** 0.1.125: fallos seguidos de Whisper (ver whisperFailures). */
+export async function getWhisperFailures(): Promise<{ count: number; appVersion: string } | null> {
+  const s = await readSettings();
+  return s.whisperFailures ?? null;
+}
+
+export async function setWhisperFailures(record: { count: number; appVersion: string } | null): Promise<void> {
+  return mutateSettings((s) => {
+    if (record) s.whisperFailures = record;
+    else delete s.whisperFailures;
   });
 }
 
