@@ -44,7 +44,7 @@ describe("Ajustes por grupos (0.1.55)", () => {
       "<ThemeSelector />",
       "interfaceSettings.hapticFeedbackLabel",
       "<LanguageSelector />",
-      "<VoiceSettings />",
+      "<VoiceSettings",
       "modelSetupScreen.recovery.wizardButton",
       "modelSetupScreen.recovery.dangerButton",
       "backup.createButton",

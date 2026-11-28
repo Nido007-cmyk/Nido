@@ -74,9 +74,11 @@ describe("VEL-5 acto 3: la cuantización declarada por entrada (el dato de la op
     Q8_0: ["q8_0", "q8"],
   };
 
-  it("toda entrada GGUF (llm y embedding) declara su cuantización; el corpus no", () => {
+  it("toda entrada GGUF (llm y embedding) declara su cuantización; el corpus y la voz no", () => {
     for (const m of MODEL_CATALOG) {
-      if (m.kind === "corpus") {
+      // 0.1.125: el modelo de voz (whisper.cpp, formato ggml propio, f16)
+      // no es GGUF ni pasa por la opción de NPU: no lleva cuantización.
+      if (m.kind === "corpus" || m.kind === "speech") {
         expect(m.quant, m.id).toBeUndefined();
       } else {
         expect(m.quant, m.id).toBeDefined();

@@ -94,7 +94,8 @@
     "outdatedNote": "A newer version of this pack is available. Until then the one you have keeps working, offline too; the new one only replaces it once it has finished downloading and been verified.",
     "measuredRowSpeed": "{{rate}} tok/s here",
     "measuredBasis": "The median of this model's last {{count}} generations on this device",
-    "provenHere": "Tested on this device: it answered with {{ctx}} tokens of context"
+    "provenHere": "Tested on this device: it answered with {{ctx}} tokens of context",
+    "speechReadyNote": "Ready: dictation uses it first"
   },
   "modelLoadErrorCard": {
     "corrupt": {
@@ -372,14 +373,17 @@
     "speechEngineLabel": "Speech-to-text engine",
     "checking": "Checking…",
     "unavailable": "Unavailable on this device",
-    "unavailableNote": "No system speech-recognition service was found — common on GrapheneOS / de-Googled builds. An embedded whisper.cpp model would remove this dependency but is a separate project on the scale of the llama.rn integration itself; not implemented in this version.",
+    "unavailableNote": "No system speech recognition service was found, which is common on GrapheneOS and builds without Google. Download the Whisper voice model in this section to dictate without it.",
     "readAloudLabel": "Read aloud",
     "readAloudValue": "Reads the assistant's answers with the system voice. NIDO skips the voices your speech engine marks as network voices and prefers the ones that work on the phone; if the engine doesn't say, it may use a voice that sends the text over the internet.",
     "engineOnDevice": "On-device recognizer: the audio stays on this phone",
     "engineSystem": "Only the system voice service (Google’s or the manufacturer’s): it may send the audio over the internet",
     "onDeviceOnlyLabel": "On-device recognition only",
     "onDeviceOnlyValue": "When on, dictation only works if your phone can recognize speech without the internet (Android 12 or later with an on-device recognizer). If you turn it off, NIDO can use the system voice service, which may send your audio over the internet.",
-    "onlineOnlyNote": "This phone has no on-device speech recognizer, so dictation is off. If you accept that the system service may send your audio over the internet, turn off “On-device recognition only”."
+    "onlineOnlyNote": "This phone has no on-device speech recognizer, so dictation is off. If you accept that the system service may send your audio over the internet, turn off “On-device recognition only”.",
+    "engineWhisper": "Whisper on the phone: the audio never leaves it (if it does not fit in memory at that moment, the Android recognizer is used)",
+    "whisperLabel": "Dictation with Whisper (no internet)",
+    "whisperValue": "A voice model of about 145 MB that understands Spanish, English and Portuguese and works on any phone, without relying on the Android recognizer. Once downloaded, dictation uses it first."
   },
   "interfaceSettings": {
     "hapticFeedbackLabel": "Haptic feedback",
@@ -1215,7 +1219,8 @@
     "unavailableMessage": "No on-device speech recognition service was found on this device (common on GrapheneOS / de-Googled builds). Type your question instead.",
     "onlineOnlyMessage": "This phone can’t recognize speech without the internet, and NIDO is set not to send your audio anywhere. Type your question, or allow the system voice service in Settings › Voice (it may send the audio over the internet).",
     "startLabel": "Dictate by voice",
-    "stopLabel": "Stop dictation"
+    "stopLabel": "Stop dictation",
+    "transcribingLabel": "Transcribing on the phone…"
   },
   "tasks": {
     "approvalTitle": "Task request",
@@ -1890,10 +1895,12 @@
             "what": "Dictate your messages and, if you like, hear the answers.",
             "steps": [
               "Tap the microphone in the chat bar and speak.",
+              "To dictate without depending on the phone: $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.voice) → $t(voiceSettings.whisperLabel) → download the model (about 145 MB, only once).",
+              "With Whisper, tap the microphone, speak and tap it again when you finish (or wait 30 seconds): you will see “$t(voiceInputAlert.transcribingLabel)” and the text appears in the box. The audio is deleted afterwards.",
               "To hear answers: $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.voice) → $t(voiceSettings.readAloudLabel).",
               "Under each answer, “$t(chatScreen.listen)” reads it aloud; tap it again to stop."
             ],
-            "tip": "Needs microphone permission. Dictation depends on your device's speech recognition."
+            "tip": "Needs microphone permission. With Whisper downloaded, dictation works on any phone and without internet; if it does not fit in memory at that moment, the Android recognizer is used."
           }
         ]
       },
