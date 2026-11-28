@@ -1042,7 +1042,31 @@ export function ModelSetupScreen(props: Props) {
         )}
         {match(t("modelSetupScreen.sections.voice"), t("voiceSettings.title"), t("voiceSettings.readAloudLabel")) && (
           <AccordionSection key={`9-${searchKey}`} defaultOpen={searching} icon="mic" title={t("modelSetupScreen.sections.voice")}>
-            <VoiceSettings />
+            {(() => {
+              // 0.1.124: Whisper (dictado sin internet) vive en Voz, con la
+              // misma tarjeta y las mismas acciones que el resto del catálogo.
+              const whisper = MODEL_CATALOG.find((m) => m.kind === "speech");
+              return (
+                <VoiceSettings
+                  whisperPresent={whisper ? (getRow(whisper)?.present ?? false) : false}
+                  whisperCard={
+                    whisper ? (
+                      <CatalogItemCard
+                        item={whisper}
+                        row={getRow(whisper)}
+                        isActive={false}
+                        onDownload={download}
+                        onUse={useModel}
+                        onRemove={remove}
+                        onDiscardPartial={discardPartial}
+                        activating={false}
+                        busy={activatingId !== null}
+                      />
+                    ) : undefined
+                  }
+                />
+              );
+            })()}
           </AccordionSection>
         )}
         {!searching && <Text style={styles.groupHeading} accessibilityRole="header">{t("settingsGroups.backup")}</Text>}

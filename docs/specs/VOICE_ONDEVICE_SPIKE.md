@@ -1,7 +1,10 @@
 # Spike — On-device voice via whisper.cpp (advance work, not yet implemented)
 
-**Status:** RESEARCH ONLY (2026-09-27). No code changes. Decision needed before any
-implementation: model size vs accuracy vs download weight.
+**Status:** IMPLEMENTED in 0.1.124 (2026-11-28). Owner's decisions: multilingual
+`base` (~148 MB, not `.en`: ES/PT/EN voice is a requirement) and "Whisper first,
+Android on-device recognizer as fallback" (so section 3 step 6, deleting the system
+path, does NOT apply). See docs/MODELS.md and src/voice/whisperDictation.ts.
+Original research notes below (2026-09-27).
 **Why:** the upstream project's voice path uses the system `SpeechRecognizer`, which may send audio
 to the network when the offline pack is missing. NIDO requires voice that is
 provably on-device. This is also the "Voice" row of the Offline Center spec.

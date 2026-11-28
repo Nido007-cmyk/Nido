@@ -47,7 +47,8 @@
     "react-native": "0.86.3",
     "react-native-safe-area-context": "5.11.1",
     "tweetnacl": "1.0.3",
-    "voice-input": "file:./modules/voice-input"
+    "voice-input": "file:./modules/voice-input",
+    "whisper.rn": "0.7.4"
   },
   "devDependencies": {
     "@react-native/babel-preset": "0.87.1",

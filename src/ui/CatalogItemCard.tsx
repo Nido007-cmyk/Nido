@@ -137,9 +137,12 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
 
   const { t, i18n } = useTranslation();
   const isCorpus = item.kind === "corpus";
+  // 0.1.124: el modelo de voz no se «usa»: con estar descargado, el
+  // dictado lo toma solo (Whisper primero, Android de respaldo).
+  const isSpeech = item.kind === "speech";
   const present = row?.present ?? false;
   const outdated = !present && (row?.outdated ?? false);
-  const effectivelyActive = isCorpus ? present : isActive;
+  const effectivelyActive = isCorpus || isSpeech ? present : isActive;
 
   // INDEX-FIX 2026-10-11: "en tu base de conocimiento" solo cuando el
   // paquete está indexado de verdad, no con solo tener el archivo.
@@ -509,14 +512,14 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
             </Pressable>
           )}
 
-          {present && !isCorpus && !isActive && activating && (
+          {present && !isCorpus && !isSpeech && !isActive && activating && (
             <View style={styles.activeCheckRow}>
               <ActivityIndicator size="small" color={colors.emerald[400]} />
               <Text style={styles.activeNote}>{t("catalogItemCard.loadingModel")}</Text>
             </View>
           )}
 
-          {present && !isCorpus && !isActive && !activating && (
+          {present && !isCorpus && !isSpeech && !isActive && !activating && (
             <Pressable accessibilityRole="button" accessibilityLabel={t("catalogItemCard.selectUse")}
               style={[styles.useBtn, busy && styles.disabled]}
               onPress={() => handleAction(() => onUse(item))}
@@ -552,7 +555,14 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
             </View>
           )}
 
-          {present && !isCorpus && isActive && (
+          {present && isSpeech && (
+            <View style={styles.activeCheckRow}>
+              <NidoIcon name="check" size={14} color={colors.text.accentEmerald} />
+              <Text style={styles.activeNote}>{t("catalogItemCard.speechReadyNote")}</Text>
+            </View>
+          )}
+
+          {present && !isCorpus && !isSpeech && isActive && (
             <View style={styles.activeCheckRow}>
               <NidoIcon name="check" size={14} color={colors.text.accentEmerald} />
               <Text style={styles.activeNote}>{t("catalogItemCard.activeNote")}</Text>

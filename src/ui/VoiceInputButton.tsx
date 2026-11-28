@@ -6,7 +6,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Text, StyleSheet, Animated, Alert, View } from "react-native";
+import { Text, StyleSheet, Animated, Alert, View, ActivityIndicator } from "react-native";
 import { Pressable } from "./components/Pressable";
 import { LinearGradient } from "expo-linear-gradient";
 import { NidoIcon } from "./components/icons/NidoIcon";
@@ -79,6 +79,9 @@ export function VoiceInputButton({ disabled, onTranscript }: Props) {
   const [availability, setAvailability] = useState<VoiceAvailability | null>(null);
   const available = availability == null ? null : availability.available;
   const [listening, setListening] = useState(false);
+  // 0.1.124: con Whisper, entre soltar y el texto hay unos segundos de
+  // transcripción en el teléfono: se ve y no se puede volver a pulsar.
+  const [transcribing, setTranscribing] = useState(false);
   const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -112,6 +115,7 @@ export function VoiceInputButton({ disabled, onTranscript }: Props) {
       );
       return;
     }
+    if (transcribing) return;
     if (listening) {
       await stopListening();
       setListening(false);
@@ -121,10 +125,15 @@ export function VoiceInputButton({ disabled, onTranscript }: Props) {
     try {
       const result = await startListening((event: VoiceEvent) => {
         if (event.type === "error") setListening(false);
+        if (event.type === "transcribing") {
+          setListening(false);
+          setTranscribing(true);
+        }
       });
       if (result) onTranscript(result);
     } finally {
       setListening(false);
+      setTranscribing(false);
     }
   };
 
@@ -135,9 +144,16 @@ export function VoiceInputButton({ disabled, onTranscript }: Props) {
       ))}
       <Animated.View style={{ transform: [{ scale: pulse }] }}>
         <Pressable accessibilityRole="button"
-          accessibilityLabel={listening ? t("voiceInputAlert.stopLabel") : t("voiceInputAlert.startLabel")}
+          accessibilityLabel={
+            transcribing
+              ? t("voiceInputAlert.transcribingLabel")
+              : listening
+                ? t("voiceInputAlert.stopLabel")
+                : t("voiceInputAlert.startLabel")
+          }
+          accessibilityState={{ busy: transcribing }}
           onPress={handlePress}
-          disabled={disabled && !listening}
+          disabled={(disabled && !listening) || transcribing}
           hitSlop={8}
           style={(disabled || available === false) && styles.btnDisabled}
         >
@@ -147,7 +163,9 @@ export function VoiceInputButton({ disabled, onTranscript }: Props) {
             end={{ x: 1, y: 1 }}
             style={styles.btn}
           >
-            {listening ? (
+            {transcribing ? (
+              <ActivityIndicator size="small" color={colors.text.accentEmerald} />
+            ) : listening ? (
               <Text style={styles.icon}>●</Text>
             ) : (
               <NidoIcon name="mic" size={20} color={colors.text.accentEmerald} />

@@ -28,7 +28,12 @@
 import type { ModelCapabilities } from "../routing/types";
 import { DownloadFailure } from "./downloadErrors";
 
-export type AssetKind = "llm" | "embedding" | "corpus";
+/**
+ * 0.1.124 (etapa 3, dictado): "speech" es el modelo de voz a texto
+ * (whisper.cpp, src/voice/whisperDictation.ts). No entra en el chat ni en
+ * la búsqueda: solo lo usa el dictado.
+ */
+export type AssetKind = "llm" | "embedding" | "corpus" | "speech";
 export type SetupTier = "minimum" | "standard" | "full" | "encyclopedia";
 
 /**
@@ -254,6 +259,8 @@ export const PINNED_SOURCE_REPOS: Readonly<Record<string, readonly string[]>> = 
     "bartowski/Qwen2.5-7B-Instruct-GGUF",
     "LiquidAI/LFM2.5-8B-A1B-GGUF",
     "google/gemma-4-E4B-it-qat-q4_0-gguf",
+    // 0.1.124: el modelo de voz a texto del dictado (whisper-base).
+    "ggerganov/whisper.cpp",
   ],
   "raw.githubusercontent.com": ["Nido007-cmyk/Nido"],
   "github.com": ["Nido007-cmyk/Nido"],
@@ -459,6 +466,27 @@ export const MODEL_CATALOG: CatalogModel[] = [
     description: "118M, multilingual sentence embeddings: search in Spanish, Portuguese and English.",
     required: false,
     capabilities: { roles: ["embedding"] },
+  },
+  {
+    // 0.1.124 (etapa 3, decisión del dueño: «Base, ~145 MB» y «Whisper
+    // primero, Android de respaldo»). Whisper base MULTILINGÜE (no el
+    // «.en»): entiende español, inglés y portugués. Lo usa solo el
+    // dictado, en el teléfono y sin internet (whisper.rn, MIT). Opcional:
+    // sin él, el dictado sigue con el reconocedor de Android en el teléfono.
+    // Fijado al commit de Hugging Face cuyos bytes coinciden con el
+    // sha256/sizeBytes (oid LFS leído de su API, 2026-11-28).
+    id: "whisper-base",
+    kind: "speech",
+    label: "Whisper base (multilingual)",
+    filename: "models/whisper-base.bin",
+    sizeBytes: 147951465,
+    sha256: "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe",
+    sourceUrl:
+      "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin",
+    revision: "5359861c739e955e79d9a303bcbc70fb988958b1",
+    license: "MIT",
+    description: "74M, on-device speech to text for dictation in Spanish, English and Portuguese.",
+    required: false,
   },
   {
     id: "qwen2.5-1.5b-instruct-q4km",

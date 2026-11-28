@@ -29,7 +29,15 @@ import {
 // voice-specific — its toggle lives in the Display & Theme section now
 // (ModelSetupScreen.tsx), alongside the rest of the interface/feedback
 // preferences, not here.
-export function VoiceSettings() {
+export function VoiceSettings({
+  whisperPresent = false,
+  whisperCard,
+}: {
+  /** 0.1.124: el modelo de voz Whisper está descargado (el dictado lo usa primero). */
+  whisperPresent?: boolean;
+  /** 0.1.124: la tarjeta del catálogo para descargar o quitar Whisper. */
+  whisperCard?: React.ReactNode;
+} = {}) {
   const { t } = useTranslation();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
@@ -101,7 +109,9 @@ export function VoiceSettings() {
         <View style={{ flex: 1 }}>
           <Text style={styles.rowLabel}>{t("voiceSettings.speechEngineLabel")}</Text>
           <Text style={styles.rowValue}>
-            {engine == null
+            {whisperPresent
+              ? t("voiceSettings.engineWhisper")
+              : engine == null
               ? t("voiceSettings.checking")
               : engine === "onDevice"
                 ? t("voiceSettings.engineOnDevice")
@@ -111,7 +121,16 @@ export function VoiceSettings() {
           </Text>
         </View>
       </View>
-      {engine === "none" && <Text style={styles.note}>{t("voiceSettings.unavailableNote")}</Text>}
+      {engine === "none" && !whisperPresent && <Text style={styles.note}>{t("voiceSettings.unavailableNote")}</Text>}
+
+      {/* 0.1.124: Whisper, el dictado en el teléfono que no depende de Android. */}
+      {whisperCard ? (
+        <View style={{ gap: 6 }}>
+          <Text style={styles.rowLabel}>{t("voiceSettings.whisperLabel")}</Text>
+          <Text style={styles.rowValue}>{t("voiceSettings.whisperValue")}</Text>
+          {whisperCard}
+        </View>
+      ) : null}
 
       {/* Auditoría 2026-10-29: solo el reconocedor del teléfono, salvo que la persona elija otra cosa. */}
       <View style={styles.row}>
@@ -127,7 +146,7 @@ export function VoiceSettings() {
           accessibilityLabel={t("voiceSettings.onDeviceOnlyLabel")}
         />
       </View>
-      {engine === "system" && onDeviceOnly && (
+      {engine === "system" && onDeviceOnly && !whisperPresent && (
         <Text style={styles.note}>{t("voiceSettings.onlineOnlyNote")}</Text>
       )}
 

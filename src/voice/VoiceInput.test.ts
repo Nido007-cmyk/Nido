@@ -56,8 +56,21 @@ vi.mock("../models/settings", () => ({
 
 import { startListening, type VoiceEvent } from "./VoiceInput";
 
+/**
+ * 0.1.124: startListening decide antes el motor (Whisper si su modelo
+ * está; si no, Android) y engancha los oyentes de Android tras esa
+ * comprobación. Se espera a que el nativo arranque antes de emitir, como
+ * pasa de verdad: el reconocedor no emite nada antes de startListening.
+ */
+async function begin(onEvent?: (e: VoiceEvent) => void): Promise<{ p: Promise<string | null> }> {
+  const p = startListening(onEvent);
+  for (let i = 0; i < 20 && nativeFake.startListening.mock.calls.length === 0; i++) await Promise.resolve();
+  return { p };
+}
+
 beforeEach(() => {
   nativeFake.reset();
+  nativeFake.startListening.mockClear();
   vi.useFakeTimers();
 });
 afterEach(() => {
@@ -67,7 +80,7 @@ afterEach(() => {
 describe("startListening (F1 M-4)", () => {
   it("un resultado normal resuelve con el texto y quita los oyentes", async () => {
     const events: VoiceEvent[] = [];
-    const p = startListening((e) => events.push(e));
+    const { p } = await begin((e) => events.push(e));
     nativeFake.emit("onSpeechStart");
     nativeFake.emit("onResults", { text: "hola mundo" });
     await expect(p).resolves.toBe("hola mundo");
@@ -76,7 +89,7 @@ describe("startListening (F1 M-4)", () => {
   });
 
   it("el resultado que llega justo tras el fin de voz también vale (orden Android)", async () => {
-    const p = startListening();
+    const { p } = await begin();
     nativeFake.emit("onSpeechEnd");
     nativeFake.emit("onResults", { text: "tarde pero válido" });
     await expect(p).resolves.toBe("tarde pero válido");
@@ -84,7 +97,7 @@ describe("startListening (F1 M-4)", () => {
 
   it("fin de voz sin resultado ni error: pasado el margen resuelve null y quita los oyentes", async () => {
     const events: VoiceEvent[] = [];
-    const p = startListening((e) => events.push(e));
+    const { p } = await begin((e) => events.push(e));
     nativeFake.emit("onSpeechEnd");
     vi.advanceTimersByTime(1001);
     await expect(p).resolves.toBeNull();
@@ -95,7 +108,7 @@ describe("startListening (F1 M-4)", () => {
   });
 
   it("un error resuelve null y quita los oyentes", async () => {
-    const p = startListening();
+    const { p } = await begin();
     nativeFake.emit("onError", { code: "7", message: "sin coincidencia" });
     await expect(p).resolves.toBeNull();
     expect(nativeFake.listenerCount()).toBe(0);

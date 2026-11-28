@@ -239,12 +239,19 @@ button in `ChatScreen`. No cloud STT API is called.
 **Honest scope note**: this depends on a system-provided recognition service
 (Google's, or an OEM's) being installed on the device. Most stock
 Android/OEM builds ship one; **GrapheneOS and other de-Googled builds
-typically do not**, so voice input won't work there out of the box —
+typically do not**, so without Whisper voice input won't work there —
 `isAvailable()` detects this and the UI shows a clear "unavailable" message
-rather than pretending to listen. A true cross-device guarantee would mean
-bundling a `whisper.cpp` model with a custom binding, which is a project on
-the scale of the `llama.rn` integration itself — documented as future work,
-not attempted in this version. Typing always works everywhere regardless.
+rather than pretending to listen. Typing always works everywhere regardless.
+
+**Whisper (0.1.124)**: the optional catalog entry `whisper-base` (whisper.cpp
+base, multilingual, ~148 MB, MIT) gives dictation that works on any phone
+without the Android recognizer. With it downloaded, dictation records a
+16 kHz mono WAV in the app cache (`modules/voice-input`, `startRecording`),
+transcribes it with `whisper.rn` after the model passes the trust gate, then
+releases the model and deletes the audio (`src/voice/whisperDictation.ts`).
+If Whisper does not fit in the memory free at that moment (~388 MB, the
+figure whisper.cpp publishes for base), dictation falls back to the Android
+on-device recognizer (owner's decision: Whisper first, Android as fallback).
 
 ## Delivery: one-time first-run download
 

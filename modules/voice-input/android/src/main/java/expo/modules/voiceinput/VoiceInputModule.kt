@@ -10,6 +10,9 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioFormat
+import android.media.AudioRecord
+import android.media.MediaRecorder
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -22,6 +25,8 @@ import expo.modules.interfaces.permissions.PermissionsStatus
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import java.io.File
+import java.io.RandomAccessFile
 
 /**
  * Offline speech-to-text via Android's built-in SpeechRecognizer with
@@ -40,18 +45,76 @@ import expo.modules.kotlin.modules.ModuleDefinition
  * startListening(onDeviceOnly) refuses with E_ON_DEVICE_UNAVAILABLE instead
  * of silently falling back to a recognizer that may go online.
  *
- * A cross-device guarantee (e.g. a bundled whisper.cpp model) would need a
- * separate, much larger native binding — not attempted here; see
- * docs/MODELS.md for the honest scope note.
+ * 0.1.124: the cross-device path is whisper.cpp (whisper.rn): this module
+ * only records the WAV it transcribes (startRecording/stopRecording); see
+ * src/voice/whisperDictation.ts and docs/MODELS.md.
  */
 class VoiceInputModule : Module() {
   private var recognizer: SpeechRecognizer? = null
   private val mainHandler = Handler(Looper.getMainLooper())
 
+  // 0.1.124 (dictado con Whisper): grabación PCM 16 kHz mono 16 bits a un
+  // WAV en la caché de la app, solo en el teléfono. La transcribe
+  // whisper.cpp (src/voice/whisperDictation.ts) y el JS borra el fichero
+  // en cuanto termina. Nada sale del teléfono.
+  @Volatile private var recording = false
+  private var recordThread: Thread? = null
+  private var recordPath: String? = null
+  private var recordStartedAt = 0L
+
   override fun definition() = ModuleDefinition {
     Name("VoiceInput")
 
-    Events("onSpeechStart", "onSpeechEnd", "onPartialResults", "onResults", "onError")
+    Events("onSpeechStart", "onSpeechEnd", "onPartialResults", "onResults", "onError", "onRecordLimit")
+
+    // 0.1.124: graba a `path` (WAV 16 kHz mono) hasta stopRecording() o
+    // hasta `maxMs`; al llegar al tope emite onRecordLimit y deja de grabar.
+    AsyncFunction("startRecording") { path: String, maxMs: Int, promise: Promise ->
+      val context = appContext.reactContext
+      if (context == null) {
+        promise.reject("E_NO_CONTEXT", "No React context available", null)
+        return@AsyncFunction
+      }
+      val hasPermission = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.RECORD_AUDIO
+      ) == PackageManager.PERMISSION_GRANTED
+      if (hasPermission) {
+        beginRecording(path, maxMs, promise)
+        return@AsyncFunction
+      }
+      val permissions = appContext.permissions
+      if (permissions == null) {
+        promise.reject("E_NO_PERMISSIONS_MODULE", "Permissions module unavailable", null)
+        return@AsyncFunction
+      }
+      permissions.askForPermissions({ result ->
+        val granted = result[Manifest.permission.RECORD_AUDIO]?.status == PermissionsStatus.GRANTED
+        if (granted) beginRecording(path, maxMs, promise)
+        else promise.reject("E_PERMISSION_DENIED", "Microphone permission denied", null)
+      }, Manifest.permission.RECORD_AUDIO)
+    }
+
+    // Para la grabación y resuelve con { path, durationMs } (o null si no
+    // había ninguna).
+    AsyncFunction("stopRecording") { promise: Promise ->
+      val thread = recordThread
+      val path = recordPath
+      if (thread == null || path == null) {
+        promise.resolve(null)
+        return@AsyncFunction
+      }
+      recording = false
+      Thread {
+        try {
+          thread.join(3000)
+        } catch (_: InterruptedException) {
+        }
+        recordThread = null
+        recordPath = null
+        promise.resolve(mapOf("path" to path, "durationMs" to (System.currentTimeMillis() - recordStartedAt).toDouble()))
+      }.start()
+    }
 
     AsyncFunction("isAvailable") { promise: Promise ->
       val context = appContext.reactContext
@@ -115,6 +178,7 @@ class VoiceInputModule : Module() {
     }
 
     OnDestroy {
+      recording = false
       mainHandler.post {
         recognizer?.destroy()
         recognizer = null
@@ -199,6 +263,85 @@ class VoiceInputModule : Module() {
         promise.reject("E_START_FAILED", e.message ?: "Failed to start listening", e)
       }
     }
+  }
+
+  private fun beginRecording(path: String, maxMs: Int, promise: Promise) {
+    if (recording) {
+      promise.reject("E_BUSY", "Already recording", null)
+      return
+    }
+    val rate = 16000
+    val minBuf = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
+    if (minBuf <= 0) {
+      promise.reject("E_RECORD_UNSUPPORTED", "16 kHz mono recording not supported", null)
+      return
+    }
+    val record = try {
+      AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, minBuf * 4)
+    } catch (e: Exception) {
+      promise.reject("E_RECORD_FAILED", e.message ?: "AudioRecord failed", e)
+      return
+    }
+    if (record.state != AudioRecord.STATE_INITIALIZED) {
+      record.release()
+      promise.reject("E_RECORD_FAILED", "AudioRecord not initialized", null)
+      return
+    }
+    val file = File(path.removePrefix("file://"))
+    file.parentFile?.mkdirs()
+    val out = try {
+      RandomAccessFile(file, "rw").apply { setLength(0); write(ByteArray(44)) }
+    } catch (e: Exception) {
+      record.release()
+      promise.reject("E_RECORD_FAILED", e.message ?: "Cannot open file", e)
+      return
+    }
+    recording = true
+    recordPath = file.absolutePath
+    recordStartedAt = System.currentTimeMillis()
+    val limit = if (maxMs > 0) maxMs.toLong() else 60_000L
+    recordThread = Thread {
+      val buf = ByteArray(minBuf)
+      var dataBytes = 0L
+      var hitLimit = false
+      try {
+        record.startRecording()
+        while (recording) {
+          val n = record.read(buf, 0, buf.size)
+          if (n > 0) {
+            out.write(buf, 0, n)
+            dataBytes += n
+          }
+          if (System.currentTimeMillis() - recordStartedAt >= limit) {
+            hitLimit = true
+            break
+          }
+        }
+      } catch (_: Exception) {
+      } finally {
+        try { record.stop() } catch (_: Exception) {}
+        record.release()
+        try {
+          writeWavHeader(out, dataBytes, rate)
+          out.close()
+        } catch (_: Exception) {}
+        recording = false
+        if (hitLimit) sendEvent("onRecordLimit", mapOf<String, Any?>())
+      }
+    }.also { it.start() }
+    promise.resolve(null)
+  }
+
+  /** Cabecera RIFF/WAVE de 44 bytes para PCM 16 bits mono. */
+  private fun writeWavHeader(out: RandomAccessFile, dataBytes: Long, rate: Int) {
+    val byteRate = rate * 2
+    val h = java.nio.ByteBuffer.allocate(44).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+    h.put("RIFF".toByteArray()); h.putInt((36 + dataBytes).toInt()); h.put("WAVE".toByteArray())
+    h.put("fmt ".toByteArray()); h.putInt(16); h.putShort(1); h.putShort(1)
+    h.putInt(rate); h.putInt(byteRate); h.putShort(2); h.putShort(16)
+    h.put("data".toByteArray()); h.putInt(dataBytes.toInt())
+    out.seek(0)
+    out.write(h.array())
   }
 
   private fun errorMessage(error: Int): String = when (error) {

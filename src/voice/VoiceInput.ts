@@ -11,6 +11,8 @@ import { parseEngineState, voiceAvailability, type VoiceAvailability, type Voice
 export type VoiceEvent =
   | { type: "start" }
   | { type: "end" }
+  /** 0.1.124: Whisper terminó de grabar y está transcribiendo. */
+  | { type: "transcribing" }
   | { type: "partial"; text: string }
   | { type: "result"; text: string }
   | { type: "error"; code: string; message: string };
@@ -20,6 +22,9 @@ interface VoiceInputNativeModule {
   engineState(): Promise<string>;
   startListening(onDeviceOnly: boolean): Promise<void>;
   stopListening(): Promise<void>;
+  /** 0.1.124: grabación WAV 16 kHz mono para Whisper (solo en el teléfono). */
+  startRecording?(path: string, maxMs: number): Promise<void>;
+  stopRecording?(): Promise<{ path: string; durationMs: number } | null>;
   addListener(eventName: string, listener: (event: any) => void): EventSubscription;
 }
 
@@ -41,9 +46,33 @@ export async function voiceEngineState(): Promise<VoiceEngineState> {
   }
 }
 
+/**
+ * 0.1.124: ¿está el modelo de Whisper descargado? (La puerta de confianza
+ * lo comprueba de verdad antes de abrirlo, en transcribeWithWhisper.)
+ */
+export async function whisperModelPresent(): Promise<boolean> {
+  if (!VoiceInputNative?.startRecording) return false;
+  try {
+    const { whisperAsset } = await import("./whisperDictation");
+    const asset = whisperAsset();
+    if (!asset) return false;
+    const FileSystem = await import("expo-file-system/legacy");
+    const info = await FileSystem.getInfoAsync(`${FileSystem.documentDirectory}${asset.filename}`);
+    return info.exists && (info as { size?: number }).size === asset.sizeBytes;
+  } catch {
+    return false;
+  }
+}
+
 /** Si el dictado puede usarse ahora, con el ajuste «solo en el teléfono». */
 export async function voiceInputAvailability(): Promise<VoiceAvailability> {
-  const [state, onDeviceOnly] = await Promise.all([voiceEngineState(), getVoiceOnDeviceOnly().catch(() => true)]);
+  const [state, onDeviceOnly, whisper] = await Promise.all([
+    voiceEngineState(),
+    getVoiceOnDeviceOnly().catch(() => true),
+    whisperModelPresent(),
+  ]);
+  // 0.1.124: Whisper es en el teléfono por construcción.
+  if (whisper) return { available: true, onDevice: true };
   return voiceAvailability(state, onDeviceOnly);
 }
 
@@ -73,7 +102,76 @@ export async function isVoiceInputAvailable(): Promise<boolean> {
  */
 const END_GRACE_MS = 1000;
 
-export function startListening(onEvent?: (event: VoiceEvent) => void): Promise<string | null> {
+/** 0.1.124: la sesión de Whisper en curso (para que stopListening la pare). */
+let whisperSession: { stop: () => void } | null = null;
+
+/**
+ * 0.1.124 (decisión del dueño: «Whisper primero, Android de respaldo»):
+ * Whisper si su modelo está descargado y cabe en la memoria de ahora; si
+ * no, el reconocedor de Android como hasta ahora.
+ */
+export async function startListening(onEvent?: (event: VoiceEvent) => void): Promise<string | null> {
+  if (!VoiceInputNative) return null;
+  if (await whisperModelPresent()) {
+    const { whisperAsset, whisperFitsNow } = await import("./whisperDictation");
+    const { readRamSnapshot } = await import("../inference/ramBudget");
+    const asset = whisperAsset();
+    if (asset && whisperFitsNow(readRamSnapshot(), asset.sizeBytes)) {
+      return listenWithWhisper(onEvent);
+    }
+  }
+  return listenWithAndroid(onEvent);
+}
+
+function listenWithWhisper(onEvent?: (event: VoiceEvent) => void): Promise<string | null> {
+  const native = VoiceInputNative!;
+  return new Promise((resolve) => {
+    let finished = false;
+    let limitSub: EventSubscription | null = null;
+    const done = (text: string | null) => {
+      if (finished) return;
+      finished = true;
+      limitSub?.remove();
+      whisperSession = null;
+      resolve(text);
+    };
+    const stopAndTranscribe = async () => {
+      if (whisperSession === null) return;
+      whisperSession = null;
+      try {
+        const rec = await native.stopRecording!();
+        onEvent?.({ type: "end" });
+        if (!rec) return done(null);
+        onEvent?.({ type: "transcribing" });
+        const { transcribeWithWhisper } = await import("./whisperDictation");
+        const i18n = (await import("../i18n")).default as { language?: string };
+        const text = await transcribeWithWhisper(rec.path, { uiLanguage: i18n.language });
+        onEvent?.({ type: "result", text });
+        done(text.length > 0 ? text : null);
+      } catch (e) {
+        onEvent?.({ type: "error", code: "whisper", message: e instanceof Error ? e.message : String(e) });
+        done(null);
+      }
+    };
+    void (async () => {
+      try {
+        const FileSystem = await import("expo-file-system/legacy");
+        const { dictationWavPath, WHISPER_MAX_RECORD_MS } = await import("./whisperDictation");
+        const path = dictationWavPath(FileSystem.cacheDirectory ?? "");
+        limitSub = native.addListener("onRecordLimit", () => void stopAndTranscribe());
+        whisperSession = { stop: () => void stopAndTranscribe() };
+        await native.startRecording!(path, WHISPER_MAX_RECORD_MS);
+        onEvent?.({ type: "start" });
+      } catch (e) {
+        whisperSession = null;
+        onEvent?.({ type: "error", code: "record", message: e instanceof Error ? e.message : String(e) });
+        done(null);
+      }
+    })();
+  });
+}
+
+function listenWithAndroid(onEvent?: (event: VoiceEvent) => void): Promise<string | null> {
   if (!VoiceInputNative) return Promise.resolve(null);
 
   return new Promise((resolve) => {
@@ -117,5 +215,10 @@ export function startListening(onEvent?: (event: VoiceEvent) => void): Promise<s
 
 export async function stopListening(): Promise<void> {
   if (!VoiceInputNative) return;
+  // 0.1.124: con Whisper, parar es «termina de grabar y transcribe».
+  if (whisperSession) {
+    whisperSession.stop();
+    return;
+  }
   await VoiceInputNative.stopListening().catch(() => {});
 }

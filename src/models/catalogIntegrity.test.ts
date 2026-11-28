@@ -206,6 +206,8 @@ describe("real MODEL_CATALOG — every entry passes the pre-network gate", () =>
       "phi-3.5-mini-instruct-q4km": "MIT",
       "bge-small-en-v1.5-q8": "MIT",
       "multilingual-e5-small-q8": "MIT",
+      // 0.1.124: whisper.cpp (ggerganov/whisper.cpp, licencia MIT en su ficha de Hugging Face).
+      "whisper-base": "MIT",
       "qwen2.5-1.5b-instruct-q4km": "Apache-2.0",
       "qwen2.5-0.5b-instruct-q4km": "Apache-2.0",
       "qwen2.5-0.5b-instruct-q5km": "Apache-2.0",
