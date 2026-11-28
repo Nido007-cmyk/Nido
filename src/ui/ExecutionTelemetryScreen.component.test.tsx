@@ -196,8 +196,8 @@ describe("ExecutionTelemetryScreen · 0.1.84 rechazos de memoria", () => {
     const { ExecutionTelemetryScreen } = require("./ExecutionTelemetryScreen");
     await render(<ExecutionTelemetryScreen onClose={() => {}} />);
     expect(await screen.findByText("models/qwen3-0.6b-q4km.gguf")).toBeTruthy();
-    expect(screen.getByText("731MB")).toBeTruthy(); // lo que necesitaba
-    expect(screen.getByText("614MB")).toBeTruthy(); // lo disponible
+    expect(screen.getByText("731 MB")).toBeTruthy(); // lo que necesitaba
+    expect(screen.getByText("614 MB")).toBeTruthy(); // lo disponible
     expect(screen.getByText("2048 / 4096")).toBeTruthy(); // contexto elegido / pedido
     expect(screen.getByText("65%")).toBeTruthy(); // freno del CrashGuard
     expect(screen.queryByText("executionTelemetry.rejections.empty")).toBeNull();

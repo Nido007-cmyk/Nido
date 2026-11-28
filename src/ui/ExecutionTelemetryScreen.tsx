@@ -59,7 +59,7 @@ function formatMs(ms: number | undefined): string {
 
 function formatMB(bytes: number | undefined): string {
   if (bytes == null) return "—";
-  return `${(bytes / (1024 * 1024)).toFixed(0)}MB`;
+  return `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
 }
 
 function residencyIcon(residency: ExecutionTelemetryRecord["modelResidency"]): string {
@@ -643,10 +643,15 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   metaText: { ...typography.mono.xs, fontSize: 10, color: colors.text.dim },
   metaDot: { color: colors.text.dim, fontFamily: fontFamilies.sans, fontSize: 10 },
   adaptiveTag: { flexDirection: "row", alignItems: "center", gap: calmSpacing.tight },
-  statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: calmSpacing.cozy },
-  statCell: { minWidth: 70 },
+  // 0.1.119 (foto del dueño, Tab A9+ con letra grande): las etiquetas
+  // (monoespaciada de 8 px, sin ancho) se salían de su casilla y se
+  // montaban sobre la siguiente («Total RAM App in use Free now…»), y no
+  // se sabía qué cifra era cuál. Ahora es una cuadrícula de casillas del
+  // mismo ancho (tres por fila) y cada etiqueta parte en su casilla.
+  statsGrid: { flexDirection: "row", flexWrap: "wrap", rowGap: calmSpacing.cozy },
+  statCell: { width: "33.33%", paddingRight: 8, gap: 2 },
   statValue: { ...typography.mono.sm, color: colors.text.primary, fontWeight: "700", fontVariant: ["tabular-nums"] },
-  statLabel: { ...typography.mono.xs, fontSize: 8, color: colors.text.dim },
+  statLabel: { ...typography.ui.caption, color: colors.text.secondary },
   timestamp: { ...typography.mono.xs, fontSize: 8, color: colors.text.dim, textAlign: "right" },
   routerCard: {},
   emptyInline: { paddingVertical: calmSpacing.comfortable },

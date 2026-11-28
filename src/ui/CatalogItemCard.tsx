@@ -10,7 +10,7 @@ import { Pressable } from "./components/Pressable";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
 import { useTranslation } from "react-i18next";
 import { CatalogModel } from "../models/manifest";
-import { computeCompatibilityDetail, residentReleasableBytes, type Compatibility } from "../models/compatibility";
+import { computeCompatibilityDetail, residentReleasableBytes, type Compatibility, type CompatibilityDetail } from "../models/compatibility";
 import { defaultLlmForRam } from "../models/defaultModel";
 import type { LlmMemoryProfile } from "../inference/LlamaEngine";
 import { readRamSnapshot, type RamSnapshot } from "../inference/ramBudget";
@@ -218,7 +218,7 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
           // varas de medir en la misma pantalla.
           canonicalFloor: isActive && residentCredit <= 0 && (residentLoaded ?? residentLoad != null),
         })
-      : ({ color: "unknown" } as { color: Compatibility; redSource?: "device" | "moment" });
+      : ({ color: "unknown" } as CompatibilityDetail);
   const compatibility = compatDetail.color;
   // Rojo de APARATO: ni en vacío cabe; manda la conducta histórica
   // (sin botón de descarga, avisos acotados). Rojo de MOMENTO: la
@@ -342,7 +342,17 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
           {compatibility === "yellow" && (
             <View style={[styles.compatPill, styles.compatAmber]}>
               <NidoIcon name="warning" size={12} color={colors.text.accentAmber} />
-              <Text style={styles.compatAmberText}>{t("catalogItemCard.compat.yellow")}</Text>
+              {/* 0.1.119: el amarillo dice lo que pasa de verdad — el
+                  contexto con el que carga, de cuántos, y si va
+                  comprimido — en lugar de «necesita mucha memoria». */}
+              <Text style={styles.compatAmberText}>
+                {compatDetail.yellow
+                  ? t(
+                      `catalogItemCard.compat.${compatDetail.yellow.source === "moment" ? "yellowNow" : "yellowDevice"}${compatDetail.yellow.kvCompressed ? "Q8" : ""}`,
+                      { ctx: String(compatDetail.yellow.nCtx), max: String(compatDetail.yellow.ceiling) },
+                    )
+                  : t("catalogItemCard.compat.yellow")}
+              </Text>
             </View>
           )}
           {compatibility === "red" && (
