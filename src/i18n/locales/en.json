@@ -93,7 +93,8 @@
     "updateAsset": "⬆️ Update",
     "outdatedNote": "A newer version of this pack is available. Until then the one you have keeps working, offline too; the new one only replaces it once it has finished downloading and been verified.",
     "measuredRowSpeed": "{{rate}} tok/s here",
-    "measuredBasis": "The median of this model's last {{count}} generations on this device"
+    "measuredBasis": "The median of this model's last {{count}} generations on this device",
+    "provenHere": "Tested on this device: it answered with {{ctx}} tokens of context"
   },
   "modelLoadErrorCard": {
     "corrupt": {
@@ -1960,8 +1961,10 @@
             "steps": [
               "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.models).",
               "If a model has already answered on this phone, its card shows the speed measured here: the median of its last generations on this device, with the timings the engine itself measures. For choosing, that counts for more than any catalog figure.",
+              "Once a model has answered on this phone, its card also says how much conversation memory it used (“Tested on this device”). It is what really happened here; it does not change which models you can load.",
               "The yellow badge says how much conversation memory the model runs with right now (for example, 1024 of 2048 tokens). If you close other apps and memory frees up, it can turn green.",
-              "“$t(modelSetupScreen.benchTitle)” measures the loaded model three times: it shows the reading and writing speed with their range, and how long it took to load."
+              "“$t(modelSetupScreen.benchTitle)” measures the loaded model three times: it shows the reading and writing speed with their range, and how long it took to load.",
+              "The first time the assistant uses its tools (reminders, memory, notes) with a model, NIDO saves on the phone its reading of the app's fixed instructions (never your memory or your conversations). The next time you open the app, those requests start answering sooner. Erasing everything and the panic button delete it."
             ],
             "tip": "If answers take too long or the app closes, try a smaller model."
           },

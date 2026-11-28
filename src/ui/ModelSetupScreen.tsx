@@ -148,6 +148,7 @@ export function ModelSetupScreen(props: Props) {
   // telemetría persistida en cada refresco: es cuando una generación
   // nueva puede haber movido la mediana.
   const [speedByModel, setSpeedByModel] = useState<Record<string, ModelSpeedSummary>>({});
+  const [provenByModel, setProvenByModel] = useState<Record<string, number>>({});
   // 0.1.108: la carga residente REAL (del motor: contexto cargado y
   // perfil aceptado) para que la tarjeta del activo aplique el
   // crédito liberable de la carga. Se relee en cada render de la
@@ -269,6 +270,8 @@ export function ModelSetupScreen(props: Props) {
     // sin velocidad que enseñar).
     const summaries = await modelSpeedSummaries();
     setSpeedByModel(Object.fromEntries(summaries.map((s) => [s.modelId, s])));
+    // 0.1.122: los contextos con que cada modelo ya respondió aquí.
+    setProvenByModel(await llamaEngine.provenContexts().catch(() => ({})));
     const statuses = await modelManager.statusAll();
     setPresence(Object.fromEntries(statuses.map((s) => [s.asset.id, s.present])));
     setOutdatedIds(Object.fromEntries(statuses.map((s) => [s.asset.id, s.outdated === true])));
@@ -913,6 +916,7 @@ export function ModelSetupScreen(props: Props) {
                   residentLoad={residentLoad}
                   residentLoaded={residentInfo != null}
                   speedSummary={speedByModel[item.filename.split("/").pop() ?? item.filename] ?? null}
+                  provenCtx={provenByModel[item.filename.split("/").pop() ?? item.filename] ?? null}
                 />
               )}
             />

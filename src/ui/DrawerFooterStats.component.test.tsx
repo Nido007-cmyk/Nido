@@ -66,7 +66,8 @@ jest.mock("react-i18next", () => ({
 
 const GB = 1024 * 1024 * 1024;
 jest.mock("ram-monitor", () => ({
-  // La Tab A9+ del dueño: 1,2 GB residentes del proceso, 8 GB totales.
+  // Un aparato de 8 GB con 1,2 GB residentes del proceso. (No es la Tab A9+
+  // del dueño: esa tiene 3416 MiB de RAM total real, la de sus fotos.)
   getMemoryInfo: () => ({ rssBytes: 1.2 * GB, totalPssBytes: 1.3 * GB }),
   getDeviceTotalRamBytes: () => 8 * GB,
 }));

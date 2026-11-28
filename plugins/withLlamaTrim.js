@@ -22,7 +22,8 @@
  * los assets HTP se extraen con fallo blando (try/catch con
  * `Log.w`). El censo de variantes no cambió entre rc.7 y rc.11
  * (tanda T-22, 2026-11-14): las mismas 7 parejas arm64 y los mismos
- * 5 assets HTP (v73/v75/v79/v81/v85).
+ * 5 assets HTP (v73/v75/v79/v81/v85). La rc.12 (0.1.122) trae el
+ * mismo censo de jniLibs que la rc.9, fichero a fichero.
  *
  * VEL-5 (2026-11-22, orden del dueño; mapa en
  * ESTUDIO-CODIGO-POCKETPAL §6): la pareja y los assets VUELVEN al

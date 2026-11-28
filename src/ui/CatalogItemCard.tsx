@@ -117,9 +117,15 @@ interface Props {
    * muestras) la tarjeta no pinta nada: el «sin datos» es ausencia.
    */
   speedSummary?: ModelSpeedSummary | null;
+  /**
+   * 0.1.122 (decisión del dueño: «solo informar»): el mayor contexto con
+   * el que este modelo respondió en ESTE aparato (provenLoads.ts). Es una
+   * medida, no una promesa: nunca cambia qué se deja cargar.
+   */
+  provenCtx?: number | null;
 }
 
-export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemove, onDiscardPartial, activating, busy, residentLoad, residentLoaded, speedSummary }: Props) {
+export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemove, onDiscardPartial, activating, busy, residentLoad, residentLoaded, speedSummary, provenCtx }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
@@ -371,6 +377,13 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
       {speedSummary?.medianTokPerSec != null && (
         <Text style={styles.measuredBasis}>
           {t("catalogItemCard.measuredBasis", { count: speedSummary.sampleCount })}
+        </Text>
+      )}
+
+      {/* 0.1.122: la prueba real en este aparato, con su contexto. */}
+      {provenCtx != null && provenCtx > 0 && (
+        <Text style={styles.measuredBasis} testID="catalog-proven-ctx">
+          {t("catalogItemCard.provenHere", { ctx: String(provenCtx) })}
         </Text>
       )}
 

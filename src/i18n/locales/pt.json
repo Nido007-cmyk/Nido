@@ -93,7 +93,8 @@
     "updateAsset": "⬆️ Atualizar",
     "outdatedNote": "Há uma versão mais nova deste pacote. Enquanto isso, a que você tem continua funcionando, também sem conexão; a nova só a substitui quando terminar de baixar e for verificada.",
     "measuredRowSpeed": "{{rate}} tok/s aqui",
-    "measuredBasis": "A mediana das últimas {{count}} gerações deste modelo neste aparelho"
+    "measuredBasis": "A mediana das últimas {{count}} gerações deste modelo neste aparelho",
+    "provenHere": "Testado neste aparelho: respondeu com {{ctx}} tokens de contexto"
   },
   "modelLoadErrorCard": {
     "corrupt": {
@@ -1960,8 +1961,10 @@
             "steps": [
               "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.models).",
               "Se um modelo já respondeu neste telefone, o cartão dele mostra a velocidade medida aqui: a mediana das últimas gerações dele neste aparelho, com os tempos que o próprio motor mede. Para escolher, isso vale mais do que qualquer número de catálogo.",
+              "Quando um modelo já respondeu neste telefone, o cartão dele também diz com quanta memória de conversa fez isso («Testado neste aparelho»). É o que aconteceu de verdade aqui; não muda quais modelos você pode carregar.",
               "A etiqueta amarela diz com quanta memória de conversa o modelo funciona agora (por exemplo, 1024 de 2048 tokens). Se você fechar outros apps e a memória liberar, ela pode ficar verde.",
-              "«$t(modelSetupScreen.benchTitle)» mede o modelo carregado três vezes: mostra a velocidade de leitura e de escrita com o intervalo, e quanto tempo levou para carregar."
+              "«$t(modelSetupScreen.benchTitle)» mede o modelo carregado três vezes: mostra a velocidade de leitura e de escrita com o intervalo, e quanto tempo levou para carregar.",
+              "Na primeira vez que o assistente usa as ferramentas dele (lembretes, memória, notas) com um modelo, o NIDO guarda no telefone a leitura das instruções fixas do app (nunca a sua memória nem as suas conversas). Na próxima vez que você abrir o app, esses pedidos começam a responder antes. O apagamento total e o botão de pânico a eliminam."
             ],
             "tip": "Se as respostas demoram muito ou o app fecha, tente um modelo menor."
           },

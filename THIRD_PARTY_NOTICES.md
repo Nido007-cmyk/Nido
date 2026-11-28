@@ -9,7 +9,7 @@ The list covers every package that `package-lock.json` does not mark as developm
 
 AI models are not part of the app: they are downloaded separately and keep their own licenses. Two of NIDO's own knowledge packs ship inside the APK since 0.1.95 (NIDO Essentials and NIDO Local, CC BY 4.0); the other packs are downloaded separately. All of them keep their own licenses (see [ATTRIBUTION.md](ATTRIBUTION.md) and `docs/release/MODEL_LICENSE_AUDIT.md`). Android libraries resolved by Gradle at build time (AndroidX, Kotlin, SQLCipher and their dependencies) do not come from npm: since 0.1.55 the exact list for each build is attached to its GitHub release as `android-runtime-dependencies.txt` (see below).
 
-Source: `package-lock.json sha256:054c4d249e29` · 590 packages.
+Source: `package-lock.json sha256:4c50fce4de9b` · 590 packages.
 
 ## License elections
 
@@ -404,7 +404,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | lightningcss-linux-x64-musl | 1.33.0 | MPL-2.0 |
 | lightningcss-win32-arm64-msvc | 1.33.0 | MPL-2.0 |
 | lightningcss-win32-x64-msvc | 1.33.0 | MPL-2.0 |
-| llama.rn | 0.13.0-rc.9 | MIT |
+| llama.rn | 0.13.0-rc.12 | MIT |
 | locate-path | 5.0.0 | MIT |
 | lodash.debounce | 4.0.8 | MIT |
 | lodash.throttle | 4.1.1 | MIT |
@@ -3387,6 +3387,32 @@ SOFTWARE.
 The MIT License (MIT)
 
 Copyright (c) 2025-present 650 Industries, Inc. (aka Expo)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+### @expo/router-server@57.0.15 — LICENSE
+
+```text
+The MIT License (MIT)
+
+Copyright (c) 2015-present 650 Industries, Inc. (aka Expo)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -8396,6 +8422,32 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+### expo-constants@57.0.24 — LICENSE
+
+```text
+The MIT License (MIT)
+
+Copyright (c) 2015-present 650 Industries, Inc. (aka Expo)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ### expo-contacts@57.0.9 — LICENSE
 
 ```text
@@ -8475,6 +8527,32 @@ SOFTWARE.
 ```
 
 ### expo-file-system@57.0.7 — LICENSE
+
+```text
+The MIT License (MIT)
+
+Copyright (c) 2015-present 650 Industries, Inc. (aka Expo)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+### expo-font@57.0.4 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -11972,7 +12050,7 @@ Ships no license file; same project, copyright holder and license as `lightningc
 
 Ships no license file; same project, copyright holder and license as `lightningcss`, whose notice applies (see above).
 
-### llama.rn@0.13.0-rc.9 — LICENSE
+### llama.rn@0.13.0-rc.12 — LICENSE
 
 ```text
 MIT License
@@ -11997,7 +12075,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### llama.rn@0.13.0-rc.9 — vendor/OpenCL-Headers/LICENSE
+### llama.rn@0.13.0-rc.12 — vendor/OpenCL-Headers/LICENSE
 
 ```text
 Apache License
@@ -12203,7 +12281,7 @@ Apache License
    limitations under the License.
 ```
 
-### llama.rn@0.13.0-rc.9 — vendor/codec.cpp/LICENSE
+### llama.rn@0.13.0-rc.12 — vendor/codec.cpp/LICENSE
 
 ```text
 MIT License
@@ -12229,7 +12307,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### llama.rn@0.13.0-rc.9 — vendor/llama.cpp/LICENSE
+### llama.rn@0.13.0-rc.12 — vendor/llama.cpp/LICENSE
 
 ```text
 MIT License
@@ -17829,14 +17907,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
 These packages declare a license in their `package.json` but ship no license file; the declared license applies. Most are build tools that do not end up in the APK.
 
-- @expo/router-server@57.0.15
 - @expo/sdk-runtime-versions@1.0.0
 - @react-native/debugger-frontend@0.86.3
 - babel-plugin-react-compiler@1.0.0
 - bplist-parser@0.3.1
 - bser@2.1.1
-- expo-constants@57.0.24
-- expo-font@57.0.4
 - fb-dotslash@0.5.8
 - fb-watchman@2.0.2
 - imurmurhash@0.1.4

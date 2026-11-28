@@ -69,6 +69,7 @@ jest.mock("../inference/LlamaEngine", () => ({
     probeNpuDevice: jest.fn(async () => mockNpuDevice),
     getModelInfo: () => mockResidentInfo,
     benchLoadedModel: async () => null,
+    provenContexts: async () => ({}),
   },
   BenchUnavailableError: class BenchUnavailableError extends Error {},
   BenchTimeoutError: class BenchTimeoutError extends Error {},

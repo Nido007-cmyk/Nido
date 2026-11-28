@@ -104,6 +104,11 @@ export const DOC_LEFTOVER_FILES = new Set([
   //   anterior: muere con él. Su copia en memoria se olvida en el
   //   paso 3 (resetNativeSessionMemory, junto a la del CrashGuard).
   "nido-native-session.json",
+  // - Las cargas probadas en este aparato (0.1.122, provenLoads.ts):
+  //   nombre de modelo → mayor contexto con que respondió. Sin datos del
+  //   usuario; su copia en memoria se olvida en el paso 3
+  //   (resetProvenLoadsMemory).
+  "nido-proven-loads.json",
   // - La traza del último crash que el módulo nativo ram-monitor
   //   escribe en la raíz de filesDir (Kotlin): el borrado JS no lo
   //   veía porque ningún código TS lo nombraba.
@@ -418,6 +423,7 @@ async function resetAllAppDataInner(): Promise<void> {
     // mismo singleton y con la misma copia en memoria; su olvido va
     // con el del CrashGuard, junto a la degradación de la sesión.
     llamaEngine.resetNativeSessionMemory();
+    llamaEngine.resetProvenLoadsMemory();
   } catch {
     /* motor sin CrashGuard (tests): nada en memoria */
   }
