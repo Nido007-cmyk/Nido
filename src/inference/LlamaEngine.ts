@@ -807,13 +807,34 @@ export class LlamaEngine {
   private async systemKeepTokens(messages: ChatMessageInput[] | undefined): Promise<number | undefined> {
     const first = messages?.[0];
     if (!first || first.role !== "system" || typeof first.content !== "string" || first.content.length === 0) return undefined;
-    const ctx = this.context as { tokenize?: (t: string) => Promise<{ tokens: unknown[] }> } | null;
+    const ctx = this.context as {
+      tokenize?: (t: string) => Promise<{ tokens: unknown[] }>;
+      getFormattedChat?: (m: unknown[], t?: string | null, p?: Record<string, unknown>) => Promise<unknown>;
+    } | null;
     if (!ctx || typeof ctx.tokenize !== "function") return undefined;
     if (this.nKeepCache && this.nKeepCache.context === ctx && this.nKeepCache.text === first.content) {
       return keepTokensFor(this.nKeepCache.tokens, this.modelInfo?.nCtx);
     }
     try {
-      const r = await ctx.tokenize(first.content);
+      // 0.1.124 (auditoría S-3): se cuenta sobre el prompt FORMATEADO por
+      // la plantilla real, desde el principio hasta el final del texto del
+      // sistema: así entra lo que la plantilla pone delante (cabecera,
+      // marcas de turno, texto propio), sea lo largo que sea. Antes se
+      // tokenizaba el texto crudo y se confiaba en un margen fijo de 16
+      // tokens; una plantilla con más envoltura habría dejado fuera la
+      // cola del prompt del sistema. El crudo queda solo de respaldo.
+      let text = first.content;
+      if (typeof ctx.getFormattedChat === "function") {
+        try {
+          const r = await ctx.getFormattedChat([first], null, { jinja: true });
+          const prompt = typeof r === "string" ? r : typeof (r as { prompt?: unknown })?.prompt === "string" ? (r as { prompt: string }).prompt : "";
+          const at = prompt.indexOf(first.content);
+          if (at >= 0) text = prompt.slice(0, at + first.content.length);
+        } catch {
+          // Plantilla que no formatea un sistema suelto: respaldo crudo.
+        }
+      }
+      const r = await ctx.tokenize(text);
       const tokens = Array.isArray(r?.tokens) ? r.tokens.length : 0;
       if (tokens <= 0) return undefined;
       this.nKeepCache = { context: ctx, text: first.content, tokens };
@@ -2375,7 +2396,10 @@ export const llamaEngine = new LlamaEngine();
  * plantilla de chat envuelve el texto con sus marcas (p. ej.
  * «<|im_start|>system\n» … «<|im_end|>»). Guardar unos tokens de más solo
  * conserva el principio del primer mensaje; guardar de menos cortaría el
- * final del prompt de seguridad.
+ * final del prompt de seguridad. 0.1.124 (S-3): la cabecera de la
+ * plantilla ya va contada (systemKeepTokens cuenta el prompt formateado);
+ * el margen cubre el BOS que añade la completion, la marca de cierre del
+ * turno y el posible empalme de tokens en el corte.
  */
 export const N_KEEP_TEMPLATE_MARGIN = 16;
 
