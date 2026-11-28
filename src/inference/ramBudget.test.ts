@@ -600,5 +600,17 @@ describe("caché de estados entre turnos (0.1.121)", () => {
     expect(stateCacheBudgetMb(6 * GiB)).toBe(64);
     expect(stateCacheBudgetMb(8 * GiB)).toBe(160);
     expect(stateCacheBudgetMb(null)).toBe(160);
+    // 0.1.123 (auditoría, BAJA): por debajo de 4096 el tope escala con el
+    // contexto cargado y queda dentro de la holgura del arch del LFM2.5
+    // (~36 MiB por cada 1024 tokens).
+    expect(stateCacheBudgetMb(3416 * MiB, 1024)).toBe(16);
+    expect(stateCacheBudgetMb(3416 * MiB, 2048)).toBe(32);
+    expect(stateCacheBudgetMb(3416 * MiB, 4096)).toBe(64);
+    expect(stateCacheBudgetMb(8 * GiB, 8192)).toBe(160);
+    expect(stateCacheBudgetMb(8 * GiB, 2048)).toBe(80);
+    expect(stateCacheBudgetMb(3416 * MiB, 128)).toBe(8);
+    for (const ctx of [1024, 2048, 3072, 4096]) {
+      expect(stateCacheBudgetMb(3416 * MiB, ctx)).toBeLessThanOrEqual((36 * ctx) / 1024);
+    }
   });
 });

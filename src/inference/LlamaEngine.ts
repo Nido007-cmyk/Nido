@@ -36,17 +36,16 @@ import {
   confirmCrashGuardRecord,
   EMERGENCY_CONTEXT,
   parseCrashGuardRecord,
-  planContext,
+  planModelLoad,
   settleCrashGuardRecord,
   type CrashGuardRecord,
-  type LadderPlan,
 } from "./memoryLadder";
 import { assertTrustedModelFileByName } from "../models/modelTrust";
 import { htpAcceleratesQuant, MODEL_CATALOG, openClAcceleratesQuant, type CatalogModel } from "../models/manifest";
 import { contextCeilingForDevice } from "../models/defaultModel";
 import { currentDevicePressure } from "./devicePressure";
 import { withStage } from "../utils/stageError";
-import { fromNativeTimings, writeRate, type NativeTimings } from "./nativeTimings";
+import { fromNativeTimings, generatedTokens, sealedWriteRate, type NativeTimings } from "./nativeTimings";
 import { recordInferenceEvent, recordRamRejection, type TelemetryStopReason } from "./telemetry";
 import { findRepetitionLoop, trimRepetitionLoop } from "./repetitionGuard";
 import { nativeGateBegin, nativeGateEnd, withNativeLoadGate } from "./nativeGate";
@@ -827,6 +826,22 @@ export class LlamaEngine {
     return this.lastNativeTimings;
   }
   /**
+   * 0.1.123 (auditoría, sospecha de «Última respuesta»): las cifras de la
+   * ÚLTIMA generación que se vio escribirse (llevaba onToken y escribió al
+   * menos un token), con su tasa en la vara sellada. lastGenerationTimings
+   * es de la última generación de cualquier tipo: un juez o una
+   * comprobación interna después de la respuesta la pisaba, y «Última
+   * respuesta» enseñaba las cifras de otra generación. La pantalla abre
+   * cada turno con beginVisibleTurn() para no heredar las del anterior.
+   */
+  private lastVisible: { timings: NativeTimings | null; tokensPerSec: number | null } | null = null;
+  get lastVisibleGeneration(): { timings: NativeTimings | null; tokensPerSec: number | null } | null {
+    return this.lastVisible;
+  }
+  beginVisibleTurn(): void {
+    this.lastVisible = null;
+  }
+  /**
    * M-39: contador de paradas pedidas con stop(). generateOnce toma una
    * foto al arrancar: si el contador se movió al asentarse, ESTA
    * generación fue parada desde fuera (usuario o timeout ya tiene su
@@ -902,6 +917,33 @@ export class LlamaEngine {
     const { record, safety } = settleCrashGuardRecord(before, { modelAlive: this.context !== null });
     if (record !== before) await this.crashGuardWrite(record);
     return safety;
+  }
+
+  /**
+   * 0.1.123 (auditoría E-1): el factor del CrashGuard con que se
+   * planificaría la PRÓXIMA carga, sin escribir nada (el asentamiento
+   * puro, el mismo de crashGuardSettle). La insignia lo usa para
+   * planificar con el mismo presupuesto que la carga. Si el cruce de la
+   * sesión nativa aún no corrió en este proceso, se predice igual que lo
+   * contaría la carga (un cierre nativo o por memoria suma un choque),
+   * pero sin escribir ni retener nada: eso lo sigue haciendo la carga.
+   */
+  async predictedCrashSafety(): Promise<number> {
+    try {
+      let record = await this.crashGuardRead();
+      if (!this.nativeSessionCrossDone) {
+        const session = await this.nativeSessionRead();
+        if (session) {
+          const cross = crossNativeSessionRecord(session, recentExitsInfo());
+          if (cross.countedNativeCrash || cross.countedLowMemoryDeath) {
+            record = { crashes: Math.min(record.crashes + 1, 10), pending: null };
+          }
+        }
+      }
+      return settleCrashGuardRecord(record, { modelAlive: this.context !== null }).safety;
+    } catch {
+      return 1;
+    }
   }
 
   /** Deja el intento en vuelo persistido ANTES de crear el contexto. */
@@ -1361,9 +1403,6 @@ export class LlamaEngine {
         return;
       }
     }
-    // 0.1.121: tope de la caché de estados entre turnos (modelos
-    // híbridos o de ventana; ver stateCacheBudgetMb).
-    const stateCacheMb = stateCacheBudgetMb(liveSnapshot?.totalRamBytes ?? snapshot?.totalRamBytes ?? null);
     const specBase = {
       fileSizeBytes,
       nLayer: catalogEntry?.arch?.nLayer,
@@ -1388,34 +1427,20 @@ export class LlamaEngine {
     // para el que acabe aceptando llama.cpp.
     let pinnedProfile: LlmMemoryProfile | null = null;
     if (!explicitCtx && snapshot) {
-      const ladderCeiling = nCtx;
-      const plan = planContext(specBase, snapshot, { ceiling: ladderCeiling, safety: crashSafety });
-      if (plan) {
-        nCtx = plan.nCtx;
-        verdict = plan.verdict;
-        contextNote = plan.note;
-      }
-      if (plan && plan.nCtx === EMERGENCY_CONTEXT) {
-        const q8Plan: LadderPlan | null = planContext(
-          { ...specBase, kvBytesPerElement: KV_Q8_BYTES_PER_ELEMENT },
-          snapshot,
-          // 0.1.86: the second call keeps the ceiling the ladder plan
-          // was judged under (ladderCeiling), not the emergency
-          // nCtx (1024) the fp16 plan landed on — inside planContext
-          // the emergency rung only exists below the ceiling, so
-          // handing it 1024 judged the q8 plan of the emergency rung
-          // against the NORMAL budget and could reject a load the
-          // design accepts (census §4.1 C).
-          { ceiling: ladderCeiling, safety: crashSafety },
-        );
-        if (q8Plan && q8Plan.verdict.fits) {
-          nCtx = q8Plan.nCtx;
-          verdict = q8Plan.verdict;
-          contextNote = q8Plan.note;
-          pinnedProfile = "kv-q8";
-        }
+      // 0.1.123 (auditoría E-1): el plan sale de planModelLoad, el MISMO
+      // que usa la insignia de la tarjeta (compatibility.ts).
+      const loadPlan = planModelLoad(specBase, snapshot, { ceiling: nCtx, safety: crashSafety });
+      if (loadPlan) {
+        nCtx = loadPlan.plan.nCtx;
+        verdict = loadPlan.plan.verdict;
+        contextNote = loadPlan.plan.note;
+        pinnedProfile = loadPlan.pinnedProfile;
       }
     }
+    // 0.1.121: tope de la caché de estados entre turnos (modelos
+    // híbridos o de ventana; ver stateCacheBudgetMb). 0.1.123: con el
+    // contexto YA elegido por el plan, porque el tope escala con él.
+    const stateCacheMb = stateCacheBudgetMb(liveSnapshot?.totalRamBytes ?? snapshot?.totalRamBytes ?? null, nCtx);
     if (verdict && !verdict.fits) {
       // Fase 2 (reapertura del defecto, 2026-11-08): el rechazo queda
       // registrado con sus cifras antes de lanzar. Hasta aquí no
@@ -1885,8 +1910,6 @@ export class LlamaEngine {
       const text = await run;
       // CrashGuard: la carga que genera queda confirmada.
       this.crashGuardConfirm();
-      // 0.1.122: y queda anotada como probada en este aparato (solo informa).
-      void this.recordProvenLoadNow();
       return text;
     } finally {
       this.generationsInLine--;
@@ -2098,6 +2121,14 @@ export class LlamaEngine {
         // también es corte a efectos del recorte; lastCut conserva su
         // significado de tope para la nota de la pantalla.
         const stoppedEarly = timedOut || loopCut || this.stopCounter !== stopsAtStart;
+        // 0.1.122/0.1.123 (auditoría, BAJA): «probado en este aparato»
+        // promete una respuesta COMPLETA. Solo cuenta una generación que se
+        // vio escribirse (onToken), escribió algo y terminó sola: ni
+        // cortada por el tope o la ventana, ni parada (usuario, plazo,
+        // bucle), ni las generaciones internas sin texto a la vista.
+        if (onToken && tokenCount > 0 && !this.lastCut && !stoppedEarly) {
+          void this.recordProvenLoadNow();
+        }
         const completed = guardLoops ? trimToCompleteSentences(raw, this.lastCut || stoppedEarly) : raw;
         // Safety net (Qwen3 lane + estudio de modelos): for a noThink
         // model whose native layer ignored enable_thinking=false, and
@@ -2143,6 +2174,8 @@ export class LlamaEngine {
       const totalMs = Date.now() - tStart;
       const ttftMs = firstTokenAt === null ? null : firstTokenAt - tStart;
       const genMs = totalMs - (ttftMs ?? 0);
+      const sealedRate = sealedWriteRate(generatedTokens(nativeTimings, tokenCount), genMs);
+      if (onToken && tokenCount > 0) this.lastVisible = { timings: nativeTimings, tokensPerSec: sealedRate };
       recordInferenceEvent({
         ts: tStart,
         modelId: this.modelInfo?.filename ?? null,
@@ -2156,9 +2189,9 @@ export class LlamaEngine {
         // tramo se generan tokenCount − 1 tokens. Dividir tokenCount
         // entero inflaba la tasa (≈3 % con 32 tokens, más en respuestas
         // cortas).
-        // 0.1.121: manda la tasa del motor (cuenta tokens de verdad);
-        // la de la app queda de respaldo si el nativo no la dio.
-        tokensPerSec: writeRate(nativeTimings, genMs > 0 && tokenCount > 1 ? ((tokenCount - 1) / genMs) * 1000 : null),
+        // 0.1.123 (auditoría E-2): la vara sellada, con la cuenta de
+        // tokens del motor cuando la dio (exacta) y la de la app si no.
+        tokensPerSec: sealedRate,
         ...(nativeTimings ? { timings: nativeTimings } : {}),
         stopReason,
         samplingPreset,

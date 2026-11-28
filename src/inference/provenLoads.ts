@@ -13,8 +13,10 @@
  * afloja la regla de memoria (la escalera ya baja el contexto para que el
  * modelo quepa, y el CrashGuard la endurece tras un cierre). Lo que sí
  * aprende es la prueba: por cada modelo, el mayor contexto con el que
- * GENERÓ una respuesta completa en este aparato. La tarjeta del modelo lo
- * enseña («Probado en este aparato con 2048 tokens»): es una medida real,
+ * GENERÓ una respuesta completa en este aparato (una respuesta a la vista
+ * que terminó sola: ni cortada, ni parada, ni una generación interna). La
+ * tarjeta del modelo lo enseña («Probado en este aparato con 2048
+ * tokens»): es una medida real,
  * no una estimación, y nunca cambia qué se deja cargar.
  *
  * Sin datos del usuario: solo nombres de fichero de modelo y números. El

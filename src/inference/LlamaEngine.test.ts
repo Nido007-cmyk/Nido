@@ -1206,12 +1206,54 @@ describe("P2.4 telemetry", () => {
       await engine.load("models/a.gguf");
       await engine.generate({ messages: [{ role: "user", content: "hola" }] });
       const e = getRecentTelemetry(10)[0];
-      expect(e.tokensPerSec).toBe(15.6);
+      // 0.1.123 (E-2): la tasa guardada es la vara sellada con la CUENTA
+      // del motor (50 tokens): 49 / tiempo de generación. La del motor
+      // (15,6) queda en los tiempos, no en tokensPerSec.
+      const genMs = e.totalMs - (e.ttftMs ?? 0);
+      expect(e.tokensPerSec).toBeCloseTo((49 / genMs) * 1000, 6);
+      expect(e.tokensPerSec).not.toBe(15.6);
       expect(e.timings).toEqual({ promptN: 300, promptPerSec: 88.5, cacheN: 40, predictedN: 50, predictedPerSec: 15.6 });
       expect(engine.lastGenerationTimings?.promptPerSec).toBe(88.5);
+
+      // «Última respuesta»: solo la generación que se vio escribirse.
+      engine.beginVisibleTurn();
+      expect(engine.lastVisibleGeneration).toBeNull();
+      await engine.generate({ messages: [{ role: "user", content: "hola" }], onToken: () => {} });
+      const visible = engine.lastVisibleGeneration;
+      expect(visible?.timings?.promptN).toBe(300);
+      const ring = getRecentTelemetry(10);
+      expect(visible?.tokensPerSec).toBe(ring[ring.length - 1].tokensPerSec);
+      // Una generación interna después (sin onToken) no la pisa.
+      mockStopVerdict = {
+        stopped_eos: true,
+        timings: { cache_n: 0, prompt_n: 7, prompt_per_second: 10, predicted_n: 3, predicted_per_second: 9 },
+      } as typeof mockStopVerdict;
+      await engine.generate({ messages: [{ role: "user", content: "juez" }] });
+      expect(engine.lastGenerationTimings?.promptN).toBe(7);
+      expect(engine.lastVisibleGeneration).toBe(visible);
       await engine.unload();
     } finally {
       mockStopVerdict = null;
+    }
+  });
+
+  it("0.1.123 (E-1): predictedCrashSafety da el factor de la PRÓXIMA carga sin escribir nada", async () => {
+    const path = "file:///docs/nido-crash-guard.json";
+    try {
+      fsStore.set(path, JSON.stringify({ crashes: 2, pending: null }));
+      let engine = new LlamaEngine();
+      expect(await engine.predictedCrashSafety()).toBe(0.65);
+      // Un pendiente sin modelo vivo contará como choque en la carga: la predicción lo cuenta ya.
+      fsStore.set(path, JSON.stringify({ crashes: 0, pending: { model: "a.gguf", nCtx: 2048, at: 1 } }));
+      engine = new LlamaEngine();
+      expect(await engine.predictedCrashSafety()).toBe(0.8);
+      // Y no escribe: el registro sigue con su pendiente.
+      expect(JSON.parse(fsStore.get(path)!).pending).not.toBeNull();
+      fsStore.delete(path);
+      engine = new LlamaEngine();
+      expect(await engine.predictedCrashSafety()).toBe(1);
+    } finally {
+      fsStore.delete(path);
     }
   });
 
@@ -1223,7 +1265,18 @@ describe("P2.4 telemetry", () => {
       fsStore.delete("file:///docs/nido-proven-loads.json");
       expect(await engine.provenContexts()).toEqual({});
       await engine.load("models/qwen2.5-0.5b-instruct-q4km.gguf", { nCtx: 2048 });
-      await engine.generate({ prompt: "hola" });
+      // 0.1.123 (auditoría, BAJA): una generación interna (sin onToken) no cuenta…
+      await engine.generate({ prompt: "juez" });
+      await new Promise((r) => setTimeout(r, 0));
+      expect(await engine.provenContexts()).toEqual({});
+      // …ni una cortada por el tope.
+      mockStopVerdict = { stopped_limit: true };
+      await engine.generate({ prompt: "larga", onToken: () => {} });
+      await new Promise((r) => setTimeout(r, 0));
+      expect(await engine.provenContexts()).toEqual({});
+      // Una respuesta a la vista que termina sola, sí.
+      mockStopVerdict = { stopped_eos: true };
+      await engine.generate({ prompt: "hola", onToken: () => {} });
       await new Promise((r) => setTimeout(r, 0));
       const loads = await engine.provenContexts();
       expect(loads["qwen2.5-0.5b-instruct-q4km.gguf"]).toBe(engine.getModelInfo()?.nCtx);

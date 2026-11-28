@@ -53,6 +53,7 @@ import {
   recordInferenceEvent,
   recordRamRejection,
   summarizeModelSpeeds,
+  sealedRowRate,
   type InferenceTelemetryEvent,
   type ModelSpeedRow,
 } from "./telemetry";
@@ -308,6 +309,20 @@ describe("telemetry: resúmenes de velocidad por modelo (G-1)", () => {
     expect(summarizeModelSpeeds(many)).toEqual([
       { modelId: "a.gguf", medianTokPerSec: 15.5, sampleCount: 20, lastTs: 124 },
     ]);
+  });
+
+  it("0.1.123 (E-2): las filas con tiempos del motor se re-expresan en la vara sellada antes de la mediana", () => {
+    // Fila de la 0.1.121–0.1.122: guardó la tasa del motor (40); con 65
+    // tokens en 4 s de generación, la vara sellada es 64 / 4 = 16.
+    const engineRow = row({ tokensPerSec: 40, predictedN: 65, genMs: 4000, ts: 3 });
+    expect(sealedRowRate(engineRow)).toBeCloseTo(16, 6);
+    // Fila antigua (sin tiempos del motor): su tasa ya era la vara sellada.
+    expect(sealedRowRate(row({ tokensPerSec: 12 }))).toBe(12);
+    const summaries = summarizeModelSpeeds([engineRow, row({ tokensPerSec: 18, ts: 2 }), row({ tokensPerSec: 14, ts: 1 })]);
+    // Mediana de [16, 18, 14] = 16 (con la tasa del motor sin re-expresar habría salido 18).
+    expect(summaries[0].medianTokPerSec).toBeCloseTo(16, 6);
+    // Califica por la cuenta del motor: 65 tokens aunque la app contara 20.
+    expect(summarizeModelSpeeds([row({ completionTokens: 20, predictedN: 65, genMs: 4000 }), row({ ts: 0 })])[0].sampleCount).toBe(2);
   });
 
   it("los eventos que no califican no entran, y un modelo con solo esos no tiene resumen", () => {

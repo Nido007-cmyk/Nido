@@ -36,7 +36,7 @@ import {
 import { contextCeilingForDevice, contextSpecForModel } from "./defaultModel";
 import { MODEL_CATALOG } from "./manifest";
 import { checkRamBudget, estimateContextBytes, KV_Q8_BYTES_PER_ELEMENT } from "../inference/ramBudget";
-import { planContext } from "../inference/memoryLadder";
+import { planContext, planModelLoad } from "../inference/memoryLadder";
 
 const GB = 1024 * 1024 * 1024;
 const MiB = 1024 * 1024;
@@ -296,8 +296,57 @@ describe("amarillo con cifras (0.1.119)", () => {
     const d = computeCompatibilityDetail(q3, TAB, snap);
     expect(d.color).toBe("yellow");
     expect(d.yellow?.source).toBe("moment");
-    expect(d.yellow!.nCtx).toBeLessThan(d.yellow!.ceiling);
+    // 0.1.123 (auditoría E-1): la carga real, con este hueco, cae en el
+    // peldaño de emergencia en fp16 y por eso prueba la KV q8, que sí
+    // cabe a 2048: carga 2048 comprimido. La insignia anterior decía
+    // «1024» (su propia copia del plan) y mentía; ahora dice lo de la carga.
     expect(d.yellow!.ceiling).toBe(2048);
+    expect(d.yellow!.nCtx).toBe(2048);
+    expect(d.yellow!.kvCompressed).toBe(true);
+  });
+
+  it("0.1.123 (E-1): la insignia y la carga comparten EL plan (planModelLoad), con el mismo factor del CrashGuard", () => {
+    const snaps = [
+      { totalRamBytes: TAB, rssBytes: 220 * MiB, availBytes: 1100 * MiB, lowMemThresholdBytes: 216 * MiB },
+      { totalRamBytes: TAB, rssBytes: 220 * MiB, availBytes: 2400 * MiB, lowMemThresholdBytes: 216 * MiB },
+      { totalRamBytes: 6 * GB, rssBytes: 400 * MiB, availBytes: 1500 * MiB, lowMemThresholdBytes: 300 * MiB },
+      { totalRamBytes: 8 * GB, rssBytes: 400 * MiB, availBytes: 900 * MiB, lowMemThresholdBytes: 300 * MiB },
+    ];
+    for (const m of LLMS) {
+      for (const snap of snaps) {
+        for (const crashSafety of [1, 0.8, 0.65, 0.5]) {
+          const d = computeCompatibilityDetail(m, snap.totalRamBytes, snap, { crashSafety });
+          // Lo que haría la carga: el plan compartido sobre la foto más severa.
+          const ceiling = contextCeilingForDevice(m.defaultNCtx, snap.totalRamBytes);
+          const { nCtx: _n, ...specBase } = contextSpecForModel(m, snap.totalRamBytes);
+          const live = planModelLoad(specBase, snap, { ceiling, safety: crashSafety });
+          if (!live) continue;
+          if (!live.plan.verdict.fits) {
+            expect(d.color, `${m.id} @${snap.totalRamBytes} s=${crashSafety}`).toBe("red");
+          } else if (d.color === "yellow" && d.yellow?.source === "moment") {
+            expect(d.yellow.nCtx).toBe(live.plan.nCtx);
+            expect(d.yellow.kvCompressed).toBe(live.pinnedProfile === "kv-q8");
+          }
+        }
+      }
+    }
+  });
+
+  it("0.1.123 (E-1): tras choques (factor del CrashGuard < 1) la insignia anuncia menos contexto, como la carga", () => {
+    const snap = { totalRamBytes: 8 * GB, rssBytes: 400 * MiB, availBytes: 6000 * MiB, lowMemThresholdBytes: 300 * MiB };
+    const big = LLMS.slice().sort((a, b) => b.sizeBytes - a.sizeBytes);
+    let sawDrop = false;
+    for (const m of big) {
+      const clean = computeCompatibilityDetail(m, 8 * GB, snap, { crashSafety: 1 });
+      const after = computeCompatibilityDetail(m, 8 * GB, snap, { crashSafety: 0.5 });
+      const ctx = (d: typeof clean) => (d.color === "green" ? Infinity : d.color === "yellow" ? d.yellow!.nCtx : d.color === "red" ? 0 : NaN);
+      expect(ctx(after)).toBeLessThanOrEqual(ctx(clean));
+      if (ctx(after) < ctx(clean)) sawDrop = true;
+    }
+    expect(sawDrop).toBe(true);
+    // Un factor inválido se trata como 1 (aparato sin choques).
+    const m = big[big.length - 1];
+    expect(computeCompatibilityDetail(m, 8 * GB, snap, { crashSafety: 7 })).toEqual(computeCompatibilityDetail(m, 8 * GB, snap));
   });
   it("verde y rojo no llevan cifras de amarillo", () => {
     const d = computeCompatibilityDetail(q3, TAB);

@@ -70,6 +70,7 @@ jest.mock("../inference/LlamaEngine", () => ({
     getModelInfo: () => mockResidentInfo,
     benchLoadedModel: async () => null,
     provenContexts: async () => ({}),
+    predictedCrashSafety: async () => 1,
   },
   BenchUnavailableError: class BenchUnavailableError extends Error {},
   BenchTimeoutError: class BenchTimeoutError extends Error {},

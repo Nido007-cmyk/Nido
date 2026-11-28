@@ -275,14 +275,33 @@ export function estimateKvCacheBytes(
  * margen en vivo.
  * Cambiar el `arch` exige volver a firmar el catálogo con la clave del
  * dueño.
+ *
+ * 0.1.123 (auditoría, BAJA): esa holgura crece con el contexto (la del
+ * LFM2.5 son ~36 MiB por cada 1024 tokens) y la justificación de arriba
+ * solo cuadraba a 4096: a 1024, el peldaño de emergencia de los aparatos
+ * de ≤4 GiB, la holgura era ~36 MiB frente a un tope fijo de 64. Ahora el
+ * tope escala con el contexto cargado por debajo de 4096 (64 × n/4096 en
+ * aparatos de ≤6 GiB: 16 MiB a 1024, 32 a 2048), con un suelo de 8 MiB, y
+ * queda dentro de la holgura en cada peldaño. Por encima de 4096 no sube.
  */
 const GIB_BYTES = 1024 * 1024 * 1024;
 export const STATE_CACHE_SMALL_MB = 64;
 export const STATE_CACHE_DEFAULT_MB = 160;
 
-export function stateCacheBudgetMb(totalRamBytes: number | null | undefined): number {
-  if (!totalRamBytes || !Number.isFinite(totalRamBytes) || totalRamBytes <= 0) return STATE_CACHE_DEFAULT_MB;
-  return totalRamBytes <= 6 * GIB_BYTES ? STATE_CACHE_SMALL_MB : STATE_CACHE_DEFAULT_MB;
+export const STATE_CACHE_FLOOR_MB = 8;
+export const STATE_CACHE_REFERENCE_CTX = 4096;
+
+export function stateCacheBudgetMb(totalRamBytes: number | null | undefined, nCtx?: number | null): number {
+  const policy =
+    !totalRamBytes || !Number.isFinite(totalRamBytes) || totalRamBytes <= 0
+      ? STATE_CACHE_DEFAULT_MB
+      : totalRamBytes <= 6 * GIB_BYTES
+        ? STATE_CACHE_SMALL_MB
+        : STATE_CACHE_DEFAULT_MB;
+  if (nCtx === undefined || nCtx === null || !Number.isFinite(nCtx) || nCtx <= 0 || nCtx >= STATE_CACHE_REFERENCE_CTX) {
+    return policy;
+  }
+  return Math.max(STATE_CACHE_FLOOR_MB, Math.round((policy * nCtx) / STATE_CACHE_REFERENCE_CTX));
 }
 
 export function estimateContextBytes(spec: ContextSpec): RamEstimate {

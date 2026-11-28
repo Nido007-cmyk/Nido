@@ -1960,7 +1960,7 @@
             "what": "Change the AI model for your device: small ones are fast, big ones reason better and use more memory.",
             "steps": [
               "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.models).",
-              "If a model has already answered on this phone, its card shows the speed measured here: the median of its last generations on this device, with the timings the engine itself measures. For choosing, that counts for more than any catalog figure.",
+              "If a model has already answered on this phone, its card shows the speed measured here: the median of its last generations on this device, with the tokens the engine itself counts (tokens minus one, over the time since the first token). For choosing, that counts for more than any catalog figure.",
               "Once a model has answered on this phone, its card also says how much conversation memory it used (“Tested on this device”). It is what really happened here; it does not change which models you can load.",
               "The yellow badge says how much conversation memory the model runs with right now (for example, 1024 of 2048 tokens). If you close other apps and memory frees up, it can turn green.",
               "“$t(modelSetupScreen.benchTitle)” measures the loaded model three times: it shows the reading and writing speed with their range, and how long it took to load.",

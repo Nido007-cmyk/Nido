@@ -4,7 +4,7 @@
  * See LICENSE file for details.
  */
 import { describe, expect, it } from "vitest";
-import { fromNativeTimings, writeRate } from "./nativeTimings";
+import { fromNativeTimings, generatedTokens, sealedWriteRate } from "./nativeTimings";
 
 const RAW = {
   cache_n: 120,
@@ -31,10 +31,18 @@ describe("tiempos nativos del motor (0.1.121)", () => {
     const { cache_n: _c, ...noCache } = RAW;
     expect(fromNativeTimings(noCache)?.cacheN).toBe(0);
   });
-  it("la tasa guardada es la del motor si escribió dos tokens o más; si no, la de la app", () => {
-    const t = fromNativeTimings(RAW);
-    expect(writeRate(t, 14)).toBe(15.6);
-    expect(writeRate(fromNativeTimings({ ...RAW, predicted_n: 1 }), 14)).toBe(14);
-    expect(writeRate(null, null)).toBeNull();
+  it("0.1.123 (E-2): la tasa guardada es la vara sellada, (tokens − 1) / tiempo de generación", () => {
+    // 64 tokens en 4,2 s desde el primero: 63 / 4,2 = 15 tok/s.
+    expect(sealedWriteRate(64, 4200)).toBeCloseTo(15, 6);
+    // Con 2 tokens hay UN tramo: 1 / t, no 2 / t (lo que daba la del motor).
+    expect(sealedWriteRate(2, 500)).toBeCloseTo(2, 6);
+    expect(sealedWriteRate(1, 500)).toBeNull();
+    expect(sealedWriteRate(10, 0)).toBeNull();
+    expect(sealedWriteRate(Number.NaN, 100)).toBeNull();
+  });
+  it("0.1.123 (E-2): la CUENTA de tokens es la del motor cuando la da; si no, la de la app", () => {
+    expect(generatedTokens(fromNativeTimings(RAW), 50)).toBe(64);
+    expect(generatedTokens(fromNativeTimings({ ...RAW, predicted_n: 0 }), 50)).toBe(50);
+    expect(generatedTokens(null, 50)).toBe(50);
   });
 });

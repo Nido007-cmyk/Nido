@@ -1960,7 +1960,7 @@
             "what": "Cambia el modelo de IA según tu dispositivo: los pequeños son rápidos, los grandes razonan mejor y ocupan más memoria.",
             "steps": [
               "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.models).",
-              "Si un modelo ya respondió en este teléfono, su tarjeta enseña su velocidad medida aquí: la mediana de sus últimas generaciones en este aparato, con los tiempos que mide el propio motor. Para elegir, eso vale más que cualquier cifra de catálogo.",
+              "Si un modelo ya respondió en este teléfono, su tarjeta enseña su velocidad medida aquí: la mediana de sus últimas generaciones en este aparato, con los tokens que cuenta el propio motor (tokens menos uno, entre el tiempo desde el primer token). Para elegir, eso vale más que cualquier cifra de catálogo.",
               "Cuando un modelo ya respondió en este teléfono, su tarjeta dice también con cuánta memoria de conversación lo hizo («Probado en este aparato»). Es lo que pasó de verdad aquí; no cambia qué modelos puedes cargar.",
               "La etiqueta amarilla dice con cuánta memoria de conversación va el modelo ahora mismo (por ejemplo, 1024 de 2048 tokens). Si cierras otras apps y se libera memoria, puede ponerse verde.",
               "«$t(modelSetupScreen.benchTitle)» mide el modelo cargado tres veces: enseña la velocidad de lectura y de escritura con su rango, y lo que tardó en cargar.",

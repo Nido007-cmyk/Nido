@@ -4,6 +4,40 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.123-alpha - 2026-11-27
+
+Fixes from an independent audit of 0.1.119 to 0.1.122.
+
+The yellow model badge now tells the truth in every case.
+It used its own copy of the memory plan, which could
+differ from the real load in two ways: after a memory
+crash the load plans with a smaller budget but the badge
+did not, so it could promise more conversation memory
+than the model would get; and on phones over 4 GB it
+could show "compressed" for a model the load would
+refuse, or the uncompressed size where the load
+compresses. The badge and the load now use one shared
+plan, with the same crash safety factor.
+
+Speeds are back on NIDO's sealed measure: tokens minus
+one, over the time since the first token. 0.1.121 had
+switched, without saying so, to the engine's own speed,
+which counts every token over its decoding time and
+reads up to almost double on very short answers. The
+engine's exact token count is kept. The "Measured on
+this device" median converts the answers recorded by
+0.1.121 and 0.1.122 to the sealed measure, so old and
+new figures are no longer mixed.
+
+"Last answer" in Measurements now shows the figures of
+the answer you saw, not of an internal check that ran
+after it. "Tested on this device" only counts answers
+that finished on their own (not cut, not stopped, not
+internal). The memory the hybrid models keep between
+turns now scales with the context they load (16 MB at
+1,024 tokens on a 4 GB phone instead of 64 MB), so it
+stays inside the margin it was justified with.
+
 ## 0.1.122-alpha - 2026-11-27
 
 Second stage of the work to match and beat the best
