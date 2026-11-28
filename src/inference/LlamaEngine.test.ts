@@ -1421,6 +1421,51 @@ describe("P2.4 telemetry", () => {
     }
   });
 
+  it("0.1.124 (S-3): n_keep se cuenta sobre el prompt FORMATEADO hasta el final del sistema, con la envoltura de la plantilla", async () => {
+    const { N_KEEP_TEMPLATE_MARGIN } = await import("./LlamaEngine");
+    mockStopVerdict = { stopped_eos: true };
+    try {
+      const engine = new LlamaEngine();
+      await engine.load("models/a.gguf");
+      const ctx = created[created.length - 1] as unknown as Record<string, unknown>;
+      // Plantilla con una envoltura MUY larga (60 «tokens» delante del
+      // sistema): más que el margen fijo de 16 de la 0.1.121.
+      const header = "<cabecera> ".repeat(60);
+      ctx.getFormattedChat = async (m: Array<{ role: string; content: string }>) => ({
+        prompt: `${header}${m[0].content}<fin>`,
+      });
+      const seen: string[] = [];
+      // Un «token» por palabra separada por espacio.
+      ctx.tokenize = async (t: string) => {
+        seen.push(t);
+        return { tokens: t.split(" ").filter(Boolean) };
+      };
+      const system = "Eres NIDO. Regla de seguridad al final.";
+      await engine.generate({ messages: [{ role: "system", content: system }, { role: "user", content: "hola" }] });
+      // Se tokenizó la cabecera + el sistema, cortado al final del sistema (sin «<fin>»).
+      expect(seen[0]).toBe(`${header}${system}`);
+      const formattedTokens = `${header}${system}`.split(" ").filter(Boolean).length;
+      expect((ctx.lastParams as Record<string, unknown>).n_keep).toBe(formattedTokens + N_KEEP_TEMPLATE_MARGIN);
+      // Con la cuenta cruda de antes se habrían guardado muchos menos.
+      expect(formattedTokens).toBeGreaterThan(system.split(" ").length + N_KEEP_TEMPLATE_MARGIN);
+      await engine.unload();
+
+      // Si la plantilla falla, respaldo crudo.
+      const engine2 = new LlamaEngine();
+      await engine2.load("models/a.gguf");
+      const ctx2 = created[created.length - 1] as unknown as Record<string, unknown>;
+      ctx2.getFormattedChat = async () => {
+        throw new Error("plantilla");
+      };
+      ctx2.tokenize = async (t: string) => ({ tokens: t.split(" ").filter(Boolean) });
+      await engine2.generate({ messages: [{ role: "system", content: system }, { role: "user", content: "hola" }] });
+      expect((ctx2.lastParams as Record<string, unknown>).n_keep).toBe(system.split(" ").length + N_KEEP_TEMPLATE_MARGIN);
+      await engine2.unload();
+    } finally {
+      mockStopVerdict = null;
+    }
+  });
+
   it("0.1.121: la carga fija state_cache_budget_mb (sin efecto en atención pura)", async () => {
     const { llmInitParamsForProfile } = await import("./LlamaEngine");
     const p = llmInitParamsForProfile("kv-q8", { model: "m", n_ctx: 2048, n_threads: 4, state_cache_budget_mb: 64 }) as Record<string, unknown>;

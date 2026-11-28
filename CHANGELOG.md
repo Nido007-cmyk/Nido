@@ -4,6 +4,26 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.124-alpha - 2026-11-28
+
+Two more points from the audit.
+
+The part of the instructions that must survive when a
+long conversation fills the memory (the app's rules and
+its safety rule) is now counted on the exact text the
+model reads, including what the chat template adds in
+front. Before, it was counted on the bare text plus a
+fixed allowance, which a template with a long header
+could have exceeded.
+
+The new order of the instructions (0.1.122) has been
+measured against the old one: on the same 24 requests in
+Spanish, English and Portuguese, the old order got 11
+right and the new one 13, with no request the old order
+got right and the new one got wrong. Answers about your
+memory and about the date were right with both. The
+measurement is in docs/perf/ORDEN_PROMPT_2026-11-28.md.
+
 ## 0.1.123-alpha - 2026-11-27
 
 Fixes from an independent audit of 0.1.119 to 0.1.122.
