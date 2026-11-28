@@ -80,7 +80,9 @@ export class EmbeddingEngine {
     // F2-2026-10-06: pre-flight ANTES de liberar el modelo actual (igual
     // que LlamaEngine). Si el chequeo falla, se conserva el modelo en uso.
     const snapshot = readRamSnapshot();
-    const verdict = snapshot ? checkRamBudget({ fileSizeBytes, nCtx: 512 }, snapshot) : null;
+    // 0.1.120: margen a la medida de la carga (liveMarginFor): con 624 MB
+    // libres en la Tab, los 256 MiB fijos rechazaban este modelo de 173 MB.
+    const verdict = snapshot ? checkRamBudget({ fileSizeBytes, nCtx: 512 }, snapshot, { proportionalMargin: true }) : null;
     if (verdict && !verdict.fits) {
       // Fase 2 (reapertura, 2026-11-08): el rechazo también queda
       // registrado — la tarjeta no dice qué motor la disparó, y si el

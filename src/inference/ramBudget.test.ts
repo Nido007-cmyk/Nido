@@ -558,3 +558,35 @@ describe("F-PC62 · la lectura en vivo en cero existe y manda (paquete de arregl
     expect(v.availableBytes).toBeGreaterThan(0);
   });
 });
+
+describe("margen en vivo proporcional (0.1.120)", () => {
+  const MiB = 1024 * 1024;
+  it("la mitad de la carga, entre 64 y 256 MiB", async () => {
+    const { liveMarginFor } = await import("./ramBudget");
+    expect(liveMarginFor(100 * MiB)).toBe(64 * MiB);
+    expect(liveMarginFor(173 * MiB)).toBe(86.5 * MiB);
+    expect(liveMarginFor(512 * MiB)).toBe(256 * MiB);
+    expect(liveMarginFor(1200 * MiB)).toBe(256 * MiB);
+  });
+
+  it("foto real de la Tab (16/11): el modelo de búsqueda cabe con 624 MB libres", async () => {
+    const { checkRamBudget } = await import("./ramBudget");
+    const snap = { totalRamBytes: 3416 * MiB, rssBytes: 214 * MiB, availBytes: 624 * MiB, lowMemThresholdBytes: 216 * MiB };
+    // La misma carga que hace embed.ts (archivo real del catálogo, contexto 512).
+    const spec = { fileSizeBytes: 132_441_664, nCtx: 512 };
+    const before = checkRamBudget(spec, snap)!;
+    expect(before.fits).toBe(false); // lo que registró la telemetría
+    const now = checkRamBudget(spec, snap, { proportionalMargin: true })!;
+    expect(now.fits).toBe(true);
+  });
+
+  it("una carga de 512 MiB o más lleva los 256 MiB aunque pida el margen proporcional", async () => {
+    const { checkRamBudget, estimateContextBytes } = await import("./ramBudget");
+    const spec = { fileSizeBytes: 380 * MiB, nCtx: 2048 };
+    const need = estimateContextBytes(spec).totalBytes;
+    expect(need).toBeGreaterThanOrEqual(512 * MiB);
+    const snap = { totalRamBytes: 3416 * MiB, rssBytes: 220 * MiB, availBytes: 1100 * MiB, lowMemThresholdBytes: 216 * MiB };
+    expect(checkRamBudget(spec, snap)!.availableBytes).toBe(1100 * MiB - 216 * MiB - 256 * MiB);
+    expect(checkRamBudget(spec, snap, { proportionalMargin: true })!.availableBytes).toBe(1100 * MiB - 216 * MiB - 256 * MiB);
+  });
+});
