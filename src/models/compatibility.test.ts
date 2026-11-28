@@ -287,3 +287,21 @@ describe("tanda too-heavy: el rojo dice su foto y el crédito es el de la carga"
     });
   });
 });
+
+describe("amarillo con cifras (0.1.119)", () => {
+  const TAB = 3416 * MiB;
+  const q3 = LLMS.find((m) => m.id === "qwen3-0.6b-q4km")!;
+  it("con poca memoria libre, el amarillo dice el contexto con el que carga y su techo", () => {
+    const snap = { totalRamBytes: TAB, rssBytes: 220 * MiB, availBytes: 1100 * MiB, lowMemThresholdBytes: 216 * MiB };
+    const d = computeCompatibilityDetail(q3, TAB, snap);
+    expect(d.color).toBe("yellow");
+    expect(d.yellow?.source).toBe("moment");
+    expect(d.yellow!.nCtx).toBeLessThan(d.yellow!.ceiling);
+    expect(d.yellow!.ceiling).toBe(2048);
+  });
+  it("verde y rojo no llevan cifras de amarillo", () => {
+    const d = computeCompatibilityDetail(q3, TAB);
+    expect(d.color).toBe("green");
+    expect(d.yellow).toBeUndefined();
+  });
+});

@@ -252,7 +252,7 @@ describe("CatalogItemCard · tanda too-heavy: crédito simétrico, suelo de la a
     // amarillo (cargado encima del residente); la carga real lo
     // juzga con el residente ya fuera: verde, como su canónica.
     expect(await screen.findByText("catalogItemCard.compat.green")).toBeTruthy();
-    expect(screen.queryByText("catalogItemCard.compat.yellow")).toBeNull();
+    expect(screen.queryByText(/^catalogItemCard\.compat\.yellow/)).toBeNull();
   });
 
   it("la activa sin residencia probada no baja de su canónica con la foto ocupada", async () => {
@@ -310,7 +310,7 @@ describe("CatalogItemCard: la entrada de embeddings enseña su veredicto (M-1)",
   it("en amarillo (2,8 GB): pinta la insignia amarilla", async () => {
     mockRamBytes = Math.floor(2.8 * 1024 * 1024 * 1024);
     await render(<CatalogItemCard item={e5()} row={undefined} {...baseProps} />);
-    expect(await screen.findByText("catalogItemCard.compat.yellow")).toBeTruthy();
+    expect(await screen.findByText(/^catalogItemCard\.compat\.yellow/)).toBeTruthy();
   });
 
   it("en rojo (2 GB): pinta la insignia roja y NO ofrece descargar", async () => {
@@ -318,5 +318,18 @@ describe("CatalogItemCard: la entrada de embeddings enseña su veredicto (M-1)",
     await render(<CatalogItemCard item={e5()} row={undefined} {...baseProps} />);
     expect(await screen.findByText("catalogItemCard.compat.red")).toBeTruthy();
     expect(screen.queryByText("catalogItemCard.downloadAsset")).toBeNull();
+  });
+});
+
+describe("CatalogItemCard 0.1.119 · el amarillo dice el contexto", () => {
+  const { CatalogItemCard } = require("./CatalogItemCard");
+  it("con la memoria de ahora justa, la letra es «ahora … N de M» y no «necesita mucha memoria»", async () => {
+    mockLiveRssBytes = 220 * 1024 * 1024;
+    mockLiveAvailBytes = 1100 * 1024 * 1024;
+    await render(<CatalogItemCard item={byId("qwen3-0.6b-q4km")} row={undefined} {...baseProps} isActive={false} />);
+    expect(await screen.findByText(/^catalogItemCard\.compat\.yellowNow/)).toBeTruthy();
+    expect(screen.queryByText("catalogItemCard.compat.yellow")).toBeNull();
+    mockLiveRssBytes = 512 * 1024 * 1024;
+    mockLiveAvailBytes = 2 * 1024 * 1024 * 1024;
   });
 });

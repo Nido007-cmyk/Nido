@@ -57,7 +57,11 @@
       "green": "Funciona bien en este dispositivo",
       "red": "Demasiado pesado para este dispositivo",
       "redMoment": "Ahora mismo no hay memoria libre suficiente",
-      "yellow": "Necesita mucha memoria"
+      "yellow": "Va con memoria de conversación reducida",
+      "yellowNow": "Ahora va con memoria de conversación reducida: {{ctx}} de {{max}} tokens",
+      "yellowDevice": "En este aparato va con memoria de conversación reducida: {{ctx}} de {{max}} tokens",
+      "yellowNowQ8": "Ahora va con memoria de conversación comprimida: {{ctx}} de {{max}} tokens",
+      "yellowDeviceQ8": "En este aparato va con memoria de conversación comprimida: {{ctx}} de {{max}} tokens"
     },
     "default": "Predeterminado",
     "deleteAccessibility": "Eliminar recurso del modelo",

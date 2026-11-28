@@ -4,6 +4,28 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.119-alpha - 2026-11-27
+
+The yellow badge on a model now says what really
+happens instead of "Needs a lot of memory", which
+appeared even on 0.4 GB models. It tells you the model
+runs with a shorter conversation memory and how much,
+for example "Right now it runs with a shorter
+conversation memory: 1024 of 2048 tokens", and whether
+that memory is compressed. "Right now" means it depends
+on the memory your phone has free at this moment: close
+other apps and it can turn green.
+
+The drawer at the side shows RAM and disk on two lines,
+the figure on top and the bar below. With large system
+text, the figure was cut off ("3.3..") and the RAM bar
+disappeared.
+
+In Execution telemetry, each memory figure sits in its
+own box with its label underneath, three per row.
+Before, the labels ran into each other and you could
+not tell which number was which.
+
 ## 0.1.118-alpha - 2026-11-27
 
 Every button and option now answers your finger: it

@@ -64,9 +64,13 @@
     "default": "Default",
     "compat": {
       "green": "Runs well on this device",
-      "yellow": "Needs a lot of memory",
+      "yellow": "Runs with a shorter conversation memory",
       "red": "Too heavy for this device",
-      "redMoment": "Not enough free memory right now"
+      "redMoment": "Not enough free memory right now",
+      "yellowNow": "Right now it runs with a shorter conversation memory: {{ctx}} of {{max}} tokens",
+      "yellowDevice": "On this device it runs with a shorter conversation memory: {{ctx}} of {{max}} tokens",
+      "yellowNowQ8": "Right now it runs with a compressed conversation memory: {{ctx}} of {{max}} tokens",
+      "yellowDeviceQ8": "On this device it runs with a compressed conversation memory: {{ctx}} of {{max}} tokens"
     },
     "downloadingAsset": "Downloading",
     "eta": "ETA: {{eta}}",

@@ -64,9 +64,13 @@
     "default": "Padrão",
     "compat": {
       "green": "Funciona bem neste dispositivo",
-      "yellow": "Precisa de muita memória",
+      "yellow": "Funciona com memória de conversa reduzida",
       "red": "Pesado demais para este dispositivo",
-      "redMoment": "Agora não há memória livre suficiente"
+      "redMoment": "Agora não há memória livre suficiente",
+      "yellowNow": "Agora funciona com memória de conversa reduzida: {{ctx}} de {{max}} tokens",
+      "yellowDevice": "Neste aparelho funciona com memória de conversa reduzida: {{ctx}} de {{max}} tokens",
+      "yellowNowQ8": "Agora funciona com memória de conversa comprimida: {{ctx}} de {{max}} tokens",
+      "yellowDeviceQ8": "Neste aparelho funciona com memória de conversa comprimida: {{ctx}} de {{max}} tokens"
     },
     "downloadingAsset": "Baixando",
     "eta": "Tempo restante: {{eta}}",

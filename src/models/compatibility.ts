@@ -98,23 +98,37 @@ export function canonicalSnapshot(deviceRamBytes: number): RamSnapshot {
 }
 
 /** El color de UNA foto: la escalera entera (fp16 y luego q8) sobre ese snapshot. */
-function colorOnSnapshot(model: CatalogModel, deviceRamBytes: number, snapshot: RamSnapshot): Compatibility {
+/**
+ * 0.1.119: el color con el contexto que el plan eligió de verdad, para que
+ * el amarillo diga «va con N de M tokens» en lugar de «necesita mucha
+ * memoria» (un 0,4 GB salía con esa letra).
+ */
+interface SnapshotVerdict {
+  color: Compatibility;
+  nCtx?: number;
+  ceiling?: number;
+  kvCompressed?: boolean;
+}
+
+function verdictOnSnapshot(model: CatalogModel, deviceRamBytes: number, snapshot: RamSnapshot): SnapshotVerdict {
   const ceiling = contextCeilingForDevice(model.defaultNCtx, deviceRamBytes);
   const { nCtx: _declaredCtx, ...specBase } = contextSpecForModel(model, deviceRamBytes);
   const plan = planContext(specBase, snapshot, { ceiling, safety: 1 });
-  if (!plan) return "unknown";
-  if (plan.verdict.fits && plan.nCtx === ceiling) return "green";
-  if (plan.verdict.fits) return "yellow";
-  // The fp16 ladder found no rung: the load path's last word is the same
-  // plan with q8 KV, whose emergency rung is judged with the emergency
-  // budget (the symmetry LlamaEngine applies since 0.1.86). If even that
-  // does not fit, the badge is red.
+  if (!plan) return { color: "unknown" };
+  if (plan.verdict.fits && plan.nCtx === ceiling) return { color: "green", nCtx: plan.nCtx, ceiling };
+  if (plan.verdict.fits) return { color: "yellow", nCtx: plan.nCtx, ceiling, kvCompressed: false };
   const q8Plan = planContext(
     { ...specBase, kvBytesPerElement: KV_Q8_BYTES_PER_ELEMENT },
     snapshot,
     { ceiling, safety: 1 },
   );
-  return q8Plan?.verdict.fits ? "yellow" : "red";
+  return q8Plan?.verdict.fits
+    ? { color: "yellow", nCtx: q8Plan.nCtx, ceiling, kvCompressed: true }
+    : { color: "red" };
+}
+
+function colorOnSnapshot(model: CatalogModel, deviceRamBytes: number, snapshot: RamSnapshot): Compatibility {
+  return verdictOnSnapshot(model, deviceRamBytes, snapshot).color;
 }
 
 /**
@@ -173,6 +187,13 @@ export interface CompatibilityDetail {
   color: Compatibility;
   /** Solo con color «red»: la foto que impuso el rojo. */
   redSource?: CompatibilityRedSource;
+  /**
+   * 0.1.119, solo con color «yellow»: el contexto con el que carga de
+   * verdad (nCtx) frente a su techo, si la memoria de conversación va
+   * comprimida (q8) y qué foto lo decidió («moment» = la memoria libre de
+   * ahora; «device» = el aparato en vacío).
+   */
+  yellow?: { nCtx: number; ceiling: number; kvCompressed: boolean; source: CompatibilityRedSource };
 }
 
 /**
@@ -204,9 +225,18 @@ export function computeCompatibilityDetail(
   opts?: { canonicalFloor?: boolean },
 ): CompatibilityDetail {
   if (deviceRamBytes <= 0) return { color: "unknown" };
-  const canonical = colorOnSnapshot(model, deviceRamBytes, canonicalSnapshot(deviceRamBytes));
+  const canonicalV = verdictOnSnapshot(model, deviceRamBytes, canonicalSnapshot(deviceRamBytes));
+  const canonical = canonicalV.color;
+  const yellowOf = (v: SnapshotVerdict, source: CompatibilityRedSource): CompatibilityDetail["yellow"] =>
+    v.color === "yellow" && v.nCtx && v.ceiling
+      ? { nCtx: v.nCtx, ceiling: v.ceiling, kvCompressed: v.kvCompressed === true, source }
+      : undefined;
   const canonicalDetail: CompatibilityDetail =
-    canonical === "red" ? { color: canonical, redSource: "device" } : { color: canonical };
+    canonical === "red"
+      ? { color: canonical, redSource: "device" }
+      : canonical === "yellow"
+        ? { color: canonical, yellow: yellowOf(canonicalV, "device") }
+        : { color: canonical };
   // La foto viva solo degrada, y solo si es DE ESTE aparato y trae
   // término en vivo (sin availBytes no es una foto del momento: es
   // otra foto canónica con otro RSS, y degradar por ella sería
@@ -230,9 +260,21 @@ export function computeCompatibilityDetail(
   if (opts?.canonicalFloor && !(liveSnapshot.releasableBytes && liveSnapshot.releasableBytes > 0)) {
     return canonicalDetail;
   }
-  const live = colorOnSnapshot(model, deviceRamBytes, liveSnapshot);
+  const liveV = verdictOnSnapshot(model, deviceRamBytes, liveSnapshot);
+  const live = liveV.color;
   if (live === "unknown") return canonicalDetail;
   const color = SEVERITY[live] > SEVERITY[canonical] ? live : canonical;
+  if (color === "yellow") {
+    // La foto más severa decide la cifra; a igualdad, la de ahora (con
+    // menos contexto) es la que el chat usará al cargar.
+    const pick = live === "yellow" ? liveV : canonicalV;
+    const source: CompatibilityRedSource = live === "yellow" ? "moment" : "device";
+    const lower =
+      live === "yellow" && canonical === "yellow" && (canonicalV.nCtx ?? Infinity) < (liveV.nCtx ?? Infinity)
+        ? { v: canonicalV, s: "device" as CompatibilityRedSource }
+        : { v: pick, s: source };
+    return { color, yellow: yellowOf(lower.v, lower.s) };
+  }
   if (color !== "red") return { color };
   if (canonical === "red") return { color, redSource: "device" };
   lastMomentRedBadge = {

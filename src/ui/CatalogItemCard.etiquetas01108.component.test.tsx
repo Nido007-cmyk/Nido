@@ -97,7 +97,7 @@ const baseProps = {
 describe("CatalogItemCard 0.1.108 · A1: el crédito del residente", () => {
   it("sin crédito declarado, la foto de la pasada juzga al Qwen3 en amarillo", async () => {
     await render(<CatalogItemCard item={byId("qwen3-0.6b-q4km")} row={undefined} {...baseProps} />);
-    expect(await screen.findByText("catalogItemCard.compat.yellow")).toBeTruthy();
+    expect(await screen.findByText(/^catalogItemCard\.compat\.yellow/)).toBeTruthy();
     expect(screen.queryByText("catalogItemCard.compat.green")).toBeNull();
   });
 
@@ -112,7 +112,7 @@ describe("CatalogItemCard 0.1.108 · A1: el crédito del residente", () => {
       />
     );
     expect(await screen.findByText("catalogItemCard.compat.green")).toBeTruthy();
-    expect(screen.queryByText("catalogItemCard.compat.yellow")).toBeNull();
+    expect(screen.queryByText(/^catalogItemCard\.compat\.yellow/)).toBeNull();
   });
 
   // Sucesión (tanda too-heavy, pasada de la 0.1.115): el caso de la
@@ -131,14 +131,14 @@ describe("CatalogItemCard 0.1.108 · A1: el crédito del residente", () => {
       />
     );
     expect(await screen.findByText("catalogItemCard.compat.green")).toBeTruthy();
-    expect(screen.queryByText("catalogItemCard.compat.yellow")).toBeNull();
+    expect(screen.queryByText(/^catalogItemCard\.compat\.yellow/)).toBeNull();
   });
 });
 
 describe("CatalogItemCard 0.1.108 · A2: la foto viva se refresca", () => {
   it("al cambiar el modelo activo, la foto se rehace con la memoria de ese momento", async () => {
     const view = await render(<CatalogItemCard item={byId("qwen3-0.6b-q4km")} row={undefined} {...baseProps} />);
-    expect(await screen.findByText("catalogItemCard.compat.yellow")).toBeTruthy();
+    expect(await screen.findByText(/^catalogItemCard\.compat\.yellow/)).toBeTruthy();
     // El modelo se descarga / la app se vacía: el RSS cae a la base y
     // la misma foto viva ya admite el modelo en su techo.
     mockRssBytes = 512 * 1024 * 1024;
@@ -146,7 +146,7 @@ describe("CatalogItemCard 0.1.108 · A2: la foto viva se refresca", () => {
       <CatalogItemCard item={byId("qwen3-0.6b-q4km")} row={undefined} {...baseProps} isActive />
     );
     expect(await screen.findByText("catalogItemCard.compat.green")).toBeTruthy();
-    expect(screen.queryByText("catalogItemCard.compat.yellow")).toBeNull();
+    expect(screen.queryByText(/^catalogItemCard\.compat\.yellow/)).toBeNull();
     mockRssBytes = 868 * 1024 * 1024;
   });
 });
