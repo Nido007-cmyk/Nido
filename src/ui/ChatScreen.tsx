@@ -87,6 +87,7 @@ import { runAdaptiveChat } from "../services/adaptiveChat";
 import { speakAloud, stopSpeaking } from "../voice/tts";
 import { groundingBadge } from "./chat/groundingBadge";
 import { tokensPerSecond } from "../eval/evalHarness.pure";
+import { writeRate } from "../inference/nativeTimings";
 import { showSecureAlert } from "nido-secure-dialog";
 // NIDO agent: loop agéntico local con herramientas (Fase A).
 import { classifyIntent } from "../agent/loop/intent";
@@ -2595,7 +2596,19 @@ export function ChatScreen({
         ttftMs,
         // 0.1.118: misma cuenta que la telemetría (tokensPerSecond):
         // tras el primer token salen tokensGenerated − 1.
-        tokPerSec: tokensPerSecond(tokensGenerated, durationMs - ttftMs - turnModelLoadMs) ?? 0,
+        // 0.1.121: con tokens del modelo en este turno, manda la tasa que
+        // midió el motor en la respuesta visible; la de la app de respaldo.
+        tokPerSec:
+          (tokensGenerated > 0 ? writeRate(llamaEngine.lastGenerationTimings, null) : null) ??
+          tokensPerSecond(tokensGenerated, durationMs - ttftMs - turnModelLoadMs) ??
+          0,
+        ...(tokensGenerated > 0 && llamaEngine.lastGenerationTimings
+          ? {
+              promptPerSec: llamaEngine.lastGenerationTimings.promptPerSec,
+              promptTokens: llamaEngine.lastGenerationTimings.promptN,
+              cachedPromptTokens: llamaEngine.lastGenerationTimings.cacheN,
+            }
+          : {}),
         peakRssBytes: peakRss.stop(),
         timestamp: Date.now(),
         totalLatencyMs: durationMs,

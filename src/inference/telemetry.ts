@@ -53,6 +53,11 @@ export interface InferenceTelemetryEvent {
   temperature?: number;
   nPredict: number;
   /**
+   * 0.1.121: los tiempos que midió el motor (nativeTimings.ts), cuando
+   * los dio: lectura del prompt, escritura y tokens de caché.
+   */
+  timings?: NativeTimings;
+  /**
    * Solo en eventos de rechazo del pre-flight (stopReason "rejected"):
    * las cifras que la comprobación de memoria vio al rechazar. Es lo
    * que permite distinguir en el aparato un rechazo del pre-flight de
@@ -79,6 +84,8 @@ const DB_MAX_ROWS = 1000;
 
 const ring: InferenceTelemetryEvent[] = [];
 
+import type { NativeTimings } from "./nativeTimings";
+
 const TELEMETRY_DDL = `
 CREATE TABLE IF NOT EXISTS inference_telemetry (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -96,6 +103,20 @@ CREATE TABLE IF NOT EXISTS inference_telemetry (
   sampling_preset TEXT,
   temperature REAL,
   n_predict INTEGER NOT NULL
+);`;
+
+/**
+ * 0.1.121: los tiempos del motor en su propia tabla, como los rechazos:
+ * la principal no cambia de esquema en instalaciones que ya la tienen.
+ */
+const TIMINGS_DDL = `
+CREATE TABLE IF NOT EXISTS inference_telemetry_timings (
+  telemetry_id INTEGER PRIMARY KEY,
+  prompt_n INTEGER NOT NULL,
+  prompt_per_sec REAL NOT NULL,
+  cache_n INTEGER NOT NULL,
+  predicted_n INTEGER NOT NULL,
+  predicted_per_sec REAL NOT NULL
 );`;
 
 /** Detalle de un rechazo del pre-flight, como JSON en su propia columna. */
@@ -171,10 +192,32 @@ async function persistEvent(e: InferenceTelemetryEvent): Promise<void> {
         [inserted.lastInsertRowId, JSON.stringify(e.ramRejection)]
       );
     }
+    if (e.timings) {
+      await db.execAsync(TIMINGS_DDL);
+      await db.runAsync(
+        `INSERT INTO inference_telemetry_timings
+         (telemetry_id, prompt_n, prompt_per_sec, cache_n, predicted_n, predicted_per_sec)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          inserted.lastInsertRowId,
+          e.timings.promptN,
+          e.timings.promptPerSec,
+          e.timings.cacheN,
+          e.timings.predictedN,
+          e.timings.predictedPerSec,
+        ]
+      );
+    }
     // Prune: keep only the newest DB_MAX_ROWS events.
     await db.execAsync(
       `DELETE FROM inference_telemetry WHERE id NOT IN (SELECT id FROM inference_telemetry ORDER BY id DESC LIMIT ${DB_MAX_ROWS})`
     );
+    if (e.timings) {
+      // Los tiempos siguen a su evento: sin evento, sin tiempos.
+      await db.execAsync(
+        `DELETE FROM inference_telemetry_timings WHERE telemetry_id NOT IN (SELECT id FROM inference_telemetry)`
+      );
+    }
   } catch {
     /* telemetry is best-effort by design */
   }

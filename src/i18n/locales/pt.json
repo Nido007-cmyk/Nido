@@ -203,7 +203,9 @@
       "title": "Erro ao iniciar",
       "body": "Não foi possível verificar o estado dos modelos. Pode ser um problema temporário de armazenamento. Tente novamente ou reinstale o app se persistir.",
       "retry": "Tentar novamente"
-    }
+    },
+    "benchRunRange": "Passada {{pp}}/{{tg}}: lê a {{speedPp}} tok/s ({{ppMin}}–{{ppMax}}) e gera a {{speedTg}} tok/s ({{tgMin}}–{{tgMax}})",
+    "benchLoad": "Carregamento do modelo: {{s}} s"
   },
   "setupWizard": {
     "calculating": "Calculando…",
@@ -1123,7 +1125,13 @@
     "deviceRamUsable": "{{usable}} utilizáveis",
     "swap": "Troca (RAM virtual)",
     "swapValue": "{{free}} livres de {{total}}",
-    "segSearchModel": "Modelo de busca"
+    "segSearchModel": "Modelo de busca",
+    "promptSpeed": "Leitura do prompt",
+    "promptTokens": "Prompt lido",
+    "promptTokensValue": "{{read}} tokens · {{cached}} do cache",
+    "threadsValue": "{{n}} threads",
+    "cpu": "Processador",
+    "decimalSeparator": ","
   },
   "calm": {
     "model": "Modelo",
@@ -1951,7 +1959,9 @@
             "what": "Troque o modelo de IA conforme seu dispositivo: os pequenos são rápidos, os grandes raciocinam melhor e usam mais memória.",
             "steps": [
               "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.models).",
-              "Se um modelo já respondeu neste telefone, o cartão dele mostra a velocidade medida aqui: a mediana das suas últimas respostas com esse modelo. Para escolher, isso vale mais do que qualquer número de catálogo."
+              "Se um modelo já respondeu neste telefone, o cartão dele mostra a velocidade medida aqui: a mediana das últimas gerações dele neste aparelho, com os tempos que o próprio motor mede. Para escolher, isso vale mais do que qualquer número de catálogo.",
+              "A etiqueta amarela diz com quanta memória de conversa o modelo funciona agora (por exemplo, 1024 de 2048 tokens). Se você fechar outros apps e a memória liberar, ela pode ficar verde.",
+              "«$t(modelSetupScreen.benchTitle)» mede o modelo carregado três vezes: mostra a velocidade de leitura e de escrita com o intervalo, e quanto tempo levou para carregar."
             ],
             "tip": "Se as respostas demoram muito ou o app fecha, tente um modelo menor."
           },

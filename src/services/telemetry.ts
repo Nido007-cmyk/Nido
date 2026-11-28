@@ -46,6 +46,15 @@ export interface QueryStats {
    */
   ttftMs: number;
   tokPerSec: number;
+  /**
+   * 0.1.121: lo que midió el motor en la respuesta visible
+   * (nativeTimings.ts): velocidad de lectura del prompt, tokens del
+   * prompt evaluados y tokens que reutilizó de la caché. Ausentes si el
+   * turno no usó el modelo o el nativo no dio tiempos.
+   */
+  promptPerSec?: number;
+  promptTokens?: number;
+  cachedPromptTokens?: number;
   peakRssBytes: number;
   timestamp: number;
   /**

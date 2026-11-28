@@ -140,6 +140,14 @@ class RamMonitorModule : Module() {
       Runtime.getRuntime().availableProcessors()
     }
 
+    // 0.1.121 (etapa 1): la frecuencia máxima de cada núcleo (kHz) de
+    // /sys/devices/system/cpu/cpuN/cpufreq/cpuinfo_max_freq. Distingue los
+    // núcleos rápidos de los de ahorro (big.LITTLE). 0 en un núcleo sin
+    // lectura (apagado o sin permiso).
+    Function("getCpuMaxFreqsKHz") {
+      readCpuMaxFreqsKHz()
+    }
+
     // Optimización 2026-11-08 (fase 3): batería del aparato para la
     // política de presión. El nivel sale del intent pegajoso
     // ACTION_BATTERY_CHANGED (sin receptor registrado, sin permisos);
@@ -430,6 +438,22 @@ class RamMonitorModule : Module() {
     } catch (e: Exception) {
       0L
     }
+  }
+
+  private fun readCpuMaxFreqsKHz(): List<Long> {
+    val cores = Runtime.getRuntime().availableProcessors()
+    val out = ArrayList<Long>(cores)
+    for (i in 0 until cores) {
+      val v = try {
+        RandomAccessFile("/sys/devices/system/cpu/cpu$i/cpufreq/cpuinfo_max_freq", "r").use { r ->
+          r.readLine()?.trim()?.toLongOrNull() ?: 0L
+        }
+      } catch (e: Exception) {
+        0L
+      }
+      out.add(v)
+    }
+    return out
   }
 
   private fun readStatusKb(field: String): Long {

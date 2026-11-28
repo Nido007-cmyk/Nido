@@ -7,7 +7,7 @@
 import * as FileSystem from "expo-file-system/legacy";
 import { initLlama, LlamaContext, type CompletionResponseFormat } from "llama.rn";
 import * as RamMonitor from "ram-monitor";
-import { batchForRam, checkRamBudget, defaultThreadsForCores, estimateContextBytes, KV_ACCEL_BYTES_PER_ELEMENT, KV_Q8_BYTES_PER_ELEMENT, RamBudgetError, readProcessorCount, readRamSnapshot, toGb } from "./ramBudget";
+import { batchForRam, checkRamBudget, defaultThreadsForCores, estimateContextBytes, KV_ACCEL_BYTES_PER_ELEMENT, KV_Q8_BYTES_PER_ELEMENT, RamBudgetError, readProcessorCount, readRamSnapshot, stateCacheBudgetMb, toGb } from "./ramBudget";
 import {
   accelLayerBudget,
   evaluateAccelGate,
@@ -46,6 +46,7 @@ import { htpAcceleratesQuant, MODEL_CATALOG, openClAcceleratesQuant, type Catalo
 import { contextCeilingForDevice } from "../models/defaultModel";
 import { currentDevicePressure } from "./devicePressure";
 import { withStage } from "../utils/stageError";
+import { fromNativeTimings, writeRate, type NativeTimings } from "./nativeTimings";
 import { recordInferenceEvent, recordRamRejection, type TelemetryStopReason } from "./telemetry";
 import { findRepetitionLoop, trimRepetitionLoop } from "./repetitionGuard";
 import { nativeGateBegin, nativeGateEnd, withNativeLoadGate } from "./nativeGate";
@@ -353,6 +354,8 @@ export interface LoadedModelInfo {
   stripReasoning?: boolean;
   /** Bounty tanda 3: nota de la escalera/CrashGuard si el plan degradó. */
   contextNote?: string;
+  /** 0.1.121: lo que tardó initLlama en cargar este modelo (ms). */
+  loadMs?: number;
 }
 
 /**
@@ -397,7 +400,7 @@ export interface AccelInitPick {
 
 export function llmInitParamsForProfile(
   profile: LlmMemoryProfile,
-  base: { model: string; n_ctx: number; n_threads: number },
+  base: { model: string; n_ctx: number; n_threads: number; state_cache_budget_mb?: number },
   batch: { nBatch: number; nUbatch: number } = { nBatch: LLM_N_BATCH, nUbatch: LLM_N_UBATCH },
   accel?: AccelInitPick,
 ): Record<string, unknown> {
@@ -407,6 +410,9 @@ export function llmInitParamsForProfile(
     n_ctx: base.n_ctx,
     n_threads: base.n_threads,
     n_gpu_layers: 0, // CPU-only for broad device compatibility; adjust per-device
+    // 0.1.121: sin efecto en modelos de atención pura; en los híbridos o
+    // de ventana, el tope que el pre-flight ya contó.
+    ...(base.state_cache_budget_mb !== undefined ? { state_cache_budget_mb: base.state_cache_budget_mb } : {}),
   };
   if (profile === "default") return common;
   // Optimización 2026-11-08 (fase 2): el lote ya no es la constante
@@ -632,6 +638,48 @@ export class LlamaEngine {
   private lastLoopCut = false;
   get lastGenerationLoopCut(): boolean {
     return this.lastLoopCut;
+  }
+  /**
+   * 0.1.121: los tiempos que midió el motor en la ÚLTIMA generación
+   * (lectura del prompt, escritura, tokens de caché). null si el nativo
+   * no los dio o venían rotos (nativeTimings.ts).
+   */
+  private lastNativeTimings: NativeTimings | null = null;
+  /**
+   * 0.1.121: tokens del prompt del sistema ya contados para este
+   * contexto (n_keep). Se cuenta una vez por texto y contexto: el prompt
+   * del sistema casi no cambia entre turnos.
+   */
+  private nKeepCache: { context: unknown; text: string; tokens: number } | null = null;
+
+  /**
+   * n_keep = los tokens del prompt del sistema (más el margen de la
+   * plantilla). Si el contexto se llena durante la generación, llama.cpp
+   * desplaza el contexto descartando tokens DESPUÉS de n_keep; con 0
+   * (el valor por defecto) el prompt de seguridad sería lo primero en
+   * perderse. Sin tokenizador o sin mensaje de sistema: undefined y la
+   * llamada nativa queda como antes.
+   */
+  private async systemKeepTokens(messages: ChatMessageInput[] | undefined): Promise<number | undefined> {
+    const first = messages?.[0];
+    if (!first || first.role !== "system" || typeof first.content !== "string" || first.content.length === 0) return undefined;
+    const ctx = this.context as { tokenize?: (t: string) => Promise<{ tokens: unknown[] }> } | null;
+    if (!ctx || typeof ctx.tokenize !== "function") return undefined;
+    if (this.nKeepCache && this.nKeepCache.context === ctx && this.nKeepCache.text === first.content) {
+      return keepTokensFor(this.nKeepCache.tokens, this.modelInfo?.nCtx);
+    }
+    try {
+      const r = await ctx.tokenize(first.content);
+      const tokens = Array.isArray(r?.tokens) ? r.tokens.length : 0;
+      if (tokens <= 0) return undefined;
+      this.nKeepCache = { context: ctx, text: first.content, tokens };
+      return keepTokensFor(tokens, this.modelInfo?.nCtx);
+    } catch {
+      return undefined;
+    }
+  }
+  get lastGenerationTimings(): NativeTimings | null {
+    return this.lastNativeTimings;
   }
   /**
    * M-39: contador de paradas pedidas con stop(). generateOnce toma una
@@ -1127,6 +1175,9 @@ export class LlamaEngine {
         return;
       }
     }
+    // 0.1.121: tope de la caché de estados entre turnos (modelos
+    // híbridos o de ventana; ver stateCacheBudgetMb).
+    const stateCacheMb = stateCacheBudgetMb(liveSnapshot?.totalRamBytes ?? snapshot?.totalRamBytes ?? null);
     const specBase = {
       fileSizeBytes,
       nLayer: catalogEntry?.arch?.nLayer,
@@ -1282,13 +1333,16 @@ export class LlamaEngine {
       let lastErr: unknown = null;
       let firstErr: unknown = null;
       let loadedProfile: LlmMemoryProfile | null = null;
+      // 0.1.121: la duración de la carga (de todos los intentos de la
+      // cascada hasta el que cargó), para la prueba de velocidad.
+      const loadStartedAt = Date.now();
       for (const profile of profilesToTry) {
         try {
           this.context = await withStage("initLlama", () =>
             initLlama(
               llmInitParamsForProfile(
                 profile,
-                { model: modelPath, n_ctx: nCtx, n_threads: nThreads },
+                { model: modelPath, n_ctx: nCtx, n_threads: nThreads, state_cache_budget_mb: stateCacheMb },
                 loadBatch,
                 profile === "accel" && accelPick ? accelPick : undefined,
               ) as never,
@@ -1328,6 +1382,7 @@ export class LlamaEngine {
         noThink: catalogEntry?.capabilities?.noThink,
         sampling: catalogEntry?.capabilities?.sampling,
         stripReasoning: catalogEntry?.capabilities?.stripReasoning,
+        loadMs: Date.now() - loadStartedAt,
       };
     } catch (e: any) {
       // The native error here (from llama.rn/llama.cpp) is often terse
@@ -1484,17 +1539,24 @@ export class LlamaEngine {
     let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
     try {
       const run = (async (): Promise<ModelBenchReport> => {
-        const raw: RawBenchResult[] = [];
+        // 0.1.121: cada repetición es su propia llamada (nr = 1): el
+        // mismo trabajo que nr repeticiones agregadas en el nativo, pero
+        // con cada velocidad a la vista para dar media y rango.
+        const raw: RawBenchResult[][] = [];
         for (const cfg of BENCH_CONFIGS) {
-          raw.push(
-            await (bench as (pp: number, tg: number, pl: number, nr: number) => Promise<RawBenchResult>).call(
-              context,
-              cfg.pp,
-              cfg.tg,
-              cfg.pl,
-              cfg.nr,
-            ),
-          );
+          const reps: RawBenchResult[] = [];
+          for (let r = 0; r < cfg.nr; r++) {
+            reps.push(
+              await (bench as (pp: number, tg: number, pl: number, nr: number) => Promise<RawBenchResult>).call(
+                context,
+                cfg.pp,
+                cfg.tg,
+                cfg.pl,
+                1,
+              ),
+            );
+          }
+          raw.push(reps);
         }
         sample();
         return buildBenchReport({
@@ -1776,6 +1838,8 @@ export class LlamaEngine {
         ? prompt.length
         : (messages ?? []).reduce((n, m) => n + (m.content?.length ?? 0), 0);
     let stopReason: TelemetryStopReason = "completed";
+    let nativeTimings: NativeTimings | null = null;
+    this.lastNativeTimings = null;
     // 0.1.55: «NIDO está respondiendo…» mientras dure la generación, para que
     // Android no cierre la app si el usuario sale (answerKeepAlive). Solo
     // para respuestas que se ven escribirse (onToken), no para trabajos
@@ -1811,6 +1875,8 @@ export class LlamaEngine {
           throw e;
         }
         const { text } = result;
+        nativeTimings = fromNativeTimings((result as { timings?: unknown }).timings);
+        this.lastNativeTimings = nativeTimings;
         const settled = text ?? started.getFull();
         // m-78 (F2-m7): el recorte de bucle sobre el texto asentado
         // SOLO si la guarda marcó bucle durante ESTA generación. Hasta
@@ -1899,7 +1965,10 @@ export class LlamaEngine {
         // tramo se generan tokenCount − 1 tokens. Dividir tokenCount
         // entero inflaba la tasa (≈3 % con 32 tokens, más en respuestas
         // cortas).
-        tokensPerSec: genMs > 0 && tokenCount > 1 ? ((tokenCount - 1) / genMs) * 1000 : null,
+        // 0.1.121: manda la tasa del motor (cuenta tokens de verdad);
+        // la de la app queda de respaldo si el nativo no la dio.
+        tokensPerSec: writeRate(nativeTimings, genMs > 0 && tokenCount > 1 ? ((tokenCount - 1) / genMs) * 1000 : null),
+        ...(nativeTimings ? { timings: nativeTimings } : {}),
         stopReason,
         samplingPreset,
         temperature,
@@ -2010,6 +2079,8 @@ export class LlamaEngine {
     // catalog flag (noThink → false); models without the flag never
     // see the param (byte-identical legacy native call).
     const thinkingParam = enableThinking ?? (this.modelInfo?.noThink ? false : undefined);
+    const nKeep = await this.systemKeepTokens(messages);
+    if (nKeep !== undefined) extraParams.n_keep = nKeep;
     const completionParams = messages
       ? {
           messages,
@@ -2064,3 +2135,19 @@ export class LlamaEngine {
 }
 
 export const llamaEngine = new LlamaEngine();
+
+/**
+ * 0.1.121: margen de tokens sobre el prompt del sistema para n_keep: la
+ * plantilla de chat envuelve el texto con sus marcas (p. ej.
+ * «<|im_start|>system\n» … «<|im_end|>»). Guardar unos tokens de más solo
+ * conserva el principio del primer mensaje; guardar de menos cortaría el
+ * final del prompt de seguridad.
+ */
+export const N_KEEP_TEMPLATE_MARGIN = 16;
+
+/** n_keep para un prompt del sistema de `tokens` tokens; nunca más de n_ctx − 4. */
+export function keepTokensFor(tokens: number, nCtx: number | undefined): number {
+  const want = Math.max(0, Math.floor(tokens)) + N_KEEP_TEMPLATE_MARGIN;
+  if (!nCtx || nCtx <= 4) return want;
+  return Math.min(want, nCtx - 4);
+}

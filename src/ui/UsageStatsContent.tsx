@@ -18,8 +18,9 @@ import { llamaEngine } from "../inference/LlamaEngine";
 import { MODEL_CATALOG, RAM_BUDGET_BYTES, STORAGE_BUDGET_BYTES } from "../models/manifest";
 import { SYSTEM_HEADROOM_BYTES } from "../inference/ramBudget";
 import { ModelManager } from "../models/ModelManager";
-import { getMemoryInfo, getDeviceTotalRamBytes, getDeviceRamInfo, type DeviceRamInfo } from "ram-monitor";
+import { getMemoryInfo, getDeviceTotalRamBytes, getDeviceRamInfo, getCpuMaxFreqsKHz, type DeviceRamInfo } from "ram-monitor";
 import { advertisedRamGb } from "./deviceRamLabel";
+import { cpuClusters, formatCpuClusters } from "../inference/cpuTopology";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
@@ -88,6 +89,8 @@ export function UsageStatsContent() {
   const [deviceTotalRam, setDeviceTotalRam] = useState(0);
   // 0.1.118: la ficha del aparato (RAM anunciada, usable y swap).
   const [ramInfo, setRamInfo] = useState<DeviceRamInfo | null>(null);
+  // 0.1.121: los núcleos del procesador agrupados por frecuencia.
+  const [cpuLabel, setCpuLabel] = useState<string | null>(null);
   const [storage, setStorage] = useState<StorageBreakdown>({
     ggufBytes: 0,
     corpusBytes: 0,
@@ -166,6 +169,8 @@ export function UsageStatsContent() {
     try {
       setDeviceTotalRam(getDeviceTotalRamBytes());
       setRamInfo(getDeviceRamInfo());
+      const clusters = cpuClusters(getCpuMaxFreqsKHz());
+      setCpuLabel(clusters.length > 0 ? formatCpuClusters(clusters, t("usageStats.decimalSeparator")) : null);
     } catch {
       // Not linked
     }
@@ -300,6 +305,7 @@ export function UsageStatsContent() {
                   : t("usageStats.deviceRamUsable", { usable: formatGB(deviceTotalRam) })
             }
           />
+          {cpuLabel ? <TelemetryRow label={t("usageStats.cpu")} value={cpuLabel} /> : null}
           {ramInfo && ramInfo.swapTotalBytes > 0 ? (
             <TelemetryRow
               label={t("usageStats.swap")}
@@ -413,6 +419,24 @@ export function UsageStatsContent() {
               value={stats.tokensGenerated > 1 && stats.tokPerSec > 0 ? `${stats.tokPerSec.toFixed(1)} tok/s` : "—"}
               highlight={colors.text.accentCyan}
             />
+            {/* 0.1.121: la lectura del prompt, medida por el motor, y lo
+                que se ahorró gracias a la caché. */}
+            {stats.tokensGenerated > 0 && stats.promptPerSec !== undefined && stats.promptPerSec > 0 ? (
+              <TelemetryRow
+                label={t("usageStats.promptSpeed")}
+                value={`${stats.promptPerSec.toFixed(1)} tok/s`}
+                highlight={colors.text.accentCyan}
+              />
+            ) : null}
+            {stats.tokensGenerated > 0 && stats.promptTokens !== undefined ? (
+              <TelemetryRow
+                label={t("usageStats.promptTokens")}
+                value={t("usageStats.promptTokensValue", {
+                  read: String(stats.promptTokens),
+                  cached: String(stats.cachedPromptTokens ?? 0),
+                })}
+              />
+            ) : null}
             <TelemetryRow
               label={t("usageStats.firstToken")}
               value={stats.tokensGenerated > 0 ? formatMs(stats.ttftMs) : "—"}
@@ -517,7 +541,8 @@ export function UsageStatsContent() {
               highlight={colors.text.heading}
             />
             <TelemetryRow label={t("usageStats.ctxWindow")} value={`${modelInfo.nCtx} tokens`} />
-            <TelemetryRow label={t("usageStats.threads")} value={`${modelInfo.nThreads} threads`} />
+            {/* 0.1.121: «threads» iba en inglés en los tres idiomas. */}
+            <TelemetryRow label={t("usageStats.threads")} value={t("usageStats.threadsValue", { n: modelInfo.nThreads })} />
             {modelCatalogEntry && (
               <TelemetryRow label={t("usageStats.license")} value={modelCatalogEntry.license} />
             )}

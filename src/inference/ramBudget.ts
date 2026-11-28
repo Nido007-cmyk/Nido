@@ -123,6 +123,7 @@ export interface ContextSpec {
    * over-charges every rung of the ladder on small devices.
    */
   kvBytesPerElement?: number;
+
   /**
    * Micro-batch the load will run with (batchForRam's pick for this
    * device class). The compute term's dominant piece is proportional
@@ -254,6 +255,34 @@ export function estimateKvCacheBytes(
   bytesPerElement: number = KV_BYTES_PER_ELEMENT
 ): number {
   return 2 * nLayer * nCtx * nKvHeads * headDim * bytesPerElement;
+}
+
+/**
+ * 0.1.121 (etapa 1): llama.rn guarda instantáneas del estado entre turnos
+ * en los modelos híbridos/recurrentes y de ventana deslizante (en el
+ * catálogo: LFM2.5 y Gemma 4), hasta `state_cache_budget_mb` (160 MiB por
+ * defecto; nada en los de atención pura). NIDO no lo fijaba: quedaba el
+ * valor de fábrica. En aparatos de 6 GiB o menos se fija en 64 MiB (96 MiB
+ * menos de memoria); por encima, los 160 de fábrica.
+ *
+ * Por qué no se suma aparte en la estimación: el `arch` de esos dos
+ * modelos (firmado en el catálogo) ya es una cota alta de su KV — el
+ * LFM2.5 cuenta sus 24 capas cuando solo 6 tienen KV (~144 MiB de holgura
+ * a 4096) y el Gemma 4 cuenta sus 42 capas a contexto completo cuando la
+ * mayoría usan ventana de 512. En aparatos de 6 GiB o menos esa holgura
+ * cubre los 64 MiB; en los grandes, el LFM2.5 queda unos 16 MiB corto
+ * frente a los 160 (144 de holgura a 4096), dentro de los 256 MiB del
+ * margen en vivo.
+ * Cambiar el `arch` exige volver a firmar el catálogo con la clave del
+ * dueño.
+ */
+const GIB_BYTES = 1024 * 1024 * 1024;
+export const STATE_CACHE_SMALL_MB = 64;
+export const STATE_CACHE_DEFAULT_MB = 160;
+
+export function stateCacheBudgetMb(totalRamBytes: number | null | undefined): number {
+  if (!totalRamBytes || !Number.isFinite(totalRamBytes) || totalRamBytes <= 0) return STATE_CACHE_DEFAULT_MB;
+  return totalRamBytes <= 6 * GIB_BYTES ? STATE_CACHE_SMALL_MB : STATE_CACHE_DEFAULT_MB;
 }
 
 export function estimateContextBytes(spec: ContextSpec): RamEstimate {

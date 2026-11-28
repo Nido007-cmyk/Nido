@@ -79,3 +79,17 @@ describe("VEL-5 acto 3: el informe lleva su foto de parámetros pegada", () => {
     expect(report.nGpuLayers).toBe(0);
   });
 });
+
+describe("summarizeSeries (0.1.121)", () => {
+  it("media, mínimo, máximo y desviación típica muestral", async () => {
+    const { summarizeSeries } = await import("./modelBench");
+    const s = summarizeSeries([10, 12, 14])!;
+    expect(s.mean).toBe(12);
+    expect(s.min).toBe(10);
+    expect(s.max).toBe(14);
+    expect(s.stdev).toBeCloseTo(2, 10);
+    expect(summarizeSeries([5])!.stdev).toBe(0);
+    expect(summarizeSeries([])).toBeNull();
+    expect(summarizeSeries([Number.NaN, -1])).toBeNull();
+  });
+});

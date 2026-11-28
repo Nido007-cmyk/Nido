@@ -85,6 +85,7 @@ interface RamMonitorNativeModule {
   getDeviceTotalRamBytes(): number;
   getDeviceRamInfo?(): DeviceRamInfo;
   getProcessorCount?(): number;
+  getCpuMaxFreqsKHz?(): number[];
   getAvailableMemory?(): AvailableMemory;
   installCrashRecorder?(): boolean;
   getCrashReport?(): CrashReport;
@@ -147,6 +148,16 @@ export function getAvailableMemory(): AvailableMemory | null {
 export function getProcessorCount(): number | null {
   try {
     return RamMonitor.getProcessorCount?.() ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** 0.1.121: frecuencia máxima de cada núcleo en kHz; null en builds anteriores. */
+export function getCpuMaxFreqsKHz(): number[] | null {
+  try {
+    const r = RamMonitor.getCpuMaxFreqsKHz?.();
+    return Array.isArray(r) && r.length > 0 ? r : null;
   } catch {
     return null;
   }
