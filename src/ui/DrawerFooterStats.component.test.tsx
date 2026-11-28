@@ -110,20 +110,20 @@ describe("DrawerFooterStats · etiquetas enteras y cifras que miden de verdad", 
 
   it("RAM: el denominador es la RAM total real del aparato (8 GB), no el presupuesto de 12", async () => {
     await render(<DrawerFooterStats />);
-    expect(await screen.findByText("1.2 GB/8.0 GB")).toBeTruthy();
+    expect(await screen.findByText("1.2 GB / 8.0 GB")).toBeTruthy();
     expect(screen.queryByText(/12\.0 GB/)).toBeNull();
   });
 
   it("DISCO: usado y total son el disco real (128 − 100 = 28), no el catálogo contra 50", async () => {
     await render(<DrawerFooterStats />);
-    expect(await screen.findByText("28.0 GB/128.0 GB")).toBeTruthy();
+    expect(await screen.findByText("28.0 GB / 128.0 GB")).toBeTruthy();
     expect(screen.queryByText(/50\.0 GB/)).toBeNull();
     expect(mockStorageUsageSpy).not.toHaveBeenCalled();
   });
 
   it("tok/s: un turno sin generación no fabrica un 0,0; la última tasa real se queda", async () => {
     await render(<DrawerFooterStats />);
-    await screen.findByText("1.2 GB/8.0 GB");
+    await screen.findByText("1.2 GB / 8.0 GB");
     expect(screen.queryByText(/tok\/s/)).toBeNull();
     await act(async () => mockStatsCallback?.({ tokPerSec: 12.34 }));
     expect(await screen.findByText("última consulta · 12.3 tok/s")).toBeTruthy();
@@ -131,5 +131,21 @@ describe("DrawerFooterStats · etiquetas enteras y cifras que miden de verdad", 
     await act(async () => mockStatsCallback?.({ tokPerSec: 0 }));
     expect(screen.queryByText(/0\.0 tok\/s/)).toBeNull();
     expect(screen.getByText("última consulta · 12.3 tok/s")).toBeTruthy();
+  });
+});
+
+// 0.1.119 (foto del dueño): con «RAM (NIDO)» y la letra grande del
+// sistema, la cifra se cortaba («3.3..») y la barra desaparecía porque las
+// tres piezas compartían una fila. Ahora la barra va en su propia línea.
+describe("DrawerFooterStats · cifra entera y barra visible (0.1.119)", () => {
+  const { DrawerFooterStats } = require("./DrawerFooterStats");
+  it("la cifra no comparte fila con la barra", async () => {
+    await render(<DrawerFooterStats />);
+    const value = await screen.findByTestId("drawer-ram-value");
+    const row = value.parent?.parent ?? value.parent;
+    // La fila de la cifra solo tiene etiqueta y cifra (dos textos).
+    const texts = (row?.children ?? []).filter((c: any) => typeof c !== "string");
+    expect(texts.length).toBeLessThanOrEqual(2);
+    expect(value.props.children).toBe("1.2 GB / 8.0 GB");
   });
 });
