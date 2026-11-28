@@ -72,6 +72,11 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   respuestas muestran los artículos de donde salen, con una línea que cuenta
   qué frases salen de ellos y cuáles del modelo sin fuente; si nada de la base
   encaja de verdad, no se muestra ninguna fuente.
+- **Preguntar sobre una foto, en el teléfono** (0.1.126): toca «+» en el
+  chat, elige una foto y pregunta. En teléfonos pequeños con LFM2-VL-450M
+  (unos 323 MB; español e inglés), y con la parte de visión del Gemma 4
+  E4B donde Gemma 4 cabe (los tres idiomas). La foto se borra al
+  contestar; en la conversación solo queda tu pregunta.
 - **Dictado con Whisper, en el teléfono** (0.1.125): descarga el modelo de
   voz Whisper (unos 145 MB, español, inglés y portugués) en Ajustes → Voz y
   el dictado funciona en cualquier teléfono sin internet, incluso sin el

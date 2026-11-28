@@ -336,3 +336,23 @@ archivo multi-GB es una limitación conocida y documentada — ver `ARCHITECTURE
 Status). `scripts/setup-models.sh` hace la verificación sha256 autoritativa, una vez,
 en la máquina de desarrollo, antes de que `expo prebuild` embeba los archivos en el
 build.
+
+## Fotos (0.1.126)
+
+Preguntar sobre una foto usa un proyector de visión (mmproj) encima de un
+modelo de lenguaje, con `initMultimodal` de llama.rn (CPU, como mucho 256 tokens
+por imagen). Dos opciones firmadas, ambas opcionales:
+
+- `lfm2-vl-450m-q4_0` (tipo `vision`, ~219 MB) + `lfm2-vl-450m-mmproj-q8_0`
+  (~104 MB): cabe en un teléfono de 4 GB; responde en español e inglés (el
+  portugués no figura en su ficha). Nunca se ofrece como modelo de chat: se carga
+  solo para la pregunta sobre la foto, con su proyector contado en el mismo plan
+  de memoria (`extraResidentBytes`), y se descarga al acabar.
+- `gemma-4-e4b-it-mmproj` (~990 MB, mismo repositorio y commit de Google que la
+  entrada de Gemma 4 E4B): con Gemma 4 como modelo de chat activo, su proyector se
+  adjunta para la pregunta y se suelta al acabar; los tres idiomas.
+
+La imagen elegida (selector del sistema, sin permiso nuevo) es una copia en la
+caché de la app que se borra al tener la respuesta, salga bien o mal
+(`src/vision/photoQuestion.ts`); el chat guarda la pregunta con la marca [Foto],
+nunca la imagen.

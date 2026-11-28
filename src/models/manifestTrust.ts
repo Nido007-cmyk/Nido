@@ -68,6 +68,9 @@ const SIGNED_FIELDS = [
   "arch",
   "defaultNCtx",
   "bundled",
+  // 0.1.126: el enlace del proyector de visión con su modelo. Una entrada
+  // sin él se canoniza igual que antes (los campos ausentes no entran).
+  "projectorFor",
 ] as const;
 
 /**

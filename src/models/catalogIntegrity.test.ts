@@ -208,6 +208,10 @@ describe("real MODEL_CATALOG — every entry passes the pre-network gate", () =>
       "multilingual-e5-small-q8": "MIT",
       // 0.1.125: whisper.cpp (ggerganov/whisper.cpp, licencia MIT en su ficha de Hugging Face).
       "whisper-base": "MIT",
+      // 0.1.126: fotos (LFM2-VL-450M y su proyector, y el proyector de Gemma 4).
+      "lfm2-vl-450m-q4_0": "LFM Open License v1.0",
+      "lfm2-vl-450m-mmproj-q8_0": "LFM Open License v1.0",
+      "gemma-4-e4b-it-mmproj": "Apache-2.0",
       "qwen2.5-1.5b-instruct-q4km": "Apache-2.0",
       "qwen2.5-0.5b-instruct-q4km": "Apache-2.0",
       "qwen2.5-0.5b-instruct-q5km": "Apache-2.0",

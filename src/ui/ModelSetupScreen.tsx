@@ -925,6 +925,32 @@ export function ModelSetupScreen(props: Props) {
                 />
               )}
             />
+            {/* 0.1.126 (etapa 3): preguntar sobre fotos, con las mismas
+                tarjetas y acciones que el resto del catálogo. */}
+            <Text style={styles.sectionHeading}>{t("modelSetupScreen.photoTitle")}</Text>
+            <Text style={styles.hapticRowValue}>{t("modelSetupScreen.photoDesc")}</Text>
+            <FlatList
+              data={MODEL_CATALOG.filter((m) => m.kind === "vision" || m.kind === "projector")}
+              keyExtractor={(m) => m.id}
+              scrollEnabled={false}
+              contentContainerStyle={styles.list}
+              renderItem={({ item }) => (
+                <CatalogItemCard
+                  item={item}
+                  row={getRow(item)}
+                  isActive={false}
+                  onDownload={download}
+                  onUse={useModel}
+                  onRemove={remove}
+                  onDiscardPartial={discardPartial}
+                  activating={false}
+                  busy={activatingId !== null}
+                  residentLoad={residentLoad}
+                  residentLoaded={residentInfo != null}
+                  crashSafety={crashSafety}
+                />
+              )}
+            />
             <Text style={styles.sectionHeading}>{t("modelSetupScreen.benchTitle")}</Text>
             <Text style={styles.hapticRowValue}>{t("modelSetupScreen.benchDesc")}</Text>
             <Pressable

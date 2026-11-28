@@ -1421,6 +1421,80 @@ describe("P2.4 telemetry", () => {
     }
   });
 
+  it("0.1.126 (fotos): proyector de visión — memoria de ahora, adjuntar, imagen en el último mensaje del usuario y soltar", async () => {
+    const { withImageOnLastUser, projectorFitsNow, VISION_WORKING_BYTES, VISION_LIVE_MARGIN_BYTES, VISION_IMAGE_MAX_TOKENS } = await import("./LlamaEngine");
+    const MiB = 1024 ** 2;
+    const GiB = 1024 ** 3;
+    // La imagen va delante del texto en el ÚLTIMO mensaje del usuario.
+    const msgs = withImageOnLastUser(
+      [
+        { role: "system", content: "s" },
+        { role: "user", content: "a" },
+        { role: "assistant", content: "b" },
+        { role: "user", content: "¿qué es?" },
+      ],
+      "file:///cache/x.jpg",
+    );
+    expect(msgs[1]).toEqual({ role: "user", content: "a" });
+    expect(msgs[3]).toEqual({
+      role: "user",
+      content: [{ type: "image_url", image_url: { url: "file:///cache/x.jpg" } }, { type: "text", text: "¿qué es?" }],
+    });
+    expect(() => withImageOnLastUser([{ role: "system", content: "s" }], "x")).toThrow();
+    // Memoria de ahora: fail-closed sin lectura.
+    const proj = 100 * MiB;
+    const need = proj + VISION_WORKING_BYTES + VISION_LIVE_MARGIN_BYTES;
+    expect(projectorFitsNow({ availBytes: need + 216 * MiB, lowMemThresholdBytes: 216 * MiB }, proj)).toBe(true);
+    expect(projectorFitsNow({ availBytes: need + 216 * MiB - 1, lowMemThresholdBytes: 216 * MiB }, proj)).toBe(false);
+    expect(projectorFitsNow(null, proj)).toBe(false);
+
+    mockStopVerdict = { stopped_eos: true };
+    const projPath = "p.gguf";
+    try {
+      const engine = new LlamaEngine();
+      // Sin modelo cargado no hay proyector.
+      await expect(engine.attachProjector("models/p.gguf")).rejects.toThrow(/not loaded/);
+      await engine.load("models/a.gguf");
+      const ctx = created[created.length - 1] as unknown as Record<string, unknown>;
+      const calls: string[] = [];
+      ctx.initMultimodal = async (o: { path: string; image_max_tokens: number; use_gpu: boolean }) => {
+        calls.push(`init:${o.path}:${o.image_max_tokens}:${o.use_gpu}`);
+        return true;
+      };
+      ctx.releaseMultimodal = async () => {
+        calls.push("release");
+      };
+      // Una imagen sin proyector adjunto no se manda.
+      await expect(engine.generate({ messages: [{ role: "user", content: "x" }], imagePath: "file:///c/x.jpg" })).rejects.toThrow(
+        /no vision projector/,
+      );
+      mockFileSizes[projPath] = 100 * MiB;
+      // Sin memoria libre suficiente AHORA: no se adjunta.
+      mockAvailMemory = { availBytes: 300 * MiB, thresholdBytes: 216 * MiB, lowMemory: false };
+      await expect(engine.attachProjector("models/p.gguf")).rejects.toThrow(/vision projector needs/);
+      expect(calls).toEqual([]);
+      // Con memoria: se adjunta (ruta sin file://, sin GPU, tope de tokens por imagen).
+      mockAvailMemory = { availBytes: 2 * GiB, thresholdBytes: 216 * MiB, lowMemory: false };
+      await engine.attachProjector("models/p.gguf");
+      expect(calls).toEqual([`init:/docs/models/p.gguf:${VISION_IMAGE_MAX_TOKENS}:false`]);
+      expect(engine.attachedProjector).toBe("models/p.gguf");
+      await engine.generate({ messages: [{ role: "system", content: "s" }, { role: "user", content: "¿qué es?" }], imagePath: "file:///c/x.jpg" });
+      const sent = (ctx.lastParams as { messages: Array<{ content: unknown }> }).messages;
+      expect(sent[1].content).toEqual([{ type: "image_url", image_url: { url: "file:///c/x.jpg" } }, { type: "text", text: "¿qué es?" }]);
+      await engine.detachProjector();
+      expect(calls).toEqual([`init:/docs/models/p.gguf:${VISION_IMAGE_MAX_TOKENS}:false`, "release"]);
+      expect(engine.attachedProjector).toBeNull();
+      // Descargar el modelo también suelta el proyector.
+      await engine.attachProjector("models/p.gguf");
+      await engine.unload();
+      expect(engine.attachedProjector).toBeNull();
+    } finally {
+      mockStopVerdict = null;
+      mockAvailMemory = null;
+      delete mockFileSizes[projPath];
+    }
+  });
+
   it("0.1.124 (S-3): n_keep se cuenta sobre el prompt FORMATEADO hasta el final del sistema, con la envoltura de la plantilla", async () => {
     const { N_KEEP_TEMPLATE_MARGIN } = await import("./LlamaEngine");
     mockStopVerdict = { stopped_eos: true };

@@ -78,6 +78,11 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   every sentence of an answer is backed by its sources, a "Checked against
   the sources" strip says so (amber when unsupported sentences were
   removed). The sources show as a row of cards you can open.
+- **Ask about a photo, on the phone** (0.1.126): tap "+" in the chat, pick
+  a photo and ask about it. On small phones with LFM2-VL-450M (about
+  323 MB; Spanish and English), and with Gemma 4 E4B's vision part where
+  Gemma 4 fits (all three languages). The photo is deleted once answered;
+  the conversation keeps only your question.
 - **Dictation with Whisper, on the phone** (0.1.125): download the Whisper
   voice model (about 145 MB, Spanish, English and Portuguese) in Settings →
   Voice and dictation works on any phone without internet, even without

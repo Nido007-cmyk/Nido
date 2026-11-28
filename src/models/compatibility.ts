@@ -13,7 +13,8 @@ import {
 } from "../inference/ramBudget";
 import { planModelLoad } from "../inference/memoryLadder";
 import { contextCeilingForDevice, contextSpecForModel } from "./defaultModel";
-import type { CatalogModel } from "./manifest";
+import { MODEL_CATALOG, type CatalogModel } from "./manifest";
+import { PHOTO_WORKING_BYTES } from "../vision/photoQuestion";
 
 /**
  * RAM-fit verdict for a GGUF model on this device — shared between the
@@ -121,7 +122,14 @@ function verdictOnSnapshot(model: CatalogModel, deviceRamBytes: number, snapshot
     return { color: v.fits ? "green" : "red" };
   }
   const ceiling = contextCeilingForDevice(model.defaultNCtx, deviceRamBytes);
-  const { nCtx: _declaredCtx, ...specBase } = contextSpecForModel(model, deviceRamBytes);
+  const { nCtx: _declaredCtx, ...specBaseRaw } = contextSpecForModel(model, deviceRamBytes);
+  // 0.1.126: el modelo de fotos se carga SIEMPRE con su proyector de visión
+  // y su memoria de trabajo (photoQuestion.ts, extraResidentBytes): la
+  // insignia cuenta lo mismo que la carga.
+  const projector = model.kind === "vision" ? MODEL_CATALOG.find((m) => m.kind === "projector" && m.projectorFor === model.id) : undefined;
+  const specBase = projector
+    ? { ...specBaseRaw, fileSizeBytes: specBaseRaw.fileSizeBytes + projector.sizeBytes + PHOTO_WORKING_BYTES }
+    : specBaseRaw;
   // 0.1.123 (auditoría E-1): el plan es planModelLoad, el MISMO de la
   // carga real, con el MISMO factor del CrashGuard (opts.safety). La
   // insignia ya no tiene su propia copia del plan.

@@ -78,7 +78,9 @@ describe("VEL-5 acto 3: la cuantización declarada por entrada (el dato de la op
     for (const m of MODEL_CATALOG) {
       // 0.1.125: el modelo de voz (whisper.cpp, formato ggml propio, f16)
       // no es GGUF ni pasa por la opción de NPU: no lleva cuantización.
-      if (m.kind === "corpus" || m.kind === "speech") {
+      // 0.1.126: los proyectores de visión (mmproj) tampoco pasan por la
+      // opción de NPU ni declaran cuantización de pesos de texto.
+      if (m.kind === "corpus" || m.kind === "speech" || m.kind === "projector") {
         expect(m.quant, m.id).toBeUndefined();
       } else {
         expect(m.quant, m.id).toBeDefined();

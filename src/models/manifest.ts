@@ -33,7 +33,7 @@ import { DownloadFailure } from "./downloadErrors";
  * (whisper.cpp, src/voice/whisperDictation.ts). No entra en el chat ni en
  * la búsqueda: solo lo usa el dictado.
  */
-export type AssetKind = "llm" | "embedding" | "corpus" | "speech";
+export type AssetKind = "llm" | "embedding" | "corpus" | "speech" | "vision" | "projector";
 export type SetupTier = "minimum" | "standard" | "full" | "encyclopedia";
 
 /**
@@ -148,6 +148,11 @@ export interface CatalogModel {
    * (scripts/build-knowledge-pack.mjs) with its own search index and
    * embeddings, opened directly (src/rag/packs.ts).
    */
+  /**
+   * 0.1.126 (fotos): solo en las entradas de tipo "projector": el id del
+   * modelo al que da vista (su mmproj). Dentro de la firma (SIGNED_FIELDS).
+   */
+  projectorFor?: string;
   format?: "json" | "sqlite-pack";
 }
 
@@ -261,6 +266,8 @@ export const PINNED_SOURCE_REPOS: Readonly<Record<string, readonly string[]>> = 
     "google/gemma-4-E4B-it-qat-q4_0-gguf",
     // 0.1.125: el modelo de voz a texto del dictado (whisper-base).
     "ggerganov/whisper.cpp",
+    // 0.1.126: el modelo de fotos para aparatos pequeños y su proyector.
+    "LiquidAI/LFM2-VL-450M-GGUF",
   ],
   "raw.githubusercontent.com": ["Nido007-cmyk/Nido"],
   "github.com": ["Nido007-cmyk/Nido"],
@@ -486,6 +493,62 @@ export const MODEL_CATALOG: CatalogModel[] = [
     revision: "5359861c739e955e79d9a303bcbc70fb988958b1",
     license: "MIT",
     description: "74M, on-device speech to text for dictation in Spanish, English and Portuguese.",
+    required: false,
+  },
+  {
+    // 0.1.126 (etapa 3, decisión del dueño: «LFM2-VL-450M»). Modelo SOLO
+    // para preguntas sobre fotos en aparatos pequeños (cabe en 4 GB con su
+    // proyector). Responde en español e inglés; el portugués no figura en
+    // su ficha. No aparece como modelo de chat. Fijado al commit de Hugging
+    // Face cuyos bytes coinciden (oid LFS leído de su API, 2026-11-28);
+    // arch leída de su cabecera GGUF (16 capas; head_count_kv 8 en las de
+    // atención: cota alta, como el LFM2.5).
+    id: "lfm2-vl-450m-q4_0",
+    kind: "vision",
+    label: "LFM2-VL-450M (photos)",
+    quant: "Q4_0",
+    filename: "models/lfm2-vl-450m-q4_0.gguf",
+    sizeBytes: 219307424,
+    sha256: "1fbf4797e8669cdeabd97fa1d31ab046907cb1fc78b1c3d4bda1ba879574e5d7",
+    sourceUrl: "https://huggingface.co/LiquidAI/LFM2-VL-450M-GGUF/resolve/main/LFM2-VL-450M-Q4_0.gguf",
+    revision: "7cf9679aa137039135e342aa77014f7b5f2bef73",
+    license: "LFM Open License v1.0",
+    description: "450M, answers questions about a photo on small phones (Spanish and English).",
+    required: false,
+    arch: { nLayer: 16, nKvHeads: 8, headDim: 64 },
+    defaultNCtx: 2048,
+  },
+  {
+    // 0.1.126: el proyector de visión (mmproj) de LFM2-VL-450M.
+    id: "lfm2-vl-450m-mmproj-q8_0",
+    kind: "projector",
+    projectorFor: "lfm2-vl-450m-q4_0",
+    label: "LFM2-VL-450M vision projector",
+    filename: "models/lfm2-vl-450m-mmproj-q8_0.gguf",
+    sizeBytes: 103890016,
+    sha256: "a6a813fae4ba3f90852a990fdd4786a017dba0e80e599a366853ba539ee2b5ef",
+    sourceUrl: "https://huggingface.co/LiquidAI/LFM2-VL-450M-GGUF/resolve/main/mmproj-LFM2-VL-450M-Q8_0.gguf",
+    revision: "7cf9679aa137039135e342aa77014f7b5f2bef73",
+    license: "LFM Open License v1.0",
+    description: "Vision part of LFM2-VL-450M: needed to ask about photos.",
+    required: false,
+  },
+  {
+    // 0.1.126 (decisión del dueño: «Sí, también»): el proyector de visión
+    // del Gemma 4 E4B del catálogo, del mismo repositorio y commit de
+    // Google. Con él, Gemma 4 contesta sobre fotos en los tres idiomas en
+    // los aparatos donde Gemma 4 ya cabe.
+    id: "gemma-4-e4b-it-mmproj",
+    kind: "projector",
+    projectorFor: "gemma-4-e4b-it-q4_0",
+    label: "Gemma 4 E4B vision projector",
+    filename: "models/gemma-4-e4b-it-mmproj.gguf",
+    sizeBytes: 991552256,
+    sha256: "7498a37cb619e55f2fcf87eb931f56e99389ed6d432e4c5c66110694c0d65578",
+    sourceUrl: "https://huggingface.co/google/gemma-4-E4B-it-qat-q4_0-gguf/resolve/main/gemma-4-E4B-it-mmproj.gguf",
+    revision: "4b4a2c1d584be7264f87aac328a1bc739ce81b6c",
+    license: "Apache-2.0",
+    description: "Vision part of Gemma 4 E4B: lets it answer about photos in Spanish, English and Portuguese.",
     required: false,
   },
   {

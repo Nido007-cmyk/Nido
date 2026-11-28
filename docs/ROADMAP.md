@@ -40,6 +40,7 @@ We document what is verified, experimental, incomplete, or still awaiting physic
 - Private hello (P2P v4) and P2P v5: on by default since 0.1.49; confirm on two physical phones
 - New key per message + ML-KEM (P2P v5): test on two phones, then turn it on by default
 - Reproducible builds: keep the two-build check green on every release
+- Ask about a photo (0.1.126): measure LFM2-VL-450M speed, memory and answer quality on the Tab A9+
 - Dictation with Whisper (0.1.125): measure transcription speed and real memory on the Tab A9+ in airplane mode
 - Continue improving voice and local interaction
 - Polish the experience across English, Spanish and Portuguese

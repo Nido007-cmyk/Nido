@@ -140,9 +140,12 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
   // 0.1.125: el modelo de voz no se «usa»: con estar descargado, el
   // dictado lo toma solo (Whisper primero, Android de respaldo).
   const isSpeech = item.kind === "speech";
+  // 0.1.126: el modelo de fotos y los proyectores de visión tampoco se
+  // «usan»: la pregunta sobre una foto los toma solos si están.
+  const isPhoto = item.kind === "vision" || item.kind === "projector";
   const present = row?.present ?? false;
   const outdated = !present && (row?.outdated ?? false);
-  const effectivelyActive = isCorpus || isSpeech ? present : isActive;
+  const effectivelyActive = isCorpus || isSpeech || isPhoto ? present : isActive;
 
   // INDEX-FIX 2026-10-11: "en tu base de conocimiento" solo cuando el
   // paquete está indexado de verdad, no con solo tener el archivo.
@@ -223,7 +226,7 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
   // la tarjeta del modelo que el ajuste marca activo no se juzga
   // por la foto viva cuando ningún crédito probado la acompaña.
   const compatDetail =
-    item.kind === "llm" || item.kind === "embedding"
+    item.kind === "llm" || item.kind === "embedding" || item.kind === "vision"
       ? computeCompatibilityDetail(item, deviceRam, liveForBadge, {
           // 0.1.118 (foto del dueño, Tab A9+ sin modelo cargado): el
           // suelo solo vale con un modelo CARGADO cuyo crédito no se
@@ -512,14 +515,14 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
             </Pressable>
           )}
 
-          {present && !isCorpus && !isSpeech && !isActive && activating && (
+          {present && !isCorpus && !isSpeech && !isPhoto && !isActive && activating && (
             <View style={styles.activeCheckRow}>
               <ActivityIndicator size="small" color={colors.emerald[400]} />
               <Text style={styles.activeNote}>{t("catalogItemCard.loadingModel")}</Text>
             </View>
           )}
 
-          {present && !isCorpus && !isSpeech && !isActive && !activating && (
+          {present && !isCorpus && !isSpeech && !isPhoto && !isActive && !activating && (
             <Pressable accessibilityRole="button" accessibilityLabel={t("catalogItemCard.selectUse")}
               style={[styles.useBtn, busy && styles.disabled]}
               onPress={() => handleAction(() => onUse(item))}
@@ -555,6 +558,13 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
             </View>
           )}
 
+          {present && isPhoto && (
+            <View style={styles.activeCheckRow}>
+              <NidoIcon name="check" size={14} color={colors.text.accentEmerald} />
+              <Text style={styles.activeNote}>{t("catalogItemCard.photoReadyNote")}</Text>
+            </View>
+          )}
+
           {present && isSpeech && (
             <View style={styles.activeCheckRow}>
               <NidoIcon name="check" size={14} color={colors.text.accentEmerald} />
@@ -562,7 +572,7 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
             </View>
           )}
 
-          {present && !isCorpus && !isSpeech && isActive && (
+          {present && !isCorpus && !isSpeech && !isPhoto && isActive && (
             <View style={styles.activeCheckRow}>
               <NidoIcon name="check" size={14} color={colors.text.accentEmerald} />
               <Text style={styles.activeNote}>{t("catalogItemCard.activeNote")}</Text>

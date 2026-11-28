@@ -21,6 +21,7 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
   Linking,
+  Image,
 } from "react-native";
 import { Pressable } from "./components/Pressable";
 import { VaultOfferBanner } from "./VaultOfferBanner";
@@ -88,6 +89,7 @@ import { speakAloud, stopSpeaking } from "../voice/tts";
 import { groundingBadge } from "./chat/groundingBadge";
 import { tokensPerSecond } from "../eval/evalHarness.pure";
 import { showSecureAlert } from "nido-secure-dialog";
+import { errorReason } from "./userFacingError";
 // NIDO agent: loop agéntico local con herramientas (Fase A).
 import { classifyIntent } from "../agent/loop/intent";
 import { isGenericMemoryQuestionShape, memoryFullCoverageHit, memoryGateHit, memoryProbeWitness } from "../agent/loop/memoryQuery";
@@ -533,6 +535,45 @@ export function ChatScreen({
   // la pantalla solo lo alimenta, la lógica vive en provenance.ts.
   const burstRef = useRef<BurstState>(createBurstState());
   const inputValueRef = useRef("");
+  // 0.1.126 (etapa 3): la foto elegida para la próxima pregunta (copia en
+  // la caché; se borra al contestar o al quitarla).
+  const [pendingPhoto, setPendingPhoto] = useState<{ uri: string; name: string } | null>(null);
+  const pendingPhotoRef = useRef<{ uri: string; name: string } | null>(null);
+  const setPhoto = useCallback((p: { uri: string; name: string } | null) => {
+    pendingPhotoRef.current = p;
+    setPendingPhoto(p);
+  }, []);
+  // 0.1.126: quitar la foto elegida también borra su copia de la caché.
+  const dropPhoto = useCallback(() => {
+    const prev = pendingPhotoRef.current;
+    setPhoto(null);
+    if (prev) void import("../vision/photoQuestion").then(({ deletePhotoCopy }) => deletePhotoCopy(prev.uri));
+  }, [setPhoto]);
+  const pickPhoto = useCallback(async () => {
+    try {
+      const { photoRouteNow, deletePhotoCopy, sweepStalePhotoCopies } = await import("../vision/photoQuestion");
+      // Copias de fotos de una sesión cortada antes de preguntar: fuera.
+      await sweepStalePhotoCopies(pendingPhotoRef.current?.uri ?? null);
+      const active = await resolveActiveModel("llm").catch(() => undefined);
+      if (!(await photoRouteNow(active))) {
+        await showSecureAlert({
+          title: t("chatScreen.photo.noModelTitle"),
+          message: t("chatScreen.photo.noModel"),
+          cancelLabel: t("common.close"),
+          confirmLabel: t("common.done"),
+        }).catch(() => {});
+        return;
+      }
+      const DocumentPicker = await import("expo-document-picker");
+      const r = await DocumentPicker.getDocumentAsync({ type: "image/*", copyToCacheDirectory: true, multiple: false });
+      if (r.canceled || !r.assets?.[0]) return;
+      const prev = pendingPhotoRef.current;
+      if (prev) await deletePhotoCopy(prev.uri);
+      setPhoto({ uri: r.assets[0].uri, name: r.assets[0].name ?? "" });
+    } catch {
+      // El selector del sistema falló o se cerró: no hay foto.
+    }
+  }, [setPhoto, t]);
   const [staged, setStaged] = useState<null | {
     text: string;
     lang: string;
@@ -1220,7 +1261,9 @@ export function ChatScreen({
   );
 
   const send = useCallback(async (override?: { text: string; draft: string }) => {
-    const query = (override?.text ?? input).trim();
+    // 0.1.126: con una foto elegida y sin texto, la pregunta por defecto.
+    const photoTurn = !override && pendingPhotoRef.current !== null;
+    const query = (override?.text ?? input).trim() || (photoTurn ? t("chatScreen.photo.defaultQuestion") : "");
     // FIX 2026-10-09: no enviar antes de que los motores estén listos.
     // El carrusel de sugerencias llena el input programáticamente (evade
     // `editable={ready}`) y el teclado puede disparar onSubmitEditing
@@ -1311,13 +1354,15 @@ export function ChatScreen({
       sessionId = session.id;
       setActiveSessionId(sessionId);
     }
-    const userMsg: Message = { id: `${Date.now()}-u`, role: "user", text: query };
+    // 0.1.126: el mensaje guardado dice que iba con una foto; la foto no se guarda.
+    const shownQuery = photoTurn ? `${t("chatScreen.photo.marker")} ${query}` : query;
+    const userMsg: Message = { id: `${Date.now()}-u`, role: "user", text: shownQuery };
     const assistantId = `${Date.now()}-a`;
     // Explicit id, matching the in-memory message id used for the FlatList
     // key/React state — so a thumbs-up/down tap on this exact message can
     // reference `item.id` directly as answer_feedback's foreign key later,
     // rather than needing a separate id-mapping step.
-    await persistMessage(sessionId, "user", query, userMsg.id);
+    await persistMessage(sessionId, "user", shownQuery, userMsg.id);
     // 2026-10-30: la fila de la respuesta nace ya, vacía y marcada como
     // interrumpida. La completa finishAssistantMessage al terminar la
     // generación, o la borra deleteMessage si no hubo respuesta; si el
@@ -1390,7 +1435,10 @@ export function ChatScreen({
     const kbAnswer =
       coHit !== null
         ? coHit.text
-        : kbQueryMeta !== null
+        : photoTurn
+          ? // 0.1.126: con una foto solo mandan las respuestas fijas de seguridad.
+            numberHit?.text ?? null
+          : kbQueryMeta !== null
           ? kbQueryMeta.answer
           : smallTalkHit?.text ?? factsHit?.text ?? numberHit?.text ?? null;
     if (kbAnswer !== null) {
@@ -1468,6 +1516,66 @@ export function ChatScreen({
     }
 
     // --- NIDO agent path: recordar / actuar ---
+    // (0.1.126: antes, la pregunta sobre una foto, que tiene su propio
+    // modelo y no pasa ni por el agente ni por la recuperación.)
+    // 0.1.126 (etapa 3): pregunta sobre una foto.
+    const photo = photoTurn ? pendingPhotoRef.current : null;
+    if (photo) {
+      setPhoto(null);
+      let photoText = "";
+      let photoOutcome: "success" | "failure" = "success";
+      try {
+        const { askAboutPhoto } = await import("../vision/photoQuestion");
+        const active = await resolveActiveModel("llm").catch(() => undefined);
+        photoText = await askAboutPhoto({
+          imageUri: photo.uri,
+          question: query,
+          lang: uiLang,
+          activeLlm: active,
+          engine: llamaEngine,
+          onToken: (tok) => {
+            if (ttftMs === null) ttftMs = performance.now() - startTime;
+            tokensGenerated++;
+            photoText += tok;
+            const live = photoText;
+            setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, text: live } : m)));
+          },
+        });
+      } catch (e: any) {
+        photoOutcome = "failure";
+        photoText =
+          e?.code === "no_photo_model"
+            ? t("chatScreen.photo.noModel")
+            : t("chatScreen.photo.failed", { reason: errorReason(t, e, i18n.language) });
+      }
+      assistantText = photoText;
+      setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, text: photoText } : m)));
+      const photoDurationMs = performance.now() - startTime;
+      recordQueryStats({
+        tokensGenerated,
+        durationMs: photoDurationMs,
+        ttftMs,
+        tokPerSec: llamaEngine.lastVisibleGeneration?.tokensPerSec ?? 0,
+        peakRssBytes: peakRss.stop(),
+        timestamp: Date.now(),
+        totalLatencyMs: photoDurationMs,
+        modelId: baseModelId,
+        taskType: "chat",
+        adaptiveRoutingUsed: false,
+        retrievalUsed: false,
+        outcome: photoOutcome,
+      });
+      if (photoText.trim().length > 0) await finishAssistantMessage(sessionId, assistantId, photoText);
+      else await deleteMessage(assistantId);
+      await pruneSessions(memorySettingsRef.current.maxSavedSessions);
+      setGeneratingNow(false);
+      setStopping(false);
+      setProcessing(null);
+      setLiveTokPerSec(null);
+      return;
+    }
+
+    // Ruta del agente (recordar / actuar):
     // Intenciones que implican herramientas locales (notas, recordatorios,
     // memoria, hora del dispositivo) se resuelven con el loop agéntico en
     // vez del pipeline RAG/adaptativo: 100% local, con memoria inyectada.
@@ -3596,6 +3704,28 @@ export function ChatScreen({
 
         {/* Input Bar */}
         <View style={[styles.inputContainer, { backgroundColor: colors.bg.black, borderTopColor: "transparent" }]}>
+          {pendingPhoto && (
+            <View style={styles.stagedWrap}>
+              <View style={styles.stagedRow}>
+                <View style={[styles.stagedChip, { backgroundColor: colors.bg.input, borderColor: colors.border.default }]}>
+                  <Image source={{ uri: pendingPhoto.uri }} style={styles.photoThumb} accessibilityIgnoresInvertColors />
+                  <Text numberOfLines={1} style={[styles.stagedText, { color: colors.text.primary }]}>
+                    {t("chatScreen.photo.attached")}
+                  </Text>
+                </View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t("chatScreen.photo.remove")}
+                  onPress={dropPhoto}
+                  hitSlop={10}
+                  style={styles.stagedDismiss}
+                >
+                  <NidoIcon name="close" size={16} color={colors.text.dim} />
+                </Pressable>
+              </View>
+              <Text style={[styles.stagedHint, { color: colors.text.dim }]}>{t("chatScreen.photo.hint")}</Text>
+            </View>
+          )}
           {staged && (
             <View style={styles.stagedWrap}>
               <View style={styles.stagedRow}>
@@ -3664,6 +3794,18 @@ export function ChatScreen({
             </Pressable>
           </View>
           <View style={[styles.inputRow, { backgroundColor: colors.bg.input, borderColor: colors.border.default }]}>
+            {/* 0.1.126: añadir una foto para preguntar sobre ella. */}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("chatScreen.photo.add")}
+              onPress={() => void pickPhoto()}
+              disabled={!ready || generating}
+              hitSlop={8}
+              style={[styles.photoBtn, (!ready || generating) && { opacity: 0.4 }]}
+              testID="chat-add-photo"
+            >
+              <NidoIcon name="add" size={20} color={colors.text.accentEmerald} />
+            </Pressable>
             {voiceInputEnabled && (
               <VoiceInputButton
                 disabled={!ready || generating}
@@ -3723,9 +3865,9 @@ export function ChatScreen({
             ) : null}
             {!generating && (
               <Pressable accessibilityRole="button"
-                style={[styles.sendBtn, (!ready || !input.trim()) && styles.sendBtnDisabled]}
+                style={[styles.sendBtn, (!ready || (!input.trim() && !pendingPhoto)) && styles.sendBtnDisabled]}
                 onPress={handleSend}
-                disabled={!ready || !input.trim()}
+                disabled={!ready || (!input.trim() && !pendingPhoto)}
                 hitSlop={8}
                 accessibilityLabel={t("chatScreen.sendMessage")}
               >
@@ -4082,6 +4224,8 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   },
   stagedText: { flexShrink: 1, fontFamily: fontFamilies.sans, fontSize: 14, fontWeight: "600" },
   stagedDismiss: { padding: 4 },
+  photoThumb: { width: 36, height: 36, borderRadius: 8 },
+  photoBtn: { width: 40, height: 44, alignItems: "center", justifyContent: "center" },
   stagedHint: { fontFamily: fontFamilies.sans, fontSize: 12, paddingHorizontal: 4 },
   callRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 },
   callBtn: { minHeight: 44, paddingHorizontal: 16, borderRadius: 22, borderWidth: 1, alignItems: "center", justifyContent: "center" },

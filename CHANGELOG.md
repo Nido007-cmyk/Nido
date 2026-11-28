@@ -4,6 +4,28 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.126-alpha - 2026-11-28
+
+Ask about a photo, on the phone and without internet
+(third stage of the work to match and beat the best
+on-device AI apps).
+
+Tap "+" next to the text box, pick a photo and ask about
+it (or send with no text to get a description). On small
+phones, download LFM2-VL-450M and its vision part in
+Settings → Models → "Ask about photos" (about 323 MB in
+total; it answers in Spanish and English). If you use
+Gemma 4 E4B, download its vision part (about 990 MB) and
+Gemma answers instead, in all three languages.
+
+The photo is copied inside the app only to answer and is
+deleted as soon as the answer is ready; the conversation
+keeps your question with a [Photo] mark, never the
+image. The vision files go through the same signed
+catalog and memory checks as the chat models: the photo
+model is loaded only for that question and the chat model
+comes back on your next message.
+
 ## 0.1.125-alpha - 2026-11-28
 
 Dictation with Whisper, on the phone and without

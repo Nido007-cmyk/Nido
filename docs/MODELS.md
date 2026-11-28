@@ -358,3 +358,23 @@ small embedding model; a multi-GB full-file JS-side sha256 is a known,
 documented limitation — see `ARCHITECTURE.md` Status). `scripts/setup-models.sh`
 does the authoritative sha256 verification, once, on the dev machine, before
 `expo prebuild` bundles the files into the build.
+
+## Photos (0.1.126)
+
+Asking about a photo uses a vision projector (mmproj) on top of a language
+model, with llama.rn's `initMultimodal` (CPU, at most 256 tokens per image).
+Two signed options, both optional:
+
+- `lfm2-vl-450m-q4_0` (kind `vision`, ~219 MB) + `lfm2-vl-450m-mmproj-q8_0`
+  (~104 MB): fits a 4 GB phone; answers in Spanish and English (Portuguese is
+  not in its model card). It is never offered as a chat model: it is loaded
+  only for the photo question, with its projector counted in the same memory
+  plan (`extraResidentBytes`), and unloaded afterwards.
+- `gemma-4-e4b-it-mmproj` (~990 MB, same Google repo and commit as the Gemma 4
+  E4B entry): when Gemma 4 is the active chat model, its projector is attached
+  for the question and released afterwards; all three languages.
+
+The picked image (system picker, no new permission) is a copy in the app
+cache that is deleted when the answer is ready, on success or failure
+(`src/vision/photoQuestion.ts`); the chat keeps the question with a [Photo]
+mark, never the image.

@@ -91,7 +91,8 @@
     "measuredRowSpeed": "{{rate}} tok/s aquí",
     "measuredBasis": "La mediana de las últimas {{count}} generaciones de este modelo en este aparato",
     "provenHere": "Probado en este aparato: respondió con {{ctx}} tokens de contexto",
-    "speechReadyNote": "Listo: el dictado lo usa primero"
+    "speechReadyNote": "Listo: el dictado lo usa primero",
+    "photoReadyNote": "Listo para fotos"
   },
   "chatHeader": {
     "cycleTone": "Cambiar el tono del asistente",
@@ -196,7 +197,18 @@
     "listen": "Escuchar",
     "stopListening": "Parar",
     "listenA11y": "Escuchar la respuesta en voz alta",
-    "stopListeningA11y": "Parar la lectura"
+    "stopListeningA11y": "Parar la lectura",
+    "photo": {
+      "defaultQuestion": "¿Qué se ve en esta foto?",
+      "marker": "[Foto]",
+      "noModelTitle": "Falta el modelo de fotos",
+      "noModel": "Para preguntar sobre una foto, descarga primero un modelo de fotos en Ajustes → Modelos → «Preguntar sobre fotos». Funciona sin internet.",
+      "failed": "No pude mirar la foto: {{reason}}",
+      "attached": "Foto lista para tu pregunta",
+      "remove": "Quitar la foto",
+      "hint": "Escribe tu pregunta sobre la foto (o envía sin texto). La foto se borra del teléfono al contestar.",
+      "add": "Añadir una foto para preguntar sobre ella"
+    }
   },
   "common": {
     "cancel": "Cancelar",
@@ -586,7 +598,9 @@
       "resetCancelled": "No se borró nada: se canceló el desbloqueo."
     },
     "benchRunRange": "Pasada {{pp}}/{{tg}}: lee a {{speedPp}} tok/s ({{ppMin}}–{{ppMax}}) y genera a {{speedTg}} tok/s ({{tgMin}}–{{tgMax}})",
-    "benchLoad": "Carga del modelo: {{s}} s"
+    "benchLoad": "Carga del modelo: {{s}} s",
+    "photoTitle": "Preguntar sobre fotos",
+    "photoDesc": "Para preguntar sobre una foto sin internet. En teléfonos pequeños: descarga LFM2-VL-450M y su parte de visión (unos 323 MB en total; responde en español e inglés). Si usas Gemma 4 E4B, descarga su parte de visión (unos 990 MB) y contestará él, en los tres idiomas."
   },
   "personalDocumentsManager": {
     "errors": {
@@ -1903,6 +1917,18 @@
               "Debajo de cada respuesta, «$t(chatScreen.listen)» la lee en voz alta; tócalo otra vez para parar."
             ],
             "tip": "Necesita permiso de micrófono. Con Whisper descargado, el dictado funciona en cualquier teléfono y sin internet; si en ese momento no cabe en la memoria o falla, sigue el reconocedor de Android."
+          },
+          {
+            "id": "photos",
+            "title": "Preguntar sobre una foto",
+            "what": "Elige una foto y pregunta qué hay en ella, sin internet.",
+            "steps": [
+              "Primero descarga un modelo de fotos: $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.photoTitle). En teléfonos pequeños, LFM2-VL-450M y su parte de visión; con Gemma 4 E4B, su parte de visión.",
+              "En el chat, toca «+» junto al cuadro de texto y elige una foto.",
+              "Escribe tu pregunta (por ejemplo «¿qué dice este cartel?») o envía sin texto para que la describa.",
+              "La foto se borra del teléfono en cuanto llega la respuesta; en la conversación solo queda tu pregunta."
+            ],
+            "tip": "LFM2-VL-450M responde en español e inglés; Gemma 4 E4B, también en portugués. Si algo no se ve claro, NIDO debe decirlo en vez de adivinar."
           }
         ]
       },

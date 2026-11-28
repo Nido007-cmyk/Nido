@@ -84,7 +84,9 @@ describe("Calm-migrated screens", () => {
     expect(screen.getByText(/Copyright \(c\) 2026 NIDO contributors/)).toBeTruthy();
     expect(screen.getByTestId("license-asset-lfm2.5-8b-a1b-q4km")).toBeTruthy();
     expect(screen.getByTestId("license-asset-qwen3-0.6b-q4km")).toBeTruthy();
-    expect(screen.getByText("licenses.notes.lfm")).toBeTruthy();
+    // 0.1.126: LFM2.5, LFM2-VL-450M y su proyector llevan la misma nota de licencia LFM.
+    expect(screen.getAllByText("licenses.notes.lfm").length).toBeGreaterThanOrEqual(3);
+    expect(screen.getByTestId("license-asset-lfm2-vl-450m-q4_0")).toBeTruthy();
     expect(screen.getAllByText("licenses.notes.ccBySa").length).toBeGreaterThan(0);
     expect(screen.getByText("licenses.knowledgeBody")).toBeTruthy();
   });

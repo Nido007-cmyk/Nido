@@ -103,6 +103,8 @@ export const GUIDE_MODULES: GuideModuleSpec[] = [
       },
       { id: "outside" },
       { id: "voice" },
+      // 0.1.126 (etapa 3): preguntar sobre una foto.
+      { id: "photos" },
     ],
   },
   {

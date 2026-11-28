@@ -145,6 +145,12 @@ export interface GenerateOptions {
    */
   publicPrefix?: string;
   /**
+   * 0.1.126 (etapa 3, fotos): imagen (URI file://) que acompaña al ÚLTIMO
+   * mensaje del usuario. Exige un proyector de visión adjunto
+   * (attachProjector); sin él, la generación lanza.
+   */
+  imagePath?: string;
+  /**
    * Safety-net budget, not a performance target — no per-generation timeout
    * existed anywhere in the app before this (see docs/ADAPTIVE_ROUTING.md
    * §14). Left unset for regular single-pass chat (already indirectly
@@ -996,6 +1002,66 @@ export class LlamaEngine {
     void this.crashGuardWrite(confirmCrashGuardRecord(record));
   }
 
+  // ---- 0.1.126 (etapa 3): proyector de visión (mmproj) adjunto al
+  // contexto cargado. Lo usa solo la pregunta sobre una foto.
+
+  private projectorFilename: string | null = null;
+
+  /** El proyector adjunto ahora (nombre de fichero del catálogo) o null. */
+  get attachedProjector(): string | null {
+    return this.projectorFilename;
+  }
+
+  /**
+   * Adjunta el proyector de visión al modelo cargado. Pasa por la puerta
+   * de confianza y por la memoria de AHORA (lo libre sobre el umbral de
+   * memoria baja debe cubrir el proyector y su memoria de trabajo).
+   */
+  attachProjector(projectorFilename: string): Promise<void> {
+    return this.enqueue(async () => {
+      if (!this.context) throw new Error("LlamaEngine: model not loaded");
+      if (this.projectorFilename === projectorFilename) return;
+      if (this.projectorFilename) await this.detachNow();
+      await assertTrustedModelFileByName(projectorFilename);
+      const path = `${FileSystem.documentDirectory}${projectorFilename}`;
+      const info = (await FileSystem.getInfoAsync(path)) as { exists: boolean; size?: number };
+      if (!info.exists) throw new Error("LlamaEngine: vision projector not downloaded");
+      const snap = readRamSnapshot();
+      if (!projectorFitsNow(snap, info.size ?? 0)) {
+        const need = (info.size ?? 0) + VISION_WORKING_BYTES + VISION_LIVE_MARGIN_BYTES;
+        const free = Math.max(0, (snap?.availBytes ?? 0) - (snap?.lowMemThresholdBytes ?? 0));
+        throw new RamBudgetError(
+          `vision projector needs ${toGb(need)} GB free; ${toGb(free)} GB free right now`,
+          need,
+          free,
+          snap?.totalRamBytes ?? 0,
+          null,
+          null,
+          null,
+        );
+      }
+      const ctx = this.context as unknown as {
+        initMultimodal?: (o: { path: string; use_gpu?: boolean; image_max_tokens?: number }) => Promise<boolean>;
+      };
+      if (typeof ctx.initMultimodal !== "function") throw new Error("LlamaEngine: multimodal not supported by this engine");
+      const ok = await ctx.initMultimodal({ path: path.replace(/^file:\/\//, ""), use_gpu: false, image_max_tokens: VISION_IMAGE_MAX_TOKENS });
+      if (!ok) throw new Error("LlamaEngine: the model rejected this vision projector");
+      this.projectorFilename = projectorFilename;
+    });
+  }
+
+  /** Suelta el proyector de visión (si lo hay). Nunca lanza. */
+  detachProjector(): Promise<void> {
+    return this.enqueue(() => this.detachNow());
+  }
+
+  private async detachNow(): Promise<void> {
+    if (!this.projectorFilename) return;
+    this.projectorFilename = null;
+    const ctx = this.context as unknown as { releaseMultimodal?: () => Promise<void> } | null;
+    await ctx?.releaseMultimodal?.().catch(() => {});
+  }
+
   // ---- 0.1.122: cargas probadas en este aparato (provenLoads.ts). Solo
   // informan a la tarjeta del modelo; nunca cambian qué se deja cargar.
 
@@ -1297,7 +1363,7 @@ export class LlamaEngine {
     resetBackgroundIndexingHold();
   }
 
-  load(modelFilename: string, opts?: { nCtx?: number; nThreads?: number }): Promise<void> {
+  load(modelFilename: string, opts?: { nCtx?: number; nThreads?: number; extraResidentBytes?: number }): Promise<void> {
     // Fase 2 (reapertura del defecto, 2026-11-08): la carga corre tras
     // la puerta de carga — un initLlama a la vez en todo el proceso.
     // Antes el LLM y el motor de embeddings arrancaban en Promise.all
@@ -1307,7 +1373,7 @@ export class LlamaEngine {
     return withNativeLoadGate(() => this.enqueue(() => this.loadNow(modelFilename, opts)));
   }
 
-  private async loadNow(modelFilename: string, opts?: { nCtx?: number; nThreads?: number }) {
+  private async loadNow(modelFilename: string, opts?: { nCtx?: number; nThreads?: number; extraResidentBytes?: number }) {
     // Per-model default context: smaller models declare a smaller defaultNCtx
     // in the catalog (context is the second biggest RAM term after weights).
     // An explicit opt always wins.
@@ -1425,7 +1491,9 @@ export class LlamaEngine {
       }
     }
     const specBase = {
-      fileSizeBytes,
+      // 0.1.126: lo que se cargará además del modelo (el proyector de
+      // visión y su memoria de trabajo) entra en el MISMO plan.
+      fileSizeBytes: fileSizeBytes + Math.max(0, opts?.extraResidentBytes ?? 0),
       nLayer: catalogEntry?.arch?.nLayer,
       nKvHeads: catalogEntry?.arch?.nKvHeads,
       headDim: catalogEntry?.arch?.headDim,
@@ -1648,6 +1716,8 @@ export class LlamaEngine {
     // degradado se curaría sin generar nada). Sin contexto vivo no
     // hay descarga que premiar: no se confirma nada.
     const hadLiveContext = this.context !== null;
+    // 0.1.126: el proyector muere con el contexto.
+    this.projectorFilename = null;
     // M-6 (2026-10-31): invalidar primero a las generaciones que
     // esperan turno en la cadena; la descarga espera solo a las
     // que ya corren (inFlight), como siempre.
@@ -1975,6 +2045,7 @@ export class LlamaEngine {
     seed,
     telemetryContext,
     publicPrefix,
+    imagePath,
   }: GenerateOptions): Promise<string> {
     // P2.4: telemetry measurement. All local, fire-and-forget, never throws.
     const tStart = Date.now();
@@ -2097,7 +2168,7 @@ export class LlamaEngine {
         // de reutilizarlo a ciegas. Dentro de la cola de carga, como el
         // propio arranque: el orden con load/unload no cambia.
         if (this.contextSuspect) await this.recreateContext();
-        return this.startCompletion({ prompt, messages, nPredict, temperature, topK, topP, minP, repeatPenalty, samplingPreset, responseFormat, grammar, enableThinking, onToken: wrappedOnToken, stop, timeoutMs, onTimeout: wrappedOnTimeout, signal, seed, publicPrefix });
+        return this.startCompletion({ prompt, messages, nPredict, temperature, topK, topP, minP, repeatPenalty, samplingPreset, responseFormat, grammar, enableThinking, onToken: wrappedOnToken, stop, timeoutMs, onTimeout: wrappedOnTimeout, signal, seed, publicPrefix, imagePath });
       });
       try {
         let result: { text?: string };
@@ -2242,6 +2313,7 @@ export class LlamaEngine {
     signal,
     seed,
     publicPrefix,
+    imagePath,
   }: GenerateOptions): Promise<{ completion: Promise<{ text?: string }>; getFull: () => string; timer: ReturnType<typeof setTimeout> | null }> {
     if (!this.context) throw new Error("LlamaEngine: model not loaded");
     if (!prompt && !messages) {
@@ -2336,9 +2408,15 @@ export class LlamaEngine {
     const thinkingParam = enableThinking ?? (this.modelInfo?.noThink ? false : undefined);
     const nKeep = await this.systemKeepTokens(messages);
     if (nKeep !== undefined) extraParams.n_keep = nKeep;
+    // 0.1.126 (fotos): la imagen va como parte del ÚLTIMO mensaje del
+    // usuario, solo hacia el nativo; el resto del motor sigue viendo texto.
+    if (imagePath && !this.projectorFilename) {
+      throw new Error("LlamaEngine: no vision projector attached for this image");
+    }
+    const nativeMessages = imagePath && messages ? withImageOnLastUser(messages, imagePath) : messages;
     const completionParams = messages
       ? {
-          messages,
+          messages: nativeMessages,
           jinja: true,
           n_predict: nPredict,
           temperature: sampling.temperature,
@@ -2387,6 +2465,45 @@ export class LlamaEngine {
     // que solo quería parar.
     await Promise.resolve(this.context?.stopCompletion()).catch(() => {});
   }
+}
+
+/**
+ * 0.1.126 (fotos): tope de tokens por imagen. Menos tokens, menos memoria
+ * y menos espera en un procesador de gama media; llama.rn recomienda
+ * 256–512 para ir rápido.
+ */
+export const VISION_IMAGE_MAX_TOKENS = 256;
+
+/** Memoria de trabajo del codificador de visión sobre el fichero del proyector. */
+export const VISION_WORKING_BYTES = 128 * 1024 * 1024;
+
+/** Margen libre que se deja sobre el umbral de memoria baja al adjuntar un proyector. */
+export const VISION_LIVE_MARGIN_BYTES = 128 * 1024 * 1024;
+
+/** ¿Cabe el proyector AHORA? Sin lectura de memoria no se arriesga. */
+export function projectorFitsNow(
+  snapshot: { availBytes?: number; lowMemThresholdBytes?: number } | null,
+  projectorBytes: number,
+): boolean {
+  if (!snapshot || snapshot.availBytes == null || snapshot.lowMemThresholdBytes == null) return false;
+  return snapshot.availBytes - snapshot.lowMemThresholdBytes - VISION_LIVE_MARGIN_BYTES >= projectorBytes + VISION_WORKING_BYTES;
+}
+
+/** El último mensaje del usuario con la imagen delante del texto (formato OpenAI de llama.rn). */
+export function withImageOnLastUser(
+  messages: ChatMessageInput[],
+  imagePath: string,
+): Array<{ role: string; content: string | Array<{ type: string; text?: string; image_url?: { url: string } }> }> {
+  let last = -1;
+  messages.forEach((m, i) => {
+    if (m.role === "user") last = i;
+  });
+  if (last < 0) throw new Error("LlamaEngine: an image needs a user message");
+  return messages.map((m, i) =>
+    i === last
+      ? { role: m.role, content: [{ type: "image_url", image_url: { url: imagePath } }, { type: "text", text: m.content }] }
+      : m,
+  );
 }
 
 export const llamaEngine = new LlamaEngine();

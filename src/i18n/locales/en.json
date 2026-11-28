@@ -95,7 +95,8 @@
     "measuredRowSpeed": "{{rate}} tok/s here",
     "measuredBasis": "The median of this model's last {{count}} generations on this device",
     "provenHere": "Tested on this device: it answered with {{ctx}} tokens of context",
-    "speechReadyNote": "Ready: dictation uses it first"
+    "speechReadyNote": "Ready: dictation uses it first",
+    "photoReadyNote": "Ready for photos"
   },
   "modelLoadErrorCard": {
     "corrupt": {
@@ -207,7 +208,9 @@
       "retry": "Retry"
     },
     "benchRunRange": "Run {{pp}}/{{tg}}: reads at {{speedPp}} tok/s ({{ppMin}}–{{ppMax}}) and generates at {{speedTg}} tok/s ({{tgMin}}–{{tgMax}})",
-    "benchLoad": "Model load: {{s}} s"
+    "benchLoad": "Model load: {{s}} s",
+    "photoTitle": "Ask about photos",
+    "photoDesc": "To ask about a photo without internet. On small phones: download LFM2-VL-450M and its vision part (about 323 MB in total; it answers in Spanish and English). If you use Gemma 4 E4B, download its vision part (about 990 MB) and it will answer, in all three languages."
   },
   "setupWizard": {
     "calculating": "Calculating…",
@@ -590,7 +593,18 @@
     "listen": "Listen",
     "stopListening": "Stop",
     "listenA11y": "Read the answer aloud",
-    "stopListeningA11y": "Stop reading"
+    "stopListeningA11y": "Stop reading",
+    "photo": {
+      "defaultQuestion": "What is in this photo?",
+      "marker": "[Photo]",
+      "noModelTitle": "The photo model is missing",
+      "noModel": "To ask about a photo, first download a photo model in Settings → Models → “Ask about photos”. It works without internet.",
+      "failed": "I could not look at the photo: {{reason}}",
+      "attached": "Photo ready for your question",
+      "remove": "Remove the photo",
+      "hint": "Type your question about the photo (or send with no text). The photo is deleted from the phone once answered.",
+      "add": "Add a photo to ask about it"
+    }
   },
   "aboutScreen": {
     "title": "About NIDO",
@@ -1903,6 +1917,18 @@
               "Under each answer, “$t(chatScreen.listen)” reads it aloud; tap it again to stop."
             ],
             "tip": "Needs microphone permission. With Whisper downloaded, dictation works on any phone and without internet; if it does not fit in memory at that moment or fails, the Android recognizer takes over."
+          },
+          {
+            "id": "photos",
+            "title": "Ask about a photo",
+            "what": "Pick a photo and ask what is in it, without internet.",
+            "steps": [
+              "First download a photo model: $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.photoTitle). On small phones, LFM2-VL-450M and its vision part; with Gemma 4 E4B, its vision part.",
+              "In the chat, tap “+” next to the text box and pick a photo.",
+              "Type your question (for example “what does this sign say?”) or send with no text to get a description.",
+              "The photo is deleted from the phone as soon as the answer arrives; only your question stays in the conversation."
+            ],
+            "tip": "LFM2-VL-450M answers in Spanish and English; Gemma 4 E4B also in Portuguese. If something is not clear, NIDO should say so instead of guessing."
           }
         ]
       },
